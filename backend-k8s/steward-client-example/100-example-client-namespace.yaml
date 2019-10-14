@@ -5,15 +5,28 @@ metadata:
   name: steward-c-client1
   annotations:
 
-    # Unique prefix for tenant namespaces of this client
-    tenant-namespace-prefix: steward-t-client1
+    # The unique prefix for tenant namespace names of this Steward client,
+    # without a trailing '-' separator.
+    steward.sap.com/tenant-namespace-prefix: steward-t-client1
 
-    # Cluster role to use for this clients tenant namespaces
-    # The cluster role itself is managed by steward admins
-    tenant-role: steward-tenant
+    # The length of a random suffix of tenant namespace names of this Steward
+    # client. Must be an integer in the range of [-127, 128]. Negative values
+    # indicate that the default value should be used. Zero disabled the
+    # random suffix. The system might limit the length to less than 128
+    # characters.
+    #
+    # A tenant namespace name follows this schema:
+    #
+    #     <prefix>-<tenant_name>-<random>
+    #
+    # Example:
+    #
+    #     steward-t-client1-tenant1-f1a060
+    #
+    # [Optional; default="6"]
+    #steward.sap.com/tenant-namespace-suffix-length: "6"
 
-    # (Optional - default: "3")
-    # Number of random HEX string bytes to append to tenant namespace name to make it unique.
-    #     (Tenant namespace schema is: <prefix>-<TenantId>-<random>)
-    # Example: 3 -> 6 HEX chars, e.g. "steward-t-client1-4e93d9d5-276e-47ca-a570-b3a763aaef3e-f1a060"
-  # tenant-random-length-bytes: 3
+    # The ClusterRole to be assigned to the default service account of
+    # tenant namespaces.
+    # The ClusterRole itself is managed by Steward administrators.
+    steward.sap.com/tenant-role: steward-tenant

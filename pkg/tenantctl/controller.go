@@ -24,7 +24,6 @@ import (
 
 const kind = "Tenants"
 const defaultServiceAccountName = "default"
-const defaultRandomLengthBytes = 3
 
 // Controller for Steward
 type Controller struct {
@@ -61,13 +60,13 @@ func (c *Controller) getSyncCount() int64 {
 }
 
 func (c *Controller) getNamespaceManager(tenant *api.Tenant) (k8s.NamespaceManager, error) {
-	tenantConfig, err := getConfig(c.factory, tenant.GetNamespace())
+	config, err := getClientConfig(c.factory, tenant.GetNamespace())
 	if err != nil {
 		return nil, err
 	}
-	tenantNamespacePrefix := tenantConfig.GetTenantNamespacePrefix()
+	tenantNamespacePrefix := config.GetTenantNamespacePrefix()
 	namespaceManager := k8s.NewNamespaceManager(c.factory, tenantNamespacePrefix,
-		tenantConfig.GetRandomLengthBytesOrDefault(defaultRandomLengthBytes))
+		config.GetTenantNamespaceSuffixLength())
 	return namespaceManager, nil
 }
 
@@ -205,7 +204,7 @@ func (c *Controller) syncHandler(key string) error {
 		var namespaceName string
 		var account *k8s.ServiceAccountWrap
 
-		config, err := getConfig(c.factory, tenant.GetNamespace())
+		config, err := getClientConfig(c.factory, tenant.GetNamespace())
 		if err != nil {
 			log.Printf("ERROR: Could not get config: %s", err.Error())
 			return err
