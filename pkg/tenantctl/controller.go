@@ -11,9 +11,9 @@ import (
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	listers "github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
-	errors "github.com/SAP/stewardci-core/pkg/errors"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
+	"github.com/pkg/errors"
 	v1beta1 "k8s.io/api/rbac/v1beta1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -268,7 +268,7 @@ func (c *Controller) updateStatus(tenant *api.Tenant) (*api.Tenant, error) {
 	client := c.factory.StewardV1alpha1().Tenants(tenant.GetNamespace())
 	updatedTenant, err := client.UpdateStatus(tenant)
 	if err != nil {
-		err = errors.Errorf(err, "Failed to update status of tenant '%s' in namespace '%s'", tenant.GetName(), tenant.GetNamespace())
+		err = errors.WithMessagef(err, "Failed to update status of tenant '%s' in namespace '%s'", tenant.GetName(), tenant.GetNamespace())
 		log.Printf("ERROR: %s", err.Error())
 		return nil, err
 	}
@@ -279,7 +279,7 @@ func (c *Controller) update(tenant *api.Tenant) (*api.Tenant, error) {
 	client := c.factory.StewardV1alpha1().Tenants(tenant.GetNamespace())
 	updatedTenant, err := client.Update(tenant)
 	if err != nil {
-		err = errors.Errorf(err, "Failed to update tenant '%s' in namespace '%s'", tenant.GetName(), tenant.GetNamespace())
+		err = errors.WithMessagef(err, "Failed to update tenant '%s' in namespace '%s'", tenant.GetName(), tenant.GetNamespace())
 		log.Printf("ERROR: %s", err.Error())
 		return nil, err
 	}
@@ -323,7 +323,7 @@ func (c *Controller) rollback(tenant *api.Tenant) error {
 func (c *Controller) deleteNamespace(tenant *api.Tenant) error {
 	namespaceManager, err := c.getNamespaceManager(tenant)
 	if err != nil {
-		err = errors.Errorf(err, "Could not delete namespace")
+		err = errors.WithMessage(err, "Could not delete namespace")
 		return err
 	}
 	return namespaceManager.Delete(tenant.Status.TenantNamespaceName)
@@ -334,7 +334,7 @@ func (c *Controller) createNamespace(tenant *api.Tenant) (string, error) {
 	annotations := map[string]string{}
 	namespaceManager, err := c.getNamespaceManager(tenant)
 	if err != nil {
-		err = errors.Errorf(err, "Could not get namespace manager")
+		err = errors.WithMessage(err, "Could not get namespace manager")
 		return "", err
 	}
 
@@ -342,7 +342,7 @@ func (c *Controller) createNamespace(tenant *api.Tenant) (string, error) {
 	if err == nil {
 		tenant.Status.TenantNamespaceName = fullName
 	} else {
-		err = errors.Errorf(err, "Create namespace failed for tenant %s:", tenant.GetName())
+		err = errors.WithMessagef(err, "Create namespace failed for tenant %s:", tenant.GetName())
 	}
 	return fullName, err
 }
@@ -352,7 +352,7 @@ func (c *Controller) getServiceAccount(tenant *api.Tenant, serviceAccountName st
 	accountManager := k8s.NewServiceAccountManager(c.factory, tenant.GetNamespace())
 	account, err := accountManager.GetServiceAccount(serviceAccountName)
 	if err != nil {
-		err = errors.Errorf(err, "Fetch service account failed for %s", tenant.Status.TenantNamespaceName)
+		err = errors.WithMessagef(err, "Fetch service account failed for %s", tenant.Status.TenantNamespaceName)
 	}
 	return account, err
 }
@@ -361,7 +361,7 @@ func (c *Controller) addRoleBinding(account *k8s.ServiceAccountWrap, tenant *api
 	log.Printf("Add role binding to role %s in namespace %s", role, tenant.Status.TenantNamespaceName)
 	roleBinding, err := account.AddRoleBinding(role, tenant.Status.TenantNamespaceName)
 	if err != nil {
-		err = errors.Errorf(err, "Add Role Binding to service account failed for %s", tenant.Status.TenantNamespaceName)
+		err = errors.WithMessagef(err, "Add Role Binding to service account failed for %s", tenant.Status.TenantNamespaceName)
 		tenant.Status.Result = api.TenantResultErrorInfra
 		tenant.Status.Message = utils.Trim(err.Error())
 		log.Printf("ERROR: %s", err.Error())
