@@ -1,0 +1,37 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: pipelineruns.steward.sap.com
+spec:
+  group: steward.sap.com
+  version: v1alpha1
+  names:
+    kind: PipelineRun
+    singular: pipelinerun
+    plural: pipelineruns
+  scope: Namespaced
+  subresources:
+    status: {}
+  additionalPrinterColumns:
+    - name: Started
+      type: date
+      JSONPath: .metadata.creationTimestamp
+    - name: Finished
+      type: date
+      JSONPath: .status.container.terminated.finishedAt
+      priority: 1
+    - name: Status
+      type: string
+      description: The current state of the pipeline run
+      JSONPath: .status.state
+      priority: 0
+    - name: Result
+      type: string
+      description: The result of the pipeline run
+      JSONPath: .status.result
+      priority: 1
+    - name: Message
+      type: string
+      description: The message of the pipeline run
+      JSONPath: .status.messageShort
+      priority: 2

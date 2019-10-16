@@ -1,0 +1,14 @@
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+metadata:
+  generateName: sleep
+spec:
+  args:
+    DURATION: "120"
+  jenkinsFile:
+    repoUrl: https://github.com/sap-production/demo-pipelines
+    revision: master
+    relativePath: sleep/Jenkinsfile
+  logging:
+    elasticsearch:
+      runID: 1

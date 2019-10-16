@@ -1,0 +1,12 @@
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+metadata:
+  generateName: error-
+spec:
+  jenkinsFile:
+    repoUrl: https://github.com/sap-production/demo-pipelines
+    revision: master
+    relativePath: error/Jenkinsfile
+  logging:
+    elasticsearch:
+      runID: 1

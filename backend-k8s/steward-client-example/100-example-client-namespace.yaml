@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  # Specify namespace name here
+  name: steward-c-client1
+  annotations:
+
+    # Unique prefix for tenant namespaces of this client
+    tenant-namespace-prefix: steward-t-client1
+
+    # Cluster role to use for this clients tenant namespaces
+    # The cluster role itself is managed by steward admins
+    tenant-role: steward-tenant
+
+    # (Optional - default: "3")
+    # Number of random HEX string bytes to append to tenant namespace name to make it unique.
+    #     (Tenant namespace schema is: <prefix>-<TenantId>-<random>)
+    # Example: 3 -> 6 HEX chars, e.g. "steward-t-client1-4e93d9d5-276e-47ca-a570-b3a763aaef3e-f1a060"
+  # tenant-random-length-bytes: 3

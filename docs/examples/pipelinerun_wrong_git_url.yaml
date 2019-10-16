@@ -1,0 +1,12 @@
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+metadata:
+  generateName: wronggiturl-
+spec:
+  jenkinsFile:
+    repoUrl: https://github.com/sap-production/wrong-repo
+    revision: master
+    relativePath: Jenkinsfile
+  logging:
+    elasticsearch:
+      runID: 1

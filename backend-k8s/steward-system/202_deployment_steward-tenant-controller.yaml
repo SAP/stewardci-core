@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: steward-tenant-controller
+  namespace: steward-system
+  labels:
+    app: steward-tenant-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: steward-tenant-controller
+  template:
+    metadata:
+      labels:
+        app: steward-tenant-controller
+    spec:
+      serviceAccountName: steward-system
+      containers:
+      - name: steward-tenant-controller
+        imagePullPolicy: IfNotPresent
+        image: alxsap/stewardci-tenant-controller:191016_ec7ab2b

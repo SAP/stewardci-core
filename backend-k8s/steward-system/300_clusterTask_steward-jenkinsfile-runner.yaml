@@ -1,0 +1,78 @@
+apiVersion: tekton.dev/v1alpha1
+kind: ClusterTask
+metadata:
+  name: steward-jenkinsfile-runner
+spec:
+  inputs:
+    params:
+    - name: PIPELINE_PARAMS_JSON
+      description: >
+        Parameters to pass to the pipeline, as JSON string.
+    - name: PIPELINE_GIT_URL
+      description: >
+        The URL of the Git repository containing the pipeline definition.
+    - name: PIPELINE_GIT_REVISION
+      description: >
+        The revision of the pipeline Git repository to used, e.g. 'master'.
+    - name: PIPELINE_FILE
+      description: >
+        The relative pathname of the pipeline definition file, typically 'Jenkinsfile'.
+    - name: PIPELINE_LOG_ELASTICSEARCH_INDEX_URL
+      description: >
+        The URL of the Elasticsearch index to send logs to.
+        If null or empty, logging to Elasticsearch is disabled.
+        # Example: http://elasticsearch-master.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc
+      default: ""
+    - name: PIPELINE_LOG_ELASTICSEARCH_AUTH_SECRET
+      description: >
+        The name of the secret of type basic-auth to use to authenticate to Elasticsearch.
+        If null or empty, no authentication takes place.
+      default: ""
+    - name: PIPELINE_LOG_ELASTICSEARCH_TRUSTEDCERTS_SECRET
+      description: >
+        The name of the secret providing the trusted certificates bundle used for TLS server verification when connecting to Elasticsearch.
+        If null or empty, the default trusted certificates are used.
+      default: ""
+    - name: PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON
+      description: >
+        The value for the 'runId' field of log events, as JSON string.
+        Must be specified if logging to Elasticsearch is enabled.
+      default: ""
+    - name: RUN_NAMESPACE
+      description: >
+        The namespace of this pipeline run.
+  steps:
+  - name: jenkinsfile-runner
+    image: alxsap/stewardci-jenkinsfilerunner-image:191015-19fdd35
+    imagePullPolicy: Always
+    args: []
+    env:
+    - name: XDG_CONFIG_HOME
+      value: /home/jenkins
+    - name: JAVA_OPTS
+      value: '-Dhudson.slaves.NodeProvisioner.initialDelay=0 -Dhudson.slaves.NodeProvisioner.MARGIN=50 -Dhudson.slaves.NodeProvisioner.MARGIN0=0.8'
+    - name: PIPELINE_GIT_URL
+      value: '$(inputs.params.PIPELINE_GIT_URL)'
+    - name: PIPELINE_GIT_REVISION
+      value: '$(inputs.params.PIPELINE_GIT_REVISION)'
+    - name: PIPELINE_FILE
+      value: '$(inputs.params.PIPELINE_FILE)'
+    - name: PIPELINE_PARAMS_JSON
+      value: '$(inputs.params.PIPELINE_PARAMS_JSON)'
+    - name: PIPELINE_LOG_ELASTICSEARCH_INDEX_URL
+      value: '$(inputs.params.PIPELINE_LOG_ELASTICSEARCH_INDEX_URL)'
+    - name: PIPELINE_LOG_ELASTICSEARCH_AUTH_SECRET
+      value: '$(inputs.params.PIPELINE_LOG_ELASTICSEARCH_AUTH_SECRET)'
+    - name: PIPELINE_LOG_ELASTICSEARCH_TRUSTEDCERTS_SECRET
+      value: '$(inputs.params.PIPELINE_LOG_ELASTICSEARCH_TRUSTEDCERTS_SECRET)'
+    - name: PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON
+      value: '$(inputs.params.PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON)'
+    - name: RUN_NAMESPACE
+      value: '$(inputs.params.RUN_NAMESPACE)'
+    resources:
+      limits:
+        cpu: 3
+        memory: 4Gi
+      requests:
+        cpu: "0.5"
+        memory: 1Gi

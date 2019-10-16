@@ -1,0 +1,19 @@
+# Services used for metric collection
+apiVersion: v1
+kind: Service
+metadata:
+  name: steward-run-metrics
+  namespace: steward-system
+  labels:
+    app: steward-run-controller
+spec:
+  clusterIP: None
+  ports:
+  - name: http-metrics
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+  selector:
+    app: steward-run-controller
+  sessionAffinity: None
+  type: ClusterIP

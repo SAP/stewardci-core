@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: steward-run-controller
+  namespace: steward-system
+  labels:
+    app: steward-run-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: steward-run-controller
+  template:
+    metadata:
+      labels:
+        app: steward-run-controller
+    spec:
+      serviceAccountName: steward-system
+      containers:
+      - name: steward-run-controller
+        imagePullPolicy: IfNotPresent
+        image: alxsap/stewardci-run-controller:191016_ec7ab2b

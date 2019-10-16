@@ -1,0 +1,8 @@
+/gen/
+
+coverage.html
+coverage.txt
+diff.txt
+fmt_diff.txt
+
+.vscode/
