@@ -72,5 +72,5 @@ set -x
     -destination="${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go" \
     -package=mocks \
     github.com/SAP/stewardci-core/pkg/k8s \
-    PipelineRun,ClientFactory,PipelineRunFetcher,SecretProvider,NamespaceManager
+    ClientFactory,NamespaceManager,PipelineRun,PipelineRunFetcher,SecretProvider,TenantFetcher
 set +x

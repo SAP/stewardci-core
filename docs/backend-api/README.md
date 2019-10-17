@@ -13,76 +13,116 @@ Inside a _tenant namespace_ the client creates `pipelinerun` resources for each 
 
 ## Tenant Resource
 
-### Create
+### Spec
+
+#### Examples
 
 A simple `Tenant` resource example can be found in [docs/examples/tenant.yaml](../examples/tenant.yaml).
 
-| Parameter | Description |
+
+#### Fields
+
+| Field | Description |
 | --------- | ----------- |
-|`metadata.name`     | the resource name has to be the unique tenant ID |
+| `apiVersion` | `steward.sap.com/v1alpha1` |
+| `kind` | `Tenant` |
+| `metadata.name` | The resource name has to be the unique tenant ID. |
 
-```bash
-$ kubectl apply -f tenant.yaml
-```
 
-### Read
+### Status
 
-The tenant resource in Kubernetes is enriched with a `status` while it is processed and when tenant preparation finished.
+The `status` section of the `Tenant` resources lets clients know about the tenant namespace assigned exclusively to a tenant.
 
-```bash
-$ kubectl -n <steward-client1> get tenant <tenantId> -oyaml
-```
-_(shortened example yaml)_
+After a client created a new `Tenant` resource, the Steward controller tries to achieve the hereby requested state:
+
+- A tenant namespace exists that is exclusively assigned to this tenant.
+
+- Service account `<tenant_namespace>::default` (where `<tenant_namespace>` is the name of the namespace assigned exlusively to the tenant) has the permissions needed to manage further resources in the tenant namespace.
+
+- Service account `<client_namespace>::default` (where `<client_namespace>` is the namespace where the `Tenant` resource belongs to) has the permissions needed to manage further resources in the tenant namespace.
+
+The Steward controller periodically checks the actual state of the resource and tries to change it to the desired state:
+
+- The role binding in the tenant namespace gets updated/recreated if needed, for instance if the client namespace's annotation `steward.sap.com/tenant-role` (defining the RBAC role to be assigned to the above-mentioned service accounts) has changed.
+
+- If `status.tenantNamespaceName` refers to a namespace that does not exist anymore, the ready condition is set to `False` indicating that the tenant is no longer ready to be used. As this never happens under normal circumstances and probably means that data has been lost, the tenant namespace will not be recreated automatically. Operators should monitor tenants, and must  analyze and fix the underlying issue if such situations occur.
+
+
+### Examples
+
 ```yaml
+apiVersion: steward.sap.com/v1apha1
+kind: Tenant
+metadata:
+  name: tenant1
+  namespace: steward-c-client1
 status:
-  message: Tenant namespace successfully prepared
-  progress: Finished
-  result: success
-  tenantNamespaceName: stu-tn-cl1-test-tenant-09a530
+  conditions:
+  - type: Ready
+    status: "True"
+    lastTransitionTime: "2019-11-01T08:15:36Z"
+  tenantNamespaceName: steward-t-client1-tenant1-83a4cf
 ```
 
-| Parameter | Description |
+
+#### Fields
+
+| Field | Description |
 | --------- | ----------- |
-|`status.message` | A message describing the latest status |
-|`status.progress` | The current progress of processing the tenant resource **(deprecated)**. Possible values:<br>`['', 'InProcess', 'CreateNamespace', 'GetServiceAccount', 'AddRoleBinding', 'Finalize', 'Finished']` |
-|`status.result` | The result of the resource processing. Possible values:<br>`['', 'success', 'error_infra', 'error_content']` |
-|`status.tenantNamespaceName` | The name of the namespace to be used for this tenant |
+| `status.conditions` | (array) A list of condition objects describing the lastest observed state of the resource. For each type of condition at most one entry exists. See _Conditions_ below. |
+| `status.conditions[*].type` | (string) The type of the condition. See _Conditions_ below. |
+| `status.conditions[*].status` | (string,optional) The status of the condition with one of the values `True`, `False` and `Unknown`. A condition that is not listed in `status.conditions` has status `Unknown`. |
+| `status.conditions[*].reason` | (string,optional) A unique, one-word, camel-case reason for the condition's last transition. |
+| `status.conditions[*].message` | (string,optional) A human-readable message indicating the details of the condition's last transition. |
+| `status.conditions[*].lastTransitionTime` | (time) The time of the condition's last transition. |
+| `status.tenantNamespaceName` | (string) The name of the namespace assigned exclusively to this tenant. As long as the tenant namespace has not been created successfully, this field is not set. |
 
-:warning: The `status` section is about to change! There will be a `Ready` condition (like for [pods][k8s_pod_conditions] or [nodes][k8s_node_conditions] replacing `message`, `progress` and `result`.
 
-### Delete
+#### Conditions
 
-When a `Tenant` resource is deleted the corresponding namespace and all linked resources are deleted automatically.
+Currently the following types of conditions are defined:
+
+- `ready`: The ready condition is the main condition. If its status is `True`, `status.tenantNamespaceName` is guaranteed to be set and the tenant namespace was correctly set up last time the Steward controller verified the resource state. Note that since then the state might have changed again but not yet been recognized by the Steward controller.
+
+
+### Deletion
+
+When a `Tenant` resource is deleted the assigned namespace will be deleted automatically, including all resources within that namespace.
 
 
 ## PipelineRun Resource
 
-### Create
+### Spec
+
+#### Examples
 
 A simple `PipelineRun` resource example can be found in [docs/examples/pipelinerun_ok.yaml](../examples/pipelinerun_ok.yaml). A more complex `PipelineRun` is [docs/examples/pipelinerun_gitscm.yaml](../examples/pipelinerun_gitscm.yaml).
 
-| Parameter | Description |
+
+#### Fields
+
+| Field | Description |
 | --------- | ----------- |
-| `spec.jenkinsFile.repoUrl` | the git repository containing the Jenkinsfile to be executed |
-| `spec.jenkinsFile.revision` | the branch/revision containing the Jenkinsfile to be executed |
-| `spec.jenkinsFile.relativePath` | the relative path to the Jenkinsfile inside the git repository + revision |
-| `spec.args` | The arguments specified here will be made available to the pipeline execution |
-| `spec.secrets[]` | The secrets specified here will be made available to the pipeline execution. Here you find [more information about secrets](../secrets/Secrets.md) |
-| `spec.logging.elasticsearch` | The configuration for pipeline logging to Elasticsearch. If not specified, logging to Elasticsearch is disabled and the default Jenkins log implementation is used (stdout of Jenkinsfile Runner container). |
-| `spec.logging.elasticsearch.runID` | The JSON value that should be set as field `runId` in each log entry. It can be any JSON value (`null`, boolean, number, string, list, map). |
+| `apiVersion` | `steward.sap.com/v1alpha1` |
+| `kind` | `PipelineRun` |
+| `spec.jenkinsFile` | (object) The configuration of the Jenkins pipeline definition to be executed. |
+| `spec.jenkinsFile.repoUrl` | (string,mandatory) The URL of the Git repository containing the pipeline definition. |
+| `spec.jenkinsFile.revision` | (string,mandatory) The revision of the pipeline Git repository to used, e.g. `master`. |
+| `spec.jenkinsFile.relativePath` | (string,mandatory) The relative pathname of the pipeline definition file in the repository check-out, typically `Jenkinsfile`. |
+| `spec.args` | (object,optional) The parameters to pass to the pipeline, as key-value pairs of type string. |
+| `spec.secrets` | (array,optional) The names of Kubernets secrets in the same (tenant) namespace to be made available to the pipeline execution. See [docs/secrets/Secrets.md](../secrets/Secrets.md) for details. |
+| `spec.logging` | (object,optional) The logging configuration. |
+| `spec.logging.elasticsearch` | (object,optional) The configuration for pipeline logging to Elasticsearch. If not specified, logging to Elasticsearch is disabled and the default Jenkins log implementation is used (stdout of Jenkinsfile Runner container). |
+| `spec.logging.elasticsearch.runID` | (any,optional) The JSON value that should be set as field `runId` in each log entry in Elasticsearch. It can be any JSON value (`null`, boolean, number, string, list, map). |
 
-```bash
-$ kubectl create -f pipelinerun.yaml
-```
 
-### Read
+### Status
 
-A pipeline resource in Kubernetes is enriched with a `status` while the pipeline is running and when it finished.
+The `status` section informs clients about the progress and result of pipeline runs.
 
-```bash
-$ kubectl -n <steward-client1-tenant1> get pipelinerun <runName> -oyaml
-```
-_(shortened example yaml)_
+
+#### Examples
+
 ```yaml
 status:
   container:
@@ -121,7 +161,10 @@ status:
     state: finished
 ```
 
-| Parameter | Description |
+
+#### Fields
+
+| Field | Description |
 | --------- | ----------- |
 |`status.message` | A message describing the latest status |
 |`status.result`  | The result of the pipeline run. Possible values:<br>`['success', 'error_infra', 'error_content', 'killed', 'timeout']` |
@@ -131,9 +174,14 @@ status:
 
 :warning: The `status` section is about to change! There will be conditions (like for [pods][k8s_pod_conditions] or [nodes][k8s_node_conditions] replacing `state`, `result` and `message`. The fields `container`, `logUrl`, `stateDetails` and `stateHistory` will possibly be removed.
 
-### Delete
 
-The sandbox namespace of a PipelineRun is deleted immediately once the pipeline finished &ndash; no need to delete the PipelineRun resource. Still PipelineRun resources can be deleted once they are not needed anymore.
+### Deletion
+
+Steward currently does not delete `PipelineRun` resources automatically. It is the clients' responsibility to delete them when they are no longer needed, reached a certain age or whatever the deletion criterion is.
+
+The sandbox namespace of a `PipelineRun` gets deleted immediately after the pipeline run has finished &ndash; no need to delete the PipelineRun resource itself to clean up.
+
+
 
 
 [k8s_pod_conditions]: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-conditions

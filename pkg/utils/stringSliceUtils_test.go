@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"strconv"
 	"testing"
 
 	"gotest.tools/assert"
@@ -53,4 +54,29 @@ func Test_RemoveString_NoExistingElement(t *testing.T) {
 	changed, new := RemoveString(old, "c")
 	assert.DeepEqual(t, []string{"a", "b"}, new)
 	assert.Assert(t, !changed)
+}
+
+func Test_StringSliceContains(t *testing.T) {
+	for i, tc := range []struct {
+		slice    []string
+		elem     string
+		expected bool
+	}{
+		{[]string{}, "", false},
+		{[]string{}, "x", false},
+		{[]string{""}, "", true},
+		{[]string{"x"}, "", false},
+		{[]string{"x"}, "a", false},
+		{[]string{"x"}, "x", true},
+		{[]string{"x", "y", "z"}, "a", false},
+		{[]string{"x", "y", "z"}, "x", true},
+		{[]string{"x", "y", "z"}, "y", true},
+		{[]string{"x", "y", "z"}, "z", true},
+	} {
+		tc := tc
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			result := StringSliceContains(tc.slice, tc.elem)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
 }

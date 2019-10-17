@@ -27,3 +27,14 @@ func RemoveString(slice []string, s string) (bool, []string) {
 	}
 	return removed, result
 }
+
+// StringSliceContains determines whether the given string slice
+// contains a given element.
+func StringSliceContains(slice []string, elem string) bool {
+	for _, v := range slice {
+		if v == elem {
+			return true
+		}
+	}
+	return false
+}
