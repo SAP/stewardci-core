@@ -1,0 +1,18 @@
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+metadata:
+  generateName: full
+spec:
+  args:
+    GIT_URL: https://github.com/sap-production/demo-pipelines
+    GIT_BRANCH: master
+    FILE_TO_SHOW: gitscm/dummy.txt
+  jenkinsFile:
+    repoUrl: https://github.com/sap-production/demo-pipelines
+    revision: master
+    relativePath: gitscm/Jenkinsfile
+  #secrets:
+  #- secret-used-in-pipeline
+  logging:
+    elasticsearch:
+      runID: 1

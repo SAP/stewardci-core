@@ -59,7 +59,7 @@ When a `Tenant` resource is deleted the corresponding namespace and all linked r
 
 ### Create
 
-A simple `PipelineRun` resource example can be found in [docs/examples/pipelinerun_ok.yaml](../examples/pipelinerun_ok.yaml). A more complex `PipelineRun` is [docs/examples/pipelinerun.yaml](../examples/pipelinerun.yaml).
+A simple `PipelineRun` resource example can be found in [docs/examples/pipelinerun_ok.yaml](../examples/pipelinerun_ok.yaml). A more complex `PipelineRun` is [docs/examples/pipelinerun_gitscm.yaml](../examples/pipelinerun_gitscm.yaml).
 
 | Parameter | Description |
 | --------- | ----------- |
