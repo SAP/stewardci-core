@@ -43,7 +43,7 @@ spec:
         The namespace of this pipeline run.
   steps:
   - name: jenkinsfile-runner
-    image: alxsap/stewardci-jenkinsfilerunner-image:191015-19fdd35
+    image: alxsap/stewardci-jenkinsfilerunner-image:191018-e443c4d
     imagePullPolicy: Always
     args: []
     env:
