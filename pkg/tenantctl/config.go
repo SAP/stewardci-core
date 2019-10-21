@@ -1,79 +1,98 @@
 package tenantctl
 
 import (
-	"errors"
+	"math"
 	"strconv"
 
-	stewarderrors "github.com/SAP/stewardci-core/pkg/errors"
+	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
+	errors "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	keyTenantNamespacePrefix   = "tenant-namespace-prefix"
-	keyTenantRole              = "tenant-role"
-	keyTenantRandomLengthBytes = "tenant-random-length-bytes"
-)
-
-type configData struct {
-	randomLengthBytes     int
-	tenantNamespacePrefix string
-	tenantRoleName        k8s.RoleName
-}
-
-type config interface {
-	GetRandomLengthBytesOrDefault(defaultValue int) int
+type clientConfig interface {
 	GetTenantNamespacePrefix() string
+	GetTenantNamespaceSuffixLength() uint8
 	GetTenantRoleName() k8s.RoleName
 }
 
-//getConfig Returns the steward-client-specific configurartion
-func getConfig(factory k8s.ClientFactory, stewardClientNamespace string) (config, error) {
-	if stewardClientNamespace == "" {
-		return nil, errors.New("GetConfig failed - client namespace not specified")
+const (
+	tenantNamespaceSuffixLengthDefault uint8 = 6
+	tenantNamespaceSuffixLengthMax     uint8 = 32
+)
+
+type clientConfigImpl struct {
+	tenantNamespacePrefix       string
+	tenantNamespaceSuffixLength int64
+	tenantRoleName              k8s.RoleName
+}
+
+// getClientConfig returns the configurartion of the Steward client.
+func getClientConfig(factory k8s.ClientFactory, clientNamespace string) (clientConfig, error) {
+	if clientNamespace == "" {
+		panic("must provide a client namespace")
 	}
-	newConfig := configData{
-		randomLengthBytes: -1,
+
+	newConfig := clientConfigImpl{
+		tenantNamespaceSuffixLength: -1,
 	}
-	//Client config
-	if factory != nil {
-		namespace, err := factory.CoreV1().Namespaces().Get(stewardClientNamespace, metav1.GetOptions{})
+
+	namespace, err := factory.CoreV1().Namespaces().Get(clientNamespace, metav1.GetOptions{})
+	if err != nil {
+		return nil, errors.WithMessagef(err, "could not get namespace '%s'", clientNamespace)
+	}
+
+	annotations := namespace.GetAnnotations()
+	var value string
+	var hasKey bool
+
+	value, hasKey = annotations[steward.AnnotationTenantNamespacePrefix]
+	if !hasKey {
+		return nil, errors.Errorf("annotation '%s' is missing on client namespace '%s'", steward.AnnotationTenantNamespacePrefix, clientNamespace)
+	}
+	if value == "" {
+		return nil, errors.Errorf("annotation '%s' on client namespace '%s' must not have an empty value", steward.AnnotationTenantNamespacePrefix, clientNamespace)
+	}
+	newConfig.tenantNamespacePrefix = value
+
+	value, hasKey = annotations[steward.AnnotationTenantRole]
+	if !hasKey {
+		return nil, errors.Errorf("annotation '%s' is missing on client namespace '%s'", steward.AnnotationTenantRole, clientNamespace)
+	}
+	if value == "" {
+		return nil, errors.Errorf("annotation '%s' on client namespace '%s' must not have an empty value", steward.AnnotationTenantRole, clientNamespace)
+	}
+	newConfig.tenantRoleName = k8s.RoleName(value)
+
+	value, hasKey = annotations[steward.AnnotationTenantNamespaceSuffixLength]
+	if hasKey {
+		i, err := strconv.ParseInt(value, 10, 8)
 		if err != nil {
-			return nil, stewarderrors.Errorf(err, "GetConfig failed - could not get namespace")
+			return nil, errors.Errorf(
+				"annotation '%s' on client namespace '%s' has an invalid value: '%s':"+
+					" should be a decimal integer in the range of [%d, %d]",
+				steward.AnnotationTenantNamespaceSuffixLength, clientNamespace, value,
+				math.MinInt8, math.MaxInt8)
 		}
-		annotations := namespace.GetAnnotations()
-
-		newConfig.tenantNamespacePrefix = annotations[keyTenantNamespacePrefix]
-		if newConfig.tenantNamespacePrefix == "" {
-			return nil, errors.New(keyTenantNamespacePrefix + " not configured for client")
-		}
-
-		newConfig.tenantRoleName = k8s.RoleName(annotations[keyTenantRole])
-		if string(newConfig.tenantRoleName) == "" {
-			return nil, errors.New(keyTenantRole + " not configured for client")
-		}
-
-		if value := annotations[keyTenantRandomLengthBytes]; value != "" {
-			i, err := strconv.Atoi(value)
-			if err == nil {
-				newConfig.randomLengthBytes = i
-			}
-		}
+		newConfig.tenantNamespaceSuffixLength = i
 	}
 	return &newConfig, nil
 }
 
-func (c *configData) GetRandomLengthBytesOrDefault(defaultValue int) int {
-	if c.randomLengthBytes >= 0 {
-		return c.randomLengthBytes
-	}
-	return defaultValue
-}
-
-func (c *configData) GetTenantNamespacePrefix() string {
+func (c *clientConfigImpl) GetTenantNamespacePrefix() string {
 	return c.tenantNamespacePrefix
 }
 
-func (c *configData) GetTenantRoleName() k8s.RoleName {
+func (c *clientConfigImpl) GetTenantNamespaceSuffixLength() uint8 {
+	if c.tenantNamespaceSuffixLength < 0 {
+		return tenantNamespaceSuffixLengthDefault
+	}
+	if c.tenantNamespaceSuffixLength > int64(tenantNamespaceSuffixLengthMax) {
+		return tenantNamespaceSuffixLengthMax
+	}
+	return uint8(c.tenantNamespaceSuffixLength)
+}
+
+func (c *clientConfigImpl) GetTenantRoleName() k8s.RoleName {
 	return c.tenantRoleName
 }
