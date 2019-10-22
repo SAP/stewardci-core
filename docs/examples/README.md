@@ -30,14 +30,16 @@ tenant1                                4m53s   success   steward-t-client1-tenan
 Now we can create a `PipelineRun` in the tenants namespace.
 
 ```sh
-$ kubectl -n steward-t-client1-tenant1-ga2xfm create -f pipelinerun_ok.yaml
-pipelinerun.steward.sap.com/ok-md4kw created
+$ export TENANT_NAMESPACE=$(kubectl -n steward-c-client1 get tenants.steward.sap.com tenant1 -o=jsonpath={.status.tenantNamespaceName})
+$ export RUN_NAME=$(kubectl -n $TENANT_NAMESPACE create -f pipelinerun_ok.yaml -o=name)
+$ echo $RUN_NAME
+pipelinerun.steward.sap.com/ok-md4kw
 ```
 
 The status of the PipelineRun can be checked on the resource.
 
 ```sh
-$ kubectl -n steward-t-client1-tenant1-ga2xfm get pipelineruns.steward.sap.com -owide
+$ kubectl -n $TENANT_NAMESPACE get $RUN_NAME -owide
 NAME       STARTED   FINISHED   STATUS    RESULT   MESSAGE
 ok-md4kw   27s                  running            
 ```
@@ -47,7 +49,9 @@ The log can be found in the `step-jenkinsfile-runner` container of the runner po
 *Note: A better way is to [persist logs in Elasticsearch](../pipeline-logs-elasticsearch/README.md)*
 
 ```sh
-$ kubectl -n steward-run-0j6v7tu2fe527kzf logs steward-jenkinsfile-runner-pod-6500b2 step-jenkinsfile-runner 
+$ export RUN_NAMESPACE=$(kubectl -n $TENANT_NAMESPACE get $RUN_NAME -o=jsonpath={.status.namespace})
+$ export POD_NAME=$(kubectl -n $RUN_NAMESPACE get pod -o name)
+$ kubectl -n $RUN_NAMESPACE logs -p $POD_NAME -c step-jenkinsfile-runner 
 Cloning pipeline repository https://github.com/sap-production/demo-pipelines
 Cloning into '.'...
 Checking out pipeline from revision master

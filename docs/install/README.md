@@ -16,10 +16,11 @@ kubectl apply -f https://github.com/tektoncd/pipeline/releases/download/v0.7.0/r
 
 ### Clone this repo
 
-Clone the repo and change into the backend-k8s directory:
+Clone the repo and change into the root directory:
 
 ```bash
 git clone $THIS_REPO
+cd stewardci-core
 ```
 
 ### Create and Start Steward-System
