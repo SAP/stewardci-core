@@ -15,4 +15,4 @@ spec:
   #- secret-used-in-pipeline
   logging:
     elasticsearch:
-      runID: 1
+      runID: {"build": 1}
