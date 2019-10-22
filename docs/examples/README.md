@@ -27,7 +27,7 @@ tenant1                                4m53s   success   steward-t-client1-tenan
 
 ## PipelineRun
 
-Now we can create a `PipelineRun` in the tenants namespace.
+Now we can create a `PipelineRun` in the tenant namespace.
 
 ```sh
 $ export TENANT_NAMESPACE=$(kubectl -n steward-c-client1 get tenants.steward.sap.com tenant1 -o=jsonpath={.status.tenantNamespaceName})

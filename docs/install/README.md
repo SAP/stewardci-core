@@ -19,7 +19,7 @@ kubectl apply -f https://github.com/tektoncd/pipeline/releases/download/v0.7.0/r
 Clone the repo and change into the root directory:
 
 ```bash
-git clone $THIS_REPO
+git clone $THIS_REPO stewardci-core
 cd stewardci-core
 ```
 
