@@ -51,7 +51,7 @@ The log can be found in the `step-jenkinsfile-runner` container of the runner po
 ```sh
 $ export RUN_NAMESPACE=$(kubectl -n $TENANT_NAMESPACE get $RUN_NAME -o=jsonpath={.status.namespace})
 $ export POD_NAME=$(kubectl -n $RUN_NAMESPACE get pod -o name)
-$ kubectl -n $RUN_NAMESPACE logs -p $POD_NAME -c step-jenkinsfile-runner 
+$ kubectl -n $RUN_NAMESPACE logs $POD_NAME -c step-jenkinsfile-runner 
 Cloning pipeline repository https://github.com/sap-production/demo-pipelines
 Cloning into '.'...
 Checking out pipeline from revision master
