@@ -1,0 +1,12 @@
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+metadata:
+  generateName: demok8s-
+spec:
+  jenkinsFile:
+    repoUrl: https://github.com/sap-production/demo-pipelines
+    revision: master
+    relativePath: k8sPlugin/Jenkinsfile
+  logging:
+    elasticsearch:
+      runID: {"build": 1}
