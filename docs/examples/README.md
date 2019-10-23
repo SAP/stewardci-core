@@ -44,13 +44,18 @@ NAME       STARTED   FINISHED   STATUS    RESULT   MESSAGE
 ok-md4kw   27s                  running            
 ```
 
-The log can be found in the `step-jenkinsfile-runner` container of the runner pod in the temporarily created sandbox namespace.
+The log can be found in the `step-jenkinsfile-runner` container of the runner pod in the temporarily created run namespace.
 
 *Note: A better way is to [persist logs in Elasticsearch](../pipeline-logs-elasticsearch/README.md)*
 
+*Note: You may use the pipelinerun_sleep.yaml in the create command above if you want to see the logs as described below.
+The pipeline runs for 2 minutes before the run namespace with the pod is deleted.
+ 
 ```sh
 $ export RUN_NAMESPACE=$(kubectl -n $TENANT_NAMESPACE get $RUN_NAME -o=jsonpath={.status.namespace})
+$ echo $RUN_NAMESPACE
 $ export POD_NAME=$(kubectl -n $RUN_NAMESPACE get pod -o name)
+$ echo $POD_NAME
 $ kubectl -n $RUN_NAMESPACE logs $POD_NAME -c step-jenkinsfile-runner 
 Cloning pipeline repository https://github.com/sap-production/demo-pipelines
 Cloning into '.'...
