@@ -4,7 +4,7 @@ metadata:
   generateName: sleep
 spec:
   args:
-    DURATION: "120"
+    SLEEP_FOR_SECONDS: "120"
   jenkinsFile:
     repoUrl: https://github.com/sap-production/demo-pipelines
     revision: master
