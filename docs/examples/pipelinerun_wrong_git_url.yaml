@@ -9,4 +9,4 @@ spec:
     relativePath: Jenkinsfile
   logging:
     elasticsearch:
-      runID: 1
+      runID: {"build": 1}
