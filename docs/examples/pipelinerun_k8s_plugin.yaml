@@ -6,5 +6,5 @@ metadata:
 spec:
   jenkinsFile:
     repoUrl: https://github.com/sap-production/demo-pipelines.git # optional default source repo url
-    revision: PR_k8splugin
+    revision: master
     relativePath: k8sPlugin/Jenkinsfile
