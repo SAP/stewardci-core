@@ -41,7 +41,7 @@ type JenkinsFile struct {
 	Revision string `json:"revision"`
 	Path     string `json:"relativePath"`
 	// +optional
-	Secret string `json:"secrets"`
+	Secret string `json:"secret"`
 }
 
 // Logging contains all logging-specific configuration.
