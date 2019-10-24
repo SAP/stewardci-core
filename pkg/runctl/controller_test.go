@@ -40,7 +40,7 @@ func Test_Controller_MissingSecret(t *testing.T) {
 	assert.Equal(t, api.ResultErrorContent, status.Result)
 	//TODO: namespace is deleted twice, second fails. We need to check why and make sure the correct error is in the message.
 	// MR: namespaceManager changed to return nil error if not existing ns is deleted
-	assert.Assert(t, is.Regexp(`Failed to get secret 'secret1' in namespace 'ns1': secrets "secret1" not found`, status.Message))
+	assert.Assert(t, is.Regexp("failed to copy secrets: .*", status.Message))
 }
 
 func Test_Controller_Success(t *testing.T) {
@@ -49,7 +49,7 @@ func Test_Controller_Success(t *testing.T) {
 		fake.PipelineRun("run1", "ns1", api.PipelineSpec{
 			Secrets: []string{"secret1"},
 		}),
-		fake.Secret("secret1", "ns1"),
+		fake.SecretOpaque("secret1", "ns1"),
 		fake.ClusterRole(string(runClusterRoleName)),
 	)
 
@@ -72,7 +72,7 @@ func Test_Controller_Running(t *testing.T) {
 		fake.PipelineRun("run1", "ns1", api.PipelineSpec{
 			Secrets: []string{"secret1"},
 		}),
-		fake.Secret("secret1", "ns1"),
+		fake.SecretOpaque("secret1", "ns1"),
 		fake.ClusterRole(string(runClusterRoleName)),
 	)
 
@@ -100,7 +100,7 @@ func Test_Controller_Deletion(t *testing.T) {
 	})
 	cf := fake.NewClientFactory(
 		pr,
-		fake.Secret("secret1", "ns1"),
+		fake.SecretOpaque("secret1", "ns1"),
 		fake.ClusterRole(string(runClusterRoleName)),
 	)
 
