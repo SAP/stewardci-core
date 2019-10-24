@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -98,13 +99,22 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 
 	//Copy secrets to Run Namespace
 	secretNames := pipelineRun.GetSpec().Secrets
+	scmCloneSecretName := pipelineRun.GetSpec().JenkinsFile.Secret
 	if scmCloneSecretName != "" {
-		secretNames = append(secretNames, scmCloneSecretName)
+		repoBase, err := pipelineRun.GetRepoBase()
+		if err != nil {
+			return err
+		}
+		stripJenkinsAnnotations := k8s.StripAnnotations("jenkins")
+		stripJenkinsLabels := k8s.StripLabels("jenkins")
+		addTektonAnnotation := k8s.SetAnnotation("tekton.dev/git-0", repoBase)
+		c.copySecrets(runNamespace, []string{scmCloneSecretName}, pipelineRun, stripJenkinsAnnotations, stripJenkinsLabels, addTektonAnnotation)
 	}
 	if pullSecretName != "" {
 		secretNames = append(secretNames, pullSecretName)
 	}
-	err = c.copySecrets(runNamespace, secretNames, pipelineRun)
+	stripTektonAnnotations := k8s.StripAnnotations("tekton")
+	err = c.copySecrets(runNamespace, secretNames, pipelineRun, stripTektonAnnotations)
 	if err != nil {
 		return errors.Wrap(err, "Failed to copy secrets.")
 	}
@@ -126,7 +136,7 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	return nil
 }
 
-func (c *runManager) copySecrets(targetNamespace string, secretNames []string, pipelineRun k8s.PipelineRun) error {
+func (c *runManager) copySecrets(targetNamespace string, secretNames []string, pipelineRun k8s.PipelineRun, mapers ...func(*v1.Secret) *v1.Secret) error {
 	for _, secretName := range secretNames {
 		targetClient := c.factory.CoreV1().Secrets(targetNamespace)
 		secret, err := c.secretProvider.GetSecret(secretName)
@@ -134,6 +144,9 @@ func (c *runManager) copySecrets(targetNamespace string, secretNames []string, p
 			pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
 			pipelineRun.UpdateMessage(err.Error())
 			return err
+		}
+		for _, maper := range mapers {
+			secret = maper(secret)
 		}
 		createSecret(targetClient, targetNamespace, secretName, secret)
 	}

@@ -3,6 +3,7 @@ package k8s
 import (
 	"fmt"
 	"log"
+	"net/url"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
@@ -22,6 +23,7 @@ type PipelineRun interface {
 	GetKey() string
 	GetRunNamespace() string
 	GetNamespace() string
+	GetRepoBase() (string, error)
 	HasDeletionTimestamp() bool
 	AddFinalizer() error
 	DeleteFinalizerIfExists() error
@@ -110,6 +112,16 @@ func (r *pipelineRun) GetKey() string {
 // GetNamespace returns the namespace of the underlying pipelineRun object
 func (r *pipelineRun) GetNamespace() string {
 	return r.cached.GetNamespace()
+}
+
+// GetRepoBase returns the base of the jenkins file repository
+func (r *pipelineRun) GetRepoBase() (string, error) {
+	urlString := r.GetSpec().JenkinsFile.URL
+	repoURL, err := url.Parse(urlString)
+	if err != nil {
+		return "", errors.Wrapf(err, "Failed to parse JenkinsFile.URL '%s'", urlString)
+	}
+	return fmt.Sprintf("%s://%s", repoURL.Scheme, repoURL.Host), nil
 }
 
 func (r *pipelineRun) GetName() string {

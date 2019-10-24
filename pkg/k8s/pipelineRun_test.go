@@ -86,8 +86,31 @@ func Test__calling_UpdateState_and_FinishState_yieldsHistoryWithOneEntry(t *test
 	assert.Equal(t, 1, len(status.StateHistory))
 }
 
+func Test_GetBaseRepo_CorrectURL(t *testing.T) {
+	factory := fake.NewClientFactory(newPipelineRunWithURL("https://github.com/SAP"))
+	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
+	url, err := r.GetRepoBase()
+	assert.Equal(t, "https://github.com", url)
+	assert.NilError(t, err)
+}
+
+func Test_GetBaseRepo_WrongUrl(t *testing.T) {
+	factory := fake.NewClientFactory(newPipelineRunWithURL("&:"))
+	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
+	url, err := r.GetRepoBase()
+	assert.Equal(t, "", url)
+	assert.Equal(t, "Failed to parse JenkinsFile.URL '&:': parse &:: first path segment in URL cannot contain colon", err.Error())
+}
+
 func newPipelineRun() *api.PipelineRun {
 	return fake.PipelineRun(run1, ns1, api.PipelineSpec{
 		Secrets: []string{"secret1"},
+	})
+}
+
+func newPipelineRunWithURL(url string) *api.PipelineRun {
+	return fake.PipelineRun(run1, ns1, api.PipelineSpec{
+		Secrets:     []string{"secret1"},
+		JenkinsFile: api.JenkinsFile{URL: url},
 	})
 }
