@@ -317,12 +317,9 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	}
 }
 
-func preparePredefinedSecrets(mockSecretProvider *mocks.MockSecretProvider, scmCloneSecretName ...string) {
-	if len(scmCloneSecretName) == 1 {
-		mockSecretProvider.EXPECT().GetSecret(scmCloneSecretName[0]).Return(&v1.Secret{}, nil)
-	}
-	if pullSecretName != "" {
-		mockSecretProvider.EXPECT().GetSecret(pullSecretName).Return(&v1.Secret{}, nil)
+func preparePredefinedSecrets(mockSecretProvider *mocks.MockSecretProvider, secrets ...string) {
+	for _, secret := range secrets {
+		mockSecretProvider.EXPECT().GetSecret(secret).Return(&v1.Secret{}, nil)
 	}
 }
 

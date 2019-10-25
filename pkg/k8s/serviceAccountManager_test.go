@@ -29,14 +29,14 @@ func fakeServiceAccount() *v1.ServiceAccount {
 
 func Test_CreateServiceAccount_works(t *testing.T) {
 	setupAccountManager()
-	acc, err := accountManager.CreateServiceAccount(accountName, "scmCloneSecretName", "pullSecretName")
+	acc, err := accountManager.CreateServiceAccount(accountName, "scmCloneSecretName", []string{"pullSecretName"})
 	assert.NilError(t, err)
 	assert.Equal(t, accountName, acc.GetServiceAccount().GetName())
 }
 
 func Test_CreateServiceAccount_failsWhenAlreadyExists(t *testing.T) {
 	setupAccountManager(fakeServiceAccount())
-	_, err := accountManager.CreateServiceAccount(accountName, "scmCloneSecretName", "pullSecretName")
+	_, err := accountManager.CreateServiceAccount(accountName, "scmCloneSecretName", []string{"pullSecretName"})
 	assert.Equal(t, `serviceaccounts "dummyAccount" already exists`, err.Error())
 }
 

@@ -15,7 +15,7 @@ const (
 
 //ServiceAccountManager manages serviceAccounts
 type ServiceAccountManager interface {
-	CreateServiceAccount(name string, scmCloneSecretName string, pullSecretName string) (*ServiceAccountWrap, error)
+	CreateServiceAccount(name string, scmCloneSecretName string, pullSecretName []string) (*ServiceAccountWrap, error)
 	GetServiceAccount(name string) (*ServiceAccountWrap, error)
 }
 
@@ -44,17 +44,17 @@ func NewServiceAccountManager(factory ClientFactory, namespace string) ServiceAc
 // CreateServiceAccount creates a service account on the cluster
 //   name					name of the service account
 //   scmCloneSecretName		(optional) the scm clone secret to attach to this service account (e.g. for fetching the Jenkinsfile)
-//   pullSecretName			(optional) the pull secret to attach to this service account (e.g. for pulling the Jenkinsfile Runner image)
-func (c *serviceAccountManager) CreateServiceAccount(name string, scmCloneSecretName string, pullSecretName string) (*ServiceAccountWrap, error) {
+//   pullSecretNames		(optional) a lsit of pull secrets to attach to this service account (e.g. for pulling the Jenkinsfile Runner image)
+func (c *serviceAccountManager) CreateServiceAccount(name string, scmCloneSecretName string, pullSecretNames []string) (*ServiceAccountWrap, error) {
 	serviceAccount := &v1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	if scmCloneSecretName != "" {
 		secretList := make([]v1.ObjectReference, 1)
 		secretList[0] = v1.ObjectReference{Name: scmCloneSecretName}
 		serviceAccount.Secrets = secretList
 	}
-	if pullSecretName != "" {
-		refList := make([]v1.LocalObjectReference, 1)
-		refList[0] = v1.LocalObjectReference{Name: pullSecretName}
+	for index, pullSecretName := range pullSecretNames {
+		refList := make([]v1.LocalObjectReference, len(pullSecretNames))
+		refList[index] = v1.LocalObjectReference{Name: pullSecretName}
 		serviceAccount.ImagePullSecrets = refList
 	}
 

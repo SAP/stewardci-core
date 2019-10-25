@@ -30,9 +30,12 @@ type PipelineRunList struct {
 type PipelineSpec struct {
 	JenkinsFile JenkinsFile       `json:"jenkinsFile"`
 	Args        map[string]string `json:"args"`
-	Secrets     []string          `json:"secrets"`
-	Intent      Intent            `json:"intent"`
-	Logging     *Logging          `json:"logging"`
+	// +optional
+	Secrets []string `json:"secrets"`
+	// +optional
+	ImagePullSecrets []string `json:"imagePullSecrets"`
+	Intent           Intent   `json:"intent"`
+	Logging          *Logging `json:"logging"`
 }
 
 // JenkinsFile represents the location from where to get the pipeline
