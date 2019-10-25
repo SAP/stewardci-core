@@ -111,7 +111,7 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	}
 
 	secretNames := pipelineRun.GetSpec().Secrets
-	secretNames, err = c.copySecrets(runNamespace, secretNames, pipelineRun, stripTektonAnnotations)
+	secretNames, err = c.copySecrets(runNamespace, secretNames, pipelineRun, false, stripTektonAnnotations)
 	if err != nil {
 		return errors.Wrap(err, "Failed to copy secrets.")
 	}
@@ -122,7 +122,7 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 		return err
 	}
 	nameSuffix := k8s.AppendNameSuffix(random)
-	imagePullSecrets, err = c.copySecrets(runNamespace, imagePullSecrets, pipelineRun, stripTektonAnnotations, nameSuffix, stripJenkinsAnnotations, stripJenkinsLabels)
+	imagePullSecrets, err = c.copySecrets(runNamespace, imagePullSecrets, pipelineRun, true, stripTektonAnnotations, nameSuffix, stripJenkinsAnnotations, stripJenkinsLabels)
 
 	//Create Service Account in Run Namespace
 	accountManager := k8s.NewServiceAccountManager(c.factory, runNamespace)
@@ -156,14 +156,14 @@ func (c *runManager) copyPipelinePullSecret(pipelineRun k8s.PipelineRun) (string
 	}
 	rename := k8s.AppendNameSuffix(random)
 	addTektonAnnotation := k8s.SetAnnotation("tekton.dev/git-0", repoBase)
-	names, err := c.copySecrets(pipelineRun.GetRunNamespace(), []string{scmCloneSecretName}, pipelineRun, rename, stripJenkinsAnnotations, stripJenkinsLabels, addTektonAnnotation)
+	names, err := c.copySecrets(pipelineRun.GetRunNamespace(), []string{scmCloneSecretName}, pipelineRun, false, rename, stripJenkinsAnnotations, stripJenkinsLabels, addTektonAnnotation)
 	if err != nil {
 		return "", err
 	}
 	return names[0], nil
 }
 
-func (c *runManager) copySecrets(targetNamespace string, secretNames []string, pipelineRun k8s.PipelineRun, mapers ...func(*v1.Secret) *v1.Secret) ([]string, error) {
+func (c *runManager) copySecrets(targetNamespace string, secretNames []string, pipelineRun k8s.PipelineRun, dockerOnly bool, mapers ...func(*v1.Secret) *v1.Secret) ([]string, error) {
 	var storedSecretNames []string
 	for _, secretName := range secretNames {
 		targetClient := c.factory.CoreV1().Secrets(targetNamespace)
@@ -172,6 +172,9 @@ func (c *runManager) copySecrets(targetNamespace string, secretNames []string, p
 			pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
 			pipelineRun.UpdateMessage(err.Error())
 			return storedSecretNames, err
+		}
+		if dockerOnly && secret.Type != v1.SecretTypeDockerConfigJson && secret.Type != v1.SecretTypeDockercfg {
+			continue
 		}
 		for _, maper := range mapers {
 			secret = maper(secret)
