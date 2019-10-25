@@ -9,6 +9,7 @@ import (
 
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
+	"github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	v1 "k8s.io/api/core/v1"
@@ -100,15 +101,22 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	//Copy secrets to Run Namespace
 	secretNames := pipelineRun.GetSpec().Secrets
 	scmCloneSecretName := pipelineRun.GetSpec().JenkinsFile.Secret
+	random, err := utils.Random(6)
+	if err != nil {
+		return err
+	}
+	scmCloneSecretNameNew := fmt.Sprintf("%s-%s", scmCloneSecretName, random)
 	if scmCloneSecretName != "" {
+
 		repoBase, err := pipelineRun.GetRepoBase()
 		if err != nil {
 			return err
 		}
+		rename := k8s.Rename(scmCloneSecretNameNew)
 		stripJenkinsAnnotations := k8s.StripAnnotations("jenkins")
 		stripJenkinsLabels := k8s.StripLabels("jenkins")
 		addTektonAnnotation := k8s.SetAnnotation("tekton.dev/git-0", repoBase)
-		c.copySecrets(runNamespace, []string{scmCloneSecretName}, pipelineRun, stripJenkinsAnnotations, stripJenkinsLabels, addTektonAnnotation)
+		c.copySecrets(runNamespace, []string{scmCloneSecretName}, pipelineRun, rename, stripJenkinsAnnotations, stripJenkinsLabels, addTektonAnnotation)
 	}
 	if pullSecretName != "" {
 		secretNames = append(secretNames, pullSecretName)
@@ -122,7 +130,7 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	//Create Service Account in Run Namespace
 	accountManager := k8s.NewServiceAccountManager(c.factory, runNamespace)
 
-	serviceAccount, err := accountManager.CreateServiceAccount(serviceAccountName, scmCloneSecretName, pullSecretName)
+	serviceAccount, err := accountManager.CreateServiceAccount(serviceAccountName, scmCloneSecretNameNew, pullSecretName)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create service account.")
 	}

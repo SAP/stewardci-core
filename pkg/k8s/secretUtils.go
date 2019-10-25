@@ -6,6 +6,15 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+// Rename returns a mapping function from secret to secret
+// in the result the secret has a new name defined by 'name'
+func Rename(name string) func(secret *v1.Secret) *v1.Secret {
+	return func(secret *v1.Secret) *v1.Secret {
+		secret.SetName(name)
+		return secret
+	}
+}
+
 // SetAnnotation returns a mapping function from secret to secret
 // in the result secret the annotation with key 'key' is set to the value 'value'.
 func SetAnnotation(key string, value string) func(secret *v1.Secret) *v1.Secret {

@@ -7,6 +7,13 @@ import (
 	"gotest.tools/assert"
 )
 
+func Test_Rename(t *testing.T) {
+	secret := fake.Secret("name", "secret")
+	rename := Rename("newName")
+	secret = rename(secret)
+	assert.Equal(t, "newName", secret.GetName())
+}
+
 func Test_SetAnnotation_New(t *testing.T) {
 	secret := fake.Secret("name", "secret")
 	add := SetAnnotation("foo", "bar")
