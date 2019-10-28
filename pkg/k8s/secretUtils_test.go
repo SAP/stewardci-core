@@ -9,14 +9,14 @@ import (
 
 func Test_AppendNameSuffix(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	appendSuffix := AppendNameSuffix("suffix")
+	appendSuffix := AppendNameSuffixFunc("suffix")
 	secret = appendSuffix(secret)
 	assert.Equal(t, "name-suffix", secret.GetName())
 }
 
 func Test_SetAnnotation_New(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	add := SetAnnotation("foo", "bar")
+	add := SetAnnotationFunc("foo", "bar")
 	assert.Equal(t, "", secret.GetAnnotations()["foo"])
 	secret = add(secret)
 	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
@@ -24,8 +24,8 @@ func Test_SetAnnotation_New(t *testing.T) {
 
 func Test_SetAnnotation_Overwrite(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	add := SetAnnotation("foo", "bar")
-	overwrite := SetAnnotation("foo", "baz")
+	add := SetAnnotationFunc("foo", "bar")
+	overwrite := SetAnnotationFunc("foo", "baz")
 	secret = add(secret)
 	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
 	secret = overwrite(secret)
@@ -34,8 +34,8 @@ func Test_SetAnnotation_Overwrite(t *testing.T) {
 
 func Test_StripAnnotations(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	add := SetAnnotation("foo", "bar")
-	strip := StripAnnotations("f")
+	add := SetAnnotationFunc("foo", "bar")
+	strip := StripAnnotationsFunc("f")
 	secret = add(secret)
 	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
 	secret = strip(secret)
@@ -44,15 +44,15 @@ func Test_StripAnnotations(t *testing.T) {
 
 func Test_StripAnnotations_Empty(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	strip := StripAnnotations("f")
+	strip := StripAnnotationsFunc("f")
 	secret = strip(secret)
 	assert.Equal(t, "", secret.GetAnnotations()["foo"])
 }
 
 func Test_SetLabel(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	add := SetLabel("foo", "bar")
-	overwrite := SetLabel("foo", "baz")
+	add := SetLabelFunc("foo", "bar")
+	overwrite := SetLabelFunc("foo", "baz")
 	assert.Equal(t, "", secret.GetLabels()["foo"])
 	secret = add(secret)
 	assert.Equal(t, "bar", secret.GetLabels()["foo"])
@@ -62,8 +62,8 @@ func Test_SetLabel(t *testing.T) {
 
 func Test_StripLabel(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	add := SetLabel("foo", "bar")
-	strip := StripLabels("f")
+	add := SetLabelFunc("foo", "bar")
+	strip := StripLabelsFunc("f")
 	secret = add(secret)
 	assert.Equal(t, "bar", secret.GetLabels()["foo"])
 	secret = strip(secret)
@@ -72,7 +72,7 @@ func Test_StripLabel(t *testing.T) {
 
 func Test_StripLabel_Empty(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	strip := StripLabels("f")
+	strip := StripLabelsFunc("f")
 	secret = strip(secret)
 	assert.Equal(t, "", secret.GetLabels()["foo"])
 }

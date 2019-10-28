@@ -23,7 +23,7 @@ type PipelineRun interface {
 	GetKey() string
 	GetRunNamespace() string
 	GetNamespace() string
-	GetRepoBase() (string, error)
+	GetRepoBaseURL() (string, error)
 	HasDeletionTimestamp() bool
 	AddFinalizer() error
 	DeleteFinalizerIfExists() error
@@ -114,8 +114,8 @@ func (r *pipelineRun) GetNamespace() string {
 	return r.cached.GetNamespace()
 }
 
-// GetRepoBase returns the base of the jenkins file repository
-func (r *pipelineRun) GetRepoBase() (string, error) {
+// GetRepoBaseURL returns the base of the jenkins file repository
+func (r *pipelineRun) GetRepoBaseURL() (string, error) {
 	urlString := r.GetSpec().JenkinsFile.URL
 	repoURL, err := url.Parse(urlString)
 	if err != nil {

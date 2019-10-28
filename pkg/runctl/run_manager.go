@@ -38,9 +38,9 @@ const (
 )
 
 var (
-	stripJenkinsAnnotations = k8s.StripAnnotations("jenkins")
-	stripJenkinsLabels      = k8s.StripLabels("jenkins")
-	stripTektonAnnotations  = k8s.StripAnnotations("tekton")
+	stripJenkinsAnnotationsFunc = k8s.StripAnnotationsFunc("jenkins")
+	stripJenkinsLabelsFunc      = k8s.StripLabelsFunc("jenkins")
+	stripTektonAnnotationsFunc  = k8s.StripAnnotationsFunc("tekton")
 )
 
 // RunManager manages runs
@@ -111,7 +111,7 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	}
 
 	secretNames := pipelineRun.GetSpec().Secrets
-	secretNames, err = c.copySecrets(runNamespace, secretNames, pipelineRun, false, stripTektonAnnotations)
+	secretNames, err = c.copySecrets(runNamespace, secretNames, pipelineRun, false, stripTektonAnnotationsFunc)
 	if err != nil {
 		return errors.Wrap(err, "Failed to copy secrets.")
 	}
@@ -121,8 +121,8 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	if err != nil {
 		return err
 	}
-	nameSuffix := k8s.AppendNameSuffix(random)
-	imagePullSecrets, err = c.copySecrets(runNamespace, imagePullSecrets, pipelineRun, true, stripTektonAnnotations, nameSuffix, stripJenkinsAnnotations, stripJenkinsLabels)
+	nameSuffixFunc := k8s.AppendNameSuffixFunc(random)
+	imagePullSecrets, err = c.copySecrets(runNamespace, imagePullSecrets, pipelineRun, true, stripTektonAnnotationsFunc, nameSuffixFunc, stripJenkinsAnnotationsFunc, stripJenkinsLabelsFunc)
 
 	//Create Service Account in Run Namespace
 	accountManager := k8s.NewServiceAccountManager(c.factory, runNamespace)
@@ -150,20 +150,20 @@ func (c *runManager) copyPipelinePullSecret(pipelineRun k8s.PipelineRun) (string
 	if err != nil {
 		return "", err
 	}
-	repoBase, err := pipelineRun.GetRepoBase()
+	repoBase, err := pipelineRun.GetRepoBaseURL()
 	if err != nil {
 		return "", err
 	}
-	rename := k8s.AppendNameSuffix(random)
-	addTektonAnnotation := k8s.SetAnnotation("tekton.dev/git-0", repoBase)
-	names, err := c.copySecrets(pipelineRun.GetRunNamespace(), []string{scmCloneSecretName}, pipelineRun, false, rename, stripJenkinsAnnotations, stripJenkinsLabels, addTektonAnnotation)
+	renameFunc := k8s.AppendNameSuffixFunc(random)
+	addTektonAnnotationFunc := k8s.SetAnnotationFunc("tekton.dev/git-0", repoBase)
+	names, err := c.copySecrets(pipelineRun.GetRunNamespace(), []string{scmCloneSecretName}, pipelineRun, false, renameFunc, stripJenkinsAnnotationsFunc, stripJenkinsLabelsFunc, addTektonAnnotationFunc)
 	if err != nil {
 		return "", err
 	}
 	return names[0], nil
 }
 
-func (c *runManager) copySecrets(targetNamespace string, secretNames []string, pipelineRun k8s.PipelineRun, dockerOnly bool, mapers ...func(*v1.Secret) *v1.Secret) ([]string, error) {
+func (c *runManager) copySecrets(targetNamespace string, secretNames []string, pipelineRun k8s.PipelineRun, dockerOnly bool, mappers ...func(*v1.Secret) *v1.Secret) ([]string, error) {
 	var storedSecretNames []string
 	for _, secretName := range secretNames {
 		targetClient := c.factory.CoreV1().Secrets(targetNamespace)
@@ -176,8 +176,8 @@ func (c *runManager) copySecrets(targetNamespace string, secretNames []string, p
 		if dockerOnly && secret.Type != v1.SecretTypeDockerConfigJson && secret.Type != v1.SecretTypeDockercfg {
 			continue
 		}
-		for _, maper := range mapers {
-			secret = maper(secret)
+		for _, mapper := range mappers {
+			secret = mapper(secret)
 		}
 		storedSecret := createSecret(targetClient, targetNamespace, secret)
 		storedSecretNames = append(storedSecretNames, storedSecret.GetName())

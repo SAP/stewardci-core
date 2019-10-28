@@ -353,7 +353,7 @@ func prepareMocksWithSpec(ctrl *gomock.Controller, spec *steward.PipelineSpec) (
 	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
 	mockPipelineRun.EXPECT().GetStatus().Return(&steward.PipelineStatus{}).AnyTimes()
 	mockPipelineRun.EXPECT().GetKey().Return("key").AnyTimes()
-	mockPipelineRun.EXPECT().GetRepoBase().Return("base", nil).AnyTimes()
+	mockPipelineRun.EXPECT().GetRepoBaseURL().Return("base", nil).AnyTimes()
 	mockPipelineRun.EXPECT().GetRunNamespace().DoAndReturn(func() string {
 		return runNamespace
 	}).AnyTimes()

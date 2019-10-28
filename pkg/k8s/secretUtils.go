@@ -7,18 +7,18 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-// AppendNameSuffix returns a mapping function from secret to secret
+// AppendNameSuffixFunc returns a mapping function from secret to secret
 // in the result the secret has a new name with suffix 'suffix'
-func AppendNameSuffix(suffix string) func(secret *v1.Secret) *v1.Secret {
+func AppendNameSuffixFunc(suffix string) func(secret *v1.Secret) *v1.Secret {
 	return func(secret *v1.Secret) *v1.Secret {
 		secret.SetName(fmt.Sprintf("%s-%s", secret.GetName(), suffix))
 		return secret
 	}
 }
 
-// SetAnnotation returns a mapping function from secret to secret
+// SetAnnotationFunc returns a mapping function from secret to secret
 // in the result secret the annotation with key 'key' is set to the value 'value'.
-func SetAnnotation(key string, value string) func(secret *v1.Secret) *v1.Secret {
+func SetAnnotationFunc(key string, value string) func(secret *v1.Secret) *v1.Secret {
 	return func(secret *v1.Secret) *v1.Secret {
 		annotations := secret.GetAnnotations()
 		if annotations == nil {
@@ -30,9 +30,9 @@ func SetAnnotation(key string, value string) func(secret *v1.Secret) *v1.Secret 
 	}
 }
 
-// StripAnnotations returns a mapping function from secret to secret
+// StripAnnotationsFunc returns a mapping function from secret to secret
 // in the result secret all annotations with prefix 'keyPrefix' are removed.
-func StripAnnotations(keyPrefix string) func(secret *v1.Secret) *v1.Secret {
+func StripAnnotationsFunc(keyPrefix string) func(secret *v1.Secret) *v1.Secret {
 	return func(secret *v1.Secret) *v1.Secret {
 		annotations := secret.GetAnnotations()
 		if annotations == nil {
@@ -48,9 +48,9 @@ func StripAnnotations(keyPrefix string) func(secret *v1.Secret) *v1.Secret {
 	}
 }
 
-// SetLabel returns a mapping function from secret to secret
+// SetLabelFunc returns a mapping function from secret to secret
 // in the result secret the label with key 'key' is set to the value 'value'.
-func SetLabel(key string, value string) func(secret *v1.Secret) *v1.Secret {
+func SetLabelFunc(key string, value string) func(secret *v1.Secret) *v1.Secret {
 	return func(secret *v1.Secret) *v1.Secret {
 		labels := secret.GetLabels()
 		if labels == nil {
@@ -62,9 +62,9 @@ func SetLabel(key string, value string) func(secret *v1.Secret) *v1.Secret {
 	}
 }
 
-// StripLabels returns a mapping function from secret to secret
+// StripLabelsFunc returns a mapping function from secret to secret
 // in the result secret all labels with prefix 'keyPrefix' are removed.
-func StripLabels(keyPrefix string) func(secret *v1.Secret) *v1.Secret {
+func StripLabelsFunc(keyPrefix string) func(secret *v1.Secret) *v1.Secret {
 	return func(secret *v1.Secret) *v1.Secret {
 		labels := secret.GetLabels()
 		if labels == nil {
