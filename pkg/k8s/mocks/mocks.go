@@ -149,19 +149,19 @@ func (mr *MockPipelineRunMockRecorder) GetNamespace() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNamespace", reflect.TypeOf((*MockPipelineRun)(nil).GetNamespace))
 }
 
-// GetRepoBaseURL mocks base method
-func (m *MockPipelineRun) GetRepoBaseURL() (string, error) {
+// GetRepoServerURL mocks base method
+func (m *MockPipelineRun) GetRepoServerURL() (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRepoBaseURL")
+	ret := m.ctrl.Call(m, "GetRepoServerURL")
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetRepoBaseURL indicates an expected call of GetRepoBaseURL
-func (mr *MockPipelineRunMockRecorder) GetRepoBaseURL() *gomock.Call {
+// GetRepoServerURL indicates an expected call of GetRepoServerURL
+func (mr *MockPipelineRunMockRecorder) GetRepoServerURL() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRepoBaseURL", reflect.TypeOf((*MockPipelineRun)(nil).GetRepoBaseURL))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRepoServerURL", reflect.TypeOf((*MockPipelineRun)(nil).GetRepoServerURL))
 }
 
 // GetRunNamespace mocks base method

@@ -16,3 +16,10 @@ func Secret(name string, namespace string) *v1.Secret {
 	data[SecretKey] = SecretValue
 	return &v1.Secret{ObjectMeta: ObjectMeta(name, namespace), StringData: data}
 }
+
+// SecretWithType creates a fake secret with defined name
+func SecretWithType(name string, namespace string, secretType v1.SecretType) *v1.Secret {
+	data := make(map[string]string)
+	data[SecretKey] = SecretValue
+	return &v1.Secret{ObjectMeta: ObjectMeta(name, namespace), StringData: data, Type: secretType}
+}

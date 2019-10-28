@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"strings"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
@@ -23,7 +24,7 @@ type PipelineRun interface {
 	GetKey() string
 	GetRunNamespace() string
 	GetNamespace() string
-	GetRepoBaseURL() (string, error)
+	GetRepoServerURL() (string, error)
 	HasDeletionTimestamp() bool
 	AddFinalizer() error
 	DeleteFinalizerIfExists() error
@@ -114,12 +115,15 @@ func (r *pipelineRun) GetNamespace() string {
 	return r.cached.GetNamespace()
 }
 
-// GetRepoBaseURL returns the base of the jenkins file repository
-func (r *pipelineRun) GetRepoBaseURL() (string, error) {
+// GetRepoServerURL returns the server hosting the Jenkinsfile repository
+func (r *pipelineRun) GetRepoServerURL() (string, error) {
 	urlString := r.GetSpec().JenkinsFile.URL
 	repoURL, err := url.Parse(urlString)
 	if err != nil {
-		return "", errors.Wrapf(err, "Failed to parse JenkinsFile.URL '%s'", urlString)
+		return "", errors.Wrapf(err, "failed to parse jenkinsFile.url '%s'", urlString)
+	}
+	if !strings.HasPrefix(repoURL.Scheme, "http") {
+		return "", fmt.Errorf("scheme not supported '%s'", repoURL.Scheme)
 	}
 	return fmt.Sprintf("%s://%s", repoURL.Scheme, repoURL.Host), nil
 }

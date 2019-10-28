@@ -86,28 +86,40 @@ func Test__calling_UpdateState_and_FinishState_yieldsHistoryWithOneEntry(t *test
 	assert.Equal(t, 1, len(status.StateHistory))
 }
 
-func Test_GetBaseRepoURL_CorrectURL(t *testing.T) {
-	factory := fake.NewClientFactory(newPipelineRunWithURL("https://github.com/SAP"))
+func Test_GetRepoServerURL_CorrectURL(t *testing.T) {
+	factory := fake.NewClientFactory(newPipelineRunWithURL("https://foo.com/Path"))
 	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
-	url, err := r.GetRepoBaseURL()
-	assert.Equal(t, "https://github.com", url)
+	url, err := r.GetRepoServerURL()
 	assert.NilError(t, err)
+	assert.Equal(t, "https://foo.com", url)
+
 }
 
-func Test_GetBaseRepoURL_CorrectURLWithPort(t *testing.T) {
-	factory := fake.NewClientFactory(newPipelineRunWithURL("https://github.com:1234/SAP"))
+func Test_GetRepoServerURL_CorrectURLWithPort(t *testing.T) {
+	factory := fake.NewClientFactory(newPipelineRunWithURL("https://foo.com:1234/Path"))
 	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
-	url, err := r.GetRepoBaseURL()
-	assert.Equal(t, "https://github.com:1234", url)
+	url, err := r.GetRepoServerURL()
 	assert.NilError(t, err)
+	assert.Equal(t, "https://foo.com:1234", url)
+
 }
 
-func Test_GetBaseRepo_WrongUrl(t *testing.T) {
+func Test_GetRepoServerURL_WrongUrl(t *testing.T) {
 	factory := fake.NewClientFactory(newPipelineRunWithURL("&:"))
 	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
-	url, err := r.GetRepoBaseURL()
+	url, err := r.GetRepoServerURL()
+	assert.Equal(t, "failed to parse jenkinsFile.url '&:': parse &:: first path segment in URL cannot contain colon", err.Error())
 	assert.Equal(t, "", url)
-	assert.Equal(t, "Failed to parse JenkinsFile.URL '&:': parse &:: first path segment in URL cannot contain colon", err.Error())
+
+}
+
+func Test_GetRepoServerURL_WrongScheme(t *testing.T) {
+	factory := fake.NewClientFactory(newPipelineRunWithURL("ftp://foo/bar"))
+	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
+	url, err := r.GetRepoServerURL()
+	assert.Equal(t, "scheme not supported 'ftp'", err.Error())
+	assert.Equal(t, "", url)
+
 }
 
 func newPipelineRun() *api.PipelineRun {

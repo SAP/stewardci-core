@@ -91,7 +91,7 @@ func Test_RunManager_Start_DoesCopySecret(t *testing.T) {
 	// SETUP
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	secretName := "SCM_Secret_Name"
+	secretName := "scm_secret1"
 	spec := &steward.PipelineSpec{JenkinsFile: steward.JenkinsFile{Secret: secretName}}
 	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocksWithSpec(mockCtrl, spec)
 
@@ -100,13 +100,14 @@ func Test_RunManager_Start_DoesCopySecret(t *testing.T) {
 
 	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager)
 
+	// VERIFY
+	// UpdateState should never be called by BuildStarter
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any()).Times(0)
+
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.NilError(t, err)
 
-	// VERIFY
-	// UpdateState should never be called by BuildStarter
-	mockPipelineRun.EXPECT().UpdateState(gomock.Any()).Times(0)
 }
 
 func Test_RunManager_Cleanup_RemovesNamespace(t *testing.T) {
@@ -353,7 +354,7 @@ func prepareMocksWithSpec(ctrl *gomock.Controller, spec *steward.PipelineSpec) (
 	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
 	mockPipelineRun.EXPECT().GetStatus().Return(&steward.PipelineStatus{}).AnyTimes()
 	mockPipelineRun.EXPECT().GetKey().Return("key").AnyTimes()
-	mockPipelineRun.EXPECT().GetRepoBaseURL().Return("base", nil).AnyTimes()
+	mockPipelineRun.EXPECT().GetRepoServerURL().Return("server", nil).AnyTimes()
 	mockPipelineRun.EXPECT().GetRunNamespace().DoAndReturn(func() string {
 		return runNamespace
 	}).AnyTimes()

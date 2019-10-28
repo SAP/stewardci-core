@@ -100,7 +100,7 @@ func (m *namespaceManager) Delete(name string) error {
 // generateSuffix generates a random string value consisting of [0-9a-z] with a length
 // as configured in the receiver.
 func (m *namespaceManager) generateSuffix() (string, error) {
-	return utils.Random(m.suffixLength)
+	return utils.RandomAlphaNumString(int64(m.suffixLength))
 }
 
 func (m *namespaceManager) generateName(customPart string) (string, error) {

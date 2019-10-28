@@ -7,10 +7,10 @@ import (
 	"strconv"
 )
 
-// Random generates a random string value consisting of [0-9a-z] with a length
+// RandomAlphaNumString generates a random string value consisting of [0-9a-z] with a length
 // as configured.
-func Random(length uint8) (string, error) {
-	if length == 0 {
+func RandomAlphaNumString(length int64) (string, error) {
+	if length <= 0 {
 		return "", nil
 	}
 
