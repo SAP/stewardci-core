@@ -86,11 +86,19 @@ func Test__calling_UpdateState_and_FinishState_yieldsHistoryWithOneEntry(t *test
 	assert.Equal(t, 1, len(status.StateHistory))
 }
 
-func Test_GetBaseRepo_CorrectURL(t *testing.T) {
+func Test_GetBaseRepoURL_CorrectURL(t *testing.T) {
 	factory := fake.NewClientFactory(newPipelineRunWithURL("https://github.com/SAP"))
 	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
 	url, err := r.GetRepoBaseURL()
 	assert.Equal(t, "https://github.com", url)
+	assert.NilError(t, err)
+}
+
+func Test_GetBaseRepoURL_CorrectURLWithPort(t *testing.T) {
+	factory := fake.NewClientFactory(newPipelineRunWithURL("https://github.com:1234/SAP"))
+	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
+	url, err := r.GetRepoBaseURL()
+	assert.Equal(t, "https://github.com:1234", url)
 	assert.NilError(t, err)
 }
 
