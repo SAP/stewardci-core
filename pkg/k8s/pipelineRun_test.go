@@ -1,11 +1,11 @@
 package k8s
 
 import (
-	"testing"
-
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
+	"testing"
 )
 
 const message string = "MyMessage"
@@ -108,9 +108,8 @@ func Test_GetRepoServerURL_WrongUrl(t *testing.T) {
 	factory := fake.NewClientFactory(newPipelineRunWithURL("&:"))
 	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
 	url, err := r.GetRepoServerURL()
-	assert.Equal(t, "failed to parse jenkinsFile.url '&:': parse &:: first path segment in URL cannot contain colon", err.Error())
+	assert.Assert(t, is.Regexp("failed to parse jenkinsFile.url '&:'.+", err.Error()))
 	assert.Equal(t, "", url)
-
 }
 
 func Test_GetRepoServerURL_WrongScheme(t *testing.T) {
