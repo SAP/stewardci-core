@@ -168,7 +168,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 		assert.NilError(t, err)
 		examinee = NewRunManager(
 			cf,
-			k8s.NewTenantNamespace(cf, pipelineRun.GetNamespace()),
+			k8s.NewTenantNamespace(cf, pipelineRun.GetNamespace()).GetSecretProvider(),
 			k8s.NewNamespaceManager(cf, "prefix1", 0),
 		).(*runManager)
 		return

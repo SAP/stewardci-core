@@ -1,42 +1,33 @@
 package k8s
 
 import (
-	"log"
-
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
-	"github.com/pkg/errors"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
+	provider "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/k8s"
+	"log"
 )
 
 // TenantNamespace representing the client
 type TenantNamespace interface {
-	SecretProvider
+	GetSecretProvider() secrets.SecretProvider
 	TargetClientFactory() ClientFactory
 }
 
-// SecretProvider provides secrets
-type SecretProvider interface {
-	GetSecret(name string) (*v1.Secret, error)
-}
-
 type tenantNamespace struct {
-	namespace         string
-	secretName        string
-	secretsClient     corev1.SecretInterface
 	pipelineRunClient stewardv1alpha1.PipelineRunInterface
 	factory           ClientFactory
+	provider          secrets.SecretProvider
 }
 
 // NewTenantNamespace creates new TenantNamespace object
 func NewTenantNamespace(factory ClientFactory, namespace string) TenantNamespace {
 	secretsClient := factory.CoreV1().Secrets(namespace)
 	pipelineRunClient := factory.StewardV1alpha1().PipelineRuns(namespace)
+	provider := provider.NewProvider(secretsClient, namespace)
 	log.Printf("Creating tenantNamespace: '%s'", namespace)
+
 	return &tenantNamespace{
-		namespace:         namespace,
-		secretsClient:     secretsClient,
+		provider:          provider,
 		pipelineRunClient: pipelineRunClient,
 		factory:           factory,
 	}
@@ -48,12 +39,6 @@ func (t *tenantNamespace) TargetClientFactory() ClientFactory {
 }
 
 //  GetSecret returns secret
-func (t *tenantNamespace) GetSecret(name string) (*v1.Secret, error) {
-	secret, err := t.secretsClient.Get(name, metav1.GetOptions{})
-	if err != nil {
-		errorWithMessage := errors.WithMessagef(err, "Failed to get secret '%s' in namespace '%s'", name, t.namespace)
-		log.Printf(errorWithMessage.Error())
-		return secret, errorWithMessage
-	}
-	return secret, nil
+func (t *tenantNamespace) GetSecretProvider() secrets.SecretProvider {
+	return t.provider
 }

@@ -1,59 +1,10 @@
-package k8s
+package secrets
 
 import (
-	"testing"
-
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
 )
-
-func Test_CopySecrets_NoFilter(t *testing.T) {
-	namespace := ns1
-	targetNamespace := "targetNs"
-	cf := fake.NewClientFactory(fake.Secret("foo", namespace))
-	tn := NewTenantNamespace(cf, namespace)
-	targetClient := cf.CoreV1().Secrets(targetNamespace)
-	helper := NewSecretHelper(tn, "", targetClient)
-
-	list, err := helper.CopySecrets([]string{"foo"}, nil)
-	assert.NilError(t, err)
-	assert.Equal(t, "foo", list[0])
-	storedSecret, _ := targetClient.Get("foo", metav1.GetOptions{})
-	assert.Equal(t, "foo", storedSecret.GetName(), "Name should be equal")
-}
-
-func Test_CopySecrets_MapName(t *testing.T) {
-	namespace := ns1
-	targetNamespace := "targetNs"
-	cf := fake.NewClientFactory(fake.Secret("foo", namespace))
-	tn := NewTenantNamespace(cf, namespace)
-	targetClient := cf.CoreV1().Secrets(targetNamespace)
-	helper := NewSecretHelper(tn, "", targetClient)
-
-	list, err := helper.CopySecrets([]string{"foo"}, nil, AppendNameSuffixFunc("suffix"))
-	assert.NilError(t, err)
-	assert.Equal(t, "foo-suffix", list[0])
-	storedSecret, _ := targetClient.Get("foo-suffix", metav1.GetOptions{})
-	assert.Equal(t, "foo-suffix", storedSecret.GetName(), "Name should be equal")
-}
-
-func Test_CopySecrets_DockerOnly(t *testing.T) {
-	namespace := ns1
-	targetNamespace := "targetNs"
-	cf := fake.NewClientFactory(fake.Secret("foo", namespace),
-		fake.SecretWithType("docker1", namespace, v1.SecretTypeDockercfg),
-		fake.SecretWithType("docker2", namespace, v1.SecretTypeDockerConfigJson),
-	)
-	tn := NewTenantNamespace(cf, namespace)
-	targetClient := cf.CoreV1().Secrets(targetNamespace)
-	helper := NewSecretHelper(tn, "", targetClient)
-	list, err := helper.CopySecrets([]string{"foo", "docker1", "docker2"}, DockerOnly)
-	assert.NilError(t, err)
-	assert.Equal(t, "docker1", list[0])
-	assert.Equal(t, "docker2", list[1])
-}
 
 func Test_AppendNameSuffixFunc(t *testing.T) {
 	secret := fake.Secret("name", "secret")
