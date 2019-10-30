@@ -1,12 +1,12 @@
 apiVersion: steward.sap.com/v1alpha1
 kind: PipelineRun
 metadata:
-  generateName: ok-
+  generateName: details-
 spec:
   jenkinsFile:
     repoUrl: https://github.com/sap-production/demo-pipelines
     revision: master
-    relativePath: success/Jenkinsfile
+    relativePath: sleep/Jenkinsfile
   runDetails:
     jobName: myName
     sequenceNumber: 1
