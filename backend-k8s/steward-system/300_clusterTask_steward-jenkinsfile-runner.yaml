@@ -41,6 +41,18 @@ spec:
     - name: RUN_NAMESPACE
       description: >
         The namespace of this pipeline run.
+    - name: JOB_NAME
+      description: >
+        Optional job name to be used in the jenkinsfile runner
+      default: ""
+    - name: RUN_NUMBER
+      description: >
+        Optional build number of the run
+      default: "1"
+    - name: RUN_CAUSE
+      description: >
+        Optional cause of the run
+      default: ""
   steps:
   - name: jenkinsfile-runner
     image: alxsap/stewardci-jenkinsfilerunner-image:191015-19fdd35
@@ -69,6 +81,12 @@ spec:
       value: '$(inputs.params.PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON)'
     - name: RUN_NAMESPACE
       value: '$(inputs.params.RUN_NAMESPACE)'
+    - name: JOB_NAME
+      value: '$(inputs.params.JOB_NAME)'
+    - name: RUN_NUMBER
+      value: '$(inputs.params.RUN_NUMBER)'
+    - name: RUN_CAUSE
+      value: '$(inputs.params.RUN_CAUSE)' 
     resources:
       limits:
         cpu: 3
