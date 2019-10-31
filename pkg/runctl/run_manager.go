@@ -9,7 +9,6 @@ import (
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
-	secretUtils "github.com/SAP/stewardci-core/pkg/k8s/secrets/utils"
 	"github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
@@ -99,7 +98,7 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 
 	//Copy secrets to Run Namespace
 	targetClient := c.factory.CoreV1().Secrets(runNamespace)
-	secretHelper := secretUtils.NewSecretHelper(c.secretProvider, runNamespace, targetClient)
+	secretHelper := secrets.NewSecretHelper(c.secretProvider, runNamespace, targetClient)
 
 	pipelineCloneSecretName, err := c.copyPipelinePullSecret(pipelineRun, secretHelper)
 	if err != nil {
@@ -146,7 +145,7 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	return nil
 }
 
-func (c *runManager) copyPipelinePullSecret(pipelineRun k8s.PipelineRun, secretHelper secretUtils.SecretHelper) (string, error) {
+func (c *runManager) copyPipelinePullSecret(pipelineRun k8s.PipelineRun, secretHelper secrets.SecretHelper) (string, error) {
 	pipelineCloneSecret := pipelineRun.GetSpec().JenkinsFile.Secret
 	if pipelineCloneSecret == "" {
 		return "", nil
@@ -172,7 +171,7 @@ func (c *runManager) copyPipelinePullSecret(pipelineRun k8s.PipelineRun, secretH
 	return names[0], nil
 }
 
-func (c *runManager) copySecrets(secretHelper secretUtils.SecretHelper, secretNames []string, pipelineRun k8s.PipelineRun, filter secrets.SecretFilterType, transformers ...secrets.SecretTransformerType) ([]string, error) {
+func (c *runManager) copySecrets(secretHelper secrets.SecretHelper, secretNames []string, pipelineRun k8s.PipelineRun, filter secrets.SecretFilterType, transformers ...secrets.SecretTransformerType) ([]string, error) {
 	storedSecretNames, err := secretHelper.CopySecrets(secretNames, filter, transformers...)
 	if err != nil {
 		pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)

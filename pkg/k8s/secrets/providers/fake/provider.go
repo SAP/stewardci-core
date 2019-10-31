@@ -2,27 +2,30 @@ package provider
 
 import (
 	"fmt"
-	"github.com/SAP/stewardci-core/pkg/k8s/mocks"
-	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
-	gomock "github.com/golang/mock/gomock"
+
 	v1 "k8s.io/api/core/v1"
-	"testing"
 )
 
-// NotExistingSecretName is a name of a not existing secret
-const NotExistingSecretName = "notExistingSecret"
-
-// ErrNotExisting is the error returned if not existing secret is requested
-var ErrNotExisting = fmt.Errorf("secret not existing")
+// FakeSecretProviderImpl is an implementation of SecretProvider for testing purposes.
+type FakeSecretProviderImpl struct {
+	namespace string
+	secrets   []*v1.Secret
+}
 
 // NewProvider creates a fake secret provider for testing returning the secrets provided
-func NewProvider(t *testing.T, namespace string, secrets ...*v1.Secret) secrets.SecretProvider {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-	mockSecretProvider := mocks.NewMockSecretProvider(mockCtrl)
-	for _, secret := range secrets {
-		mockSecretProvider.EXPECT().GetSecret(secret.GetName()).Return(secret, nil).AnyTimes()
+func NewProvider(namespace string, secrets ...*v1.Secret) *FakeSecretProviderImpl {
+	return &FakeSecretProviderImpl{
+		namespace: namespace,
+		secrets:   secrets,
 	}
-	mockSecretProvider.EXPECT().GetSecret(NotExistingSecretName).Return(nil, ErrNotExisting).AnyTimes()
-	return mockSecretProvider
+}
+
+// GetSecret fulfills the SecretProvider interface.
+func (p *FakeSecretProviderImpl) GetSecret(name string) (*v1.Secret, error) {
+	for _, secret := range p.secrets {
+		if secret.GetName() == name {
+			return secret, nil
+		}
+	}
+	return nil, fmt.Errorf("secret not found: %s/%s", p.namespace, name)
 }

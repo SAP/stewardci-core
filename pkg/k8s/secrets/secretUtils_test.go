@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
-	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	provider "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/fake"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
@@ -19,7 +18,7 @@ const (
 
 func initHelper(t *testing.T) (SecretHelper, corev1.SecretInterface) {
 	// SETUP
-	provider := provider.NewProvider(t, namespace,
+	provider := provider.NewProvider(namespace,
 		fake.Secret("foo", namespace),
 		fake.SecretWithType("docker1", namespace, v1.SecretTypeDockercfg),
 		fake.SecretWithType("docker2", namespace, v1.SecretTypeDockerConfigJson))
@@ -39,7 +38,7 @@ func Test_CopySecrets_NoFilter(t *testing.T) {
 
 func Test_CopySecrets_MapName(t *testing.T) {
 	helper, targetClient := initHelper(t)
-	list, err := helper.CopySecrets([]string{"foo"}, nil, secrets.AppendNameSuffixFunc("suffix"))
+	list, err := helper.CopySecrets([]string{"foo"}, nil, AppendNameSuffixFunc("suffix"))
 	assert.NilError(t, err)
 	assert.Equal(t, "foo-suffix", list[0])
 	storedSecret, _ := targetClient.Get("foo-suffix", metav1.GetOptions{})
@@ -48,7 +47,7 @@ func Test_CopySecrets_MapName(t *testing.T) {
 
 func Test_CopySecrets_DockerOnly(t *testing.T) {
 	helper, _ := initHelper(t)
-	list, err := helper.CopySecrets([]string{"foo", "docker1", "docker2"}, secrets.DockerOnly)
+	list, err := helper.CopySecrets([]string{"foo", "docker1", "docker2"}, DockerOnly)
 	assert.NilError(t, err)
 	assert.Equal(t, 2, len(list))
 	assert.Equal(t, "docker1", list[0])
@@ -57,8 +56,8 @@ func Test_CopySecrets_DockerOnly(t *testing.T) {
 
 func Test_CopySecrets_NotExisting(t *testing.T) {
 	helper, _ := initHelper(t)
-	list, err := helper.CopySecrets([]string{"foo", provider.NotExistingSecretName, "docker1"}, nil)
-	assert.Equal(t, provider.ErrNotExisting, err)
+	list, err := helper.CopySecrets([]string{"foo", "notExistingSecret1", "docker1"}, nil)
+	assert.Assert(t, err != nil)
 	assert.Equal(t, 1, len(list))
 	assert.Equal(t, "foo", list[0])
 }
