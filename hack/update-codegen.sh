@@ -79,7 +79,7 @@ echo "## Generate mocks for package 'k8s/secrets' ###############"
 set -x
 "$GOPATH_1/bin/mockgen" \
     -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
-    -destination="${PROJECT_ROOT}/pkg/k8s/mocks/secrets_mocks.go" \
+    -destination="${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
     -package=mocks \
     github.com/SAP/stewardci-core/pkg/k8s/secrets \
     SecretProvider

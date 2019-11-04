@@ -1,26 +1,26 @@
 package secrets
 
 import (
-	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
+	"log"
+
 	v1 "k8s.io/api/core/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"log"
 )
 
 // SecretHelper copies secrets
 type SecretHelper interface {
-	CopySecrets(secretNames []string, filter secrets.SecretFilterType, transformers ...secrets.SecretTransformerType) ([]string, error)
+	CopySecrets(secretNames []string, filter SecretFilterType, transformers ...SecretTransformerType) ([]string, error)
 	CreateSecret(secret *v1.Secret) *v1.Secret
 }
 
 type secretHelper struct {
-	provider  secrets.SecretProvider
+	provider  SecretProvider
 	namespace string
 	client    corev1.SecretInterface
 }
 
 // NewSecretHelper creates a secret helper
-func NewSecretHelper(provider secrets.SecretProvider, namespace string, client corev1.SecretInterface) SecretHelper {
+func NewSecretHelper(provider SecretProvider, namespace string, client corev1.SecretInterface) SecretHelper {
 	return &secretHelper{
 		provider:  provider,
 		namespace: namespace,
@@ -32,7 +32,7 @@ func NewSecretHelper(provider secrets.SecretProvider, namespace string, client c
 // filter can be defined to copy only dedicated secrets
 // transformers can be defined to transform the secrets before they are stored
 // returns a list of the secret names (after transformation) which were stored
-func (h *secretHelper) CopySecrets(secretNames []string, filter secrets.SecretFilterType, transformers ...secrets.SecretTransformerType) ([]string, error) {
+func (h *secretHelper) CopySecrets(secretNames []string, filter SecretFilterType, transformers ...SecretTransformerType) ([]string, error) {
 	var storedSecretNames []string
 	for _, secretName := range secretNames {
 		secret, err := h.provider.GetSecret(secretName)

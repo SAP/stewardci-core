@@ -10,6 +10,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	k8sfake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
+	secretMocks "github.com/SAP/stewardci-core/pkg/k8s/secrets/mocks"
 	tektonclientfake "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/fake"
 	"github.com/davecgh/go-spew/spew"
 	gomock "github.com/golang/mock/gomock"
@@ -318,7 +319,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	}
 }
 
-func preparePredefinedSecrets(mockSecretProvider *mocks.MockSecretProvider, secrets ...string) {
+func preparePredefinedSecrets(mockSecretProvider *secretMocks.MockSecretProvider, secrets ...string) {
 	for _, secret := range secrets {
 		mockSecretProvider.EXPECT().GetSecret(secret).Return(&v1.Secret{}, nil)
 	}
@@ -333,10 +334,11 @@ func preparePredefinedClusterRole(t *testing.T, factory *mocks.MockClientFactory
 	assert.NilError(t, err)
 }
 
-func prepareMocks(ctrl *gomock.Controller) (*mocks.MockClientFactory, *mocks.MockPipelineRun, *mocks.MockSecretProvider, k8s.NamespaceManager) {
+func prepareMocks(ctrl *gomock.Controller) (*mocks.MockClientFactory, *mocks.MockPipelineRun, *secretMocks.MockSecretProvider, k8s.NamespaceManager) {
 	return prepareMocksWithSpec(ctrl, &steward.PipelineSpec{})
 }
-func prepareMocksWithSpec(ctrl *gomock.Controller, spec *steward.PipelineSpec) (*mocks.MockClientFactory, *mocks.MockPipelineRun, *mocks.MockSecretProvider, k8s.NamespaceManager) {
+
+func prepareMocksWithSpec(ctrl *gomock.Controller, spec *steward.PipelineSpec) (*mocks.MockClientFactory, *mocks.MockPipelineRun, *secretMocks.MockSecretProvider, k8s.NamespaceManager) {
 	mockFactory := mocks.NewMockClientFactory(ctrl)
 
 	coreClientSet := kubefake.NewSimpleClientset()
@@ -363,7 +365,7 @@ func prepareMocksWithSpec(ctrl *gomock.Controller, spec *steward.PipelineSpec) (
 		runNamespace = arg
 	})
 
-	mockSecretProvider := mocks.NewMockSecretProvider(ctrl)
+	mockSecretProvider := secretMocks.NewMockSecretProvider(ctrl)
 
 	//TODO: Mock when required
 	namespaceManager := k8s.NewNamespaceManager(mockFactory, runNamespacePrefix, runNamespaceRandomLength)
