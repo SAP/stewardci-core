@@ -9,7 +9,6 @@ import (
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
-	"github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -113,15 +112,11 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	}
 
 	imagePullSecrets := pipelineRun.GetSpec().ImagePullSecrets
-	random, err := utils.RandomAlphaNumString(6)
-	if err != nil {
-		return err
-	}
 	transformers := []secrets.SecretTransformerType{
 		stripTektonAnnotationsTransformer,
 		secrets.StripAnnotationsTransformer("jenkins.io/"),
 		secrets.StripLabelsTransformer("jenkins.io/"),
-		secrets.AppendNameSuffixTransformer(random),
+		secrets.UniqueNameTransformer(),
 	}
 
 	imagePullSecrets, err = c.copySecrets(secretHelper, imagePullSecrets, pipelineRun, secrets.DockerOnly, transformers...)
@@ -150,10 +145,6 @@ func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secret
 	if pipelineCloneSecret == "" {
 		return "", nil
 	}
-	random, err := utils.RandomAlphaNumString(6)
-	if err != nil {
-		return "", err
-	}
 	repoServerURL, err := pipelineRun.GetRepoServerURL()
 	if err != nil {
 		return "", err
@@ -161,7 +152,7 @@ func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secret
 	transformers := []secrets.SecretTransformerType{
 		secrets.StripAnnotationsTransformer("jenkins.io/"),
 		secrets.StripLabelsTransformer("jenkins.io/"),
-		secrets.AppendNameSuffixTransformer(random),
+		secrets.UniqueNameTransformer(),
 		secrets.SetAnnotationTransformer("tekton.dev/git-0", repoServerURL),
 	}
 	names, err := c.copySecrets(secretHelper, []string{pipelineCloneSecret}, pipelineRun, nil, transformers...)

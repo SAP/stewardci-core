@@ -1,14 +1,13 @@
 package secrets
 
 import (
-	"testing"
-
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	provider "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/fake"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"testing"
 )
 
 const (
@@ -31,15 +30,6 @@ func Test_CopySecrets_NoFilter(t *testing.T) {
 	assert.DeepEqual(t, []string{"foo"}, list)
 	storedSecret, _ := targetClient.Get("foo", metav1.GetOptions{})
 	assert.Equal(t, "foo", storedSecret.GetName())
-}
-
-func Test_CopySecrets_MapName(t *testing.T) {
-	helper, targetClient := initHelper(fake.Secret("foo", namespace))
-	list, err := helper.CopySecrets([]string{"foo"}, nil, AppendNameSuffixTransformer("suffix"))
-	assert.NilError(t, err)
-	assert.DeepEqual(t, []string{"foo-suffix"}, list)
-	storedSecret, _ := targetClient.Get("foo-suffix", metav1.GetOptions{})
-	assert.Equal(t, "foo-suffix", storedSecret.GetName())
 }
 
 func Test_CopySecrets_DockerOnly(t *testing.T) {

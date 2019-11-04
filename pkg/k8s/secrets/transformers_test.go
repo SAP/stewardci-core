@@ -6,11 +6,11 @@ import (
 	"testing"
 )
 
-func Test_AppendNameSuffixTransformer(t *testing.T) {
+func Test_UniqueNameTransformer(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	result := AppendNameSuffixTransformer("suffix")(secret)
-	assert.Equal(t, "name", secret.GetName())
-	assert.Equal(t, "name-suffix", result.GetName())
+	result := UniqueNameTransformer()(secret)
+	assert.Equal(t, "", result.GetName())
+	assert.Equal(t, "name", result.GetGenerateName())
 }
 
 func Test_SetAnnotationTransformer_New(t *testing.T) {
