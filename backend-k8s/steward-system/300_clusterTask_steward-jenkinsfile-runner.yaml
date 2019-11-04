@@ -43,15 +43,18 @@ spec:
         The namespace of this pipeline run.
     - name: JOB_NAME
       description: >
-        Optional job name to be used in the jenkinsfile runner
+        The name of the job this pipeline run belongs to. It is used as the name of the Jenkins job and therefore must be a valid Jenkins job name.
+        If null or empty, `job` will be used.
       default: ""
     - name: RUN_NUMBER
       description: >
-        Optional build number of the run
+        The sequence number of the pipeline run, which translates into the build number of the Jenkins job.
+        If null or empty, `1` is used.
       default: "1"
     - name: RUN_CAUSE
       description: >
-        Optional cause of the run
+        A textual description of the cause of this pipeline run. Will be set as cause of the Jenkins job.
+        If null or empty, no cause information will be available.
       default: ""
   steps:
   - name: jenkinsfile-runner
