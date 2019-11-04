@@ -14,5 +14,4 @@ func Test_GetSecret_works(t *testing.T) {
 	storedSecret, _ := tn.GetSecretProvider().GetSecret(name)
 	assert.Equal(t, name, storedSecret.GetName(), "Name should be equal")
 	assert.Equal(t, ns1, storedSecret.GetNamespace(), "Namespace should be equal")
-	assert.Equal(t, fake.SecretValue, storedSecret.StringData[fake.SecretKey])
 }

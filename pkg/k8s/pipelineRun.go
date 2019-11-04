@@ -2,10 +2,6 @@ package k8s
 
 import (
 	"fmt"
-	"log"
-	"net/url"
-	"strings"
-
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
@@ -14,6 +10,8 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"log"
+	"net/url"
 )
 
 // PipelineRun is a wrapper for the K8s PipelineRun resource
@@ -122,7 +120,7 @@ func (r *pipelineRun) GetRepoServerURL() (string, error) {
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to parse jenkinsFile.url '%s'", urlString)
 	}
-	if !strings.HasPrefix(repoURL.Scheme, "http") {
+	if !(repoURL.Scheme == "http") && !(repoURL.Scheme == "https") {
 		return "", fmt.Errorf("scheme not supported '%s'", repoURL.Scheme)
 	}
 	return fmt.Sprintf("%s://%s", repoURL.Scheme, repoURL.Host), nil

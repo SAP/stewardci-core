@@ -1,4 +1,4 @@
-package provider
+package k8s
 
 import (
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func Test_GetSecret_Existing(t *testing.T) {
+func Test_provider_GetSecret_Existing(t *testing.T) {
 	namespace := "ns1"
 	cf := fake.NewClientFactory(fake.Secret("foo", namespace))
 	secretsClient := cf.CoreV1().Secrets(namespace)
@@ -17,7 +17,7 @@ func Test_GetSecret_Existing(t *testing.T) {
 	assert.Equal(t, "foo", secret.GetName())
 }
 
-func Test_GetSecret_NotExisting(t *testing.T) {
+func Test_provider_GetSecret_NotExisting(t *testing.T) {
 	namespace := "ns1"
 	cf := fake.NewClientFactory(fake.Secret("foo", namespace))
 	secretsClient := cf.CoreV1().Secrets(namespace)

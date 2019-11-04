@@ -9,19 +9,21 @@ import (
 // SecretTransformerType is a type for secret transformers
 type SecretTransformerType = func(*v1.Secret) *v1.Secret
 
-// AppendNameSuffixFunc returns a mapping function from secret to secret
-// in the result the secret has a new name with suffix 'suffix'
-func AppendNameSuffixFunc(suffix string) SecretTransformerType {
+// AppendNameSuffixTransformer returns a transforming function from secret to secret
+// the resulting secret has the given suffix added to the original name.
+func AppendNameSuffixTransformer(suffix string) SecretTransformerType {
 	return func(secret *v1.Secret) *v1.Secret {
+		secret = secret.DeepCopy()
 		secret.SetName(fmt.Sprintf("%s-%s", secret.GetName(), suffix))
 		return secret
 	}
 }
 
-// SetAnnotationFunc returns a mapping function from secret to secret
+// SetAnnotationTransformer returns a transforming function from secret to secret
 // in the result secret the annotation with key 'key' is set to the value 'value'.
-func SetAnnotationFunc(key string, value string) SecretTransformerType {
+func SetAnnotationTransformer(key string, value string) SecretTransformerType {
 	return func(secret *v1.Secret) *v1.Secret {
+		secret = secret.DeepCopy()
 		annotations := secret.GetAnnotations()
 		if annotations == nil {
 			annotations = make(map[string]string)
@@ -32,10 +34,11 @@ func SetAnnotationFunc(key string, value string) SecretTransformerType {
 	}
 }
 
-// StripAnnotationsFunc returns a mapping function from secret to secret
+// StripAnnotationsTransformer returns a transforming function from secret to secret
 // in the result secret all annotations with prefix 'keyPrefix' are removed.
-func StripAnnotationsFunc(keyPrefix string) SecretTransformerType {
+func StripAnnotationsTransformer(keyPrefix string) SecretTransformerType {
 	return func(secret *v1.Secret) *v1.Secret {
+		secret = secret.DeepCopy()
 		annotations := secret.GetAnnotations()
 		if annotations == nil {
 			annotations = make(map[string]string)
@@ -50,10 +53,11 @@ func StripAnnotationsFunc(keyPrefix string) SecretTransformerType {
 	}
 }
 
-// SetLabelFunc returns a mapping function from secret to secret
+// SetLabelTransformer returns a transforming function from secret to secret
 // in the result secret the label with key 'key' is set to the value 'value'.
-func SetLabelFunc(key string, value string) SecretTransformerType {
+func SetLabelTransformer(key string, value string) SecretTransformerType {
 	return func(secret *v1.Secret) *v1.Secret {
+		secret = secret.DeepCopy()
 		labels := secret.GetLabels()
 		if labels == nil {
 			labels = make(map[string]string)
@@ -64,10 +68,11 @@ func SetLabelFunc(key string, value string) SecretTransformerType {
 	}
 }
 
-// StripLabelsFunc returns a mapping function from secret to secret
+// StripLabelsTransformer returns a transforming function from secret to secret
 // in the result secret all labels with prefix 'keyPrefix' are removed.
-func StripLabelsFunc(keyPrefix string) SecretTransformerType {
+func StripLabelsTransformer(keyPrefix string) SecretTransformerType {
 	return func(secret *v1.Secret) *v1.Secret {
+		secret = secret.DeepCopy()
 		labels := secret.GetLabels()
 		if labels == nil {
 			labels = make(map[string]string)

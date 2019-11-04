@@ -29,26 +29,26 @@ func fakeServiceAccount() *v1.ServiceAccount {
 
 func Test_CreateServiceAccount_works(t *testing.T) {
 	setupAccountManager()
-	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName", []string{"pullSecret1"})
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1"})
 	assert.NilError(t, err)
 	assert.Equal(t, accountName, acc.GetServiceAccount().GetName())
 	assert.Equal(t, 1, len(acc.GetServiceAccount().ImagePullSecrets))
-	assert.Equal(t, "pullSecret1", acc.GetServiceAccount().ImagePullSecrets[0].Name)
+	assert.Equal(t, "imagePullSecret1", acc.GetServiceAccount().ImagePullSecrets[0].Name)
 }
 
 func Test_CreateServiceAccount_multipleSecretsworks(t *testing.T) {
 	setupAccountManager()
-	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName", []string{"pullSecret1", "pullSecret2"})
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
 	assert.NilError(t, err)
 	assert.Equal(t, accountName, acc.GetServiceAccount().GetName())
 	assert.Equal(t, 2, len(acc.GetServiceAccount().ImagePullSecrets))
-	assert.Equal(t, "pullSecret1", acc.GetServiceAccount().ImagePullSecrets[0].Name)
-	assert.Equal(t, "pullSecret2", acc.GetServiceAccount().ImagePullSecrets[1].Name)
+	assert.Equal(t, "imagePullSecret1", acc.GetServiceAccount().ImagePullSecrets[0].Name)
+	assert.Equal(t, "imagePullSecret2", acc.GetServiceAccount().ImagePullSecrets[1].Name)
 }
 
 func Test_CreateServiceAccount_failsWhenAlreadyExists(t *testing.T) {
 	setupAccountManager(fakeServiceAccount())
-	_, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName", []string{"pullSecretName"})
+	_, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecretName1"})
 	assert.Equal(t, `serviceaccounts "dummyAccount" already exists`, err.Error())
 }
 

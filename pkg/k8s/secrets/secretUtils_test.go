@@ -16,48 +16,45 @@ const (
 	targetNamespace = "targetNs"
 )
 
-func initHelper(t *testing.T) (SecretHelper, corev1.SecretInterface) {
+func initHelper(secrets ...*v1.Secret) (SecretHelper, corev1.SecretInterface) {
 	// SETUP
-	provider := provider.NewProvider(namespace,
-		fake.Secret("foo", namespace),
-		fake.SecretWithType("docker1", namespace, v1.SecretTypeDockercfg),
-		fake.SecretWithType("docker2", namespace, v1.SecretTypeDockerConfigJson))
+	provider := provider.NewProvider(namespace, secrets...)
 	cf := fake.NewClientFactory()
 	targetClient := cf.CoreV1().Secrets(targetNamespace)
 	return NewSecretHelper(provider, targetNamespace, targetClient), targetClient
 }
+
 func Test_CopySecrets_NoFilter(t *testing.T) {
-	helper, targetClient := initHelper(t)
+	helper, targetClient := initHelper(fake.Secret("foo", namespace))
 	list, err := helper.CopySecrets([]string{"foo"}, nil)
 	assert.NilError(t, err)
-	assert.Equal(t, 1, len(list))
-	assert.Equal(t, "foo", list[0])
+	assert.DeepEqual(t, []string{"foo"}, list)
 	storedSecret, _ := targetClient.Get("foo", metav1.GetOptions{})
-	assert.Equal(t, "foo", storedSecret.GetName(), "Name should be equal")
+	assert.Equal(t, "foo", storedSecret.GetName())
 }
 
 func Test_CopySecrets_MapName(t *testing.T) {
-	helper, targetClient := initHelper(t)
-	list, err := helper.CopySecrets([]string{"foo"}, nil, AppendNameSuffixFunc("suffix"))
+	helper, targetClient := initHelper(fake.Secret("foo", namespace))
+	list, err := helper.CopySecrets([]string{"foo"}, nil, AppendNameSuffixTransformer("suffix"))
 	assert.NilError(t, err)
-	assert.Equal(t, "foo-suffix", list[0])
+	assert.DeepEqual(t, []string{"foo-suffix"}, list)
 	storedSecret, _ := targetClient.Get("foo-suffix", metav1.GetOptions{})
-	assert.Equal(t, "foo-suffix", storedSecret.GetName(), "Name should be equal")
+	assert.Equal(t, "foo-suffix", storedSecret.GetName())
 }
 
 func Test_CopySecrets_DockerOnly(t *testing.T) {
-	helper, _ := initHelper(t)
+	helper, _ := initHelper(fake.Secret("foo", namespace),
+		fake.SecretWithType("docker1", namespace, v1.SecretTypeDockercfg),
+		fake.SecretWithType("docker2", namespace, v1.SecretTypeDockerConfigJson))
 	list, err := helper.CopySecrets([]string{"foo", "docker1", "docker2"}, DockerOnly)
 	assert.NilError(t, err)
-	assert.Equal(t, 2, len(list))
-	assert.Equal(t, "docker1", list[0])
-	assert.Equal(t, "docker2", list[1])
+	assert.DeepEqual(t, []string{"docker1", "docker2"}, list)
 }
 
 func Test_CopySecrets_NotExisting(t *testing.T) {
-	helper, _ := initHelper(t)
+	helper, _ := initHelper(fake.Secret("foo", namespace),
+		fake.SecretWithType("docker1", namespace, v1.SecretTypeDockercfg))
 	list, err := helper.CopySecrets([]string{"foo", "notExistingSecret1", "docker1"}, nil)
 	assert.Assert(t, err != nil)
-	assert.Equal(t, 1, len(list))
-	assert.Equal(t, "foo", list[0])
+	assert.DeepEqual(t, []string{"foo"}, list)
 }

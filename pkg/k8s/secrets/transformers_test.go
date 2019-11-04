@@ -6,72 +6,61 @@ import (
 	"testing"
 )
 
-func Test_AppendNameSuffixFunc(t *testing.T) {
+func Test_AppendNameSuffixTransformer(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	appendSuffix := AppendNameSuffixFunc("suffix")
-	secret = appendSuffix(secret)
-	assert.Equal(t, "name-suffix", secret.GetName())
+	result := AppendNameSuffixTransformer("suffix")(secret)
+	assert.Equal(t, "name", secret.GetName())
+	assert.Equal(t, "name-suffix", result.GetName())
 }
 
-func Test_SetAnnotationFunc_New(t *testing.T) {
+func Test_SetAnnotationTransformer_New(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	add := SetAnnotationFunc("foo", "bar")
+	result := SetAnnotationTransformer("foo", "bar")(secret)
 	assert.Equal(t, "", secret.GetAnnotations()["foo"])
-	secret = add(secret)
-	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
+	assert.Equal(t, "bar", result.GetAnnotations()["foo"])
 }
 
-func Test_SetAnnotationFunc_Overwrite(t *testing.T) {
+func Test_SetAnnotationTransformer_Overwrite(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	add := SetAnnotationFunc("foo", "bar")
-	overwrite := SetAnnotationFunc("foo", "baz")
-	secret = add(secret)
-	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
-	secret = overwrite(secret)
-	assert.Equal(t, "baz", secret.GetAnnotations()["foo"])
+	result1 := SetAnnotationTransformer("foo", "bar")(secret)
+	result2 := SetAnnotationTransformer("foo", "baz")(result1)
+	assert.Equal(t, "bar", result1.GetAnnotations()["foo"])
+	assert.Equal(t, "baz", result2.GetAnnotations()["foo"])
 }
 
-func Test_StripAnnotationsFunc(t *testing.T) {
+func Test_StripAnnotationsTransformer(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	add := SetAnnotationFunc("foo", "bar")
-	strip := StripAnnotationsFunc("f")
-	secret = add(secret)
-	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
-	secret = strip(secret)
-	assert.Equal(t, "", secret.GetAnnotations()["foo"])
+	result1 := SetAnnotationTransformer("foo", "bar")(secret)
+	result2 := StripAnnotationsTransformer("f")(result1)
+	assert.Equal(t, "bar", result1.GetAnnotations()["foo"])
+	assert.Equal(t, "", result2.GetAnnotations()["foo"])
 }
 
-func Test_StripAnnotationsFunc_Empty(t *testing.T) {
+func Test_StripAnnotationsTransformer_Empty(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	strip := StripAnnotationsFunc("f")
-	secret = strip(secret)
-	assert.Equal(t, "", secret.GetAnnotations()["foo"])
+	result := StripAnnotationsTransformer("f")(secret)
+	assert.Equal(t, "", result.GetAnnotations()["foo"])
 }
 
-func Test_SetLabelFunc(t *testing.T) {
+func Test_SetLabelTransformer(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	add := SetLabelFunc("foo", "bar")
-	overwrite := SetLabelFunc("foo", "baz")
+	result1 := SetLabelTransformer("foo", "bar")(secret)
+	result2 := SetLabelTransformer("foo", "baz")(result1)
 	assert.Equal(t, "", secret.GetLabels()["foo"])
-	secret = add(secret)
-	assert.Equal(t, "bar", secret.GetLabels()["foo"])
-	secret = overwrite(secret)
-	assert.Equal(t, "baz", secret.GetLabels()["foo"])
+	assert.Equal(t, "bar", result1.GetLabels()["foo"])
+	assert.Equal(t, "baz", result2.GetLabels()["foo"])
 }
 
-func Test_StripLabelFunc(t *testing.T) {
+func Test_StripLabelTransformer(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	add := SetLabelFunc("foo", "bar")
-	strip := StripLabelsFunc("f")
-	secret = add(secret)
-	assert.Equal(t, "bar", secret.GetLabels()["foo"])
-	secret = strip(secret)
-	assert.Equal(t, "", secret.GetLabels()["foo"])
+	result1 := SetLabelTransformer("foo", "bar")(secret)
+	result2 := StripLabelsTransformer("f")(result1)
+	assert.Equal(t, "bar", result1.GetLabels()["foo"])
+	assert.Equal(t, "", result2.GetLabels()["foo"])
 }
 
-func Test_StripLabelFunc_Empty(t *testing.T) {
+func Test_StripLabelTransformer_Empty(t *testing.T) {
 	secret := fake.Secret("name", "secret")
-	strip := StripLabelsFunc("f")
-	secret = strip(secret)
-	assert.Equal(t, "", secret.GetLabels()["foo"])
+	result := StripLabelsTransformer("f")(secret)
+	assert.Equal(t, "", result.GetLabels()["foo"])
 }

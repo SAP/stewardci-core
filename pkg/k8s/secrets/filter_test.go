@@ -9,20 +9,24 @@ import (
 
 func Test_DockerOnly_UntypedReturnsFalse(t *testing.T) {
 	secret := fake.Secret("foo", "bar")
-	assert.Assert(t, !DockerOnly(secret))
+	result := DockerOnly(secret)
+	assert.Assert(t, result == false)
 }
 
 func Test_DockerOnly_TypeOpaqueReturnsFalse(t *testing.T) {
 	secret := fake.SecretWithType("foo", "bar", v1.SecretTypeOpaque)
-	assert.Assert(t, !DockerOnly(secret))
+	result := DockerOnly(secret)
+	assert.Assert(t, result == false)
 }
 
 func Test_DockerOnly_DockerCfgReturnsTrue(t *testing.T) {
 	secret := fake.SecretWithType("foo", "bar", v1.SecretTypeDockercfg)
-	assert.Assert(t, DockerOnly(secret))
+	result := DockerOnly(secret)
+	assert.Assert(t, result == true)
 }
 
 func Test_DockerOnly_DockerConfigJsonReturnsTrue(t *testing.T) {
 	secret := fake.SecretWithType("foo", "bar", v1.SecretTypeDockerConfigJson)
-	assert.Assert(t, DockerOnly(secret))
+	result := DockerOnly(secret)
+	assert.Assert(t, result == true)
 }

@@ -100,14 +100,14 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	targetClient := c.factory.CoreV1().Secrets(runNamespace)
 	secretHelper := secrets.NewSecretHelper(c.secretProvider, runNamespace, targetClient)
 
-	pipelineCloneSecretName, err := c.copyPipelinePullSecret(pipelineRun, secretHelper)
+	pipelineCloneSecretName, err := c.copyPipelineCloneSecret(pipelineRun, secretHelper)
 	if err != nil {
-		return errors.Wrap(err, "failed to copy pipeline pull secret")
+		return errors.Wrap(err, "failed to copy pipeline clone secret")
 	}
 
 	secretNames := pipelineRun.GetSpec().Secrets
-	stripTektonAnnotationsFunc := secrets.StripAnnotationsFunc("tekton")
-	secretNames, err = c.copySecrets(secretHelper, secretNames, pipelineRun, nil, stripTektonAnnotationsFunc)
+	stripTektonAnnotationsTransformer := secrets.StripAnnotationsTransformer("tekton.dev/")
+	secretNames, err = c.copySecrets(secretHelper, secretNames, pipelineRun, nil, stripTektonAnnotationsTransformer)
 	if err != nil {
 		return errors.Wrap(err, "failed to copy secrets")
 	}
@@ -118,22 +118,22 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 		return err
 	}
 	transformers := []secrets.SecretTransformerType{
-		stripTektonAnnotationsFunc,
-		secrets.StripAnnotationsFunc("jenkins"),
-		secrets.StripLabelsFunc("jenkins"),
-		secrets.AppendNameSuffixFunc(random),
+		stripTektonAnnotationsTransformer,
+		secrets.StripAnnotationsTransformer("jenkins.io/"),
+		secrets.StripLabelsTransformer("jenkins.io/"),
+		secrets.AppendNameSuffixTransformer(random),
 	}
 
 	imagePullSecrets, err = c.copySecrets(secretHelper, imagePullSecrets, pipelineRun, secrets.DockerOnly, transformers...)
 	if err != nil {
-		return errors.Wrap(err, "failed to copy imagePullSecrets.")
+		return errors.Wrap(err, "failed to copy image pull secrets")
 	}
 	//Create Service Account in Run Namespace
 	accountManager := k8s.NewServiceAccountManager(c.factory, runNamespace)
 
 	serviceAccount, err := accountManager.CreateServiceAccount(serviceAccountName, pipelineCloneSecretName, imagePullSecrets)
 	if err != nil {
-		return errors.Wrap(err, "failed to create service account.")
+		return errors.Wrap(err, "failed to create service account")
 	}
 
 	//Add Role Binding to Service Account
@@ -145,7 +145,7 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	return nil
 }
 
-func (c *runManager) copyPipelinePullSecret(pipelineRun k8s.PipelineRun, secretHelper secrets.SecretHelper) (string, error) {
+func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secretHelper secrets.SecretHelper) (string, error) {
 	pipelineCloneSecret := pipelineRun.GetSpec().JenkinsFile.Secret
 	if pipelineCloneSecret == "" {
 		return "", nil
@@ -154,15 +154,15 @@ func (c *runManager) copyPipelinePullSecret(pipelineRun k8s.PipelineRun, secretH
 	if err != nil {
 		return "", err
 	}
-	repoServer, err := pipelineRun.GetRepoServerURL()
+	repoServerURL, err := pipelineRun.GetRepoServerURL()
 	if err != nil {
 		return "", err
 	}
 	transformers := []secrets.SecretTransformerType{
-		secrets.StripAnnotationsFunc("jenkins"),
-		secrets.StripLabelsFunc("jenkins"),
-		secrets.AppendNameSuffixFunc(random),
-		secrets.SetAnnotationFunc("tekton.dev/git-0", repoServer),
+		secrets.StripAnnotationsTransformer("jenkins.io/"),
+		secrets.StripLabelsTransformer("jenkins.io/"),
+		secrets.AppendNameSuffixTransformer(random),
+		secrets.SetAnnotationTransformer("tekton.dev/git-0", repoServerURL),
 	}
 	names, err := c.copySecrets(secretHelper, []string{pipelineCloneSecret}, pipelineRun, nil, transformers...)
 	if err != nil {

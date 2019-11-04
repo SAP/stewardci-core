@@ -93,7 +93,9 @@ func Test_RunManager_Start_DoesCopySecret(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	secretName := "scm_secret1"
-	spec := &steward.PipelineSpec{JenkinsFile: steward.JenkinsFile{Secret: secretName}}
+	spec := &steward.PipelineSpec{
+		JenkinsFile: steward.JenkinsFile{
+			Secret: secretName}}
 	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocksWithSpec(mockCtrl, spec)
 
 	preparePredefinedSecrets(mockSecretProvider, secretName)
@@ -103,7 +105,7 @@ func Test_RunManager_Start_DoesCopySecret(t *testing.T) {
 
 	// VERIFY
 	// UpdateState should never be called by BuildStarter
-	mockPipelineRun.EXPECT().UpdateState(gomock.Any()).Times(0)
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any()).Do(func(interface{}) { panic("unexpected call") }).AnyTimes()
 
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
