@@ -18,6 +18,7 @@ import (
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubefake "k8s.io/client-go/kubernetes/fake"
 )
@@ -111,6 +112,58 @@ func Test_RunManager_Start_DoesCopySecret(t *testing.T) {
 	err := examinee.Start(mockPipelineRun)
 	assert.NilError(t, err)
 
+}
+
+func Test_RunManager_Start_FailsWithContentErrorWhenSecretNotFound(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	secretName := "scm_secret1"
+	spec := &steward.PipelineSpec{
+		JenkinsFile: steward.JenkinsFile{
+			Secret: secretName}}
+	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocksWithSpec(mockCtrl, spec)
+
+	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
+
+	// VERIFY
+	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager)
+	notFoundError := k8serrors.NewNotFound(steward.Resource("secret"), secretName)
+	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, notFoundError)
+	mockPipelineRun.EXPECT().UpdateMessage(notFoundError.Error())
+	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorContent)
+	mockPipelineRun.EXPECT().FinishState()
+	// EXERCISE
+	err := examinee.Start(mockPipelineRun)
+	assert.Assert(t, err != nil)
+}
+
+func Test_RunManager_Start_FailsWithInfraErrorWhenForbidden(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	secretName := "scm_secret1"
+	spec := &steward.PipelineSpec{
+		JenkinsFile: steward.JenkinsFile{
+			Secret: secretName}}
+	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocksWithSpec(mockCtrl, spec)
+
+	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
+
+	// VERIFY
+	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager)
+	notFoundError := k8serrors.NewForbidden(steward.Resource("secret"), secretName, nil)
+	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, notFoundError)
+	mockPipelineRun.EXPECT().UpdateMessage(notFoundError.Error())
+	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorInfra)
+	mockPipelineRun.EXPECT().FinishState()
+	// EXERCISE
+	err := examinee.Start(mockPipelineRun)
+	assert.Assert(t, err != nil)
 }
 
 func Test_RunManager_Cleanup_RemovesNamespace(t *testing.T) {

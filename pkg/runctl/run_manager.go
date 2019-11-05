@@ -3,7 +3,7 @@ package runctl
 import (
 	"encoding/json"
 	"fmt"
-
+    "log"
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -165,8 +166,13 @@ func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secret
 func (c *runManager) copySecrets(secretHelper secrets.SecretHelper, secretNames []string, pipelineRun k8s.PipelineRun, filter secrets.SecretFilterType, transformers ...secrets.SecretTransformerType) ([]string, error) {
 	storedSecretNames, err := secretHelper.CopySecrets(secretNames, filter, transformers...)
 	if err != nil {
-		pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
+		log.Printf("cannot copy secrets %s: %s", secretNames, err)
 		pipelineRun.UpdateMessage(err.Error())
+		if k8serrors.IsNotFound(err) {
+		pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
+		} else {
+			pipelineRun.UpdateResult(v1alpha1.ResultErrorInfra)
+		}
 		return storedSecretNames, err
 	}
 	return storedSecretNames, nil
