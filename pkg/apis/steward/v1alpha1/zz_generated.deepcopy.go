@@ -164,6 +164,11 @@ func (in *PipelineSpec) DeepCopyInto(out *PipelineSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.ImagePullSecrets != nil {
+		in, out := &in.ImagePullSecrets, &out.ImagePullSecrets
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.Logging != nil {
 		in, out := &in.Logging, &out.Logging
 		*out = new(Logging)
