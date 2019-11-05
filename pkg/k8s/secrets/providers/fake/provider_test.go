@@ -1,4 +1,4 @@
-package k8s
+package fake
 
 import (
 	"testing"
@@ -45,7 +45,5 @@ func Test_provider_GetSecret_NotExisting(t *testing.T) {
 }
 
 func initProvider(namespace string, secret *v1.Secret) secrets.SecretProvider {
-	cf := fake.NewClientFactory(secret)
-	secretsClient := cf.CoreV1().Secrets(namespace)
-	return NewProvider(secretsClient, namespace)
+	return NewProvider(namespace, secret)
 }

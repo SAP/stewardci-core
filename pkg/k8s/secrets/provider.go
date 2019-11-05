@@ -7,4 +7,5 @@ import (
 // SecretProvider provides secrets
 type SecretProvider interface {
 	GetSecret(name string) (*v1.Secret, error)
+	IsNotFound(err error) bool
 }
