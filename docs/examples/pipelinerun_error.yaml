@@ -9,4 +9,4 @@ spec:
     relativePath: error/Jenkinsfile
   logging:
     elasticsearch:
-      runID: 1
+      runID: {"build": 1}

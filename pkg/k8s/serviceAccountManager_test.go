@@ -11,6 +11,7 @@ import (
 )
 
 var accountManager ServiceAccountManager
+var factory ClientFactory
 
 const (
 	accountName = "dummyAccount"

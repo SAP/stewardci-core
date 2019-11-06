@@ -2,12 +2,11 @@ package tenantctl
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
-	"strings"
-
-	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
 	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	assert "gotest.tools/assert"
@@ -24,7 +23,6 @@ var (
 	optDelete             = &metav1.DeleteOptions{}
 	defaultServiceAccount = &v1.ServiceAccount{ObjectMeta: fake.ObjectMeta("default", ns1)}
 	defaultTenantRoleName = "testrole"
-	testRandomLengthBytes = 3
 )
 
 const (
@@ -38,8 +36,8 @@ const prefix1 = "prefix1"
 func Test_Controller(t *testing.T) {
 	cf := fake.NewClientFactory(
 		fake.NamespaceWithAnnotations(ns1, map[string]string{
-			"tenant-namespace-prefix": prefix1,
-			"tenant-role":             defaultTenantRoleName,
+			steward.AnnotationTenantNamespacePrefix: prefix1,
+			steward.AnnotationTenantRole:            defaultTenantRoleName,
 		}),
 		defaultServiceAccount,
 		fake.ClusterRole(defaultTenantRoleName),
@@ -52,7 +50,7 @@ func Test_Controller(t *testing.T) {
 	assertTenant(t, cf, ns1, tenantID1, expect{
 		name:                "TenantName",
 		displayName:         "Description",
-		result:              api.TenantResultSuccess,
+		result:              steward.TenantResultSuccess,
 		message:             "Tenant namespace successfully prepared",
 		prefix:              prefix1,
 		namespaceExists:     true,
@@ -63,8 +61,8 @@ func Test_Controller(t *testing.T) {
 func Test_MultipleTenants(t *testing.T) {
 	cf := fake.NewClientFactory(
 		fake.NamespaceWithAnnotations(ns1, map[string]string{
-			"tenant-namespace-prefix": prefix1,
-			"tenant-role":             defaultTenantRoleName,
+			steward.AnnotationTenantNamespacePrefix: prefix1,
+			steward.AnnotationTenantRole:            defaultTenantRoleName,
 		}),
 		defaultServiceAccount,
 		fake.ClusterRole(defaultTenantRoleName),
@@ -79,7 +77,7 @@ func Test_MultipleTenants(t *testing.T) {
 	assertTenant(t, cf, ns1, tenantID1, expect{
 		name:                "TenantName1",
 		displayName:         "Description1",
-		result:              api.TenantResultSuccess,
+		result:              steward.TenantResultSuccess,
 		message:             "Tenant namespace successfully prepared",
 		prefix:              prefix1,
 		namespaceExists:     true,
@@ -88,7 +86,7 @@ func Test_MultipleTenants(t *testing.T) {
 	assertTenant(t, cf, ns1, tenantID2, expect{
 		name:                "TenantName2",
 		displayName:         "Description2",
-		result:              api.TenantResultSuccess,
+		result:              steward.TenantResultSuccess,
 		message:             "Tenant namespace successfully prepared",
 		prefix:              prefix1,
 		namespaceExists:     true,
@@ -97,7 +95,7 @@ func Test_MultipleTenants(t *testing.T) {
 	assertTenant(t, cf, ns1, tenantID3, expect{
 		name:                "TenantName3",
 		displayName:         "Description3",
-		result:              api.TenantResultSuccess,
+		result:              steward.TenantResultSuccess,
 		message:             "Tenant namespace successfully prepared",
 		prefix:              prefix1,
 		namespaceExists:     true,
@@ -108,8 +106,8 @@ func Test_MultipleTenants(t *testing.T) {
 func Test_MissingServiceAccount(t *testing.T) {
 	cf := fake.NewClientFactory(
 		fake.NamespaceWithAnnotations(ns1, map[string]string{
-			"tenant-namespace-prefix": prefix1,
-			"tenant-role":             defaultTenantRoleName,
+			steward.AnnotationTenantNamespacePrefix: prefix1,
+			steward.AnnotationTenantRole:            defaultTenantRoleName,
 		}),
 		fake.Tenant(tenantID1, "TenantName", "Description", ns1),
 	)
@@ -120,7 +118,7 @@ func Test_MissingServiceAccount(t *testing.T) {
 	assertTenant(t, cf, ns1, tenantID1, expect{
 		name:            "TenantName",
 		displayName:     "Description",
-		result:          api.TenantResultErrorInfra,
+		result:          steward.TenantResultErrorInfra,
 		message:         `serviceaccounts "` + defaultServiceAccountName + `" not found`,
 		prefix:          prefix1,
 		namespaceExists: false,
@@ -133,9 +131,9 @@ func Test_DuplicateTenantID(t *testing.T) {
 		defaultServiceAccount,
 		fake.ClusterRole(defaultTenantRoleName),
 		fake.NamespaceWithAnnotations(ns1, map[string]string{
-			"tenant-random-length-bytes": "0",
-			"tenant-namespace-prefix":    prefix1,
-			"tenant-role":                defaultTenantRoleName,
+			steward.AnnotationTenantNamespacePrefix:       prefix1,
+			steward.AnnotationTenantRole:                  defaultTenantRoleName,
+			steward.AnnotationTenantNamespaceSuffixLength: "0",
 		}),
 		fake.Namespace(clashNamespace),
 		fake.Tenant(tenantID1, "Duplicate Tenant", "Description", ns1),
@@ -147,7 +145,7 @@ func Test_DuplicateTenantID(t *testing.T) {
 	assertTenant(t, cf, ns1, tenantID1, expect{
 		name:                "Duplicate Tenant",
 		displayName:         "Description",
-		result:              api.TenantResultErrorContent,
+		result:              steward.TenantResultErrorContent,
 		message:             "already exists",
 		prefix:              prefix1,
 		namespaceStartsWith: "",
@@ -163,9 +161,9 @@ func Test_MissingClusterRole(t *testing.T) {
 	cf := fake.NewClientFactory(
 		defaultServiceAccount,
 		fake.NamespaceWithAnnotations(ns1, map[string]string{
-			"tenant-random-length-bytes": "0",
-			"tenant-namespace-prefix":    prefix1,
-			"tenant-role":                defaultTenantRoleName,
+			steward.AnnotationTenantNamespacePrefix:       prefix1,
+			steward.AnnotationTenantRole:                  defaultTenantRoleName,
+			steward.AnnotationTenantNamespaceSuffixLength: "0",
 		}),
 		fake.Tenant(tenantID1, "TenantName", "Description", ns1),
 	)
@@ -176,7 +174,7 @@ func Test_MissingClusterRole(t *testing.T) {
 	assertTenant(t, cf, ns1, tenantID1, expect{
 		name:            "TenantName",
 		displayName:     "Description",
-		result:          api.TenantResultErrorInfra,
+		result:          steward.TenantResultErrorInfra,
 		message:         `clusterroles.rbac.authorization.k8s.io "` + defaultTenantRoleName + `" not found`,
 		prefix:          prefix1,
 		namespaceExists: false,
@@ -191,8 +189,8 @@ func Test_MultipleUpdateStatusCalls(t *testing.T) {
 		fakeClusterRole(),
 		fakeServiceAccount(),
 		fake.NamespaceWithAnnotations(ns1, map[string]string{
-			"tenant-namespace-prefix": prefix1,
-			"tenant-role":             defaultTenantRoleName,
+			steward.AnnotationTenantNamespacePrefix: prefix1,
+			steward.AnnotationTenantRole:            defaultTenantRoleName,
 		}),
 		fake.Tenant(tenantID1, "TenantName", "Description", ns1),
 	)
@@ -205,7 +203,7 @@ func Test_MultipleUpdateStatusCalls(t *testing.T) {
 	tenant.Status.Message = "Changed 1"
 	_, err = controller.updateStatus(tenant)
 	assert.NilError(t, err)
-	tenant.Status.Result = api.TenantResultErrorInfra
+	tenant.Status.Result = steward.TenantResultErrorInfra
 	//TODO: This one here should fail since the original object was updated and not the returned one - but it doesn't with the fakes.
 	_, err = controller.updateStatus(tenant)
 	//assert.Assert(t, err != nil)
@@ -218,8 +216,8 @@ func TestFullWorkflow(t *testing.T) {
 
 	cf := fake.NewClientFactory(
 		fake.NamespaceWithAnnotations(clientNamespace, map[string]string{
-			"tenant-namespace-prefix": prefix1,
-			"tenant-role":             defaultTenantRoleName,
+			steward.AnnotationTenantNamespacePrefix: prefix1,
+			steward.AnnotationTenantRole:            defaultTenantRoleName,
 		}),
 		fake.ServiceAccount(defaultServiceAccountName, clientNamespace),
 		fake.ClusterRole(defaultTenantRoleName),
@@ -273,7 +271,7 @@ func TestFullWorkflow(t *testing.T) {
 	tenant, err := tenantsClient.Get(defaultTenantID, optGet)
 	assert.NilError(t, err)
 	assert.Equal(t, "Tenant namespace successfully prepared", tenant.Status.Message)
-	assert.Equal(t, api.TenantResultSuccess, tenant.Status.Result)
+	assert.Equal(t, steward.TenantResultSuccess, tenant.Status.Result)
 
 	tenantNamespace := tenant.Status.TenantNamespaceName
 	namespace, err := namespacesClient.Get(tenantNamespace, optGet)
@@ -328,8 +326,8 @@ func Test_TenantDeletion_WorksIfNamesapceWasDeletedBefore(t *testing.T) {
 
 	cf := fake.NewClientFactory(
 		fake.NamespaceWithAnnotations(clientNamespace, map[string]string{
-			"tenant-namespace-prefix": prefix1,
-			"tenant-role":             defaultTenantRoleName,
+			steward.AnnotationTenantNamespacePrefix: prefix1,
+			steward.AnnotationTenantRole:            defaultTenantRoleName,
 		}),
 		fake.ServiceAccount(defaultServiceAccountName, clientNamespace),
 		fake.ClusterRole(defaultTenantRoleName),
@@ -411,7 +409,7 @@ func assertTenant(t *testing.T, cf *fake.ClientFactory, namespace string, expect
 	if expected.displayName != "" {
 		assert.Equal(t, expected.displayName, tenant.Spec.DisplayName, tenantString)
 	}
-	if expected.result != api.TenantResult("") {
+	if expected.result != steward.TenantResult("") {
 		assert.Equal(t, expected.result, tenant.Status.Result, tenantString)
 	}
 	if expected.message != "" {
@@ -464,7 +462,7 @@ func printNamespaces(t *testing.T, cf *fake.ClientFactory) {
 type expect struct {
 	name                string
 	displayName         string
-	result              api.TenantResult
+	result              steward.TenantResult
 	message             string
 	prefix              string
 	namespaceExists     bool

@@ -16,19 +16,24 @@ kubectl apply -f https://github.com/tektoncd/pipeline/releases/download/v0.7.0/r
 
 ### Clone this repo
 
-Clone the repo and change into the backend-k8s directory:
+Clone the repo and change into the root directory:
 
 ```bash
-git clone $THIS_REPO
+git clone $THIS_REPO stewardci-core
+cd stewardci-core
 ```
 
 ### Create and Start Steward-System
+
+*Note: If you want to store logs in Elasticsearch apply the changes described in [Sending Pipeline Logs to Elasticsearch](../pipeline-logs-elasticsearch/README.md) first.*
 
 ```bash
 kubectl apply -f ./backend-k8s/steward-system
 ```
 
 ### Prepare Namespace for Back-End Client
+
+Each front-end client gets an own back-end client namespace to operate with a project "Steward" instance. Typically a front-end client is a UI on top of our backend, and typically there is only one front-end client communicating with a project "Steward" instance.
 
 **Example only:**
 ```bash
@@ -40,3 +45,7 @@ See the yaml files in this folder for more details about configuration options.
 
 
 [tekton-install]: https://github.com/tektoncd/pipeline/blob/master/docs/install.md
+
+### More
+
+As a next step you might want to [test your project "Steward"](../examples/README.md) by running example pipelines.

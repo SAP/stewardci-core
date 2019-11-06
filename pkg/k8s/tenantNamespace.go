@@ -4,7 +4,7 @@ import (
 	"log"
 
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
-	errors "github.com/SAP/stewardci-core/pkg/errors"
+	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -51,7 +51,7 @@ func (t *tenantNamespace) TargetClientFactory() ClientFactory {
 func (t *tenantNamespace) GetSecret(name string) (*v1.Secret, error) {
 	secret, err := t.secretsClient.Get(name, metav1.GetOptions{})
 	if err != nil {
-		errorWithMessage := errors.Errorf(err, "Failed to get secret '%s' in namespace '%s'", name, t.namespace)
+		errorWithMessage := errors.WithMessagef(err, "Failed to get secret '%s' in namespace '%s'", name, t.namespace)
 		log.Printf(errorWithMessage.Error())
 		return secret, errorWithMessage
 	}

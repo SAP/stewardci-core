@@ -1,140 +1,246 @@
 package k8s
 
 import (
-	"fmt"
-	"strings"
+	"math"
+	"strconv"
 	"testing"
 
-	"log"
-
-	stewardapi "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	emptyPrefix    = ""
-	prefix         = "stu-test"
-	preprefix      = "stu"
-	noRandom       = 0
-	shortRandom    = 5
-	longRandom     = 16
-	negativeRandom = -1
+func Test_NewNamespaceManager(t *testing.T) {
+	// SETUP
+	cf := fake.NewClientFactory()
 
-	nameSuffix        = "hello"
-	nameSuffixEmpty   = ""
-	nameSuffixIllegal = "hello_world"
-)
+	// EXERCISE
+	result := NewNamespaceManager(cf, "prefix1", 255)
 
-var factory ClientFactory
-var nsManager NamespaceManager
-
-func Test_CreateNamespace_prefixSuffixShortRandom(t *testing.T) {
-	setup(prefix, shortRandom)
-	result, _ := create(nameSuffix)
-	expectedPrefix := "stu-test-hello-"
-	assert.Assert(t, strings.HasPrefix(result, expectedPrefix), "Unexpected: "+result)
-	assert.Equal(t, expectedLength(expectedPrefix, shortRandom), len(result), "Unexpected: "+result)
+	// VERIFY
+	assert.Assert(t, result != nil)
+	impl := result.(*namespaceManager)
+	assert.Assert(t, impl.nsInterface != nil)
+	assert.Equal(t, "prefix1", impl.prefix)
+	assert.Equal(t, uint8(255), impl.suffixLength)
 }
 
-func Test_CreateNamespace_prefixEmptySuffixLongRandom(t *testing.T) {
-	setup(prefix, longRandom)
-	result, _ := create(nameSuffixEmpty)
-	expectedPrefix := "stu-test-"
-	assert.Assert(t, strings.HasPrefix(result, expectedPrefix), "Unexpected: "+result)
-	assert.Equal(t, expectedLength(expectedPrefix, longRandom), len(result), "Unexpected: "+result)
+func Test_namespaceManager_generateSuffix(t *testing.T) {
+	const testRounds = 5000
+
+	for _, length := range []uint8{
+		0,
+		1,
+		2,
+		10,
+		30,
+		math.MaxUint8,
+	} {
+		testName := strconv.Itoa(int(length))
+		t.Run(testName, func(t *testing.T) {
+			// SETUP
+			examinee := &namespaceManager{suffixLength: length}
+
+			for i := 0; i < testRounds; i++ {
+				// EXERCISE
+				result, err := examinee.generateSuffix()
+
+				// VERIFY
+				assert.NilError(t, err)
+				assert.Equal(t, int(length), len(result))
+				assert.Assert(t, is.Regexp("^[0-9a-z]*$", result))
+			}
+		})
+	}
 }
 
-func Test_CreateNamespace_noRandom(t *testing.T) {
-	setup(prefix, noRandom)
-	result, _ := create(nameSuffix)
-	expectedPrefix := "stu-test-hello"
-	assert.Equal(t, expectedPrefix, result, "Unexpected: "+result)
+func Test_namespaceManager_generateName(t *testing.T) {
+	for ti, tc := range []struct {
+		prefix               string
+		customPart           string
+		suffixLength         uint8
+		expectedResultRegexp string
+	}{
+		{"", "", 0, ""},
+		{"a", "", 0, "^a$"},
+		{"-", "", 0, "^-$"},
+
+		{"", "b", 0, "^b$"},
+		{"", "-", 0, "^-$"},
+		{"a", "b", 0, "^a-b$"},
+		{"-", "-", 0, "^---$"},
+
+		{"", "", 3, "^[0-9a-z]{3}$"},
+		{"", "", 100, "^[0-9a-z]{100}$"},
+		{"a", "", 3, "^a-[0-9a-z]{3}$"},
+		{"-", "", 3, "^--[0-9a-z]{3}$"},
+		{"", "b", 3, "^b-[0-9a-z]{3}$"},
+		{"", "-", 3, "^--[0-9a-z]{3}$"},
+		{"a", "b", 3, "^a-b-[0-9a-z]{3}$"},
+		{"-", "-", 3, "^----[0-9a-z]{3}$"},
+
+		{"prefix1", "customPart1", 15, "^prefix1-customPart1-[0-9a-z]{15}$"},
+		{" \t\r\n", " \t\r\n", 3, "^ \t\r\n- \t\r\n-[0-9a-z]{3}$"},
+	} {
+		testName := strconv.Itoa(ti)
+		t.Run(testName, func(t *testing.T) {
+			// SETUP
+			examinee := &namespaceManager{
+				prefix:       tc.prefix,
+				suffixLength: tc.suffixLength,
+			}
+
+			// EXERCISE
+			result, err := examinee.generateName(tc.customPart)
+
+			// VERIFY
+			assert.NilError(t, err)
+			assert.Assert(t, is.Regexp(tc.expectedResultRegexp, result))
+		})
+	}
 }
 
-func Test_CreateNamespace_negativeRandom(t *testing.T) {
-	setup(prefix, negativeRandom)
-	_, err := create(nameSuffix)
-	assert.Assert(t, err != nil)
-	assert.Equal(t, "randomLength not configured in namespace manager", err.Error())
-}
+func Test_namespaceManager_Create_uses_generateName(t *testing.T) {
+	// SETUP
+	cf := fake.NewClientFactory()
+	examinee := &namespaceManager{
+		nsInterface:  cf.CoreV1().Namespaces(),
+		prefix:       "prefix1",
+		suffixLength: 17,
+	}
 
-func Test_CreateNamespace_alreadyExists(t *testing.T) {
-	setup(prefix, noRandom)
-	create(nameSuffix)
-	result, _ := create(nameSuffix)
-	assert.Equal(t, "", result, "Unexpected: Namespace created twice: "+result)
-}
+	// EXERCISE
+	result, err := examinee.Create("customPart1", map[string]string{})
 
-func Test_CreateDeleteNamespace(t *testing.T) {
-	setup(prefix, longRandom)
-	result, _ := create(nameSuffixEmpty)
-	assert.Equal(t, 1, countNamespace(factory))
-	assert.NilError(t, nsManager.Delete(result))
-	assert.Equal(t, 0, countNamespace(factory))
-}
-
-func Test_DeleteNamespaceWithWrongManager_fails(t *testing.T) {
-	setup(prefix, longRandom)
-	result, _ := create(nameSuffixEmpty)
-	nsManager2 := NewNamespaceManager(factory, preprefix, longRandom)
-
-	namespaces := factory.CoreV1().Namespaces()
-	namespace, _ := namespaces.List(metav1.ListOptions{})
-	log.Printf("%+v", namespace)
-
-	err := nsManager2.Delete(result)
-	assert.Assert(t, err != nil)
-	assert.Equal(t, "Cannot delete namespace not owned by this steward instance: '"+result+"'", err.Error())
-}
-
-func Test_DeleteNamespace_works(t *testing.T) {
-	setup(prefix, noRandom)
-	result, _ := create(nameSuffixEmpty)
-	err := nsManager.Delete(result)
+	// VERIFY
 	assert.NilError(t, err)
-	assert.Equal(t, 0, countNamespace(factory))
+	assert.Assert(t, is.Regexp("^prefix1-customPart1-[0-9a-z]{17}$", result))
 }
 
-func Test_DeleteNamespaceWithWrongPrefix_fails(t *testing.T) {
-	setup(prefix, longRandom)
-	create(nameSuffixEmpty)
+func Test_namespaceManager_Create_Success(t *testing.T) {
+	// SETUP
+	const namespaceName = "namespace1"
 
-	nsName := "Wrong"
-	err := nsManager.Delete(nsName)
-	assert.Assert(t, err != nil)
-	assert.Equal(t, fmt.Sprintf("Cannot delete namespace '%s'. It does not start with prefix '%s'", nsName, prefix), err.Error())
-}
-
-func Test_DeleteNamespaceNotExisting_success(t *testing.T) {
-	setup(prefix, longRandom)
-	nsName := prefix + "-NotExisting"
-	err := nsManager.Delete(nsName)
-	assert.NilError(t, err)
-}
-
-func expectedLength(expectedPrefix string, randomLength int) int {
-	return len(expectedPrefix) + randomLength*2 //HEX
-}
-
-func setup(prefix string, random int) {
-	factory = fake.NewClientFactory(
-		fake.PipelineRun(run1, ns1, stewardapi.PipelineSpec{}),
+	cf := fake.NewClientFactory(
+	// no objects preexist
 	)
-	nsManager = NewNamespaceManager(factory, prefix, random)
+	examinee := NewNamespaceManager(cf, "", 0)
+	annotations := map[string]string{
+		"key1":         "0439u5kfgn",
+		"key2":         "9087652346",
+		"04385340":     "0493785gns",
+		"gbkjsn495678": "0948534etgdflk",
+	}
+
+	// EXERCISE
+	result, err := examinee.Create(namespaceName, annotations)
+
+	// VERIFY
+	assert.NilError(t, err)
+	assert.Equal(t, namespaceName, result)
+	namespaceList, err := listNamespaces(cf)
+	assert.NilError(t, err)
+	assert.Equal(t, 1, len(namespaceList.Items))
+	namespace := namespaceList.Items[0]
+	assert.Equal(t, namespaceName, namespace.Name)
+	assert.DeepEqual(t, annotations, namespace.GetObjectMeta().GetAnnotations())
 }
 
-func create(nameSuffix string) (string, error) {
-	name, err := nsManager.Create(nameSuffix, map[string]string{})
-	return name, err
+func Test_namespaceManager_Create_ExistsAlready(t *testing.T) {
+	// SETUP
+	const namespaceName = "namespace1"
+
+	cf := fake.NewClientFactory(
+		fake.Namespace(namespaceName), // existing namespace
+	)
+	examinee := NewNamespaceManager(cf, "", 0)
+
+	// EXERCISE
+	result, err := examinee.Create(namespaceName, map[string]string{})
+
+	// VERIFY
+	assert.Assert(t, err != nil)
+	assert.Equal(t, "", result)
 }
 
-func countNamespace(factory ClientFactory) int {
-	nf := factory.CoreV1().Namespaces()
-	namespace, err := nf.List(metav1.ListOptions{})
+func Test_namespaceManager_Delete_Success(t *testing.T) {
+	// SETUP
+	const namespaceName = "namespace1"
+	cf := fake.NewClientFactory(
+		fake.Namespace(namespaceName),
+	)
+	examinee := NewNamespaceManager(cf, "", 0)
+	assert.Equal(t, 1, countNamespaces(cf))
+
+	// EXERCISE
+	err := examinee.Delete(namespaceName)
+
+	// VERIFY
+	assert.NilError(t, err)
+	assert.Equal(t, 0, countNamespaces(cf))
+}
+
+func Test_namespaceManager_Delete_FailsIfNameDoesNotStartWithPrefix(t *testing.T) {
+	// SETUP
+	cf := fake.NewClientFactory()
+	examinee := NewNamespaceManager(cf, "prefix1", 0)
+
+	// EXERCISE
+	err := examinee.Delete("foo")
+
+	// VERIFY
+	assert.Assert(t, err != nil)
+	assert.Equal(t, "refused to delete namespace 'foo': name does not start with 'prefix1'", err.Error())
+}
+
+func Test_namespaceManager_Delete_FailsIfPrefixLabelDoesNotMatch(t *testing.T) {
+	// SETUP
+	cf := fake.NewClientFactory()
+	examinee := NewNamespaceManager(cf, "prefix1", 0)
+	namespaceName, err := examinee.Create("foo", map[string]string{})
+	assert.NilError(t, err)
+
+	namespace, err := cf.CoreV1().Namespaces().Get(namespaceName, metav1.GetOptions{})
+	assert.NilError(t, err)
+	labels := namespace.GetLabels()
+	labels[labelPrefix] = "unexpectedValue"
+	namespace.SetLabels(labels)
+	cf.CoreV1().Namespaces().Update(namespace)
+
+	// EXERCISE
+	err = examinee.Delete(namespaceName)
+
+	// VERIFY
+	assert.Assert(t, err != nil)
+	assert.Equal(t, "refused to delete namespace 'prefix1-foo': not a Steward namespace (label mismatch)", err.Error())
+}
+
+func Test_namespaceManager_Delete_NotExisting(t *testing.T) {
+	// SETUP
+	cf := fake.NewClientFactory(
+	// no namespace preexists
+	)
+	examinee := NewNamespaceManager(cf, "", 0)
+	assert.Equal(t, 0, countNamespaces(cf))
+
+	// EXERCISE
+	err := examinee.Delete("foo")
+
+	// VERIFY
+	assert.NilError(t, err)
+	assert.Equal(t, 0, countNamespaces(cf))
+}
+
+func listNamespaces(cf ClientFactory) (*corev1.NamespaceList, error) {
+	return cf.CoreV1().Namespaces().List(metav1.ListOptions{})
+}
+
+func countNamespaces(factory ClientFactory) int {
+	namespace, err := listNamespaces(factory)
 	if err != nil {
-		return -1
+		panic(err)
 	}
 	return len(namespace.Items)
 }

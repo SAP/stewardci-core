@@ -1,14 +1,12 @@
 apiVersion: steward.sap.com/v1alpha1
 kind: PipelineRun
 metadata:
-  generateName: sleep
+  generateName: demok8s-
 spec:
-  args:
-    DURATION: "120"
   jenkinsFile:
     repoUrl: https://github.com/sap-production/demo-pipelines
     revision: master
-    relativePath: sleep/Jenkinsfile
+    relativePath: k8sPlugin/Jenkinsfile
   logging:
     elasticsearch:
-      runID: 1
+      runID: {"build": 1}

@@ -1,14 +1,14 @@
 apiVersion: steward.sap.com/v1alpha1
 kind: PipelineRun
 metadata:
-  generateName: missingsecret-
+  generateName: sleep
 spec:
+  args:
+    SLEEP_FOR_SECONDS: "120"
   jenkinsFile:
     repoUrl: https://github.com/sap-production/demo-pipelines
     revision: master
-    relativePath: success/Jenkinsfile
-  secrets:
-  - unknown
+    relativePath: sleep/Jenkinsfile
   logging:
     elasticsearch:
       runID: {"build": 1}
