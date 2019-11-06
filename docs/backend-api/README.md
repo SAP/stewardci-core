@@ -68,6 +68,7 @@ A simple `PipelineRun` resource example can be found in [docs/examples/pipeliner
 | `spec.jenkinsFile.relativePath` | the relative path to the Jenkinsfile inside the git repository + revision |
 | `spec.args` | The arguments specified here will be made available to the pipeline execution |
 | `spec.secrets[]` | The secrets specified here will be made available to the pipeline execution. Here you find [more information about secrets](../secrets/Secrets.md) |
+| `spec.imagePullSecrets[]` | The secrets specified here will be attached as immage pull secrets to the service account which is used to execute the pipeline run. This allows the pipeline to pull images from private docker repositories. Here you find [more information about secrets](../secrets/Secrets.md) |
 | `spec.logging.elasticsearch` | The configuration for pipeline logging to Elasticsearch. If not specified, logging to Elasticsearch is disabled and the default Jenkins log implementation is used (stdout of Jenkinsfile Runner container). |
 | `spec.logging.elasticsearch.runID` | The JSON value that should be set as field `runId` in each log entry. It can be any JSON value (`null`, boolean, number, string, list, map). |
 
