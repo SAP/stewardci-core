@@ -41,9 +41,24 @@ spec:
     - name: RUN_NAMESPACE
       description: >
         The namespace of this pipeline run.
+    - name: JOB_NAME
+      description: >
+        The name of the job this pipeline run belongs to. It is used as the name of the Jenkins job and therefore must be a valid Jenkins job name.
+        If null or empty, `job` will be used.
+      default: ""
+    - name: RUN_NUMBER
+      description: >
+        The sequence number of the pipeline run, which translates into the build number of the Jenkins job.
+        If null or empty, `1` is used.
+      default: "1"
+    - name: RUN_CAUSE
+      description: >
+        A textual description of the cause of this pipeline run. Will be set as cause of the Jenkins job.
+        If null or empty, no cause information will be available.
+      default: ""
   steps:
   - name: jenkinsfile-runner
-    image: alxsap/stewardci-jenkinsfilerunner-image:191018-e443c4d
+    image: stewardci/stewardci-jenkinsfile-runner:191106_9d59d4b
     imagePullPolicy: Always
     args: []
     env:
@@ -69,6 +84,12 @@ spec:
       value: '$(inputs.params.PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON)'
     - name: RUN_NAMESPACE
       value: '$(inputs.params.RUN_NAMESPACE)'
+    - name: JOB_NAME
+      value: '$(inputs.params.JOB_NAME)'
+    - name: RUN_NUMBER
+      value: '$(inputs.params.RUN_NUMBER)'
+    - name: RUN_CAUSE
+      value: '$(inputs.params.RUN_CAUSE)' 
     resources:
       limits:
         cpu: 3

@@ -207,10 +207,27 @@ func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun) error {
 
 	c.addTektonTaskRunParamsForPipeline(pipelineRun, &tektonTaskRun)
 	c.addTektonTaskRunParamsForLoggingElasticsearch(pipelineRun, &tektonTaskRun)
-
+	c.addTektonTaskRunParamsForRunDetails(pipelineRun, &tektonTaskRun)
 	tektonClient := c.factory.TektonV1alpha1()
 	_, err = tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(&tektonTaskRun)
 	return err
+}
+
+func (c *runManager) addTektonTaskRunParamsForRunDetails(
+	pipelineRun k8s.PipelineRun,
+	tektonTaskRun *tekton.TaskRun,
+) {
+	spec := pipelineRun.GetSpec()
+	details := spec.RunDetails
+	if details != nil {
+		params := []tekton.Param{
+			tektonStringParam("JOB_NAME", details.JobName),
+			tektonStringParam("RUN_NUMBER", fmt.Sprintf("%d", details.SequenceNumber)),
+			tektonStringParam("RUN_CAUSE", details.Cause),
+		}
+
+		tektonTaskRun.Spec.Inputs.Params = append(tektonTaskRun.Spec.Inputs.Params, params...)
+	}
 }
 
 func (c *runManager) addTektonTaskRunParamsForPipeline(

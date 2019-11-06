@@ -71,6 +71,10 @@ A simple `PipelineRun` resource example can be found in [docs/examples/pipeliner
 | `spec.imagePullSecrets[]` | The secrets specified here will be attached as immage pull secrets to the service account which is used to execute the pipeline run. This allows the pipeline to pull images from private docker repositories. Here you find [more information about secrets](../secrets/Secrets.md) |
 | `spec.logging.elasticsearch` | The configuration for pipeline logging to Elasticsearch. If not specified, logging to Elasticsearch is disabled and the default Jenkins log implementation is used (stdout of Jenkinsfile Runner container). |
 | `spec.logging.elasticsearch.runID` | The JSON value that should be set as field `runId` in each log entry. It can be any JSON value (`null`, boolean, number, string, list, map). |
+| `spec.runDetails.jobName` | The name of the job this pipeline run belongs to. It is used as the name of the Jenkins job and therefore must be a valid Jenkins job name. If null or empty, `job` will be used. |
+| `spec.runDetails.sequenceNumber` | The sequence number of the pipeline run, which translates into the build number of the Jenkins job.  If null or empty, `1` is used. |
+| `spec.runDetails.cause` | A textual description of the cause of this pipeline run. Will be set as cause of the Jenkins job. If null or empty, no cause information will be available. |
+
 
 ```bash
 $ kubectl create -f pipelinerun.yaml
