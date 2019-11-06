@@ -1,0 +1,16 @@
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+metadata:
+  generateName: details-
+spec:
+  jenkinsFile:
+    repoUrl: https://github.com/sap-production/demo-pipelines
+    revision: master
+    relativePath: sleep/Jenkinsfile
+  runDetails:
+    jobName: jobName1
+    sequenceNumber: 42
+    cause: "my cause"
+  logging:
+    elasticsearch:
+      runID: {"build": 42}
