@@ -9,8 +9,8 @@ spec:
     relativePath: sleep/Jenkinsfile
   runDetails:
     jobName: jobName1
-    sequenceNumber: 1
+    sequenceNumber: 42
     cause: "my cause"
   logging:
     elasticsearch:
-      runID: {"build": 1}
+      runID: {"build": 42}
