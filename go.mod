@@ -19,6 +19,7 @@ require (
 	github.com/lithammer/dedent v1.1.0
 	github.com/markbates/inflect v1.0.4 // indirect
 	github.com/mattbaird/jsonpatch v0.0.0-20171005235357-81af80346b1a // indirect
+	github.com/openzipkin/zipkin-go v0.2.2 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.2.1
 	github.com/tektoncd/pipeline v0.7.0
