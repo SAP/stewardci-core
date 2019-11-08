@@ -44,3 +44,16 @@ func JenkinsFileSpec(url, revision, path string) PipelineRunSpecOp {
 
 	}
 }
+
+func ArgSpec(key, value string) PipelineRunSpecOp {
+  return func(spec api.PipelineSpec) api.PipelineSpec {
+       args := spec.Args
+       if args == nil {
+          args = map[string]string{key: value}
+       } else {
+          args[key] = value
+       }
+       spec.Args = args
+       return spec
+   }
+}
