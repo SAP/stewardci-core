@@ -17,7 +17,7 @@ import (
 // Resync is only required if events got lost or if the controller restarted (and missed events).
 const resyncPeriod = 5 * time.Minute
 
-func setup(t *testing.T) (k8s.ClientFactory, string) {
+func setup(t *testing.T) (k8s.ClientFactory, string, Waiter) {
 	t.Helper()
 	kubeconfig := knativetest.Flags.Kubeconfig
 	clusterName := knativetest.Flags.Cluster
@@ -34,5 +34,5 @@ func setup(t *testing.T) (k8s.ClientFactory, string) {
 	if testClient == "" {
 		t.Fatalf("environment variable STEWARD_TEST_CLIENT undefined")
 	}
-	return factory, "steward-test-c"
+	return factory, "steward-test-c", NewWaiter(factory)
 }

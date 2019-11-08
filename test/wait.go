@@ -7,7 +7,7 @@ import (
 	"go.opencensus.io/trace"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-"github.com/SAP/stewardci-core/pkg/k8s"
+	"github.com/SAP/stewardci-core/pkg/k8s"
 )
 
 const (
@@ -15,11 +15,23 @@ const (
 	timeout  = 2 * time.Minute
 )
 
-func WaitForState(clientFactory k8s.ClientFactory, condition WaitCondition, name string) error {
-	_, span := trace.StartSpan(context.Background(), name)
+type Waiter interface {
+	WaitFor(condition WaitCondition) error
+}
+
+type waiter struct {
+	clientFactory k8s.ClientFactory
+}
+
+func NewWaiter(clientFactory k8s.ClientFactory) Waiter {
+	return &waiter{clientFactory: clientFactory}
+}
+
+func (w *waiter) WaitFor(condition WaitCondition) error {
+	_, span := trace.StartSpan(context.Background(), condition.Name())
 	defer span.End()
 
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		return condition(clientFactory)
+		return condition.Wait(w.clientFactory)
 	})
 }
