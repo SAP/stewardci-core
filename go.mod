@@ -23,14 +23,6 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.2.1
 	github.com/tektoncd/pipeline v0.7.0
-	go.opencensus.io v0.22.2 // indirect
-	go.uber.org/zap v1.13.0 // indirect
-	golang.org/x/crypto v0.0.0-20191117063200-497ca9f6d64f // indirect
-	golang.org/x/net v0.0.0-20191116160921-f9c825593386 // indirect
-	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
-	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
-	google.golang.org/api v0.14.0 // indirect
-	gopkg.in/yaml.v2 v2.2.5 // indirect
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.0.0-20191004102349-159aefb8556b
 	k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689
