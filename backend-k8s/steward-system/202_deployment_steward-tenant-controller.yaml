@@ -19,5 +19,5 @@ spec:
       containers:
       - name: steward-tenant-controller
         imagePullPolicy: IfNotPresent
-        image: alxsap/stewardci-tenant-controller:191021_e5399f4
+        image: stewardci/stewardci-tenant-controller:191107_e1a3e75
 
