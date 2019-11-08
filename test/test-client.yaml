@@ -4,5 +4,5 @@ metadata:
   # Specify namespace name here
   name: steward-test-c
   annotations:
-    steward.sap.com/tenant-namespace-prefix: steward-test-c-
+    steward.sap.com/tenant-namespace-prefix: steward-test-c
     steward.sap.com/tenant-role: steward-tenant

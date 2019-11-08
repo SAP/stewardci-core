@@ -4,12 +4,12 @@ package test
 
 import (
 	"log"
+	"os"
 	"testing"
 	"time"
 
-_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"github.com/SAP/stewardci-core/pkg/k8s"
-	"k8s.io/client-go/tools/clientcmd"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	knativetest "knative.dev/pkg/test"
 )
 
@@ -20,8 +20,9 @@ const resyncPeriod = 5 * time.Minute
 func setup(t *testing.T) (k8s.ClientFactory, string) {
 	t.Helper()
 	kubeconfig := knativetest.Flags.Kubeconfig
+	clusterName := knativetest.Flags.Cluster
 	log.Printf("Create Factory (config: %s,resync period: %s)", kubeconfig, resyncPeriod.String())
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	config, err := knativetest.BuildClientConfig(kubeconfig, clusterName)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -29,6 +30,9 @@ func setup(t *testing.T) (k8s.ClientFactory, string) {
 	if factory == nil {
 		t.Fatalf("failed to create client factory for config file '%s'.", kubeconfig)
 	}
-
-        return factory, "steward-test-c"
+	testClient := os.Getenv("STEWARD_TEST_CLIENT")
+	if testClient == "" {
+		t.Fatalf("environment variable STEWARD_TEST_CLIENT undefined")
+	}
+	return factory, "steward-test-c"
 }
