@@ -15,10 +15,10 @@ func Test_PipelineRunBuilder_Jenkinsfile(t *testing.T) {
 }
 
 func Test_PipelineRunBuilder_ArgSpec(t *testing.T) {
-        pipelineRun := PipelineRun("namespace1",
-                PipelineRunSpec(
-                        ArgSpec("foo","bar"),
-                        ArgSpec("baz","bum")))
-        assert.Equal(t, "bar", pipelineRun.Spec.Args["foo"])
-        assert.Equal(t, "bum", pipelineRun.Spec.Args["baz"])
+	pipelineRun := PipelineRun("namespace1",
+		PipelineRunSpec(
+			ArgSpec("foo", "bar"),
+			ArgSpec("baz", "bum")))
+	assert.Equal(t, "bar", pipelineRun.Spec.Args["foo"])
+	assert.Equal(t, "bum", pipelineRun.Spec.Args["baz"])
 }
