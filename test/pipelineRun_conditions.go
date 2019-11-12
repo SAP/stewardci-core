@@ -18,7 +18,7 @@ func CreatePipelineRunCondition(pipelineRun *api.PipelineRun, check PipelineRunC
 		}
 		return check(pipelineRun), nil
 	},
-		fmt.Sprintf("PipelineRunCondition_%s_%s_%s", pipelineRun.GetNamespace(), pipelineRun.GetName(), desc))
+		fmt.Sprintf("PRC_%s_%s_%s", pipelineRun.GetNamespace(), pipelineRun.GetName(), desc))
 }
 
 func PipelineRunHasStateResult(result api.Result) PipelineRunCheck {

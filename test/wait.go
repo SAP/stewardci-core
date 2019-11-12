@@ -4,10 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/SAP/stewardci-core/pkg/k8s"
 	"go.opencensus.io/trace"
 	"k8s.io/apimachinery/pkg/util/wait"
-
-	"github.com/SAP/stewardci-core/pkg/k8s"
 )
 
 const (
@@ -30,7 +29,6 @@ func NewWaiter(clientFactory k8s.ClientFactory) Waiter {
 func (w *waiter) WaitFor(condition WaitCondition) error {
 	_, span := trace.StartSpan(context.Background(), condition.Name())
 	defer span.End()
-
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		return condition.Wait(w.clientFactory)
 	})
