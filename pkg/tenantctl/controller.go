@@ -307,19 +307,16 @@ func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenan
 	syncNeeded, err := c.syncRoleBinding(tenant, nsName, config)
 	if err != nil {
 		if syncNeeded {
-			// TODO should we set the status to not ready or just keep the existing value?
-			/*
-				condMsg := fmt.Sprintf(
-					"The RoleBinding in tenant namespace %q is outdated and could not be updated.",
-					nsName,
-				)
-				tenant.Status.SetCondition(&knativeapis.Condition{
-					Type:    knativeapis.ConditionReady,
-					Status:  corev1.ConditionFalse,
-					Reason:  api.StatusReasonDependentResourceState,
-					Message: condMsg,
-				})
-			*/
+			condMsg := fmt.Sprintf(
+				"The RoleBinding in tenant namespace %q is outdated and could not be updated.",
+				nsName,
+			)
+			tenant.Status.SetCondition(&knativeapis.Condition{
+				Type:    knativeapis.ConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  api.StatusReasonDependentResourceState,
+				Message: condMsg,
+			})
 		}
 		return err
 	}
