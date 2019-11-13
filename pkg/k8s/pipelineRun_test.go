@@ -115,8 +115,8 @@ func Test_pipelineRun_GetRepoServerURL_WrongURLs(t *testing.T) {
 		expectedErrorPattern string
 	}
 	testSet := []tests{
-		{url: "&:", expectedErrorPattern: "failed to parse jenkinsFile.url '&:'.+"},
-		{url: "ftp://foo/bar", expectedErrorPattern: "scheme not supported 'ftp'"},
+		{url: "&:", expectedErrorPattern: `value "&:" of field spec.jenkinsFile.url is invalid: .*`},
+		{url: "ftp://foo/bar", expectedErrorPattern: `value "ftp://foo/bar" of field spec.jenkinsFile.url is invalid: scheme not supported: .*`},
 	}
 	for _, test := range testSet {
 		factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, test.url))
