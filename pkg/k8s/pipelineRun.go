@@ -118,10 +118,10 @@ func (r *pipelineRun) GetRepoServerURL() (string, error) {
 	urlString := r.GetSpec().JenkinsFile.URL
 	repoURL, err := url.Parse(urlString)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to parse jenkinsFile.url '%s'", urlString)
+		return "", errors.Wrapf(err, "value %q of field spec.jenkinsFile.url is invalid", urlString)
 	}
 	if !(repoURL.Scheme == "http") && !(repoURL.Scheme == "https") {
-		return "", fmt.Errorf("scheme not supported '%s'", repoURL.Scheme)
+		return "", fmt.Errorf("value %q of field spec.jenkinsFile.url is invalid: scheme not supported: %q", urlString, repoURL.Scheme)
 	}
 	return fmt.Sprintf("%s://%s", repoURL.Scheme, repoURL.Host), nil
 }

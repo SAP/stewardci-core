@@ -91,7 +91,7 @@ func (h *secretHelper) IsNotFound(err error) bool {
 	}
 }
 
-// CreateSecret stores the given secret
+// CreateSecret creates the given secret in the storage the underlying client is connected to.
 func (h *secretHelper) CreateSecret(secret *v1.Secret) (*v1.Secret, error) {
 	newSecret := &v1.Secret{Data: secret.Data, StringData: secret.StringData, Type: secret.Type}
 	name := secret.GetName()

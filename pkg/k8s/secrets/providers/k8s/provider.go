@@ -30,7 +30,7 @@ func (p *provider) GetSecret(name string) (*v1.Secret, error) {
 		if k8serrors.IsNotFound(err) {
 			return nil, nil
 		}
-		errorWithMessage := errors.WithMessagef(err, "failed to get secret '%s' in namespace '%s'", name, p.namespace)
+		errorWithMessage := errors.WithMessagef(err, "failed to get secret %q from namespace %q", name, p.namespace)
 		return secret, errorWithMessage
 	}
 	if !secret.ObjectMeta.DeletionTimestamp.IsZero() {
