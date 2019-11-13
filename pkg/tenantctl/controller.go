@@ -47,6 +47,7 @@ type Controller struct {
 
 type controllerTesting struct {
 	syncRoleBindingStub func(tenant *api.Tenant, namespace string, config clientConfig) (bool, error)
+	getClientConfigStub func(factory k8s.ClientFactory, clientNamespace string) (clientConfig, error)
 }
 
 // NewController creates new Controller
@@ -183,7 +184,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
-	config, err := getClientConfig(c.factory, tenant.GetNamespace())
+	config, err := c.getClientConfig(c.factory, tenant.GetNamespace())
 	if err != nil {
 		c.logPrintln(tenant, err)
 		return err
@@ -308,7 +309,7 @@ func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenan
 	if err != nil {
 		if syncNeeded {
 			condMsg := fmt.Sprintf(
-				"The RoleBinding in tenant namespace %q is outdated and could not be updated.",
+				"The RoleBinding in tenant namespace %q is outdated but could not be updated.",
 				nsName,
 			)
 			tenant.Status.SetCondition(&knativeapis.Condition{
@@ -327,6 +328,13 @@ func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenan
 	})
 
 	return nil
+}
+
+func (c *Controller) getClientConfig(factory k8s.ClientFactory, clientNamespace string) (clientConfig, error) {
+	if c.testing != nil && c.testing.getClientConfigStub != nil {
+		return c.testing.getClientConfigStub(factory, clientNamespace)
+	}
+	return getClientConfig(factory, clientNamespace)
 }
 
 func (c *Controller) hasFinalizer(tenant *api.Tenant) bool {

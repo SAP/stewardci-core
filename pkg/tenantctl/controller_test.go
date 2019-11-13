@@ -23,7 +23,7 @@ import (
 
 func Test_Controller_syncHandler_DoesNotingIfTenantNotFound(t *testing.T) {
 	// SETUP
-	cf := fake.NewClientFactory()
+	cf := fake.NewClientFactory( /* no objects exist */ )
 	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
 
 	// EXERCISE
@@ -75,56 +75,30 @@ func Test_Controller_syncHandler_FailsIfClientConfigIsInvalid(t *testing.T) {
 		tenantRoleName = "tenantClusterRole1"
 	)
 
-	// We cannot mock `getClientConfig` to check for a known error value.
-	// As a workaround we first verify that we have a setup where
-	// `syncHandler` succeeds and then start over with the same setup
-	// except that the client config is broken.
-	setup := func() (cf *fake.ClientFactory, ctl *Controller) {
-		cf = fake.NewClientFactory(
-			fake.NamespaceWithAnnotations(clientNSName, map[string]string{
-				stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
-				stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
-			}),
-			fake.Tenant(tenantID, "", "", clientNSName),
-		)
-		ctl = NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
-		return
-	}
-	cf, ctl := setup()
-	tenantKey := makeTenantKey(clientNSName, tenantID)
+	cf := fake.NewClientFactory(
+		fake.Namespace(clientNSName), // annotations left out because not needed
+		fake.Tenant(tenantID, "", "", clientNSName),
+	)
+	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
 
-	// ensure that this setup is working
-	assert.NilError(t, ctl.syncHandler(tenantKey))
-
-	// start over with broken client config
-	cf, ctl = setup()
-	{
-		namespacesIfc := cf.CoreV1().Namespaces()
-		clientNS, err := namespacesIfc.Get(clientNSName, metav1.GetOptions{})
-		assert.NilError(t, err)
-		clientNS.SetAnnotations(nil) // invalid client config
-		namespacesIfc.Update(clientNS)
+	injectedError := errors.New("ERR1")
+	ctl.testing = &controllerTesting{
+		getClientConfigStub: func(k8s.ClientFactory, string) (clientConfig, error) {
+			return nil, injectedError
+		},
 	}
 
 	// EXERCISE
-	resultErr := ctl.syncHandler(tenantKey)
+	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
 
 	// VERIFY
-	assert.Assert(t, resultErr != nil)
+	assert.Assert(t, injectedError == resultErr)
 	assertThatExactlyTheseNamespacesExist(t, cf,
 		clientNSName,
 	)
 	assertThatExactlyTheseTenantsExistInNamespace(t, cf, clientNSName,
 		tenantID,
 	)
-}
-
-func Test_Controller_syncHandler_MarkedForDeletion_FinalizerSet(t *testing.T) {
-	t.Skip("test not implemented")
-}
-
-func Test_Controller_syncHandler_MarkedForDeletion_FinalizerNotSet(t *testing.T) {
-	t.Skip("test not implemented")
 }
 
 func Test_Controller_syncHandler_AddsFinalizer(t *testing.T) {
@@ -165,7 +139,7 @@ func Test_Controller_syncHandler_AddsFinalizer(t *testing.T) {
 	}
 }
 
-func Test_Controller_syncHandler_UninitializedTenant_Success(t *testing.T) {
+func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 	// SETUP
 	const (
 		clientNSName      = "client1"
@@ -547,8 +521,24 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnErrorWhenSyncingRoleBi
 	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
 	assert.NilError(t, err)
 
-	// status left unchanged
-	assert.DeepEqual(t, origTenant.Status, tenant.Status)
+	// status
+	{
+		dump := fmt.Sprintf("\n\n%v", spew.Sdump(tenant.Status))
+
+		readyCond := tenant.Status.GetCondition(knativeapis.ConditionReady)
+		assert.Assert(t, readyCond.IsFalse(), dump)
+		assert.Equal(t, api.StatusReasonDependentResourceState, readyCond.Reason, dump)
+		assert.Equal(t,
+			fmt.Sprintf(
+				"The RoleBinding in tenant namespace \"%s\" is outdated but could not be updated.",
+				tenantNSName,
+			),
+			readyCond.Message,
+			dump,
+		)
+
+		assert.Equal(t, tenantNSName, tenant.Status.TenantNamespaceName, dump)
+	}
 
 	assertThatExactlyTheseNamespacesExist(t, cf,
 		clientNSName,
