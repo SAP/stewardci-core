@@ -65,18 +65,46 @@ func PipelineRunOK(namespace string) pipelineRunTest {
 	}
 }
 
-func TestPipelineRuns(t *testing.T) {
+func xxxipelineRuns(t *testing.T) {
 	executePipelineRunTests(t,
 		testPlan{testBuilder: PipelineRunSleep,
 			parallel: 0,
 		},
-         testPlan{testBuilder: PipelineRunFail,
-	                  parallel: 1,
-	                 },
-	         testPlan{testBuilder: PipelineRunOK,
-	                  parallel: 1,
-	                 },
+		testPlan{testBuilder: PipelineRunFail,
+			parallel: 1,
+		},
+		testPlan{testBuilder: PipelineRunOK,
+			parallel: 1,
+		},
 	)
+}
+
+func Test_PipelineRunSuccess(t *testing.T) {
+	executeSingleTest(t, PipelineRunOK)
+}
+
+func executeSingleTest(t *testing.T, testBuilder pipelineRunTestBuilder) {
+	t.Parallel()
+	clientFactory, namespace, waiter := setup(t)
+	test := TenantSuccessTest(namespace)
+	tenant := test.tenant
+	tenant, err := CreateTenant(clientFactory, tenant)
+	assert.NilError(t, err)
+
+	defer DeleteTenant(clientFactory, tenant)
+	check := CreateTenantCondition(tenant, test.check, test.name)
+	err = waiter.WaitFor(check)
+	assert.NilError(t, err)
+	tenant, err = GetTenant(clientFactory, tenant)
+	assert.NilError(t, err)
+	tnn := tenant.Status.TenantNamespaceName
+	pipelineTest := testBuilder(tnn)
+	pr, err := createPipelineRun(clientFactory, pipelineTest.pipelineRun)
+	assert.NilError(t, err)
+	pipelineRunCheck := CreatePipelineRunCondition(pr, pipelineTest.check, pipelineTest.name)
+	err = waiter.WaitFor(pipelineRunCheck)
+	assert.NilError(t, err)
+
 }
 
 func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
@@ -99,15 +127,15 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 		for i := 1; i <= testPlan.parallel; i++ {
 			testBuilder := testPlan.testBuilder
 			pipelineTest := testBuilder(tnn)
-                        pipelineTest.name = 
-			   fmt.Sprintf("%s_%d", pipelineTest.name, i)
-		pr, err := createPipelineRun(clientFactory, pipelineTest.pipelineRun)
-				assert.NilError(t, err)
-				pipelineRunCheck := CreatePipelineRunCondition(pr, pipelineTest.check, pipelineTest.name)
-				err = waiter.WaitFor(pipelineRunCheck)
-				assert.NilError(t, err)
+			pipelineTest.name =
+				fmt.Sprintf("%s_%d", pipelineTest.name, i)
+			pr, err := createPipelineRun(clientFactory, pipelineTest.pipelineRun)
+			assert.NilError(t, err)
+			pipelineRunCheck := CreatePipelineRunCondition(pr, pipelineTest.check, pipelineTest.name)
+			err = waiter.WaitFor(pipelineRunCheck)
+			assert.NilError(t, err)
+		}
 	}
-}
 }
 func createPipelineRun(clientFactory k8s.ClientFactory, pipelineRun *api.PipelineRun) (*api.PipelineRun, error) {
 	stewardClient := clientFactory.StewardV1alpha1().PipelineRuns(pipelineRun.GetNamespace())
