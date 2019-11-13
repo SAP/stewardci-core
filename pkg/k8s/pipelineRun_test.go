@@ -1,11 +1,12 @@
 package k8s
 
 import (
+	"testing"
+
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
-	"testing"
 )
 
 const message string = "MyMessage"
@@ -86,48 +87,44 @@ func Test__pipelineRun_calling_UpdateState_and_FinishState_yieldsHistoryWithOneE
 	assert.Equal(t, 1, len(status.StateHistory))
 }
 
-func Test_pipelineRun_GetRepoServerURL_CorrectURLHTTP(t *testing.T) {
-	factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, "HTTP://foo.com/Path"))
-	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
-	url, err := r.GetRepoServerURL()
-	assert.NilError(t, err)
-	assert.Equal(t, "http://foo.com", url)
-
+func Test_pipelineRun_GetRepoServerURL_CorrectURLs(t *testing.T) {
+	type tests struct {
+		url         string
+		expectedURL string
+	}
+	testSet := []tests{
+		{url: "http://foo.com/Path", expectedURL: "http://foo.com"},
+		{url: "HTTP://foo.com/Path", expectedURL: "http://foo.com"},
+		{url: "https://foo.com/Path", expectedURL: "https://foo.com"},
+		{url: "HTTPS://foo.com/Path", expectedURL: "https://foo.com"},
+		{url: "https://foo.com:1234/Path", expectedURL: "https://foo.com:1234"},
+		{url: "http://foo.com:1234/Path", expectedURL: "http://foo.com:1234"},
+	}
+	for _, test := range testSet {
+		factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, test.url))
+		r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
+		url, err := r.GetRepoServerURL()
+		assert.NilError(t, err)
+		assert.Equal(t, test.expectedURL, url)
+	}
 }
 
-func Test_pipelineRun_GetRepoServerURL_CorrectURL(t *testing.T) {
-	factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, "https://foo.com/Path"))
-	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
-	url, err := r.GetRepoServerURL()
-	assert.NilError(t, err)
-	assert.Equal(t, "https://foo.com", url)
-
-}
-
-func Test_pipelineRun_GetRepoServerURL_CorrectURLWithPort(t *testing.T) {
-	factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, "https://foo.com:1234/Path"))
-	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
-	url, err := r.GetRepoServerURL()
-	assert.NilError(t, err)
-	assert.Equal(t, "https://foo.com:1234", url)
-
-}
-
-func Test_pipelineRun_GetRepoServerURL_WrongUrl(t *testing.T) {
-	factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, "&:"))
-	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
-	url, err := r.GetRepoServerURL()
-	assert.Assert(t, is.Regexp("failed to parse jenkinsFile.url '&:'.+", err.Error()))
-	assert.Equal(t, "", url)
-}
-
-func Test_pipelineRun_GetRepoServerURL_WrongScheme(t *testing.T) {
-	factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, "ftp://foo/bar"))
-	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
-	url, err := r.GetRepoServerURL()
-	assert.Equal(t, "scheme not supported 'ftp'", err.Error())
-	assert.Equal(t, "", url)
-
+func Test_pipelineRun_GetRepoServerURL_WrongURLs(t *testing.T) {
+	type tests struct {
+		url                  string
+		expectedErrorPattern string
+	}
+	testSet := []tests{
+		{url: "&:", expectedErrorPattern: "failed to parse jenkinsFile.url '&:'.+"},
+		{url: "ftp://foo/bar", expectedErrorPattern: "scheme not supported 'ftp'"},
+	}
+	for _, test := range testSet {
+		factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, test.url))
+		r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
+		url, err := r.GetRepoServerURL()
+		assert.Assert(t, is.Regexp(test.expectedErrorPattern, err.Error()))
+		assert.Equal(t, "", url)
+	}
 }
 
 func newPipelineRun(ns string, name string) *api.PipelineRun {

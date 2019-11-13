@@ -1,16 +1,17 @@
 package secrets
 
 import (
+	"testing"
+
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
-	"testing"
 )
 
 func Test_UniqueNameTransformer(t *testing.T) {
 	secret := fake.Secret("name", "secret")
 	result := UniqueNameTransformer()(secret)
 	assert.Equal(t, "", result.GetName())
-	assert.Equal(t, "name", result.GetGenerateName())
+	assert.Equal(t, "name-", result.GetGenerateName())
 }
 
 func Test_SetAnnotationTransformer_New(t *testing.T) {
@@ -21,19 +22,39 @@ func Test_SetAnnotationTransformer_New(t *testing.T) {
 }
 
 func Test_SetAnnotationTransformer_Overwrite(t *testing.T) {
+	// SETUP
 	secret := fake.Secret("name", "secret")
-	result1 := SetAnnotationTransformer("foo", "bar")(secret)
-	result2 := SetAnnotationTransformer("foo", "baz")(result1)
-	assert.Equal(t, "bar", result1.GetAnnotations()["foo"])
-	assert.Equal(t, "baz", result2.GetAnnotations()["foo"])
+	secret = SetAnnotationTransformer("foo", "bar")(secret)
+	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
+	// EXERCISE
+	result := SetAnnotationTransformer("foo", "baz")(secret)
+	// VERIFY
+	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
+	assert.Equal(t, "baz", result.GetAnnotations()["foo"])
 }
 
-func Test_StripAnnotationsTransformer(t *testing.T) {
+func Test_StripAnnotationsTransformer_match(t *testing.T) {
+	// SETUP
 	secret := fake.Secret("name", "secret")
-	result1 := SetAnnotationTransformer("foo", "bar")(secret)
-	result2 := StripAnnotationsTransformer("f")(result1)
-	assert.Equal(t, "bar", result1.GetAnnotations()["foo"])
-	assert.Equal(t, "", result2.GetAnnotations()["foo"])
+	secret = SetAnnotationTransformer("foo", "bar")(secret)
+	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
+	// EXERCISE
+	result := StripAnnotationsTransformer("f")(secret)
+	// VERIFY
+	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
+	assert.Equal(t, "", result.GetAnnotations()["foo"])
+}
+
+func Test_StripAnnotationsTransformer_noMatch(t *testing.T) {
+	// SETUP
+	secret := fake.Secret("name", "secret")
+	secret = SetAnnotationTransformer("foo", "bar")(secret)
+	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
+	// EXERCISE
+	result := StripAnnotationsTransformer("x")(secret)
+	// VERIFY
+	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
+	assert.Equal(t, "bar", result.GetAnnotations()["foo"])
 }
 
 func Test_StripAnnotationsTransformer_Empty(t *testing.T) {
@@ -43,20 +64,39 @@ func Test_StripAnnotationsTransformer_Empty(t *testing.T) {
 }
 
 func Test_SetLabelTransformer(t *testing.T) {
+	// SETUP
 	secret := fake.Secret("name", "secret")
-	result1 := SetLabelTransformer("foo", "bar")(secret)
-	result2 := SetLabelTransformer("foo", "baz")(result1)
-	assert.Equal(t, "", secret.GetLabels()["foo"])
-	assert.Equal(t, "bar", result1.GetLabels()["foo"])
-	assert.Equal(t, "baz", result2.GetLabels()["foo"])
+	secret = SetLabelTransformer("foo", "bar")(secret)
+	assert.Equal(t, "bar", secret.GetLabels()["foo"])
+	// EXERCISE
+	result := SetLabelTransformer("foo", "baz")(secret)
+	// VERIFY
+	assert.Equal(t, "bar", secret.GetLabels()["foo"])
+	assert.Equal(t, "baz", result.GetLabels()["foo"])
 }
 
-func Test_StripLabelTransformer(t *testing.T) {
+func Test_StripLabelTransformer_match(t *testing.T) {
+	// SETUP
 	secret := fake.Secret("name", "secret")
-	result1 := SetLabelTransformer("foo", "bar")(secret)
-	result2 := StripLabelsTransformer("f")(result1)
-	assert.Equal(t, "bar", result1.GetLabels()["foo"])
-	assert.Equal(t, "", result2.GetLabels()["foo"])
+	secret = SetLabelTransformer("foo", "bar")(secret)
+	assert.Equal(t, "bar", secret.GetLabels()["foo"])
+	// EXERCISE
+	result := StripLabelsTransformer("f")(secret)
+	// VERIFY
+	assert.Equal(t, "bar", secret.GetLabels()["foo"])
+	assert.Equal(t, "", result.GetLabels()["foo"])
+}
+
+func Test_StripLabelTransformer_noMatch(t *testing.T) {
+	// SETUP
+	secret := fake.Secret("name", "secret")
+	secret = SetLabelTransformer("foo", "bar")(secret)
+	assert.Equal(t, "bar", secret.GetLabels()["foo"])
+	// EXERCISE
+	result := StripLabelsTransformer("x")(secret)
+	// VERIFY
+	assert.Equal(t, "bar", secret.GetLabels()["foo"])
+	assert.Equal(t, "bar", result.GetLabels()["foo"])
 }
 
 func Test_StripLabelTransformer_Empty(t *testing.T) {

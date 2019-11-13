@@ -6,6 +6,7 @@ import (
 
 // SecretProvider provides secrets
 type SecretProvider interface {
+	// GetSecret returns a secret by its name
+	// returns nil,nil if secret is not found
 	GetSecret(name string) (*v1.Secret, error)
-	IsNotFound(err error) bool
 }

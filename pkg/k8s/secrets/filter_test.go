@@ -1,32 +1,31 @@
 package secrets
 
 import (
+	"testing"
+
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
-	"testing"
 )
 
-func Test_DockerOnly_UntypedReturnsFalse(t *testing.T) {
-	secret := fake.Secret("foo", "bar")
-	result := DockerOnly(secret)
-	assert.Assert(t, result == false)
-}
-
-func Test_DockerOnly_TypeOpaqueReturnsFalse(t *testing.T) {
-	secret := fake.SecretWithType("foo", "bar", v1.SecretTypeOpaque)
-	result := DockerOnly(secret)
-	assert.Assert(t, result == false)
-}
-
-func Test_DockerOnly_DockerCfgReturnsTrue(t *testing.T) {
-	secret := fake.SecretWithType("foo", "bar", v1.SecretTypeDockercfg)
-	result := DockerOnly(secret)
-	assert.Assert(t, result == true)
-}
-
-func Test_DockerOnly_DockerConfigJsonReturnsTrue(t *testing.T) {
-	secret := fake.SecretWithType("foo", "bar", v1.SecretTypeDockerConfigJson)
-	result := DockerOnly(secret)
-	assert.Assert(t, result == true)
+func Test_DockerOnly(t *testing.T) {
+	t.Parallel()
+	type tests struct {
+		secretType     v1.SecretType
+		expectedResult bool
+	}
+	testSet := []tests{
+		{secretType: v1.SecretTypeOpaque, expectedResult: false},
+		{secretType: v1.SecretTypeServiceAccountToken, expectedResult: false},
+		{secretType: v1.SecretTypeBasicAuth, expectedResult: false},
+		{secretType: v1.SecretTypeSSHAuth, expectedResult: false},
+		{secretType: v1.SecretTypeTLS, expectedResult: false},
+		{secretType: v1.SecretTypeDockercfg, expectedResult: true},
+		{secretType: v1.SecretTypeDockerConfigJson, expectedResult: true},
+	}
+	for _, test := range testSet {
+		secret := fake.SecretWithType("foo", "bar", test.secretType)
+		result := DockerOnly(secret)
+		assert.Assert(t, result == test.expectedResult)
+	}
 }

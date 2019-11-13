@@ -66,7 +66,7 @@ A simple `PipelineRun` resource example can be found in [docs/examples/pipeliner
 | `spec.jenkinsFile.repoUrl` | the git repository containing the Jenkinsfile to be executed |
 | `spec.jenkinsFile.revision` | the branch/revision containing the Jenkinsfile to be executed |
 | `spec.jenkinsFile.relativePath` | the relative path to the Jenkinsfile inside the git repository + revision |
-| `spec.jenkinsFile.secret` | the name of the secret used for cloning the git repository containing the Jenkinsfile |
+| `spec.jenkinsFile.repoAuthSecret` | the name of the secret used for cloning the git repository containing the Jenkinsfile |
 | `spec.args` | The arguments specified here will be made available to the pipeline execution |
 | `spec.secrets[]` | The secrets specified here will be made available to the pipeline execution. Here you find [more information about secrets](../secrets/Secrets.md) |
 | `spec.imagePullSecrets[]` | The secrets specified here will be attached as immage pull secrets to the service account which is used to execute the pipeline run. This allows the pipeline to pull images from private docker repositories. Here you find [more information about secrets](../secrets/Secrets.md) |

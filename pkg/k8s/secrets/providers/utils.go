@@ -8,11 +8,10 @@ import (
 // StripMetadata strips the metadata from a secret
 func StripMetadata(secret *v1.Secret) *v1.Secret {
 	newSecret := secret.DeepCopy()
-	meta := metav1.ObjectMeta{
+	newSecret.ObjectMeta = metav1.ObjectMeta{
 		Name:        secret.GetName(),
 		Labels:      secret.GetLabels(),
 		Annotations: secret.GetAnnotations(),
 	}
-	newSecret.ObjectMeta = meta
 	return newSecret
 }

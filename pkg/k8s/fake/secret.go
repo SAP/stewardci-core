@@ -13,3 +13,8 @@ func Secret(name string, namespace string) *v1.Secret {
 func SecretWithType(name string, namespace string, secretType v1.SecretType) *v1.Secret {
 	return &v1.Secret{ObjectMeta: ObjectMeta(name, namespace), Type: secretType}
 }
+
+//SecretWithMetadata creates a fake secret with metadata
+func SecretWithMetadata(name, namespace string, secretType v1.SecretType) *v1.Secret {
+	return &v1.Secret{ObjectMeta: ObjectMetaFull(name, namespace), Type: secretType}
+}

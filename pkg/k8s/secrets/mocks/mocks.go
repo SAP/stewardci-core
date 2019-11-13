@@ -70,17 +70,3 @@ func (mr *MockSecretProviderMockRecorder) GetSecret(arg0 interface{}) *gomock.Ca
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockSecretProvider)(nil).GetSecret), arg0)
 }
-
-// IsNotFound mocks base method
-func (m *MockSecretProvider) IsNotFound(arg0 error) bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsNotFound", arg0)
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// IsNotFound indicates an expected call of IsNotFound
-func (mr *MockSecretProviderMockRecorder) IsNotFound(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNotFound", reflect.TypeOf((*MockSecretProvider)(nil).IsNotFound), arg0)
-}

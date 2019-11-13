@@ -141,7 +141,7 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 }
 
 func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secretHelper secrets.SecretHelper) (string, error) {
-	pipelineCloneSecret := pipelineRun.GetSpec().JenkinsFile.Secret
+	pipelineCloneSecret := pipelineRun.GetSpec().JenkinsFile.RepoAuthSecret
 	if pipelineCloneSecret == "" {
 		return "", nil
 	}
@@ -167,7 +167,7 @@ func (c *runManager) copySecrets(secretHelper secrets.SecretHelper, secretNames 
 	if err != nil {
 		log.Printf("cannot copy secrets %s: %s", secretNames, err)
 		pipelineRun.UpdateMessage(err.Error())
-		if c.secretProvider.IsNotFound(err) {
+		if secretHelper.IsNotFound(err) {
 			pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
 		} else {
 			pipelineRun.UpdateResult(v1alpha1.ResultErrorInfra)

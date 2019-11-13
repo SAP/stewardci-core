@@ -1,6 +1,9 @@
 package secrets
 
 import (
+	"fmt"
+
+	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
@@ -9,6 +12,7 @@ import (
 type SecretHelper interface {
 	CopySecrets(secretNames []string, filter SecretFilterType, transformers ...SecretTransformerType) ([]string, error)
 	CreateSecret(secret *v1.Secret) (*v1.Secret, error)
+	IsNotFound(err error) bool
 }
 
 type secretHelper struct {
@@ -39,6 +43,9 @@ func (h *secretHelper) CopySecrets(secretNames []string, filter SecretFilterType
 		if err != nil {
 			return storedSecretNames, err
 		}
+		if secret == nil {
+			return storedSecretNames, NewNotFoundError(secretName)
+		}
 		if filter != nil && !filter(secret) {
 			continue
 		}
@@ -52,6 +59,36 @@ func (h *secretHelper) CopySecrets(secretNames []string, filter SecretFilterType
 		storedSecretNames = append(storedSecretNames, storedSecret.GetName())
 	}
 	return storedSecretNames, nil
+}
+
+type notFoundError struct {
+	name string
+}
+
+func (e *notFoundError) Error() string {
+	return fmt.Sprintf("secret not found: '%s'", e.name)
+}
+
+// NewNotFoundError returns a not found error
+func NewNotFoundError(name string) error {
+	return &notFoundError{name: name}
+}
+
+// IsNotFound returns true if the error returned by CopySecrets is a not found error
+func (h *secretHelper) IsNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	switch err.(type) {
+	default:
+		cause := errors.Cause(err)
+		if err == cause {
+			return false
+		}
+		return h.IsNotFound(cause)
+	case *notFoundError:
+		return true
+	}
 }
 
 // CreateSecret stores the given secret

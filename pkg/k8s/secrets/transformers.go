@@ -1,19 +1,24 @@
 package secrets
 
 import (
+	"fmt"
+
 	v1 "k8s.io/api/core/v1"
 	"strings"
 )
 
 // SecretTransformerType is a type for secret transformers
+// the function MUST NOT modify the original secret but
+// return a copy of the given one even if no modification took place
 type SecretTransformerType = func(*v1.Secret) *v1.Secret
 
 // UniqueNameTransformer returns a transforming function from secret to secret
-// the resulting secret has generateName set to the original name and name is unset
+// the resulting secret has generateName set to the original name plus '-' as separator
+// and name is unset
 func UniqueNameTransformer() SecretTransformerType {
 	return func(secret *v1.Secret) *v1.Secret {
 		secret = secret.DeepCopy()
-		secret.SetGenerateName(secret.GetName())
+		secret.SetGenerateName(fmt.Sprintf("%s-", secret.GetName()))
 		secret.SetName("")
 		return secret
 	}
