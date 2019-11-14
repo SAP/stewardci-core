@@ -46,8 +46,9 @@ type Controller struct {
 }
 
 type controllerTesting struct {
-	syncRoleBindingStub func(tenant *api.Tenant, namespace string, config clientConfig) (bool, error)
 	getClientConfigStub func(factory k8s.ClientFactory, clientNamespace string) (clientConfig, error)
+	syncRoleBindingStub func(tenant *api.Tenant, namespace string, config clientConfig) (bool, error)
+	updateStatusStub    func(tenant *api.Tenant) (*api.Tenant, error)
 }
 
 // NewController creates new Controller
@@ -200,14 +201,14 @@ func (c *Controller) syncHandler(key string) error {
 		if err != nil {
 			return err
 		}
-		err = c.removeFinalizerAndUpdate(tenant)
+		tenant, err = c.removeFinalizerAndUpdate(tenant)
 		if err == nil {
 			c.syncCount++
 		}
 		return err
 	}
 
-	err = c.addFinalizerAndUpdate(tenant)
+	tenant, err = c.addFinalizerAndUpdate(tenant)
 	if err != nil {
 		return err
 	}
@@ -217,6 +218,9 @@ func (c *Controller) syncHandler(key string) error {
 	// do not update the status if there's no change
 	if !equality.Semantic.DeepEqual(origTenant.Status, tenant.Status) {
 		if _, err := c.updateStatus(tenant); err != nil {
+			if !c.isInitialized(origTenant) && c.isInitialized(tenant) {
+				c.rollbackTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config)
+			}
 			return err
 		}
 	}
@@ -230,11 +234,15 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
+func (c *Controller) isInitialized(tenant *api.Tenant) bool {
+	return tenant.Status.TenantNamespaceName != ""
+}
+
 func (c *Controller) reconcile(config clientConfig, tenant *api.Tenant) (err error) {
-	if tenant.Status.TenantNamespaceName == "" {
-		err = c.reconcileUninitialized(config, tenant)
-	} else {
+	if c.isInitialized(tenant) {
 		err = c.reconcileInitialized(config, tenant)
+	} else {
+		err = c.reconcileUninitialized(config, tenant)
 	}
 	return
 }
@@ -341,25 +349,29 @@ func (c *Controller) hasFinalizer(tenant *api.Tenant) bool {
 	return utils.StringSliceContains(tenant.GetFinalizers(), k8s.FinalizerName)
 }
 
-func (c *Controller) addFinalizerAndUpdate(tenant *api.Tenant) error {
+func (c *Controller) addFinalizerAndUpdate(tenant *api.Tenant) (*api.Tenant, error) {
 	changed, finalizerList := utils.AddStringIfMissing(tenant.GetFinalizers(), k8s.FinalizerName)
 	if changed {
 		tenant.SetFinalizers(finalizerList)
-		return c.updateFinalizers(tenant)
+		return c.update(tenant)
 	}
-	return nil
+	return tenant, nil
 }
 
-func (c *Controller) removeFinalizerAndUpdate(tenant *api.Tenant) error {
+func (c *Controller) removeFinalizerAndUpdate(tenant *api.Tenant) (*api.Tenant, error) {
 	changed, finalizerList := utils.RemoveString(tenant.GetFinalizers(), k8s.FinalizerName)
 	if changed {
 		tenant.SetFinalizers(finalizerList)
-		return c.updateFinalizers(tenant)
+		return c.update(tenant)
 	}
-	return nil
+	return tenant, nil
 }
 
 func (c *Controller) updateStatus(tenant *api.Tenant) (*api.Tenant, error) {
+	if c.testing != nil && c.testing.updateStatusStub != nil {
+		return c.testing.updateStatusStub(tenant)
+	}
+
 	client := c.factory.StewardV1alpha1().Tenants(tenant.GetNamespace())
 	updatedTenant, err := client.UpdateStatus(tenant)
 	if err != nil {
@@ -370,28 +382,18 @@ func (c *Controller) updateStatus(tenant *api.Tenant) (*api.Tenant, error) {
 	return updatedTenant, nil
 }
 
-func (c *Controller) updateFinalizers(tenant *api.Tenant) error {
+func (c *Controller) update(tenant *api.Tenant) (*api.Tenant, error) {
 	client := c.factory.StewardV1alpha1().Tenants(tenant.GetNamespace())
-	newTenant, err := client.Get(tenant.GetName(), metav1.GetOptions{})
-	if err != nil {
-		err = errors.WithMessagef(err,
-			"failed to get tenant %q in namespace %q",
-			tenant.GetName(), tenant.GetNamespace(),
-		)
-		c.logPrintln(tenant, err)
-		return err
-	}
-	newTenant.SetFinalizers(tenant.GetFinalizers())
-	_, err = client.Update(newTenant)
+	result, err := client.Update(tenant)
 	if err != nil {
 		err = errors.WithMessagef(err,
 			"failed to update tenant %q in namespace %q",
 			tenant.GetName(), tenant.GetNamespace(),
 		)
 		c.logPrintln(tenant, err)
-		return err
+		return tenant, err
 	}
-	return nil
+	return result, nil
 }
 
 func (c *Controller) checkNamespaceExists(name string) (bool, error) {

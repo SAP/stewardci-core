@@ -127,9 +127,9 @@ func Test_Controller_syncHandler_AddsFinalizer(t *testing.T) {
 
 	// EXERCISE
 	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
-	assert.NilError(t, resultErr)
 
 	// VERIFY
+	assert.NilError(t, resultErr)
 	{
 		tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
@@ -161,9 +161,9 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 
 	// EXERCISE
 	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
-	assert.NilError(t, resultErr)
 
 	// VERIFY
+	assert.NilError(t, resultErr)
 	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
 	assert.NilError(t, err)
 
@@ -364,9 +364,9 @@ func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *tes
 
 	// EXERCISE
 	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
-	assert.NilError(t, resultErr)
 
 	// VERIFY
+	assert.NilError(t, resultErr)
 	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
 	assert.NilError(t, err)
 
@@ -546,7 +546,7 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnErrorWhenSyncingRoleBi
 	)
 }
 
-func Test_Controller_syncHandler_RollbackIfDeletionTimestampAndFinalizerIsSet(t *testing.T) {
+func Test_Controller_syncHandler_RollbackOnDelete_IfFinalizerIsSet(t *testing.T) {
 	// SETUP
 	const (
 		clientNSName   = "client1"
@@ -600,9 +600,9 @@ func Test_Controller_syncHandler_RollbackIfDeletionTimestampAndFinalizerIsSet(t 
 
 	// EXERCISE
 	resultErr := ctl.syncHandler(tenantKey)
-	assert.NilError(t, resultErr)
 
 	// VERIFY
+	assert.NilError(t, resultErr)
 	assertThatExactlyTheseNamespacesExist(t, cf,
 		clientNSName,
 		// tenant namespace removed
@@ -610,7 +610,73 @@ func Test_Controller_syncHandler_RollbackIfDeletionTimestampAndFinalizerIsSet(t 
 	assertThatExactlyTheseTenantsExistInNamespace(t, cf, clientNSName /*none*/)
 }
 
-func Test_Controller_syncHandler_RollbackEvenIfNamespaceDoesNotExistAnymore(t *testing.T) {
+func Test_Controller_syncHandler_RollBackOnDelete_SkippedIfFinalizerIsNotSet(t *testing.T) {
+	// SETUP
+	const (
+		clientNSName   = "client1"
+		tenantNSPrefix = "prefix1"
+		tenantID       = "tenant1"
+		tenantRoleName = "tenantClusterRole1"
+	)
+
+	cf := fake.NewClientFactory(
+		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
+			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
+		}),
+		fake.Tenant(tenantID, "", "", clientNSName),
+	)
+	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
+	tenantKey := makeTenantKey(clientNSName, tenantID)
+	tenantsIfc := cf.StewardV1alpha1().Tenants(clientNSName)
+	var tenantNSName string
+
+	// initialize tenant
+	{
+		err := ctl.syncHandler(tenantKey)
+		assert.NilError(t, err)
+
+		initializedTenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
+		assert.NilError(t, err)
+		tenantNSName = initializedTenant.Status.TenantNamespaceName
+	}
+
+	assert.Assert(t, tenantNSName != "")
+	assertThatExactlyTheseNamespacesExist(t, cf,
+		clientNSName,
+		tenantNSName, // tenant namespace created
+	)
+
+	// mark tenant as deleted
+	{
+		// Fake client deletes immediately -> set deletion timestamp
+		tenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
+		assert.NilError(t, err)
+		tenant.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
+		tenant.SetFinalizers([]string{"not-our-finalizer"})
+		_, err = tenantsIfc.Update(tenant)
+		assert.NilError(t, err)
+	}
+
+	// EXERCISE
+	resultErr := ctl.syncHandler(tenantKey)
+
+	// VERIFY
+	assert.NilError(t, resultErr)
+	assertThatExactlyTheseNamespacesExist(t, cf,
+		clientNSName,
+		tenantNSName, // tenant namespace NOT removed
+	)
+	assertThatExactlyTheseTenantsExistInNamespace(t, cf, clientNSName,
+		tenantID, // due to other finalizer
+	)
+	tenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
+	assert.NilError(t, err)
+	assert.Assert(t, !tenant.GetDeletionTimestamp().IsZero())
+	assertThatExactlyTheseFinalizersExist(t, &tenant.ObjectMeta, "not-our-finalizer")
+}
+
+func Test_Controller_syncHandler_RollbackOnDelete_IfNamespaceDoesNotExistAnymore(t *testing.T) {
 	// SETUP
 	const (
 		clientNSName   = "client1"
@@ -675,13 +741,13 @@ func Test_Controller_syncHandler_RollbackEvenIfNamespaceDoesNotExistAnymore(t *t
 
 	// EXERCISE
 	resultErr := ctl.syncHandler(tenantKey)
-	assert.NilError(t, resultErr)
 
 	// VERIFY
+	assert.NilError(t, resultErr)
 	assertThatExactlyTheseTenantsExistInNamespace(t, cf, clientNSName /*none*/)
 }
 
-func Test_Controller_syncHandler_RollBackSkippedIfDeletionTimestampIsSetButFinalizerIsNotSet(t *testing.T) {
+func Test_Controller_syncHandler_RollbackOnStatusUpdateFailure(t *testing.T) {
 	// SETUP
 	const (
 		clientNSName   = "client1"
@@ -698,53 +764,25 @@ func Test_Controller_syncHandler_RollBackSkippedIfDeletionTimestampIsSetButFinal
 		fake.Tenant(tenantID, "", "", clientNSName),
 	)
 	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
-	tenantKey := makeTenantKey(clientNSName, tenantID)
-	tenantsIfc := cf.StewardV1alpha1().Tenants(clientNSName)
-	var tenantNSName string
 
-	// initialize tenant
-	{
-		err := ctl.syncHandler(tenantKey)
-		assert.NilError(t, err)
-
-		initializedTenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
-		assert.NilError(t, err)
-		tenantNSName = initializedTenant.Status.TenantNamespaceName
-	}
-
-	assert.Assert(t, tenantNSName != "")
-	assertThatExactlyTheseNamespacesExist(t, cf,
-		clientNSName,
-		tenantNSName, // tenant namespace created
-	)
-
-	// mark tenant as deleted
-	{
-		// Fake client deletes immediately -> set deletion timestamp
-		tenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
-		assert.NilError(t, err)
-		tenant.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
-		tenant.SetFinalizers([]string{"not-our-finalizer"})
-		_, err = tenantsIfc.Update(tenant)
-		assert.NilError(t, err)
+	injectedError := errors.New("ERR1")
+	ctl.testing = &controllerTesting{
+		updateStatusStub: func(tenant *api.Tenant) (*api.Tenant, error) {
+			assert.Assert(t, tenant.Status.TenantNamespaceName != "", spew.Sdump(tenant.Status))
+			return tenant, injectedError
+		},
 	}
 
 	// EXERCISE
-	resultErr := ctl.syncHandler(tenantKey)
-	assert.NilError(t, resultErr)
+	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
 
 	// VERIFY
+	assert.Assert(t, injectedError == resultErr)
+
 	assertThatExactlyTheseNamespacesExist(t, cf,
 		clientNSName,
-		tenantNSName, // tenant namespace NOT removed
+		/* no tenant namespace */
 	)
-	assertThatExactlyTheseTenantsExistInNamespace(t, cf, clientNSName,
-		tenantID, // due to other finalizer
-	)
-	tenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
-	assert.NilError(t, err)
-	assert.Assert(t, !tenant.GetDeletionTimestamp().IsZero())
-	assertThatExactlyTheseFinalizersExist(t, &tenant.ObjectMeta, "not-our-finalizer")
 }
 
 func Test_Controller_createOrReplaceRoleBinding_Replace(t *testing.T) {
