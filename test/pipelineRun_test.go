@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/test/builder"
 	"gotest.tools/assert"
 )
@@ -61,20 +60,20 @@ func PipelineRunOK(namespace string) pipelineRunTest {
 					"master",
 					"success/Jenkinsfile"),
 			)),
-		check: PipelineRunHasStateResult(api.ResultErrorContent),
+		check: PipelineRunHasStateResult(api.ResultSuccess),
 	}
 }
 
-func xxxipelineRuns(t *testing.T) {
+func Test_PipelineRuns(t *testing.T) {
 	executePipelineRunTests(t,
 		testPlan{testBuilder: PipelineRunSleep,
-			parallel: 0,
+			parallel: 1,
 		},
 		testPlan{testBuilder: PipelineRunFail,
-			parallel: 1,
+			parallel: 2,
 		},
 		testPlan{testBuilder: PipelineRunOK,
-			parallel: 1,
+			parallel: 3,
 		},
 	)
 }
@@ -95,6 +94,7 @@ func executeSingleTest(t *testing.T, testBuilder pipelineRunTestBuilder) {
 	check := CreateTenantCondition(tenant, test.check, test.name)
 	err = waiter.WaitFor(check)
 	assert.NilError(t, err)
+
 	tenant, err = GetTenant(clientFactory, tenant)
 	assert.NilError(t, err)
 	tnn := tenant.Status.TenantNamespaceName
@@ -104,7 +104,6 @@ func executeSingleTest(t *testing.T, testBuilder pipelineRunTestBuilder) {
 	pipelineRunCheck := CreatePipelineRunCondition(pr, pipelineTest.check, pipelineTest.name)
 	err = waiter.WaitFor(pipelineRunCheck)
 	assert.NilError(t, err)
-
 }
 
 func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
@@ -129,15 +128,15 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 			pipelineTest := testBuilder(tnn)
 			pipelineTest.name =
 				fmt.Sprintf("%s_%d", pipelineTest.name, i)
+				//    t.Run(pipelineTest.name,func(t *testing.T) {
+				//      pipelineTest := pipelineTest
+				//      t.Parallel()
 			pr, err := createPipelineRun(clientFactory, pipelineTest.pipelineRun)
 			assert.NilError(t, err)
 			pipelineRunCheck := CreatePipelineRunCondition(pr, pipelineTest.check, pipelineTest.name)
 			err = waiter.WaitFor(pipelineRunCheck)
 			assert.NilError(t, err)
+			//	})
 		}
 	}
-}
-func createPipelineRun(clientFactory k8s.ClientFactory, pipelineRun *api.PipelineRun) (*api.PipelineRun, error) {
-	stewardClient := clientFactory.StewardV1alpha1().PipelineRuns(pipelineRun.GetNamespace())
-	return stewardClient.Create(pipelineRun)
 }

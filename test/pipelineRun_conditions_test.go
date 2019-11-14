@@ -1,16 +1,16 @@
 package test
 
 import (
-	"testing"
-        "time"
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"github.com/SAP/stewardci-core/test/builder"
 	"gotest.tools/assert"
+	"testing"
+	"time"
 )
 
-func Test_PipelineCondition(t *testing.T) {
+func xxx_PipelineCondition(t *testing.T) {
 	check := PipelineRunHasStateResult(api.ResultSuccess)
 	pipelineRun :=
 		builder.PipelineRun("namespace1")
@@ -24,7 +24,7 @@ func Test_PipelineCondition(t *testing.T) {
 	go func() {
 		errorChan <- waiter.WaitFor(pipelineRunCheck)
 	}()
-        time.Sleep(3 * time.Second)
+	time.Sleep(3 * time.Second)
 	setState(clientFactory, pr, api.ResultSuccess)
 	err = <-errorChan
 	assert.NilError(t, err)

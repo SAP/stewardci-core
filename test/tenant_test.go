@@ -26,7 +26,7 @@ func TenantSuccessTest(namespace string) tenantTest {
 	}
 }
 
-func TestTenantCreation(t *testing.T) {
+func Test_TenantCreation(t *testing.T) {
 	t.Parallel()
 	clientFactory, namespace, waiter := setup(t)
 	test := TenantSuccessTest(namespace)
