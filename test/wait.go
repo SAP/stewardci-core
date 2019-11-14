@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
@@ -32,4 +33,20 @@ func (w *waiter) WaitFor(condition WaitCondition) error {
 	return wait.PollImmediate(interval, timeout, func() (bool, error) {
 		return condition.Wait(w.clientFactory)
 	})
+}
+
+func (w *waiter) MyWaitFor(condition WaitCondition) error {
+	time.Sleep(interval)
+	for {
+		result, err := condition.Wait(w.clientFactory)
+		log.Printf("MyWaitFor: %t, %s", result, err)
+		if err != nil {
+			return err
+		}
+		if result {
+			break
+		}
+		time.Sleep(interval)
+	}
+	return nil
 }
