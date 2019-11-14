@@ -10,10 +10,10 @@ import (
 // filter function nil keeps all items
 type SecretFilterType = func(*v1.Secret) bool
 
-// DockerOnly filter to filter only docker secrets
 // check that signature conforms to type
 var _ SecretFilterType = DockerOnly
 
+// DockerOnly filter to filter only docker secrets
 func DockerOnly(secret *v1.Secret) bool {
 	return secret.Type == v1.SecretTypeDockerConfigJson || secret.Type == v1.SecretTypeDockercfg
 }

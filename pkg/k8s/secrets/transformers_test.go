@@ -5,13 +5,15 @@ import (
 
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
+	v1 "k8s.io/api/core/v1"
 )
 
 func Test_UniqueNameTransformer(t *testing.T) {
-	secret := fake.Secret("name", "secret")
+	secret := fake.SecretWithType("name", "secret", v1.SecretTypeDockercfg)
 	result := UniqueNameTransformer()(secret)
 	assert.Equal(t, "", result.GetName())
 	assert.Equal(t, "name-", result.GetGenerateName())
+	assert.Equal(t, v1.SecretTypeDockercfg, result.Type)
 }
 
 func Test_SetAnnotationTransformer_New(t *testing.T) {

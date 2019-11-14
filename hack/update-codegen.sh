@@ -82,5 +82,5 @@ set -x
     -destination="${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
     -package=mocks \
     github.com/SAP/stewardci-core/pkg/k8s/secrets \
-    SecretProvider
+    SecretProvider,SecretHelper
 set +x

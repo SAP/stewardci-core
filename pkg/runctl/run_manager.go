@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 const (
@@ -42,17 +43,25 @@ type RunManager interface {
 }
 
 type runManager struct {
-	secretProvider   secrets.SecretProvider
-	factory          k8s.ClientFactory
-	namespaceManager k8s.NamespaceManager
+	secretProvider        secrets.SecretProvider
+	factory               k8s.ClientFactory
+	namespaceManager      k8s.NamespaceManager
+	uniqueNameTransformer secrets.SecretTransformerType
+	testing               *runManagerTesting
+}
+
+type runManagerTesting struct {
+	getSecretHelperStub func(string, corev1.SecretInterface) secrets.SecretHelper
 }
 
 // NewRunManager creates a new RunManager.
 func NewRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) RunManager {
+	uniqueNameTransformer := secrets.UniqueNameTransformer()
 	return &runManager{
-		secretProvider:   secretProvider,
-		factory:          factory,
-		namespaceManager: namespaceManager,
+		secretProvider:        secretProvider,
+		factory:               factory,
+		namespaceManager:      namespaceManager,
+		uniqueNameTransformer: uniqueNameTransformer,
 	}
 }
 
@@ -97,7 +106,7 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 
 	//Copy secrets to Run Namespace
 	targetClient := c.factory.CoreV1().Secrets(runNamespace)
-	secretHelper := secrets.NewSecretHelper(c.secretProvider, runNamespace, targetClient)
+	secretHelper := c.getSecretHelper(runNamespace, targetClient)
 
 	pipelineCloneSecretName, err := c.copyPipelineCloneSecret(pipelineRun, secretHelper)
 	if err != nil {
@@ -116,7 +125,7 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 		stripTektonAnnotationsTransformer,
 		secrets.StripAnnotationsTransformer("jenkins.io/"),
 		secrets.StripLabelsTransformer("jenkins.io/"),
-		secrets.UniqueNameTransformer(),
+		c.uniqueNameTransformer,
 	}
 
 	imagePullSecrets, err = c.copySecrets(secretHelper, imagePullSecrets, pipelineRun, secrets.DockerOnly, transformers...)
@@ -140,6 +149,13 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	return nil
 }
 
+func (c *runManager) getSecretHelper(runNamespace string, targetClient corev1.SecretInterface) secrets.SecretHelper {
+	if c.testing != nil && c.testing.getSecretHelperStub != nil {
+		return c.testing.getSecretHelperStub(runNamespace, targetClient)
+	}
+	return secrets.NewSecretHelper(c.secretProvider, runNamespace, targetClient)
+}
+
 func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secretHelper secrets.SecretHelper) (string, error) {
 	pipelineCloneSecret := pipelineRun.GetSpec().JenkinsFile.RepoAuthSecret
 	if pipelineCloneSecret == "" {
@@ -152,7 +168,7 @@ func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secret
 	transformers := []secrets.SecretTransformerType{
 		secrets.StripAnnotationsTransformer("jenkins.io/"),
 		secrets.StripLabelsTransformer("jenkins.io/"),
-		secrets.UniqueNameTransformer(),
+		c.uniqueNameTransformer,
 		secrets.SetAnnotationTransformer("tekton.dev/git-0", repoServerURL),
 	}
 	names, err := c.copySecrets(secretHelper, []string{pipelineCloneSecret}, pipelineRun, nil, transformers...)

@@ -29,21 +29,33 @@ func fakeServiceAccount() *v1.ServiceAccount {
 
 func Test_CreateServiceAccount_works(t *testing.T) {
 	setupAccountManager()
-	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1"})
-	assert.NilError(t, err)
-	assert.Equal(t, accountName, acc.GetServiceAccount().GetName())
-	assert.Equal(t, 1, len(acc.GetServiceAccount().ImagePullSecrets))
-	assert.Equal(t, "imagePullSecret1", acc.GetServiceAccount().ImagePullSecrets[0].Name)
-}
-
-func Test_CreateServiceAccount_multipleSecretsworks(t *testing.T) {
-	setupAccountManager()
 	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
 	assert.NilError(t, err)
 	assert.Equal(t, accountName, acc.GetServiceAccount().GetName())
+	assert.Equal(t, "pipelineCloneSecretName1", acc.GetServiceAccount().Secrets[0].Name)
 	assert.Equal(t, 2, len(acc.GetServiceAccount().ImagePullSecrets))
 	assert.Equal(t, "imagePullSecret1", acc.GetServiceAccount().ImagePullSecrets[0].Name)
 	assert.Equal(t, "imagePullSecret2", acc.GetServiceAccount().ImagePullSecrets[1].Name)
+}
+
+func Test_CreateServiceAccount_noPullSecrets(t *testing.T) {
+	setupAccountManager()
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{})
+	assert.NilError(t, err)
+	assert.Equal(t, accountName, acc.GetServiceAccount().GetName())
+	assert.Equal(t, "pipelineCloneSecretName1", acc.GetServiceAccount().Secrets[0].Name)
+	assert.Equal(t, 0, len(acc.GetServiceAccount().ImagePullSecrets))
+}
+
+func Test_CreateServiceAccount_noCloneSecret(t *testing.T) {
+	setupAccountManager()
+	acc, err := accountManager.CreateServiceAccount(accountName, "", []string{"imagePullSecret1"})
+	assert.NilError(t, err)
+	assert.Equal(t, accountName, acc.GetServiceAccount().GetName())
+	assert.Equal(t, 0, len(acc.GetServiceAccount().Secrets))
+	assert.Equal(t, 1, len(acc.GetServiceAccount().ImagePullSecrets))
+	assert.Equal(t, "imagePullSecret1", acc.GetServiceAccount().ImagePullSecrets[0].Name)
+
 }
 
 func Test_CreateServiceAccount_failsWhenAlreadyExists(t *testing.T) {
