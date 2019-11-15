@@ -17,6 +17,6 @@ func Test_TenantCreation(t *testing.T) {
 	assert.NilError(t, err)
 	defer DeleteTenant(clientFactory, tenant)
 	check := CreateTenantCondition(tenant, test.check, test.name)
-	err = waiter.WaitFor(check)
+	err = waiter.WaitFor(t, check)
 	assert.NilError(t, err)
 }

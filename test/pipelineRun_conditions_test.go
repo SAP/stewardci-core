@@ -22,7 +22,7 @@ func Test_PipelineCondition(t *testing.T) {
 	errorChan := make(chan error)
 
 	go func() {
-		errorChan <- waiter.WaitFor(pipelineRunCheck)
+		errorChan <- waiter.WaitFor(t, pipelineRunCheck)
 	}()
 	time.Sleep(3 * time.Second)
 	setState(clientFactory, pr, api.ResultSuccess)
