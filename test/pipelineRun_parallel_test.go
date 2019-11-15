@@ -3,6 +3,7 @@
 package test
 
 import (
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"testing"
 )
 
@@ -19,4 +20,3 @@ func Test_PipelineRuns(t *testing.T) {
 		},
 	)
 }
-
