@@ -4,7 +4,7 @@ metadata:
   generateName: details-
 spec:
   jenkinsFile:
-    repoUrl: https://github.com/sap-production/demo-pipelines
+    repoUrl: https://github.com/SAP-samples/stewardci-example-pipelines
     revision: master
     relativePath: sleep/Jenkinsfile
   runDetails:
