@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	knativetest "knative.dev/pkg/test"
 )
 
