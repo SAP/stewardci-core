@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func xxx_PipelineCondition(t *testing.T) {
+func Test_PipelineCondition(t *testing.T) {
 	check := PipelineRunHasStateResult(api.ResultSuccess)
 	pipelineRun :=
 		builder.PipelineRun("namespace1")

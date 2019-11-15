@@ -5,10 +5,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// PipelineRunOp is an operation which modifies a PipelineRun.
 type PipelineRunOp func(*api.PipelineRun)
 
+// PipelineRunSpecOp is an operation returning a modified PipelineSpec
 type PipelineRunSpecOp func(api.PipelineSpec) api.PipelineSpec
 
+// PipelineRun creates a PipelineRun
+// Any number of PipelineRunOps can be passed
 func PipelineRun(namespace string, ops ...PipelineRunOp) *api.PipelineRun {
 	run := &api.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
@@ -22,6 +26,8 @@ func PipelineRun(namespace string, ops ...PipelineRunOp) *api.PipelineRun {
 	return run
 }
 
+// PipelineRunSpec creates a PipelineRunSpec
+// Any number of PipelineRunSpecOps can be passed
 func PipelineRunSpec(ops ...PipelineRunSpecOp) PipelineRunOp {
 	return func(run *api.PipelineRun) {
 		spec := run.Spec
@@ -33,6 +39,8 @@ func PipelineRunSpec(ops ...PipelineRunSpecOp) PipelineRunOp {
 	}
 }
 
+// JenkinsFileSpec creates a JenkinsFileSpec
+// TODO: introduce JenkinsFileSpecOp
 func JenkinsFileSpec(url, revision, path string) PipelineRunSpecOp {
 	return func(spec api.PipelineSpec) api.PipelineSpec {
 		spec.JenkinsFile = api.JenkinsFile{
@@ -45,6 +53,7 @@ func JenkinsFileSpec(url, revision, path string) PipelineRunSpecOp {
 	}
 }
 
+// ArgSpec creates a PipelineRunSpecOp which adds an ArgSpec
 func ArgSpec(key, value string) PipelineRunSpecOp {
 	return func(spec api.PipelineSpec) api.PipelineSpec {
 		args := spec.Args
