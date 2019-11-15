@@ -5,6 +5,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Tenant creates a Tenant
 func Tenant(name, namespace, displayName string) *api.Tenant {
 	t := &api.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
