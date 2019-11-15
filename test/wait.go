@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"log"
+	"testing"
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
@@ -17,7 +18,7 @@ const (
 
 // Waiter is a waiter waiting for a condition to be fullfilled
 type Waiter interface {
-	WaitFor(condition WaitCondition) error
+	WaitFor(t *testing.T, condition WaitCondition) error
 }
 
 type waiter struct {
@@ -31,12 +32,12 @@ func NewWaiter(clientFactory k8s.ClientFactory) Waiter {
 
 // WaitFor waits for a condition
 // it returns an error if condition is not fullfilled
-func (w *waiter) WaitFor(condition WaitCondition) error {
-	log.Printf("wait for %s", condition.Name())
+func (w *waiter) WaitFor(t *testing.T, condition WaitCondition) error {
+	t.Helper()
 	startTime := time.Now()
+	log.Printf("wait for %s", condition.Name())
 	_, span := trace.StartSpan(context.Background(), condition.Name())
 	defer span.End()
-
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		return condition.Check(w.clientFactory)
 	})
@@ -44,12 +45,15 @@ func (w *waiter) WaitFor(condition WaitCondition) error {
 	return err
 }
 
-func (w *waiter) myWaitFor(condition WaitCondition) error {
-	time.Sleep(interval)
+// WaitFor waits for a condition
+func (w *waiter) WaitForX(t *testing.T, condition WaitCondition) error {
+	t.Helper()
+	log.Printf("wait for %s", condition.Name())
+	startTime := time.Now()
 	for {
 		result, err := condition.Check(w.clientFactory)
-		log.Printf("MyWaitFor: %t, %s", result, err)
 		if err != nil {
+			log.Printf("waiting completed for %s after %s", condition.Name(), time.Now().Sub(startTime))
 			return err
 		}
 		if result {
@@ -57,5 +61,6 @@ func (w *waiter) myWaitFor(condition WaitCondition) error {
 		}
 		time.Sleep(interval)
 	}
+	log.Printf("waiting completed for %s after %s", condition.Name(), time.Now().Sub(startTime))
 	return nil
 }
