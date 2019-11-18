@@ -87,43 +87,42 @@ func Test__pipelineRun_calling_UpdateState_and_FinishState_yieldsHistoryWithOneE
 	assert.Equal(t, 1, len(status.StateHistory))
 }
 
-func Test_pipelineRun_GetRepoServerURL_CorrectURLs(t *testing.T) {
-	type tests struct {
+func Test_pipelineRun_GetPipelineRepoServerURL_CorrectURLs(t *testing.T) {
+	for _, test := range []struct {
 		url         string
 		expectedURL string
-	}
-	testSet := []tests{
+	}{
 		{url: "http://foo.com/Path", expectedURL: "http://foo.com"},
 		{url: "HTTP://foo.com/Path", expectedURL: "http://foo.com"},
 		{url: "https://foo.com/Path", expectedURL: "https://foo.com"},
 		{url: "HTTPS://foo.com/Path", expectedURL: "https://foo.com"},
 		{url: "https://foo.com:1234/Path", expectedURL: "https://foo.com:1234"},
 		{url: "http://foo.com:1234/Path", expectedURL: "http://foo.com:1234"},
-	}
-	for _, test := range testSet {
-		factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, test.url))
-		r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
-		url, err := r.GetRepoServerURL()
-		assert.NilError(t, err)
-		assert.Equal(t, test.expectedURL, url)
+	} {
+		t.Run(test.url, func(t *testing.T) {
+			factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, test.url))
+			r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
+			url, err := r.GetPipelineRepoServerURL()
+			assert.NilError(t, err)
+			assert.Equal(t, test.expectedURL, url)
+		})
 	}
 }
-
-func Test_pipelineRun_GetRepoServerURL_WrongURLs(t *testing.T) {
-	type tests struct {
+func Test_pipelineRun_GetPipelineRepoServerURL_WrongURLs(t *testing.T) {
+	for _, test := range []struct {
 		url                  string
 		expectedErrorPattern string
-	}
-	testSet := []tests{
+	}{
 		{url: "&:", expectedErrorPattern: `value "&:" of field spec.jenkinsFile.url is invalid: .*`},
 		{url: "ftp://foo/bar", expectedErrorPattern: `value "ftp://foo/bar" of field spec.jenkinsFile.url is invalid: scheme not supported: .*`},
-	}
-	for _, test := range testSet {
-		factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, test.url))
-		r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
-		url, err := r.GetRepoServerURL()
-		assert.Assert(t, is.Regexp(test.expectedErrorPattern, err.Error()))
-		assert.Equal(t, "", url)
+	} {
+		t.Run(test.url, func(t *testing.T) {
+			factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, test.url))
+			r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
+			url, err := r.GetPipelineRepoServerURL()
+			assert.Assert(t, is.Regexp(test.expectedErrorPattern, err.Error()))
+			assert.Equal(t, "", url)
+		})
 	}
 }
 

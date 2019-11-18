@@ -2,6 +2,9 @@ package k8s
 
 import (
 	"fmt"
+	"log"
+	"net/url"
+
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
@@ -10,8 +13,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
-	"log"
-	"net/url"
 )
 
 // PipelineRun is a wrapper for the K8s PipelineRun resource
@@ -22,7 +23,7 @@ type PipelineRun interface {
 	GetKey() string
 	GetRunNamespace() string
 	GetNamespace() string
-	GetRepoServerURL() (string, error)
+	GetPipelineRepoServerURL() (string, error)
 	HasDeletionTimestamp() bool
 	AddFinalizer() error
 	DeleteFinalizerIfExists() error
@@ -113,8 +114,8 @@ func (r *pipelineRun) GetNamespace() string {
 	return r.cached.GetNamespace()
 }
 
-// GetRepoServerURL returns the server hosting the Jenkinsfile repository
-func (r *pipelineRun) GetRepoServerURL() (string, error) {
+// GetPipelineRepoServerURL returns the server hosting the Jenkinsfile repository
+func (r *pipelineRun) GetPipelineRepoServerURL() (string, error) {
 	urlString := r.GetSpec().JenkinsFile.URL
 	repoURL, err := url.Parse(urlString)
 	if err != nil {

@@ -161,7 +161,7 @@ func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secret
 	if pipelineCloneSecret == "" {
 		return "", nil
 	}
-	repoServerURL, err := pipelineRun.GetRepoServerURL()
+	repoServerURL, err := pipelineRun.GetPipelineRepoServerURL()
 	if err != nil {
 		return "", err
 	}

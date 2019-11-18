@@ -3,14 +3,32 @@ package providers
 import (
 	"testing"
 
-	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func Test_StripMetadata(t *testing.T) {
-	secret := fake.SecretWithMetadata("foo", "ns1", v1.SecretTypeOpaque)
+	now := metav1.Now()
+	var grace int64 = 1
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:                       "foo",
+			GenerateName:               "dummy",
+			Namespace:                  "ns1",
+			SelfLink:                   "dummy",
+			UID:                        types.UID("dummy"),
+			ResourceVersion:            "dummy",
+			Generation:                 1,
+			CreationTimestamp:          now,
+			DeletionGracePeriodSeconds: &grace,
+			OwnerReferences:            []metav1.OwnerReference{metav1.OwnerReference{}},
+			Finalizers:                 []string{"dummy"},
+			ClusterName:                "dummy",
+		},
+		Type: v1.SecretTypeOpaque,
+	}
 	labels := map[string]string{"lbar": "lbaz"}
 	secret.SetLabels(labels)
 	annotations := map[string]string{"abar": "abaz"}

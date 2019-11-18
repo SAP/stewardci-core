@@ -117,7 +117,7 @@ func Test_CreateSecret(t *testing.T) {
 	assert.Equal(t, "foo", storedSecret.GetName())
 }
 
-func xxx_CreateSecret_Error(t *testing.T) {
+func Test_CreateSecret_Error(t *testing.T) {
 	t.Parallel()
 	// SETUP
 	provider := provider.NewProvider(namespace)
@@ -130,7 +130,6 @@ func xxx_CreateSecret_Error(t *testing.T) {
 	// EXERCISE
 	_, err := helper.CreateSecret(secret)
 	// VERIFY
-	assert.Equal(t, "", err.Error())
 	assert.Assert(t, expectedError == err)
 }
 

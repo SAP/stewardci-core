@@ -115,9 +115,15 @@ func Test_RunManager_Start_DoesCopySecret(t *testing.T) {
 
 	// VERIFY
 	// CopySecrets(secretNames []string, filter SecretFilterType, transformers ...SecretTransformerType)
-	mockSecretHelper.EXPECT().CopySecrets([]string{"scm_secret1"}, nil, gomock.Any()).Return([]string{"scm_secret1"}, nil)
-	mockSecretHelper.EXPECT().CopySecrets([]string{"secret1", "secret2"}, nil, gomock.Any()).Return([]string{"secret1", "secret2"}, nil)
-	mockSecretHelper.EXPECT().CopySecrets([]string{"imagePullSecret1", "imagePullSecret2"}, gomock.Any(), gomock.Any()).Return([]string{"imagePullSecret1", "imagePullSecret2"}, nil)
+	mockSecretHelper.EXPECT().
+		CopySecrets([]string{"scm_secret1"}, nil, gomock.Any()).
+		Return([]string{"scm_secret1"}, nil)
+	mockSecretHelper.EXPECT().
+		CopySecrets([]string{"secret1", "secret2"}, nil, gomock.Any()).
+		Return([]string{"secret1", "secret2"}, nil)
+	mockSecretHelper.EXPECT().
+		CopySecrets([]string{"imagePullSecret1", "imagePullSecret2"}, gomock.Any(), gomock.Any()).
+		Return([]string{"imagePullSecret1", "imagePullSecret2"}, nil)
 
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
@@ -460,7 +466,7 @@ func prepareMocksWithSpec(ctrl *gomock.Controller, spec *steward.PipelineSpec) (
 	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
 	mockPipelineRun.EXPECT().GetStatus().Return(&steward.PipelineStatus{}).AnyTimes()
 	mockPipelineRun.EXPECT().GetKey().Return("key").AnyTimes()
-	mockPipelineRun.EXPECT().GetRepoServerURL().Return("server", nil).AnyTimes()
+	mockPipelineRun.EXPECT().GetPipelineRepoServerURL().Return("server", nil).AnyTimes()
 	mockPipelineRun.EXPECT().GetRunNamespace().DoAndReturn(func() string {
 		return runNamespace
 	}).AnyTimes()

@@ -1,5 +1,3 @@
-// +build experimental
-
 package fake
 
 import (
@@ -29,5 +27,12 @@ func NewGenerateNameReactor(randomLength int64) testing.ReactionFunc {
 		}
 		log.Printf("Object: %+v", createAction.Object)
 		return false, createAction.Object, nil
+	}
+}
+
+// NewErrorReactor returns a new ReactorFunc returning an error
+func NewErrorReactor(expectedErr error) testing.ReactionFunc {
+	return func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+		return true, nil, expectedErr
 	}
 }
