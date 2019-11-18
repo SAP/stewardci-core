@@ -81,8 +81,3 @@ var _ clientset.Interface = &Clientset{}
 func (c *Clientset) StewardV1alpha1() stewardv1alpha1.StewardV1alpha1Interface {
 	return &fakestewardv1alpha1.FakeStewardV1alpha1{Fake: &c.Fake}
 }
-
-// Steward retrieves the StewardV1alpha1Client
-func (c *Clientset) Steward() stewardv1alpha1.StewardV1alpha1Interface {
-	return &fakestewardv1alpha1.FakeStewardV1alpha1{Fake: &c.Fake}
-}

@@ -13,7 +13,6 @@ require (
 	github.com/golang/mock v1.3.1
 	github.com/google/go-containerregistry v0.0.0-20191004221607-1c9529ac5ad3 // indirect
 	github.com/googleapis/gnostic v0.3.1 // indirect
-	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/lithammer/dedent v1.1.0
 	github.com/markbates/inflect v1.0.4 // indirect
@@ -36,16 +35,17 @@ require (
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.2.3 // indirect
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.0.0-20190817221950-ebce17126a01
-	k8s.io/apimachinery v0.0.0-20190817221809-bf4de9df677c
-	k8s.io/client-go v0.0.0-20190817222206-ee6c071a42cf
+	k8s.io/api v0.0.0-20191004102349-159aefb8556b
+	k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689
+	k8s.io/client-go v11.0.1-0.20191029005444-8e4128053008+incompatible
 	k8s.io/kube-openapi v0.0.0-20190918143330-0270cf2f1c1d // indirect
+	k8s.io/utils v0.0.0-20191114200735-6ca3b61696b6 // indirect
 	knative.dev/pkg v0.0.0-20190925130640-d02c80dc6256
 )
 
 replace (
 	github.com/tektoncd/pipeline => github.com/tektoncd/pipeline v0.7.0
-	k8s.io/api => k8s.io/api v0.0.0-20190817221950-ebce17126a01 // kubernetes-1.13.11
-	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190817221809-bf4de9df677c // kubernetes-1.13.11
-	k8s.io/client-go => k8s.io/client-go v0.0.0-20190817222206-ee6c071a42cf // kubernetes-1.13.11
+	k8s.io/api => k8s.io/api v0.0.0-20191004102349-159aefb8556b // kubernetes-1.14.9
+	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689 // kubernetes-1.14.9
+	k8s.io/client-go => k8s.io/client-go v11.0.1-0.20191029005444-8e4128053008+incompatible // kubernetes-1.14.9
 )
