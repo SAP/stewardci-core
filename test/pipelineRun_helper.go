@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"log"
 	"testing"
-
-	"gotest.tools/assert"
+	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
+	"gotest.tools/assert"
 )
 
 func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
@@ -39,10 +39,17 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 					waiter := waiter
 					name := name
 					clientFactory := clientFactory
-					t.Parallel()
+					if testPlan.parallelCreation {
+						t.Parallel()
+					}
 					pr, err := createPipelineRun(clientFactory, pipelineTest.pipelineRun)
 					assert.NilError(t, err)
 					log.Printf("pipeline run created for test: %s", name)
+
+					if !testPlan.parallelCreation {
+						time.Sleep(testPlan.creationDelay)
+						t.Parallel()
+					}
 					pipelineRunCheck := CreatePipelineRunCondition(pr, pipelineTest.check, name)
 					err = waiter.WaitFor(t, pipelineRunCheck)
 					assert.NilError(t, err)
