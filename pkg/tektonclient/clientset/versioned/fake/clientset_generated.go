@@ -81,8 +81,3 @@ var _ clientset.Interface = &Clientset{}
 func (c *Clientset) TektonV1alpha1() tektonv1alpha1.TektonV1alpha1Interface {
 	return &faketektonv1alpha1.FakeTektonV1alpha1{Fake: &c.Fake}
 }
-
-// Tekton retrieves the TektonV1alpha1Client
-func (c *Clientset) Tekton() tektonv1alpha1.TektonV1alpha1Interface {
-	return &faketektonv1alpha1.FakeTektonV1alpha1{Fake: &c.Fake}
-}
