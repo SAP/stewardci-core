@@ -1,6 +1,8 @@
 package test
 
 import (
+	"time"
+
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/test/builder"
 )
@@ -16,8 +18,10 @@ type PipelineRunTest struct {
 type PipelineRunTestBuilder = func(string) PipelineRunTest
 
 type testPlan struct {
-	testBuilder PipelineRunTestBuilder
-	parallel    int
+	testBuilder      PipelineRunTestBuilder
+	parallel         int
+	parallelCreation bool
+	creationDelay    time.Duration
 }
 
 // AllTestBuilders is a list of all test builders
