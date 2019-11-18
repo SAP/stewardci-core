@@ -19,6 +19,11 @@ type secretHelper struct {
 	provider  SecretProvider
 	namespace string
 	client    corev1.SecretInterface
+	testing   *secretHelperTesting
+}
+
+type secretHelperTesting struct {
+	createSecretStub func(secret *v1.Secret) (*v1.Secret, error)
 }
 
 // NewSecretHelper creates a secret helper
@@ -80,19 +85,22 @@ func (h *secretHelper) IsNotFound(err error) bool {
 		return false
 	}
 	switch err.(type) {
+	case *notFoundError:
+		return true
 	default:
 		cause := errors.Cause(err)
 		if err == cause {
 			return false
 		}
 		return h.IsNotFound(cause)
-	case *notFoundError:
-		return true
 	}
 }
 
 // CreateSecret creates the given secret in the storage the underlying client is connected to.
 func (h *secretHelper) CreateSecret(secret *v1.Secret) (*v1.Secret, error) {
+	if h.testing != nil && h.testing.createSecretStub != nil {
+		return h.testing.createSecretStub(secret)
+	}
 	newSecret := &v1.Secret{Data: secret.Data, StringData: secret.StringData, Type: secret.Type}
 	name := secret.GetName()
 	newSecret.SetName(name)
