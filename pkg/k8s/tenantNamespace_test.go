@@ -10,7 +10,7 @@ import (
 const name string = "MyName"
 
 func Test_GetSecretProvider_works(t *testing.T) {
-	factory := fake.NewClientFactory(fake.Secret(name, ns1))
+	factory := fake.NewClientFactory(fake.SecretOpaque(name, ns1))
 	tn := NewTenantNamespace(factory, ns1)
 	storedSecret, _ := tn.GetSecretProvider().GetSecret(name)
 	assert.Equal(t, name, storedSecret.GetName())

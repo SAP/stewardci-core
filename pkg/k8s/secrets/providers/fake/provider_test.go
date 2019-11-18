@@ -36,7 +36,7 @@ func Test_provider_GetSecret_Existing(t *testing.T) {
 }
 
 func Test_provider_GetSecret_InDeletion(t *testing.T) {
-	deletedSecret := fake.Secret("foo", "ns1")
+	deletedSecret := fake.SecretOpaque("foo", "ns1")
 	now := metav1.Now()
 	deletedSecret.SetDeletionTimestamp(&now)
 	provider := initProvider("ns1", deletedSecret)
@@ -47,7 +47,7 @@ func Test_provider_GetSecret_InDeletion(t *testing.T) {
 }
 
 func Test_provider_GetSecret_NotExisting(t *testing.T) {
-	provider := initProvider("ns1", fake.Secret("foo", "ns1"))
+	provider := initProvider("ns1", fake.SecretOpaque("foo", "ns1"))
 	secret, err := provider.GetSecret("bar")
 	assert.Assert(t, err == nil)
 	assert.Assert(t, secret == nil)

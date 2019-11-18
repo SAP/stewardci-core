@@ -49,7 +49,7 @@ func Test_Controller_Success(t *testing.T) {
 		fake.PipelineRun("run1", "ns1", api.PipelineSpec{
 			Secrets: []string{"secret1"},
 		}),
-		fake.Secret("secret1", "ns1"),
+		fake.SecretOpaque("secret1", "ns1"),
 		fake.ClusterRole(string(runClusterRoleName)),
 	)
 
@@ -72,7 +72,7 @@ func Test_Controller_Running(t *testing.T) {
 		fake.PipelineRun("run1", "ns1", api.PipelineSpec{
 			Secrets: []string{"secret1"},
 		}),
-		fake.Secret("secret1", "ns1"),
+		fake.SecretOpaque("secret1", "ns1"),
 		fake.ClusterRole(string(runClusterRoleName)),
 	)
 
@@ -100,7 +100,7 @@ func Test_Controller_Deletion(t *testing.T) {
 	})
 	cf := fake.NewClientFactory(
 		pr,
-		fake.Secret("secret1", "ns1"),
+		fake.SecretOpaque("secret1", "ns1"),
 		fake.ClusterRole(string(runClusterRoleName)),
 	)
 

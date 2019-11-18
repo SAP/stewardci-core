@@ -29,7 +29,7 @@ func initHelper(secrets ...*v1.Secret) (SecretHelper, corev1.SecretInterface) {
 func Test_CopySecrets_NoFilter(t *testing.T) {
 	t.Parallel()
 	// SETUP
-	helper, targetClient := initHelper(fake.Secret("foo", namespace))
+	helper, targetClient := initHelper(fake.SecretOpaque("foo", namespace))
 	// EXERCISE
 	list, err := helper.CopySecrets([]string{"foo"}, nil)
 	// VERIFY
@@ -46,9 +46,9 @@ func nameStartsWithB(secret *v1.Secret) bool {
 func Test_CopySecrets_WithFilter(t *testing.T) {
 	t.Parallel()
 	// SETUP
-	helper, _ := initHelper(fake.Secret("foo", namespace),
-		fake.Secret("bar", namespace),
-		fake.Secret("baz", namespace))
+	helper, _ := initHelper(fake.SecretOpaque("foo", namespace),
+		fake.SecretOpaque("bar", namespace),
+		fake.SecretOpaque("baz", namespace))
 	// EXERCISE
 	list, err := helper.CopySecrets([]string{"foo", "bar", "baz"}, nameStartsWithB)
 	// VERIFY
@@ -59,8 +59,8 @@ func Test_CopySecrets_WithFilter(t *testing.T) {
 func Test_CopySecrets_NotExisting(t *testing.T) {
 	t.Parallel()
 	// SETUP
-	helper, _ := initHelper(fake.Secret("foo", namespace),
-		fake.Secret("bar", namespace))
+	helper, _ := initHelper(fake.SecretOpaque("foo", namespace),
+		fake.SecretOpaque("bar", namespace))
 	// EXERCISE
 	list, err := helper.CopySecrets([]string{"foo", "notExistingSecret1", "bar"}, nil)
 	// VERIFY

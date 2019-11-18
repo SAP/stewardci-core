@@ -4,9 +4,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-// Secret creates a fake secret with defined name
-func Secret(name string, namespace string) *v1.Secret {
-	return &v1.Secret{ObjectMeta: ObjectMeta(name, namespace)}
+// SecretOpaque creates a fake secret with defined name and type Opaque
+func SecretOpaque(name string, namespace string) *v1.Secret {
+	return &v1.Secret{ObjectMeta: ObjectMeta(name, namespace), Type: v1.SecretTypeOpaque}
 }
 
 // SecretWithType creates a fake secret with defined name
