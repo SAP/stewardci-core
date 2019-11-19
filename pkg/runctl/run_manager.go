@@ -43,11 +43,10 @@ type RunManager interface {
 }
 
 type runManager struct {
-	secretProvider        secrets.SecretProvider
-	factory               k8s.ClientFactory
-	namespaceManager      k8s.NamespaceManager
-	uniqueNameTransformer secrets.SecretTransformerType
-	testing               *runManagerTesting
+	secretProvider   secrets.SecretProvider
+	factory          k8s.ClientFactory
+	namespaceManager k8s.NamespaceManager
+	testing          *runManagerTesting
 }
 
 type runManagerTesting struct {
@@ -56,12 +55,10 @@ type runManagerTesting struct {
 
 // NewRunManager creates a new RunManager.
 func NewRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) RunManager {
-	uniqueNameTransformer := secrets.UniqueNameTransformer()
 	return &runManager{
-		secretProvider:        secretProvider,
-		factory:               factory,
-		namespaceManager:      namespaceManager,
-		uniqueNameTransformer: uniqueNameTransformer,
+		secretProvider:   secretProvider,
+		factory:          factory,
+		namespaceManager: namespaceManager,
 	}
 }
 
@@ -125,7 +122,7 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 		stripTektonAnnotationsTransformer,
 		secrets.StripAnnotationsTransformer("jenkins.io/"),
 		secrets.StripLabelsTransformer("jenkins.io/"),
-		c.uniqueNameTransformer,
+		secrets.UniqueNameTransformer(),
 	}
 
 	imagePullSecrets, err = c.copySecrets(secretHelper, imagePullSecrets, pipelineRun, secrets.DockerOnly, transformers...)
@@ -168,7 +165,7 @@ func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secret
 	transformers := []secrets.SecretTransformerType{
 		secrets.StripAnnotationsTransformer("jenkins.io/"),
 		secrets.StripLabelsTransformer("jenkins.io/"),
-		c.uniqueNameTransformer,
+		secrets.UniqueNameTransformer(),
 		secrets.SetAnnotationTransformer("tekton.dev/git-0", repoServerURL),
 	}
 	names, err := c.copySecrets(secretHelper, []string{pipelineCloneSecret}, pipelineRun, nil, transformers...)

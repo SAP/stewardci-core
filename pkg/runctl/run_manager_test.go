@@ -8,6 +8,7 @@ import (
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	fsteward "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/fake"
 	"github.com/SAP/stewardci-core/pkg/k8s"
+	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	k8sfake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
@@ -18,7 +19,6 @@ import (
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubefake "k8s.io/client-go/kubernetes/fake"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -91,30 +91,39 @@ func Test_RunManager_Start_DoesCopySecret(t *testing.T) {
 	// SETUP
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
+
 	spec := &steward.PipelineSpec{
 		JenkinsFile: steward.JenkinsFile{
 			RepoAuthSecret: "scm_secret1",
 		},
-		Secrets:          []string{"secret1", "secret2"},
-		ImagePullSecrets: []string{"imagePullSecret1", "imagePullSecret2"},
+		Secrets: []string{
+			"secret1",
+			"secret2",
+		},
+		ImagePullSecrets: []string{
+			"imagePullSecret1",
+			"imagePullSecret2",
+		},
 	}
 	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocksWithSpec(mockCtrl, spec)
-	// UpdateState should never be called by BuildStarter
-	mockPipelineRun.EXPECT().UpdateState(gomock.Any()).Do(func(interface{}) { panic("unexpected call") }).AnyTimes()
+	// UpdateState should never be called
+	mockPipelineRun.EXPECT().
+		UpdateState(gomock.Any()).
+		Do(func(interface{}) { panic("unexpected call") }).
+		AnyTimes()
 
 	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
-	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager)
-	x := examinee.(*runManager)
-	x.uniqueNameTransformer = func(secret *v1.Secret) *v1.Secret { return secret }
+	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager).(*runManager)
 	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	x.testing = &runManagerTesting{
+
+	// inject secret helper mock
+	examinee.testing = &runManagerTesting{
 		getSecretHelperStub: func(string, corev1.SecretInterface) secrets.SecretHelper {
 			return mockSecretHelper
 		},
 	}
 
-	// VERIFY
-	// CopySecrets(secretNames []string, filter SecretFilterType, transformers ...SecretTransformerType)
+	// EXPECT
 	mockSecretHelper.EXPECT().
 		CopySecrets([]string{"scm_secret1"}, nil, gomock.Any()).
 		Return([]string{"scm_secret1"}, nil)
@@ -451,9 +460,11 @@ func prepareMocks(ctrl *gomock.Controller) (*mocks.MockClientFactory, *mocks.Moc
 func prepareMocksWithSpec(ctrl *gomock.Controller, spec *steward.PipelineSpec) (*mocks.MockClientFactory, *mocks.MockPipelineRun, *secretMocks.MockSecretProvider, k8s.NamespaceManager) {
 	mockFactory := mocks.NewMockClientFactory(ctrl)
 
-	coreClientSet := kubefake.NewSimpleClientset()
-	mockFactory.EXPECT().CoreV1().Return(coreClientSet.CoreV1()).AnyTimes()
-	mockFactory.EXPECT().RbacV1beta1().Return(coreClientSet.RbacV1beta1()).AnyTimes()
+	kubeClientSet := kubefake.NewSimpleClientset()
+	kubeClientSet.PrependReactor("create", "*", fake.GenerateNameReactor(0))
+
+	mockFactory.EXPECT().CoreV1().Return(kubeClientSet.CoreV1()).AnyTimes()
+	mockFactory.EXPECT().RbacV1beta1().Return(kubeClientSet.RbacV1beta1()).AnyTimes()
 
 	stewardClientset := fsteward.NewSimpleClientset()
 	mockFactory.EXPECT().StewardV1alpha1().Return(stewardClientset.StewardV1alpha1()).AnyTimes()
