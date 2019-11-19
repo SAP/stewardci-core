@@ -61,23 +61,33 @@ func Test_provider_GetSecret_Existing(t *testing.T) {
 }
 
 func Test_provider_GetSecret_InDeletion(t *testing.T) {
-	deletedSecret := fake.SecretOpaque("foo", "ns1")
+	// SETUP
+	storedSecret := fake.SecretOpaque("foo", "ns1")
 	now := metav1.Now()
-	deletedSecret.SetDeletionTimestamp(&now)
-	provider := initProvider("ns1", deletedSecret)
-	secret, err := provider.GetSecret("foo")
-	assert.Assert(t, err == nil)
-	assert.Assert(t, secret == nil)
+	storedSecret.SetDeletionTimestamp(&now)
 
+	examinee := initProvider("ns1", storedSecret)
+
+	// EXERCISE
+	resultSecret, resultErr := examinee.GetSecret("foo")
+
+	// VERIFY
+	assert.Assert(t, resultErr == nil)
+	assert.Assert(t, resultSecret == nil)
 }
 
 func Test_provider_GetSecret_NotExisting(t *testing.T) {
-	provider := initProvider("ns1", fake.SecretOpaque("foo", "ns1"))
-	secret, err := provider.GetSecret("bar")
-	assert.Assert(t, err == nil)
-	assert.Assert(t, secret == nil)
+	// SETUP
+	examinee := initProvider("ns1" /* no secret exists */)
+
+	// EXERCISE
+	resultSecret, resultErr := examinee.GetSecret("foo")
+
+	// VERIFY
+	assert.Assert(t, resultErr == nil)
+	assert.Assert(t, resultSecret == nil)
 }
 
-func initProvider(namespace string, secret *v1.Secret) secrets.SecretProvider {
-	return NewProvider(namespace, secret)
+func initProvider(namespace string, secret ...*v1.Secret) secrets.SecretProvider {
+	return NewProvider(namespace, secret...)
 }
