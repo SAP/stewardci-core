@@ -15,7 +15,7 @@ import (
 // Resync is only required if events got lost or if the controller restarted (and missed events).
 const resyncPeriod = 5 * time.Minute
 
-func setup(t *testing.T) (context.Context, Waiter) {
+func setup(t *testing.T) (context.Context) {
 	t.Helper()
 	kubeconfig := knativetest.Flags.Kubeconfig
 	clusterName := knativetest.Flags.Cluster
@@ -35,5 +35,5 @@ func setup(t *testing.T) (context.Context, Waiter) {
 	ctx := context.Background()
 	ctx = SetNamespace(ctx, testClient)
 	ctx = SetClientFactory(ctx, factory)
-	return ctx, NewWaiter(factory)
+	return ctx
 }

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -12,8 +13,8 @@ type PipelineRunCheck func(k8s.PipelineRun) bool
 
 // CreatePipelineRunCondition returns a WaitCondition for a pipelineRun with a dedicated PipelineCheck
 func CreatePipelineRunCondition(pipelineRun *api.PipelineRun, check PipelineRunCheck, desc string) WaitCondition {
-	return NewWaitCondition(func(clientFactory k8s.ClientFactory) (bool, error) {
-		fetcher := k8s.NewPipelineRunFetcher(clientFactory)
+	return NewWaitCondition(func(ctx context.Context) (bool, error) {
+		fetcher := k8s.NewPipelineRunFetcher(GetClientFactory(ctx))
 		pipelineRun, err := fetcher.ByName(pipelineRun.GetNamespace(), pipelineRun.GetName())
 		if err != nil {
 			return true, err

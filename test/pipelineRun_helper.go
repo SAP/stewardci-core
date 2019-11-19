@@ -19,7 +19,7 @@ type testRun struct {
 }
 
 func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
-	ctx, waiter := setup(t)
+	ctx := setup(t)
 	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 	test := TenantSuccessTest(ctx)
@@ -29,7 +29,7 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 
 	defer DeleteTenant(ctx, tenant)
 	check := CreateTenantCondition(tenant, test.check, test.name)
-	err = waiter.WaitFor(t, check)
+	err = WaitFor(ctx, check)
 	assert.NilError(t, err)
 	tenant, err = GetTenant(ctx, tenant)
 	assert.NilError(t, err)
@@ -70,7 +70,7 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 		pr := GetPipelineRun(ctx)
 		pipelineRunCheck := CreatePipelineRunCondition(pr, run.check, run.name)
 		go func(pipelineRunCheck WaitCondition) {
-			err = waiter.WaitFor(t, pipelineRunCheck)
+			err = WaitFor(ctx, pipelineRunCheck)
 			resultChan <- err
 		}(pipelineRunCheck)
 	}
