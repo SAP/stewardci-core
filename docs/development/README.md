@@ -58,8 +58,8 @@ export CODEGEN_PKG=${PWD}
 ```
 
 ```sh
-# Prepare gomock tool
-go get github.com/golang/mock/gomock
+# Prepare mockgen tool
+go get github.com/golang/mock/mockgen
 ```
 
 ### Build
