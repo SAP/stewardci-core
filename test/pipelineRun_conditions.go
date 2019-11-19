@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"fmt"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
@@ -12,7 +11,7 @@ import (
 type PipelineRunCheck func(k8s.PipelineRun) bool
 
 // CreatePipelineRunCondition returns a WaitCondition for a pipelineRun with a dedicated PipelineCheck
-func CreatePipelineRunCondition(pipelineRun *api.PipelineRun, check PipelineRunCheck, desc string) WaitCondition {
+func CreatePipelineRunCondition(pipelineRun *api.PipelineRun, check PipelineRunCheck) WaitCondition {
 	return NewWaitCondition(func(ctx context.Context) (bool, error) {
 		fetcher := k8s.NewPipelineRunFetcher(GetClientFactory(ctx))
 		pipelineRun, err := fetcher.ByName(pipelineRun.GetNamespace(), pipelineRun.GetName())
@@ -21,8 +20,7 @@ func CreatePipelineRunCondition(pipelineRun *api.PipelineRun, check PipelineRunC
 		}
 		result := check(pipelineRun)
 		return result, nil
-	},
-		fmt.Sprintf("PRC_%s_%s_%s", pipelineRun.GetNamespace(), pipelineRun.GetName(), desc))
+	})
 }
 
 // PipelineRunHasStateResult returns a PipelineRunCheck which checks if a pipelineRun has a dedicated result

@@ -12,7 +12,7 @@ import (
 type TenantCheck func(*api.Tenant) bool
 
 // CreateTenantCondition creates a WaitCondition for a tenant with a dedicated check
-func CreateTenantCondition(tenant *api.Tenant, check TenantCheck, desc string) WaitCondition {
+func CreateTenantCondition(tenant *api.Tenant, check TenantCheck) WaitCondition {
 	key := fmt.Sprintf("%s/%s", tenant.GetNamespace(), tenant.GetName())
 	return NewWaitCondition(func(ctx context.Context) (bool, error) {
 		fetcher := k8s.NewTenantFetcher(GetClientFactory(ctx))
@@ -21,8 +21,7 @@ func CreateTenantCondition(tenant *api.Tenant, check TenantCheck, desc string) W
 			return true, err
 		}
 		return check(tenant), nil
-	},
-		fmt.Sprintf("TenantCondition_%s_%s", key, desc))
+	})
 }
 
 // TenantHasStateResult creates a TenantCheck which checks for a dedicated State

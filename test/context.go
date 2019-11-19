@@ -2,7 +2,7 @@ package test
 
 import (
 	"context"
-     "log"
+        "log"
         "time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -21,6 +21,7 @@ const (
 	factoryKey     contextKey = "factory"
 	pipelineRunKey contextKey = "pipelineRun"
 	namespaceKey   contextKey = "namespace"
+        testNameKey    contextKey = "testName"
 )
 
 // GetClientFactory returns the client factory from the context
@@ -53,15 +54,26 @@ func SetPipelineRun(ctx context.Context, pipelineRun *api.PipelineRun) context.C
 	return context.WithValue(ctx, pipelineRunKey, pipelineRun)
 }
 
+// GetTestName returns the test name from the context
+func GetTestName(ctx context.Context) string {
+        return ctx.Value(testNameKey).(string)
+}
+
+// SetTestName sets the test name to the context
+func SetTestName(ctx context.Context, name string) context.Context {
+        return context.WithValue(ctx, testNameKey, name)
+}
+
+
 // WaitFor waits for a condition
 // it returns an error if condition is not fullfilled
 func WaitFor(ctx context.Context, condition WaitCondition) error {
         startTime := time.Now()
-        log.Printf("wait for %s", condition.Name())
+        log.Printf("wait for %s", GetTestName(ctx))
         err := wait.PollImmediate(interval, timeout, func() (bool, error) {
                 return condition.Check(ctx)
         })
-        log.Printf("waiting completed for %s after %s", condition.Name(), time.Now().Sub(startTime))
+        log.Printf("waiting completed for %s after %s", GetTestName(ctx), time.Now().Sub(startTime))
         return err
 }
 
