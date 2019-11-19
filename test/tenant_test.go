@@ -10,12 +10,12 @@ import (
 
 func Test_TenantCreation(t *testing.T) {
 	t.Parallel()
-	clientFactory, namespace, waiter := setup(t)
-	test := TenantSuccessTest(namespace)
+	ctx, waiter := setup(t)
+	test := TenantSuccessTest(ctx)
 	tenant := test.tenant
-	tenant, err := CreateTenant(clientFactory, tenant)
+	tenant, err := CreateTenant(ctx, tenant)
 	assert.NilError(t, err)
-	defer DeleteTenant(clientFactory, tenant)
+	defer DeleteTenant(ctx, tenant)
 	check := CreateTenantCondition(tenant, test.check, test.name)
 	err = waiter.WaitFor(t, check)
 	assert.NilError(t, err)

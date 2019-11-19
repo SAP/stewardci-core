@@ -7,6 +7,7 @@ Test writes a Parallel: x to the log indicating how many tests are runing in par
 
 ```bash
 export STEWARD_TEST_CLIENT=$(kubectl apply -f test-client.yaml -o=name)
+export STEWARD_TEST_CLIENT=${STEWARD_TEST_CLIENT#*/}
 ```
 
 ## Run integration tests

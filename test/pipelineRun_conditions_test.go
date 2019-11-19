@@ -1,3 +1,5 @@
+// +build xxx
+
 package test
 
 import (
