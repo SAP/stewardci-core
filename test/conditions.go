@@ -12,21 +12,18 @@ type WaitConditionFunc func(context.Context) (bool, error)
 
 type waitCondition struct {
 	conditionFunc WaitConditionFunc
-	name          string
 }
 
 // WaitCondition interface implenments a Wait function
 type WaitCondition interface {
 	Check(context.Context) (bool, error)
-	Name() string
 }
 
 // NewWaitCondition creates a new WaitCondition
 // name must be unique
-func NewWaitCondition(f WaitConditionFunc, name string) WaitCondition {
+func NewWaitCondition(f WaitConditionFunc) WaitCondition {
 	return &waitCondition{
 		conditionFunc: f,
-		name:          name,
 	}
 }
 
@@ -38,7 +35,3 @@ func (w *waitCondition) Check(ctx context.Context) (bool, error) {
 	return w.conditionFunc(ctx)
 }
 
-// Name returns the unique name of the WaitCondition
-func (w *waitCondition) Name() string {
-	return w.name
-}

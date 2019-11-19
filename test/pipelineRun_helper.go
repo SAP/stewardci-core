@@ -20,7 +20,7 @@ type testRun struct {
 
 func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 	ctx := setup(t)
-	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5 *time.Second)
 	defer cancel()
 	test := TenantSuccessTest(ctx)
 	tenant := test.tenant
@@ -28,7 +28,8 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 	assert.NilError(t, err)
 
 	defer DeleteTenant(ctx, tenant)
-	check := CreateTenantCondition(tenant, test.check, test.name)
+        ctx = SetTestName(ctx,fmt.Sprintf("Create tenant for pipelineruns: %s",tenant.GetName()))	
+        check := CreateTenantCondition(tenant, test.check)
 	err = WaitFor(ctx, check)
 	assert.NilError(t, err)
 	tenant, err = GetTenant(ctx, tenant)
@@ -44,6 +45,7 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 		for i := 1; i <= testPlan.parallel; i++ {
 			name :=
 				fmt.Sprintf("%s_%d", pipelineTest.name, i)
+                        ctx = SetTestName(ctx,name)
 			log.Printf("Create Test: %s", name)
 			myTestRun := testRun{
 				name:  name,
@@ -68,7 +70,7 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 		ctx := run.ctx
 		assert.NilError(t, ctx.Err())
 		pr := GetPipelineRun(ctx)
-		pipelineRunCheck := CreatePipelineRunCondition(pr, run.check, run.name)
+		pipelineRunCheck := CreatePipelineRunCondition(pr, run.check)
 		go func(pipelineRunCheck WaitCondition) {
 			err = WaitFor(ctx, pipelineRunCheck)
 			resultChan <- err
