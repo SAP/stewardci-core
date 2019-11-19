@@ -12,6 +12,7 @@ import (
 )
 
 func Test_provider_GetSecret_Existing(t *testing.T) {
+	// SETUP
 	now := metav1.Now()
 	var grace int64 = 1
 	storedSecret := &v1.Secret{
@@ -28,30 +29,35 @@ func Test_provider_GetSecret_Existing(t *testing.T) {
 			OwnerReferences:            []metav1.OwnerReference{metav1.OwnerReference{}},
 			Finalizers:                 []string{"dummy"},
 			ClusterName:                "dummy",
+			Labels: map[string]string{
+				"lbar": "lbaz",
+			},
+			Annotations: map[string]string{
+				"abar": "abaz",
+			},
 		},
 		Type: v1.SecretTypeOpaque,
 	}
 
-	labels := map[string]string{"lbar": "lbaz"}
-	storedSecret.SetLabels(labels)
-	annotations := map[string]string{"abar": "abaz"}
-	storedSecret.SetAnnotations(annotations)
-	provider := initProvider("ns1", storedSecret)
-	providedSecret, err := provider.GetSecret("foo")
-	assert.NilError(t, err)
-	assert.Equal(t, "foo", providedSecret.GetName())
-	assert.Equal(t, "", providedSecret.GetGenerateName())
-	assert.Equal(t, "", providedSecret.GetNamespace())
-	assert.Equal(t, "", providedSecret.GetSelfLink())
-	assert.Equal(t, types.UID(""), providedSecret.GetUID())
-	assert.Equal(t, "", providedSecret.GetResourceVersion())
-	assert.Equal(t, int64(0), providedSecret.GetGeneration())
+	examinee := initProvider("ns1", storedSecret.DeepCopy())
 
-	assert.DeepEqual(t, annotations, providedSecret.GetAnnotations())
-	assert.DeepEqual(t, labels, providedSecret.GetLabels())
-	creationTime := providedSecret.GetCreationTimestamp()
-	assert.Assert(t, (&creationTime).IsZero())
-	assert.Assert(t, providedSecret.GetDeletionTimestamp().IsZero())
+	// EXERCISE
+	resultSecret, resultErr := examinee.GetSecret(storedSecret.GetName())
+
+	// VERIFY
+	assert.NilError(t, resultErr)
+	assert.Assert(t, resultSecret != nil)
+
+	expectedSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        storedSecret.GetName(),
+			Labels:      storedSecret.GetLabels(),
+			Annotations: storedSecret.GetAnnotations(),
+		},
+		Type: v1.SecretTypeOpaque,
+	}
+
+	assert.DeepEqual(t, *expectedSecret, *resultSecret)
 }
 
 func Test_provider_GetSecret_InDeletion(t *testing.T) {
