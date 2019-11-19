@@ -34,4 +34,3 @@ func NewWaitCondition(f WaitConditionFunc) WaitCondition {
 func (w *waitCondition) Check(ctx context.Context) (bool, error) {
 	return w.conditionFunc(ctx)
 }
-

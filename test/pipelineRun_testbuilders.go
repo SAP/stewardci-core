@@ -12,6 +12,7 @@ type PipelineRunTest struct {
 	name        string
 	pipelineRun *api.PipelineRun
 	check       PipelineRunCheck
+	timeout     time.Duration
 }
 
 // PipelineRunTestBuilder is a funciton creating a PipelineRunTest for a defined namespace
@@ -27,6 +28,7 @@ type testPlan struct {
 // AllTestBuilders is a list of all test builders
 var AllTestBuilders = []PipelineRunTestBuilder{
 	PipelineRunSleep,
+	//        PipelineRunSleepTooLong,
 	PipelineRunFail,
 	PipelineRunOK,
 }
@@ -42,7 +44,24 @@ func PipelineRunSleep(namespace string) PipelineRunTest {
 					"sleep/Jenkinsfile"),
 				builder.ArgSpec("SLEEP_FOR_SECONDS", "1"),
 			)),
-		check: PipelineRunHasStateResult(api.ResultSuccess),
+		check:   PipelineRunHasStateResult(api.ResultSuccess),
+		timeout: 120 * time.Second,
+	}
+}
+
+// PipelineRunSleepTooLong is a pipelineRunTestBuilder to build pipelineRunTest which sleeps for one second
+func PipelineRunSleepTooLong(namespace string) PipelineRunTest {
+	return PipelineRunTest{
+		name: "sleep_too_long",
+		pipelineRun: builder.PipelineRun(namespace,
+			builder.PipelineRunSpec(
+				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
+					"master",
+					"sleep/Jenkinsfile"),
+				builder.ArgSpec("SLEEP_FOR_SECONDS", "120"),
+			)),
+		check:   PipelineRunHasStateResult(api.ResultSuccess),
+		timeout: 100 * time.Second,
 	}
 }
 
@@ -56,7 +75,8 @@ func PipelineRunFail(namespace string) PipelineRunTest {
 					"master",
 					"error/Jenkinsfile"),
 			)),
-		check: PipelineRunHasStateResult(api.ResultErrorContent),
+		check:   PipelineRunHasStateResult(api.ResultErrorContent),
+		timeout: 120 * time.Second,
 	}
 }
 
@@ -70,6 +90,7 @@ func PipelineRunOK(namespace string) PipelineRunTest {
 					"master",
 					"success/Jenkinsfile"),
 			)),
-		check: PipelineRunHasStateResult(api.ResultSuccess),
+		check:   PipelineRunHasStateResult(api.ResultSuccess),
+		timeout: 120 * time.Second,
 	}
 }

@@ -16,8 +16,8 @@ func Test_PipelineCondition(t *testing.T) {
 	pipelineRun :=
 		builder.PipelineRun("namespace1")
 	clientFactory := fake.NewClientFactory()
-        ctx := context.Background()
-        ctx.SetClientFactory(clientFactroy)
+	ctx := context.Background()
+	ctx.SetClientFactory(clientFactroy)
 	pr, err := createPipelineRun(clientFactory, pipelineRun)
 	assert.NilError(t, err)
 	pipelineRunCheck := CreatePipelineRunCondition(pr, check, "Test")
