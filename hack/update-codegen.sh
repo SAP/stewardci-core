@@ -9,21 +9,22 @@ function die() {
 
 PROJECT_ROOT=$(cd "$(dirname "$BASH_SOURCE")/.."; pwd)
 
+# Check and prepare build enviroment
 if [[ -z $GOPATH ]]; then
     echo "error: GOPATH not set"
     exit 1
 fi
 GOPATH_1=${GOPATH%%:*}  # the first entry of the GOPATH
-
 if [[ -z $CODEGEN_PKG ]]; then
+    echo "Installing code-generator (path to existing code-generator can be overridden via CODEGEN_PKG)"
     . ${PROJECT_ROOT}/hack/bootstrap-codegen.sh || die "Installation of code-generator failed"
 fi
 if [[ ! -f $CODEGEN_PKG/generate-groups.sh ]]; then
     echo "error: CODEGEN_PKG does not point to a directory containing 'generate-groups.sh': $CODEGEN_PKG"
     exit 1
 fi
-
 if [[ ! -x "$GOPATH_1/bin/mockgen" ]]; then
+    echo "Installing mockgen"
     go get github.com/golang/mock/mockgen || die "Installation of mockgen failed"
 fi
 
@@ -49,7 +50,8 @@ if [ "$VERIFY" = true ]; then
     set -x
     rm -rf \
         "${GEN_DIR}" \
-        "${GOPATH_1}/bin/"{client-gen,deepcopy-gen,defaulter-gen,informer-gen,lister-gen}
+        "${GOPATH_1}/bin/"{client-gen,deepcopy-gen,defaulter-gen,informer-gen,lister-gen} \
+        || die "Cleanup failed"
     set +x
 else
     set -x
@@ -59,7 +61,8 @@ else
         "${PROJECT_ROOT}/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go" \
         "${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go" \
         "${GEN_DIR}/github.com" \
-        "${GOPATH_1}/bin/"{client-gen,deepcopy-gen,defaulter-gen,informer-gen,lister-gen}
+        "${GOPATH_1}/bin/"{client-gen,deepcopy-gen,defaulter-gen,informer-gen,lister-gen} \
+        || die "Cleanup failed"
     set +x
 fi
 
@@ -72,7 +75,8 @@ set -x
     github.com/SAP/stewardci-core/pkg/apis \
     steward:v1alpha1 \
     --go-header-file "${PROJECT_ROOT}/hack/boilerplate.go.txt" \
-    --output-base "${GEN_DIR}"
+    --output-base "${GEN_DIR}" \
+    || die "Code generation failed"
 set +x
 set -x
 "${CODEGEN_PKG}/generate-groups.sh" \
@@ -81,7 +85,8 @@ set -x
     github.com/tektoncd/pipeline/pkg/apis \
     pipeline:v1alpha1 \
     --go-header-file "${PROJECT_ROOT}/hack/boilerplate.go.txt" \
-    --output-base "${GEN_DIR}"
+    --output-base "${GEN_DIR}" \
+    || die "Code generation failed"
 set +x
 
 if [ "$VERIFY" = true ]; then
@@ -96,10 +101,10 @@ else
     echo
     echo "## Move generated files ###########################"
     set -x
-    mv "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/client" "${PROJECT_ROOT}/pkg/"
-    mv "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/tektonclient" "${PROJECT_ROOT}/pkg/"
-    cp -r "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/apis" "${PROJECT_ROOT}/pkg/"
-    rm -rf "${GEN_DIR}/github.com"
+    mv "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/client" "${PROJECT_ROOT}/pkg/" || die "Moving generated clients failed"
+    mv "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/tektonclient" "${PROJECT_ROOT}/pkg/" || die "Moving generated tektonclients failed"
+    cp -r "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/apis" "${PROJECT_ROOT}/pkg/" || die "Copying generated apis failed"
+    rm -rf "${GEN_DIR}/github.com" || die "Cleanup gen dir failed"
     set +x
 fi
 
@@ -113,7 +118,8 @@ if [ "$VERIFY" = true ]; then
         -destination="${GEN_DIR}/pkg/k8s/mocks/mocks.go" \
         -package=mocks \
         github.com/SAP/stewardci-core/pkg/k8s \
-        PipelineRun,ClientFactory,PipelineRunFetcher,SecretProvider,NamespaceManager
+        PipelineRun,ClientFactory,PipelineRunFetcher,SecretProvider,NamespaceManager \
+        || die "Mock generation failed"
     diff -Naupr ${GEN_DIR}/pkg/k8s/mocks/mocks.go ${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go || die "Regeneration required for apis"
     set +x
 else
@@ -124,6 +130,14 @@ else
         -destination="${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go" \
         -package=mocks \
         github.com/SAP/stewardci-core/pkg/k8s \
-        PipelineRun,ClientFactory,PipelineRunFetcher,SecretProvider,NamespaceManager
+        PipelineRun,ClientFactory,PipelineRunFetcher,SecretProvider,NamespaceManager \
+        || die "Mock generation failed"
     set +x
+fi
+
+echo
+if [ "$VERIFY" = true ]; then
+    echo "Verification successful"
+else
+    echo "Generation successful"
 fi
