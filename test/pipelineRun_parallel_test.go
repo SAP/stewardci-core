@@ -3,20 +3,27 @@
 package test
 
 import (
-	"fmt"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"testing"
-
-	"gotest.tools/assert"
+	"time"
 )
 
+func Test_PipelineRuns_delayedCreation(t *testing.T) {
+	executePipelineRunTests(t,
+		testPlan{testBuilder: PipelineRunOK,
+			parallel:      10,
+			creationDelay: time.Duration(5 * time.Second),
+		},
+	)
+}
+
 func Test_PipelineRuns(t *testing.T) {
-	t.Parallel()
 	executePipelineRunTests(t,
 		testPlan{testBuilder: PipelineRunSleep,
-			parallel: 1,
+			parallel: 3,
 		},
 		testPlan{testBuilder: PipelineRunFail,
-			parallel: 2,
+			parallel: 3,
 		},
 		testPlan{testBuilder: PipelineRunOK,
 			parallel: 3,
@@ -24,36 +31,36 @@ func Test_PipelineRuns(t *testing.T) {
 	)
 }
 
-func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
-	clientFactory, namespace, waiter := setup(t)
-	test := TenantSuccessTest(namespace)
-	tenant := test.tenant
-	tenant, err := CreateTenant(clientFactory, tenant)
-	assert.NilError(t, err)
+func Test_PipelineRuns_parallelCreation(t *testing.T) {
+	executePipelineRunTests(t,
+		testPlan{testBuilder: PipelineRunSleep,
+			parallel:         3,
+			parallelCreation: true,
+		},
+		testPlan{testBuilder: PipelineRunFail,
+			parallel:         3,
+			parallelCreation: true,
+		},
+		testPlan{testBuilder: PipelineRunOK,
+			parallel:         3,
+			parallelCreation: true,
+		},
+	)
+}
 
-	defer DeleteTenant(clientFactory, tenant)
-	check := CreateTenantCondition(tenant, test.check, test.name)
-	err = waiter.WaitFor(check)
-	assert.NilError(t, err)
-	tenant, err = GetTenant(clientFactory, tenant)
-	assert.NilError(t, err)
-	tnn := tenant.Status.TenantNamespaceName
-	for _, testPlan := range testPlans {
-		testPlan := testPlan
-		for i := 1; i <= testPlan.parallel; i++ {
-			testBuilder := testPlan.testBuilder
-			pipelineTest := testBuilder(tnn)
-			pipelineTest.name =
-				fmt.Sprintf("%s_%d", pipelineTest.name, i)
-				//    t.Run(pipelineTest.name,func(t *testing.T) {
-				//      pipelineTest := pipelineTest
-				//      t.Parallel()
-			pr, err := createPipelineRun(clientFactory, pipelineTest.pipelineRun)
-			assert.NilError(t, err)
-			pipelineRunCheck := CreatePipelineRunCondition(pr, pipelineTest.check, pipelineTest.name)
-			err = waiter.WaitFor(pipelineRunCheck)
-			assert.NilError(t, err)
-			//	})
-		}
-	}
+func Test_PipelineRuns_creationDelay(t *testing.T) {
+	executePipelineRunTests(t,
+		testPlan{testBuilder: PipelineRunSleep,
+			parallel:      3,
+			creationDelay: time.Duration(1 * time.Second),
+		},
+		testPlan{testBuilder: PipelineRunFail,
+			parallel:      3,
+			creationDelay: time.Duration(1 * time.Second),
+		},
+		testPlan{testBuilder: PipelineRunOK,
+			parallel:      3,
+			creationDelay: time.Duration(1 * time.Second),
+		},
+	)
 }
