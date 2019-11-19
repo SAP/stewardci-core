@@ -7,6 +7,15 @@ function die() {
     exit 1
 }
 
+if [[ "$1" == "--help" || "$1" == "-?" ]]; then
+    echo "update-codegen.sh [OPTION]"
+    echo "Without OPTION the code-generator will update all generated code."
+    echo "  -v, --verify    Checks if all generated code is up-to-date."
+    echo "                  No productive code will be overwritten."
+    echo "  -?, --help      display this help and exit"
+    exit 0
+fi
+
 PROJECT_ROOT=$(cd "$(dirname "$BASH_SOURCE")/.."; pwd)
 
 # Check and prepare build enviroment
