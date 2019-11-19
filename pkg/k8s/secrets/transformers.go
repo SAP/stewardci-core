@@ -7,15 +7,15 @@ import (
 	"strings"
 )
 
-// SecretTransformerType is a type for secret transformers
+// SecretTransformer is a type for secret transformers
 // the function MUST NOT modify the original secret but
 // return a copy of the given one even if no modification took place
-type SecretTransformerType = func(*v1.Secret) *v1.Secret
+type SecretTransformer = func(*v1.Secret) *v1.Secret
 
 // UniqueNameTransformer returns a transforming function from secret to secret
 // the resulting secret has generateName set to the original name plus '-' as separator
 // and name is unset
-func UniqueNameTransformer() SecretTransformerType {
+func UniqueNameTransformer() SecretTransformer {
 	return func(secret *v1.Secret) *v1.Secret {
 		secret = secret.DeepCopy()
 		secret.SetGenerateName(fmt.Sprintf("%s-", secret.GetName()))
@@ -26,7 +26,7 @@ func UniqueNameTransformer() SecretTransformerType {
 
 // SetAnnotationTransformer returns a transforming function from secret to secret
 // in the result secret the annotation with key 'key' is set to the value 'value'.
-func SetAnnotationTransformer(key string, value string) SecretTransformerType {
+func SetAnnotationTransformer(key string, value string) SecretTransformer {
 	return func(secret *v1.Secret) *v1.Secret {
 		secret = secret.DeepCopy()
 		annotations := secret.GetAnnotations()
@@ -41,7 +41,7 @@ func SetAnnotationTransformer(key string, value string) SecretTransformerType {
 
 // StripAnnotationsTransformer returns a transforming function from secret to secret
 // in the result secret all annotations with prefix 'keyPrefix' are removed.
-func StripAnnotationsTransformer(keyPrefix string) SecretTransformerType {
+func StripAnnotationsTransformer(keyPrefix string) SecretTransformer {
 	return func(secret *v1.Secret) *v1.Secret {
 		secret = secret.DeepCopy()
 		annotations := secret.GetAnnotations()
@@ -60,7 +60,7 @@ func StripAnnotationsTransformer(keyPrefix string) SecretTransformerType {
 
 // SetLabelTransformer returns a transforming function from secret to secret
 // in the result secret the label with key 'key' is set to the value 'value'.
-func SetLabelTransformer(key string, value string) SecretTransformerType {
+func SetLabelTransformer(key string, value string) SecretTransformer {
 	return func(secret *v1.Secret) *v1.Secret {
 		secret = secret.DeepCopy()
 		labels := secret.GetLabels()
@@ -75,7 +75,7 @@ func SetLabelTransformer(key string, value string) SecretTransformerType {
 
 // StripLabelsTransformer returns a transforming function from secret to secret
 // in the result secret all labels with prefix 'keyPrefix' are removed.
-func StripLabelsTransformer(keyPrefix string) SecretTransformerType {
+func StripLabelsTransformer(keyPrefix string) SecretTransformer {
 	return func(secret *v1.Secret) *v1.Secret {
 		secret = secret.DeepCopy()
 		labels := secret.GetLabels()

@@ -118,7 +118,7 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	}
 
 	imagePullSecrets := pipelineRun.GetSpec().ImagePullSecrets
-	transformers := []secrets.SecretTransformerType{
+	transformers := []secrets.SecretTransformer{
 		stripTektonAnnotationsTransformer,
 		secrets.StripAnnotationsTransformer("jenkins.io/"),
 		secrets.StripLabelsTransformer("jenkins.io/"),
@@ -160,9 +160,11 @@ func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secret
 	}
 	repoServerURL, err := pipelineRun.GetPipelineRepoServerURL()
 	if err != nil {
+		pipelineRun.UpdateMessage(err.Error())
+		pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
 		return "", err
 	}
-	transformers := []secrets.SecretTransformerType{
+	transformers := []secrets.SecretTransformer{
 		secrets.StripAnnotationsTransformer("jenkins.io/"),
 		secrets.StripLabelsTransformer("jenkins.io/"),
 		secrets.UniqueNameTransformer(),
@@ -175,7 +177,7 @@ func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secret
 	return names[0], nil
 }
 
-func (c *runManager) copySecrets(secretHelper secrets.SecretHelper, secretNames []string, pipelineRun k8s.PipelineRun, filter secrets.SecretFilterType, transformers ...secrets.SecretTransformerType) ([]string, error) {
+func (c *runManager) copySecrets(secretHelper secrets.SecretHelper, secretNames []string, pipelineRun k8s.PipelineRun, filter secrets.SecretFilterType, transformers ...secrets.SecretTransformer) ([]string, error) {
 	storedSecretNames, err := secretHelper.CopySecrets(secretNames, filter, transformers...)
 	if err != nil {
 		log.Printf("cannot copy secrets %s: %s", secretNames, err)

@@ -10,7 +10,7 @@ import (
 
 // SecretHelper copies secrets
 type SecretHelper interface {
-	CopySecrets(secretNames []string, filter SecretFilterType, transformers ...SecretTransformerType) ([]string, error)
+	CopySecrets(secretNames []string, filter SecretFilterType, transformers ...SecretTransformer) ([]string, error)
 	CreateSecret(secret *v1.Secret) (*v1.Secret, error)
 	IsNotFound(err error) bool
 }
@@ -41,7 +41,7 @@ func NewSecretHelper(provider SecretProvider, namespace string, client corev1.Se
 // returns a list of the secret names (after transformation) which were stored
 // In case of an error the copying is stopped. The result list contains the secrets already copied
 // before the error occured. There is no rollback done by this function.
-func (h *secretHelper) CopySecrets(secretNames []string, filter SecretFilterType, transformers ...SecretTransformerType) ([]string, error) {
+func (h *secretHelper) CopySecrets(secretNames []string, filter SecretFilterType, transformers ...SecretTransformer) ([]string, error) {
 	var storedSecretNames []string
 	for _, secretName := range secretNames {
 		secret, err := h.provider.GetSecret(secretName)
