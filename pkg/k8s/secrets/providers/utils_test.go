@@ -10,9 +10,10 @@ import (
 )
 
 func Test_StripMetadata(t *testing.T) {
+	// SETUP
 	now := metav1.Now()
 	var grace int64 = 1
-	secret := &v1.Secret{
+	origSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:                       "foo",
 			GenerateName:               "dummy",
@@ -26,27 +27,30 @@ func Test_StripMetadata(t *testing.T) {
 			OwnerReferences:            []metav1.OwnerReference{metav1.OwnerReference{}},
 			Finalizers:                 []string{"dummy"},
 			ClusterName:                "dummy",
+			Labels: map[string]string{
+				"lbar": "lbaz",
+			},
+			Annotations: map[string]string{
+				"abar": "abaz",
+			},
 		},
 		Type: v1.SecretTypeOpaque,
 	}
-	labels := map[string]string{"lbar": "lbaz"}
-	secret.SetLabels(labels)
-	annotations := map[string]string{"abar": "abaz"}
-	secret.SetAnnotations(annotations)
 
-	stripedSecret := StripMetadata(secret)
+	// EXERCISE
+	resultSecret := StripMetadata(origSecret.DeepCopy())
 
-	assert.Equal(t, "foo", stripedSecret.GetName())
-	assert.Equal(t, "", stripedSecret.GetGenerateName())
-	assert.Equal(t, "", stripedSecret.GetNamespace())
-	assert.Equal(t, "", stripedSecret.GetSelfLink())
-	assert.Equal(t, types.UID(""), stripedSecret.GetUID())
-	assert.Equal(t, "", stripedSecret.GetResourceVersion())
-	assert.Equal(t, int64(0), stripedSecret.GetGeneration())
+	// VERIFY
+	assert.Assert(t, resultSecret != nil)
 
-	assert.DeepEqual(t, annotations, stripedSecret.GetAnnotations())
-	assert.DeepEqual(t, labels, stripedSecret.GetLabels())
-	creationTime := stripedSecret.GetCreationTimestamp()
-	assert.Assert(t, (&creationTime).IsZero())
-	assert.Assert(t, stripedSecret.GetDeletionTimestamp().IsZero())
+	expectedSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        origSecret.GetName(),
+			Labels:      origSecret.GetLabels(),
+			Annotations: origSecret.GetAnnotations(),
+		},
+		Type: v1.SecretTypeOpaque,
+	}
+
+	assert.DeepEqual(t, *expectedSecret, *resultSecret)
 }
