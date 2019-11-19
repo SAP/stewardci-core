@@ -8,101 +8,243 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func Test_UniqueNameTransformer(t *testing.T) {
-	secret := fake.SecretWithType("name1", "secret1", v1.SecretTypeDockercfg)
-	result := UniqueNameTransformer()(secret)
-	assert.Equal(t, "", result.GetName())
-	assert.Equal(t, "name1-", result.GetGenerateName())
-	assert.Equal(t, v1.SecretTypeDockercfg, result.Type)
-}
+func Test_UniqueNameTransformer_WithNameSet(t *testing.T) {
+	t.Parallel()
 
-func Test_SetAnnotationTransformer_New(t *testing.T) {
-	secret := fake.SecretOpaque("name1", "secret1")
-	result := SetAnnotationTransformer("foo", "bar")(secret)
-	assert.Equal(t, "", secret.GetAnnotations()["foo"])
-	assert.Equal(t, "bar", result.GetAnnotations()["foo"])
-}
-
-func Test_SetAnnotationTransformer_Overwrite(t *testing.T) {
 	// SETUP
-	secret := fake.SecretOpaque("name1", "secret1")
-	secret = SetAnnotationTransformer("foo", "bar")(secret)
-	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
+	orig := fake.SecretWithType("name1", "secret1", v1.SecretTypeDockercfg)
+	origCopy := orig.DeepCopy()
+
 	// EXERCISE
-	result := SetAnnotationTransformer("foo", "baz")(secret)
+	result := UniqueNameTransformer()(origCopy)
+
 	// VERIFY
-	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
-	assert.Equal(t, "baz", result.GetAnnotations()["foo"])
+	assert.DeepEqual(t, orig, origCopy)
+	assert.Assert(t, result != origCopy)
+
+	expected := orig.DeepCopy()
+	expected.SetName("")
+	expected.SetGenerateName("name1-")
+
+	assert.DeepEqual(t, expected, result)
 }
 
-func Test_StripAnnotationsTransformer_match(t *testing.T) {
+func Test_SetAnnotationTransformer_SetNew(t *testing.T) {
+	t.Parallel()
+
 	// SETUP
-	secret := fake.SecretOpaque("name1", "secret1")
-	secret = SetAnnotationTransformer("foo", "bar")(secret)
-	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
+	orig := fake.SecretOpaque("name1", "secret1") // no annotations
+	origCopy := orig.DeepCopy()
+
 	// EXERCISE
-	result := StripAnnotationsTransformer("f")(secret)
+	result := SetAnnotationTransformer("foo", "bar")(origCopy)
+
 	// VERIFY
-	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
-	assert.Equal(t, "", result.GetAnnotations()["foo"])
+	assert.DeepEqual(t, orig, origCopy)
+	assert.Assert(t, result != origCopy)
+
+	expected := orig.DeepCopy()
+	expected.SetAnnotations(map[string]string{
+		"foo": "bar",
+	})
+
+	assert.DeepEqual(t, expected, result)
 }
 
-func Test_StripAnnotationsTransformer_noMatch(t *testing.T) {
+func Test_SetAnnotationTransformer_OverwriteExisting(t *testing.T) {
+	t.Parallel()
+
 	// SETUP
-	secret := fake.SecretOpaque("name1", "secret1")
-	secret = SetAnnotationTransformer("foo", "bar")(secret)
-	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
+	orig := fake.SecretOpaque("name1", "secret1")
+	orig.SetAnnotations(map[string]string{
+		"foo": "origValue1",
+	})
+	origCopy := orig.DeepCopy()
+
 	// EXERCISE
-	result := StripAnnotationsTransformer("x")(secret)
+	result := SetAnnotationTransformer("foo", "newValue1")(origCopy)
+
 	// VERIFY
-	assert.Equal(t, "bar", secret.GetAnnotations()["foo"])
-	assert.Equal(t, "bar", result.GetAnnotations()["foo"])
+	assert.DeepEqual(t, orig, origCopy)
+	assert.Assert(t, result != origCopy)
+
+	expected := orig.DeepCopy()
+	expected.SetAnnotations(map[string]string{
+		"foo": "newValue1",
+	})
+
+	assert.DeepEqual(t, expected, result)
 }
 
-func Test_StripAnnotationsTransformer_Empty(t *testing.T) {
-	secret := fake.SecretOpaque("name1", "secret1")
-	result := StripAnnotationsTransformer("f")(secret)
-	assert.Equal(t, "", result.GetAnnotations()["foo"])
-}
+func Test_StripAnnotationsTransformer_Match(t *testing.T) {
+	t.Parallel()
 
-func Test_SetLabelTransformer(t *testing.T) {
 	// SETUP
-	secret := fake.SecretOpaque("name1", "secret1")
-	secret = SetLabelTransformer("foo", "bar")(secret)
-	assert.Equal(t, "bar", secret.GetLabels()["foo"])
+	orig := fake.SecretOpaque("name1", "secret1")
+	orig.SetAnnotations(map[string]string{
+		"foo": "bar",
+	})
+	origCopy := orig.DeepCopy()
+
 	// EXERCISE
-	result := SetLabelTransformer("foo", "baz")(secret)
+	result := StripAnnotationsTransformer("f")(origCopy)
+
 	// VERIFY
-	assert.Equal(t, "bar", secret.GetLabels()["foo"])
-	assert.Equal(t, "baz", result.GetLabels()["foo"])
+	assert.DeepEqual(t, orig, origCopy)
+	assert.Assert(t, result != origCopy)
+
+	expected := orig.DeepCopy()
+	expected.SetAnnotations(map[string]string{})
+
+	assert.DeepEqual(t, expected, result)
 }
 
-func Test_StripLabelTransformer_match(t *testing.T) {
+func Test_StripAnnotationsTransformer_NoMatch(t *testing.T) {
+	t.Parallel()
+
 	// SETUP
-	secret := fake.SecretOpaque("name1", "secret1")
-	secret = SetLabelTransformer("foo", "bar")(secret)
-	assert.Equal(t, "bar", secret.GetLabels()["foo"])
+	orig := fake.SecretOpaque("name1", "secret1")
+	orig.SetAnnotations(map[string]string{
+		"foo": "bar",
+	})
+	origCopy := orig.DeepCopy()
+
 	// EXERCISE
-	result := StripLabelsTransformer("f")(secret)
+	result := StripAnnotationsTransformer("x")(origCopy)
+
 	// VERIFY
-	assert.Equal(t, "bar", secret.GetLabels()["foo"])
-	assert.Equal(t, "", result.GetLabels()["foo"])
+	assert.DeepEqual(t, orig, origCopy)
+	assert.Assert(t, result != origCopy)
+
+	assert.DeepEqual(t, orig, result)
 }
 
-func Test_StripLabelTransformer_noMatch(t *testing.T) {
+func Test_StripAnnotationsTransformer_NoExisting(t *testing.T) {
+	t.Parallel()
+
 	// SETUP
-	secret := fake.SecretOpaque("name1", "secret1")
-	secret = SetLabelTransformer("foo", "bar")(secret)
-	assert.Equal(t, "bar", secret.GetLabels()["foo"])
+	orig := fake.SecretOpaque("name1", "secret1") // no annotations
+	origCopy := orig.DeepCopy()
+
 	// EXERCISE
-	result := StripLabelsTransformer("x")(secret)
+	result := StripAnnotationsTransformer("f")(origCopy)
+
 	// VERIFY
-	assert.Equal(t, "bar", secret.GetLabels()["foo"])
-	assert.Equal(t, "bar", result.GetLabels()["foo"])
+	assert.DeepEqual(t, orig, origCopy)
+	assert.Assert(t, result != origCopy)
+
+	expected := orig.DeepCopy()
+	expected.SetAnnotations(map[string]string{})
+
+	assert.DeepEqual(t, expected, result)
 }
 
-func Test_StripLabelTransformer_Empty(t *testing.T) {
-	secret := fake.SecretOpaque("name1", "secret1")
-	result := StripLabelsTransformer("f")(secret)
-	assert.Equal(t, "", result.GetLabels()["foo"])
+func Test_SetLabelTransformer_SetNew(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	orig := fake.SecretOpaque("name1", "secret1") // no labels
+	origCopy := orig.DeepCopy()
+
+	// EXERCISE
+	result := SetLabelTransformer("foo", "bar")(origCopy)
+
+	// VERIFY
+	assert.DeepEqual(t, orig, origCopy)
+	assert.Assert(t, result != origCopy)
+
+	expected := orig.DeepCopy()
+	expected.SetLabels(map[string]string{
+		"foo": "bar",
+	})
+
+	assert.DeepEqual(t, expected, result)
+}
+
+func Test_SetLabelTransformer_OverwriteExisting(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	orig := fake.SecretOpaque("name1", "secret1")
+	orig.SetLabels(map[string]string{
+		"foo": "origValue1",
+	})
+	origCopy := orig.DeepCopy()
+
+	// EXERCISE
+	result := SetLabelTransformer("foo", "newValue1")(origCopy)
+
+	// VERIFY
+	assert.DeepEqual(t, orig, origCopy)
+	assert.Assert(t, result != origCopy)
+
+	expected := orig.DeepCopy()
+	expected.SetLabels(map[string]string{
+		"foo": "newValue1",
+	})
+
+	assert.DeepEqual(t, expected, result)
+}
+
+func Test_StripLabelsTransformer_Match(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	orig := fake.SecretOpaque("name1", "secret1")
+	orig.SetLabels(map[string]string{
+		"foo": "bar",
+	})
+	origCopy := orig.DeepCopy()
+
+	// EXERCISE
+	result := StripLabelsTransformer("f")(origCopy)
+
+	// VERIFY
+	assert.DeepEqual(t, orig, origCopy)
+	assert.Assert(t, result != origCopy)
+
+	expected := orig.DeepCopy()
+	expected.SetLabels(map[string]string{})
+
+	assert.DeepEqual(t, expected, result)
+}
+
+func Test_StripLabelsTransformer_NoMatch(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	orig := fake.SecretOpaque("name1", "secret1")
+	orig.SetLabels(map[string]string{
+		"foo": "bar",
+	})
+	origCopy := orig.DeepCopy()
+
+	// EXERCISE
+	result := StripLabelsTransformer("x")(origCopy)
+
+	// VERIFY
+	assert.DeepEqual(t, orig, origCopy)
+	assert.Assert(t, result != origCopy)
+
+	assert.DeepEqual(t, orig, result)
+}
+
+func Test_StripLabelsTransformer_NoExisting(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	orig := fake.SecretOpaque("name1", "secret1") // no annotations
+	origCopy := orig.DeepCopy()
+
+	// EXERCISE
+	result := StripLabelsTransformer("f")(origCopy)
+
+	// VERIFY
+	assert.DeepEqual(t, orig, origCopy)
+	assert.Assert(t, result != origCopy)
+
+	expected := orig.DeepCopy()
+	expected.SetLabels(map[string]string{})
+
+	assert.DeepEqual(t, expected, result)
 }
