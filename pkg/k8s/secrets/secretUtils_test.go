@@ -31,9 +31,8 @@ func initHelperWithMock(t *testing.T, secrets ...*v1.Secret) (SecretHelper, *sec
 
 	mockCtrl := gomock.NewController(t)
 	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	helper := NewSecretHelper(provider, targetNamespace, targetClient)
-	x := helper.(*secretHelper)
-	x.testing = &secretHelperTesting{createSecretStub: mockSecretHelper.CreateSecret}
+	helper := NewSecretHelper(provider, targetNamespace, targetClient).(*secretHelper)
+	helper.testing = &secretHelperTesting{createSecretStub: mockSecretHelper.CreateSecret}
 	return helper, mockSecretHelper
 }
 
@@ -43,14 +42,13 @@ func Test_CopySecrets_NoFilter(t *testing.T) {
 	secret := fake.SecretOpaque("foo", namespace)
 	helper, mockSecretHelper := initHelperWithMock(t, secret)
 	expectedSecret := fake.SecretOpaque("foo", "")
-	// VERIFY
+	// EXPECT
 	mockSecretHelper.EXPECT().CreateSecret(expectedSecret).Return(expectedSecret, nil)
 	// EXERCISE
 	list, err := helper.CopySecrets([]string{"foo"}, nil)
 	// VERIFY
 	assert.NilError(t, err)
 	assert.DeepEqual(t, []string{"foo"}, list)
-
 }
 
 func nameStartsWithB(secret *v1.Secret) bool {
@@ -129,18 +127,19 @@ func Test_CreateSecret_Error(t *testing.T) {
 
 	// EXERCISE
 	_, err := helper.CreateSecret(secret)
+
 	// VERIFY
 	assert.Assert(t, expectedError == err)
 }
 
-func Test_IsNotFound(t *testing.T) {
+func Test_IsNotFound_True(t *testing.T) {
 	t.Parallel()
 	helper, _ := initHelperWithClient()
 	err := NewNotFoundError("foo")
 	assert.Assert(t, helper.IsNotFound(err))
 }
 
-func Test_IsNotFoundWrapped(t *testing.T) {
+func Test_IsNotFound_Wrapped(t *testing.T) {
 	t.Parallel()
 	helper, _ := initHelperWithClient()
 	err := NewNotFoundError("foo")
