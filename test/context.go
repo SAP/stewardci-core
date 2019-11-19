@@ -2,9 +2,17 @@ package test
 
 import (
 	"context"
+     "log"
+        "time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
+        "k8s.io/apimachinery/pkg/util/wait"
+)
+
+const (
+        interval = 1 * time.Second
+        timeout  = 2 * time.Minute
 )
 
 type contextKey string
@@ -44,3 +52,16 @@ func GetPipelineRun(ctx context.Context) *api.PipelineRun {
 func SetPipelineRun(ctx context.Context, pipelineRun *api.PipelineRun) context.Context {
 	return context.WithValue(ctx, pipelineRunKey, pipelineRun)
 }
+
+// WaitFor waits for a condition
+// it returns an error if condition is not fullfilled
+func WaitFor(ctx context.Context, condition WaitCondition) error {
+        startTime := time.Now()
+        log.Printf("wait for %s", condition.Name())
+        err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+                return condition.Check(ctx)
+        })
+        log.Printf("waiting completed for %s after %s", condition.Name(), time.Now().Sub(startTime))
+        return err
+}
+

@@ -16,14 +16,15 @@ func Test_PipelineCondition(t *testing.T) {
 	pipelineRun :=
 		builder.PipelineRun("namespace1")
 	clientFactory := fake.NewClientFactory()
-	waiter := NewWaiter(clientFactory)
+        ctx := context.Background()
+        ctx.SetClientFactory(clientFactroy)
 	pr, err := createPipelineRun(clientFactory, pipelineRun)
 	assert.NilError(t, err)
 	pipelineRunCheck := CreatePipelineRunCondition(pr, check, "Test")
 	errorChan := make(chan error)
 
 	go func() {
-		errorChan <- waiter.WaitFor(t, pipelineRunCheck)
+		errorChan <- WaitFor(ctx, pipelineRunCheck)
 	}()
 	time.Sleep(3 * time.Second)
 	setState(clientFactory, pr, api.ResultSuccess)

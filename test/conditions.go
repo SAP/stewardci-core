@@ -1,14 +1,14 @@
 package test
 
 import (
-	"github.com/SAP/stewardci-core/pkg/k8s"
+	"context"
 )
 
 // WaitConditionFunc is a function waiting for a condition
 // return true,nil if condition is fullfilled
 // return false,nil if condition may be fullfilled in the future
 // returns nil,error if condition is not fullfilled
-type WaitConditionFunc func(k8s.ClientFactory) (bool, error)
+type WaitConditionFunc func(context.Context) (bool, error)
 
 type waitCondition struct {
 	conditionFunc WaitConditionFunc
@@ -17,7 +17,7 @@ type waitCondition struct {
 
 // WaitCondition interface implenments a Wait function
 type WaitCondition interface {
-	Check(k8s.ClientFactory) (bool, error)
+	Check(context.Context) (bool, error)
 	Name() string
 }
 
@@ -34,8 +34,8 @@ func NewWaitCondition(f WaitConditionFunc, name string) WaitCondition {
 // return true,nil if condition is fullfilled
 // return false,nil if condition may be fullfilled in the future
 // returns nil,error if condition is not fullfilled
-func (w *waitCondition) Check(clientFactory k8s.ClientFactory) (bool, error) {
-	return w.conditionFunc(clientFactory)
+func (w *waitCondition) Check(ctx context.Context) (bool, error) {
+	return w.conditionFunc(ctx)
 }
 
 // Name returns the unique name of the WaitCondition
