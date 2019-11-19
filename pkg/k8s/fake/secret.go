@@ -13,4 +13,3 @@ func SecretOpaque(name string, namespace string) *v1.Secret {
 func SecretWithType(name string, namespace string, secretType v1.SecretType) *v1.Secret {
 	return &v1.Secret{ObjectMeta: ObjectMeta(name, namespace), Type: secretType}
 }
-
