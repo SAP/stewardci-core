@@ -79,6 +79,8 @@ The pipeline and/or tools used by the pipeline to start additional pods are not 
 
 __:warning: Warning:__ Any code that gets executed by a pipeline AND has access to the Kubernetes service account token can read all image pull secrets! This is especially important to consider if untrusted code may get executed, e.g. a pipeline processing pull requests from untrusted users.
 
+The following code has access to image pull secrets:
+
 - Any code running in the Jenkinsfile Runner container, because this container has the service account token mounted.
 - Any code running in additional containers that have the service account token mounted.
 
@@ -121,6 +123,8 @@ This means that any further Git commands executed in the Jenkinsfile Runner cont
 
 __:warning: Warning:__ Any code that gets executed by a pipeline AND runs in the Jenkinsfile Runner container or has access to the Kubernetes service account token can read the pipeline clone secret!
 This is especially important to consider if untrusted code may get executed, e.g. a pipeline processing pull requests from untrusted users.
+
+The following code has access to a pipeline sync secret:
 
 - Any code running in the Jenkinsfile Runner container, because this container has the credentials in `$HOME/.git-credentials` and has the service account token mounted.
 - Any code running in additional containers that have the service account token mounted.
@@ -173,6 +177,8 @@ Any secret that is not listed in `spec.secrets` will not be available as Jenkins
 
 __:warning: Warning:__ Any code that gets executed by a pipeline AND has access to the Kubernetes service account token can read all image pull secrets! This is especially important to consider if untrusted code may get executed, e.g. a pipeline processing pull requests from untrusted users.
 
+The following code has access to Jenkins credential secrets:
+
 - Any code running in the Jenkinsfile Runner container, because this container has the service account token mounted.
 - Any code running in additional containers that have the service account token mounted.
 
@@ -200,7 +206,7 @@ __TODO:__ How to configure credentials for Elasticseach logging
     - [Add ImagePullSecrets to a service account][k8s_docs_add_imagepullsecrets_to_service_account] (K8s docs)
     - [Distribute Credentials Securely Using Secrets][k8s_docs_distribute_credentials_secure] (K8s docs)
 
-</p>
+<p/>
 
 - Jenkins Kubernetes Credentials Provider Plugin:
     - [Home Page][jenkins_k8s_credential_provider_plugin]
