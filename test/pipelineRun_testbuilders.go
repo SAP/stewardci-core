@@ -5,12 +5,14 @@ import (
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/test/builder"
+	v1 "k8s.io/api/core/v1"
 )
 
 // PipelineRunTest is a test for a pipeline run
 type PipelineRunTest struct {
 	name        string
 	pipelineRun *api.PipelineRun
+	secrets     []*v1.Secret
 	check       PipelineRunCheck
 	expected    string
 	timeout     time.Duration
@@ -34,6 +36,7 @@ var AllTestBuilders = []PipelineRunTestBuilder{
 	PipelineRunOK,
 	PipelineRunWrongExpect,
 	PipelineRunWrongName,
+	PipelineRunWithSecret,
 }
 
 // PipelineRunSleep is a pipelineRunTestBuilder to build pipelineRunTest which sleeps for one second
@@ -128,5 +131,25 @@ func PipelineRunWrongName(namespace string) PipelineRunTest {
 		check:    PipelineRunHasStateResult(api.ResultSuccess),
 		timeout:  120 * time.Second,
 		expected: `pipeline run creation failed: .*wrong_name.*`,
+	}
+}
+
+// PipelineRunWithSecret is a pipelineRunTestBuilder to build pipelineRunTest which uses secrets
+func PipelineRunWithSecret(namespace string) PipelineRunTest {
+	return PipelineRunTest{
+		name: "with-secret",
+		pipelineRun: builder.PipelineRun("with-secret-", namespace,
+			builder.PipelineRunSpec(
+				builder.JenkinsFileSpec("https://github.com/rinckm/demo-pipelines",
+					"master",
+					"secret/Jenkinsfile"),
+				builder.ArgSpec("SECRETID", "foo"),
+				builder.ArgSpec("EXPECTEDUSER", "bar"),
+				builder.ArgSpec("EXPECTEDPWD", "baz"),
+				builder.Secret("foo"),
+			)),
+		check:   PipelineRunHasStateResult(api.ResultSuccess),
+		timeout: 120 * time.Second,
+		secrets: []*v1.Secret{builder.SecretBasicAuth("foo", namespace, "bar", "baz")},
 	}
 }
