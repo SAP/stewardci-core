@@ -13,11 +13,11 @@ type PipelineRunSpecOp func(api.PipelineSpec) api.PipelineSpec
 
 // PipelineRun creates a PipelineRun
 // Any number of PipelineRunOps can be passed
-func PipelineRun(namespace string, ops ...PipelineRunOp) *api.PipelineRun {
+func PipelineRun(prefix, namespace string, ops ...PipelineRunOp) *api.PipelineRun {
 	run := &api.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    namespace,
-			GenerateName: "run-",
+			GenerateName: prefix,
 		},
 	}
 	for _, op := range ops {

@@ -6,7 +6,7 @@ import (
 )
 
 func Test_PipelineRunBuilder_Jenkinsfile(t *testing.T) {
-	pipelineRun := PipelineRun("namespace1",
+	pipelineRun := PipelineRun("prefix1", "namespace1",
 		PipelineRunSpec(
 			JenkinsFileSpec("https://foo.bar", "revision1", "path1")))
 	assert.Equal(t, "https://foo.bar", pipelineRun.Spec.JenkinsFile.URL)
@@ -15,7 +15,7 @@ func Test_PipelineRunBuilder_Jenkinsfile(t *testing.T) {
 }
 
 func Test_PipelineRunBuilder_ArgSpec(t *testing.T) {
-	pipelineRun := PipelineRun("namespace1",
+	pipelineRun := PipelineRun("prefix1", "namespace1",
 		PipelineRunSpec(
 			ArgSpec("foo", "bar"),
 			ArgSpec("baz", "bum")))
