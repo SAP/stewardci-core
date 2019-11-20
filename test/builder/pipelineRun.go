@@ -66,3 +66,29 @@ func ArgSpec(key, value string) PipelineRunSpecOp {
 		return spec
 	}
 }
+
+// Secret creates a PipelineRunSpecOp which adds a Secret
+func Secret(name string) PipelineRunSpecOp {
+	return func(spec api.PipelineSpec) api.PipelineSpec {
+		secrets := spec.Secrets
+		if secrets == nil {
+			secrets = []string{name}
+		} else {
+			secrets = append(secrets, name)
+		}
+		spec.Secrets = secrets
+		return spec
+	}
+}
+
+// RunDetails creates a PipelineRunSpecOp which adds RunDetails
+func RunDetails(jobName, cause string, sequenceNumber int) PipelineRunSpecOp {
+	return func(spec api.PipelineSpec) api.PipelineSpec {
+		spec.RunDetails = &api.PipelineRunDetails{
+			JobName:        jobName,
+			SequenceNumber: sequenceNumber,
+			Cause:          cause,
+		}
+		return spec
+	}
+}
