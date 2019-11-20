@@ -35,3 +35,47 @@ spec:
       description: The message of the pipeline run
       JSONPath: .status.messageShort
       priority: 2
+  validation:
+    openAPIV3Schema:
+      type: object
+      properties:
+        spec: ###
+          type: object
+          properties:
+            jenkinsFile: ###
+              type: object
+              properties:
+                repoUrl: ###
+                  type: string
+                revision: ###
+                  type: string
+                relativePath: ###
+                  type: string
+            args: ### map[string]string
+              type: object
+              additionalProperties: ###
+                type: string
+            secrets: ###
+              type: array
+              items:
+                type: string
+            intent: ###
+              type: string
+            logging: ###
+              type: object
+              properties:
+                elasticsearch: ###
+                  type: object
+                  properties:
+                    runID: ###
+                      type: object
+            runDetails: ###
+              type: object
+              properties:
+                jobName: ###
+                  type: string
+                sequenceNumber: ###
+                  type: integer
+                cause: ###
+                  type: string
+            
