@@ -31,3 +31,14 @@ spec:
       description: The name of the namespace for this tenant
       JSONPath: .status.tenantNamespaceName
       priority: 0
+  validation:
+    openAPIV3Schema:
+      type: object
+      properties:
+        spec: ###
+          type: object
+          properties:
+            name: ###
+              type: string
+            displayName: ###
+              type: string
