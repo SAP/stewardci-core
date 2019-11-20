@@ -12,6 +12,7 @@ type PipelineRunTest struct {
 	name        string
 	pipelineRun *api.PipelineRun
 	check       PipelineRunCheck
+	expected    string
 	timeout     time.Duration
 }
 
@@ -28,9 +29,10 @@ type testPlan struct {
 // AllTestBuilders is a list of all test builders
 var AllTestBuilders = []PipelineRunTestBuilder{
 	PipelineRunSleep,
-	//        PipelineRunSleepTooLong,
+	PipelineRunSleepTooLong,
 	PipelineRunFail,
 	PipelineRunOK,
+	PipelineRunWrongExpect,
 }
 
 // PipelineRunSleep is a pipelineRunTestBuilder to build pipelineRunTest which sleeps for one second
@@ -58,10 +60,11 @@ func PipelineRunSleepTooLong(namespace string) PipelineRunTest {
 				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
 					"master",
 					"sleep/Jenkinsfile"),
-				builder.ArgSpec("SLEEP_FOR_SECONDS", "120"),
+				builder.ArgSpec("SLEEP_FOR_SECONDS", "10"),
 			)),
-		check:   PipelineRunHasStateResult(api.ResultSuccess),
-		timeout: 100 * time.Second,
+		check:    PipelineRunHasStateResult(api.ResultSuccess),
+		timeout:  1 * time.Second,
+		expected: "context deadline exceeded",
 	}
 }
 
@@ -92,5 +95,21 @@ func PipelineRunOK(namespace string) PipelineRunTest {
 			)),
 		check:   PipelineRunHasStateResult(api.ResultSuccess),
 		timeout: 120 * time.Second,
+	}
+}
+
+// PipelineRunWrongExpect is a pipelineRunTestBuilder to build pipelineRunTest which succeeds
+func PipelineRunWrongExpect(namespace string) PipelineRunTest {
+	return PipelineRunTest{
+		name: "wrong_expect",
+		pipelineRun: builder.PipelineRun(namespace,
+			builder.PipelineRunSpec(
+				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
+					"master",
+					"success/Jenkinsfile"),
+			)),
+		check:    PipelineRunHasStateResult(api.ResultKilled),
+		timeout:  120 * time.Second,
+		expected: `Unexpected result: expecting "killed", got "success"`,
 	}
 }
