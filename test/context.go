@@ -2,17 +2,9 @@ package test
 
 import (
 	"context"
-	"log"
-	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
-	"k8s.io/apimachinery/pkg/util/wait"
-)
-
-const (
-	interval = 1 * time.Second
-	timeout  = 2 * time.Minute
 )
 
 type contextKey string
@@ -62,21 +54,4 @@ func GetTestName(ctx context.Context) string {
 // SetTestName sets the test name to the context
 func SetTestName(ctx context.Context, name string) context.Context {
 	return context.WithValue(ctx, testNameKey, name)
-}
-
-// WaitFor waits for a condition
-// it returns an error if condition is not fullfilled
-func WaitFor(ctx context.Context, condition WaitCondition) error {
-	startTime := time.Now()
-	log.Printf("wait for %s", GetTestName(ctx))
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
-		select {
-		case <-ctx.Done():
-			return false, ctx.Err()
-		default:
-		}
-		return condition.Check(ctx)
-	})
-	log.Printf("waiting completed for %s after %s", GetTestName(ctx), time.Now().Sub(startTime))
-	return err
 }

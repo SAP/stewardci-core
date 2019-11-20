@@ -73,7 +73,7 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 		assert.NilError(t, ctx.Err())
 		pr := GetPipelineRun(ctx)
 		pipelineRunCheck := CreatePipelineRunCondition(pr, run.check)
-		go func(pipelineRunCheck WaitCondition) {
+		go func(pipelineRunCheck WaitConditionFunc) {
 			err = WaitFor(ctx, pipelineRunCheck)
 			resultChan <- err
 		}(pipelineRunCheck)
