@@ -59,11 +59,11 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 				expected: pipelineTest.expected,
 			}
 			if testPlan.parallelCreation {
-				go createPipelineRun(pipelineTest.pipelineRun, myTestRun, testChan)
+				go createPipelineRunTest(pipelineTest, myTestRun, testChan)
 			}
 			if !testPlan.parallelCreation {
 				single := make(chan testRun, 1)
-				go createPipelineRun(pipelineTest.pipelineRun, myTestRun, single)
+				go createPipelineRunTest(pipelineTest, myTestRun, single)
 				time.Sleep(testPlan.creationDelay)
 				x := <-single
 				testChan <- x
@@ -101,9 +101,22 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 	}
 }
 
-func createPipelineRun(pipelineRun *api.PipelineRun, run testRun, chanel chan testRun) {
+func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun, chanel chan testRun) {
+
+	pipelineRun := pipelineTest.pipelineRun
 	ctx := run.ctx
-	stewardClient := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(pipelineRun.GetNamespace())
+	factory := GetClientFactory(ctx)
+	namespace := pipelineRun.GetNamespace()
+	secretInterface := factory.CoreV1().Secrets(namespace)
+	for _, secret := range pipelineTest.secrets {
+		_, err := secretInterface.Create(secret)
+		if err != nil {
+			run.result = fmt.Errorf("secret creation failed: %q", err.Error())
+			chanel <- run
+			return
+		}
+	}
+	stewardClient := factory.StewardV1alpha1().PipelineRuns(namespace)
 	pr, err := stewardClient.Create(pipelineRun)
 	if err != nil {
 		run.result = fmt.Errorf("pipeline run creation failed: %q", err.Error())
