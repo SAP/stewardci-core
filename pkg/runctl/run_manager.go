@@ -177,7 +177,7 @@ func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secret
 	return names[0], nil
 }
 
-func (c *runManager) copySecrets(secretHelper secrets.SecretHelper, secretNames []string, pipelineRun k8s.PipelineRun, filter secrets.SecretFilterType, transformers ...secrets.SecretTransformer) ([]string, error) {
+func (c *runManager) copySecrets(secretHelper secrets.SecretHelper, secretNames []string, pipelineRun k8s.PipelineRun, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
 	storedSecretNames, err := secretHelper.CopySecrets(secretNames, filter, transformers...)
 	if err != nil {
 		log.Printf("cannot copy secrets %s: %s", secretNames, err)
