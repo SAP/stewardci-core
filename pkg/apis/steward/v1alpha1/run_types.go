@@ -30,9 +30,12 @@ type PipelineRunList struct {
 type PipelineSpec struct {
 	JenkinsFile JenkinsFile       `json:"jenkinsFile"`
 	Args        map[string]string `json:"args"`
-	Secrets     []string          `json:"secrets"`
-	Intent      Intent            `json:"intent"`
-	Logging     *Logging          `json:"logging"`
+	// +optional
+	Secrets []string `json:"secrets"`
+	// +optional
+	ImagePullSecrets []string `json:"imagePullSecrets"`
+	Intent           Intent   `json:"intent"`
+	Logging          *Logging `json:"logging"`
 	// +optional
 	RunDetails *PipelineRunDetails `json:"runDetails"`
 }
@@ -42,6 +45,8 @@ type JenkinsFile struct {
 	URL      string `json:"repoUrl"`
 	Revision string `json:"revision"`
 	Path     string `json:"relativePath"`
+	// +optional
+	RepoAuthSecret string `json:"repoAuthSecret"`
 }
 
 // Logging contains all logging-specific configuration.

@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"math"
 	"strconv"
 	"testing"
 
@@ -25,35 +24,6 @@ func Test_NewNamespaceManager(t *testing.T) {
 	assert.Assert(t, impl.nsInterface != nil)
 	assert.Equal(t, "prefix1", impl.prefix)
 	assert.Equal(t, uint8(255), impl.suffixLength)
-}
-
-func Test_namespaceManager_generateSuffix(t *testing.T) {
-	const testRounds = 5000
-
-	for _, length := range []uint8{
-		0,
-		1,
-		2,
-		10,
-		30,
-		math.MaxUint8,
-	} {
-		testName := strconv.Itoa(int(length))
-		t.Run(testName, func(t *testing.T) {
-			// SETUP
-			examinee := &namespaceManager{suffixLength: length}
-
-			for i := 0; i < testRounds; i++ {
-				// EXERCISE
-				result, err := examinee.generateSuffix()
-
-				// VERIFY
-				assert.NilError(t, err)
-				assert.Equal(t, int(length), len(result))
-				assert.Assert(t, is.Regexp("^[0-9a-z]*$", result))
-			}
-		})
-	}
 }
 
 func Test_namespaceManager_generateName(t *testing.T) {

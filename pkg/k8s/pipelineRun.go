@@ -3,6 +3,7 @@ package k8s
 import (
 	"fmt"
 	"log"
+	"net/url"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
@@ -22,6 +23,7 @@ type PipelineRun interface {
 	GetKey() string
 	GetRunNamespace() string
 	GetNamespace() string
+	GetPipelineRepoServerURL() (string, error)
 	HasDeletionTimestamp() bool
 	AddFinalizer() error
 	DeleteFinalizerIfExists() error
@@ -110,6 +112,19 @@ func (r *pipelineRun) GetKey() string {
 // GetNamespace returns the namespace of the underlying pipelineRun object
 func (r *pipelineRun) GetNamespace() string {
 	return r.cached.GetNamespace()
+}
+
+// GetPipelineRepoServerURL returns the server hosting the Jenkinsfile repository
+func (r *pipelineRun) GetPipelineRepoServerURL() (string, error) {
+	urlString := r.GetSpec().JenkinsFile.URL
+	repoURL, err := url.Parse(urlString)
+	if err != nil {
+		return "", errors.Wrapf(err, "value %q of field spec.jenkinsFile.url is invalid", urlString)
+	}
+	if !(repoURL.Scheme == "http") && !(repoURL.Scheme == "https") {
+		return "", fmt.Errorf("value %q of field spec.jenkinsFile.url is invalid: scheme not supported: %q", urlString, repoURL.Scheme)
+	}
+	return fmt.Sprintf("%s://%s", repoURL.Scheme, repoURL.Host), nil
 }
 
 func (r *pipelineRun) GetName() string {
