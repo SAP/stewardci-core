@@ -2,13 +2,14 @@ package test
 
 import (
 	"context"
+	"fmt"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 )
 
 // PipelineRunCheck is a check for a PipelineRun
-type PipelineRunCheck func(k8s.PipelineRun) bool
+type PipelineRunCheck func(k8s.PipelineRun) (bool, error)
 
 // CreatePipelineRunCondition returns a WaitCondition for a pipelineRun with a dedicated PipelineCheck
 func CreatePipelineRunCondition(pipelineRun *api.PipelineRun, check PipelineRunCheck) WaitConditionFunc {
@@ -18,15 +19,19 @@ func CreatePipelineRunCondition(pipelineRun *api.PipelineRun, check PipelineRunC
 		if err != nil {
 			return true, err
 		}
-		result := check(pipelineRun)
-		return result, nil
+		return check(pipelineRun)
 	}
 }
 
 // PipelineRunHasStateResult returns a PipelineRunCheck which checks if a pipelineRun has a dedicated result
 func PipelineRunHasStateResult(result api.Result) PipelineRunCheck {
-	return func(pr k8s.PipelineRun) bool {
-
-		return pr.GetStatus().Result == result
+	return func(pr k8s.PipelineRun) (bool, error) {
+		if pr.GetStatus().Result == "" {
+			return false, nil
+		}
+		if pr.GetStatus().Result == result {
+			return true, nil
+		}
+		return true, fmt.Errorf("Unexpected result: expecting %q, got %q", result, pr.GetStatus().Result)
 	}
 }

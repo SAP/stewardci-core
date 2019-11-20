@@ -10,12 +10,15 @@ import (
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
 )
 
 type testRun struct {
-	name  string
-	ctx   context.Context
-	check PipelineRunCheck
+	name     string
+	ctx      context.Context
+	check    PipelineRunCheck
+	result   error
+	expected string
 }
 
 func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
@@ -50,9 +53,10 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 
 			log.Printf("Create Test: %s", name)
 			myTestRun := testRun{
-				name:  name,
-				ctx:   ctx,
-				check: pipelineTest.check,
+				name:     name,
+				ctx:      ctx,
+				check:    pipelineTest.check,
+				expected: pipelineTest.expected,
 			}
 			if testPlan.parallelCreation {
 				go createPipelineRun(pipelineTest.pipelineRun, myTestRun, testChan)
@@ -66,7 +70,7 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 			}
 		}
 	}
-	resultChan := make(chan error, count)
+	resultChan := make(chan testRun, count)
 	for i := count; i > 0; i-- {
 		run := <-testChan
 		ctx := run.ctx
@@ -75,13 +79,18 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 		pipelineRunCheck := CreatePipelineRunCondition(pr, run.check)
 		go func(pipelineRunCheck WaitConditionFunc) {
 			err = WaitFor(ctx, pipelineRunCheck)
-			resultChan <- err
+			run.result = err
+			resultChan <- run
 		}(pipelineRunCheck)
 	}
 	for i := count; i > 0; i-- {
 		log.Printf("Remaining: %d", i)
-		err := <-resultChan
-		assert.NilError(t, err)
+		run := <-resultChan
+		if run.expected == "" {
+			assert.NilError(t, run.result)
+		} else {
+			assert.Assert(t, is.Regexp(run.expected, run.result.Error()))
+		}
 	}
 }
 
