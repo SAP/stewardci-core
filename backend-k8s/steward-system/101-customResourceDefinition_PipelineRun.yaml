@@ -38,12 +38,24 @@ spec:
   validation:
     openAPIV3Schema:
       type: object
+      required:
+        - spec
       properties:
         spec: ###
           type: object
+          required: #TODO: Really required? Compare with run_types.go
+            - jenkinsFile
+            - args
+            - secrets
+            - intent
+            - logging
           properties:
             jenkinsFile: ###
               type: object
+              required:
+                - repoUrl
+                - revision
+                - relativePath
               properties:
                 repoUrl: ###
                   type: string
@@ -63,9 +75,13 @@ spec:
               type: string
             logging: ###
               type: object
+              required:
+                - elasticsearch
               properties:
                 elasticsearch: ###
                   type: object
+                  required:
+                    - runID
                   properties:
                     runID: ###
                       type: object

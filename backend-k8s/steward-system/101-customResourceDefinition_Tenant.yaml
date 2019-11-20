@@ -34,9 +34,14 @@ spec:
   validation:
     openAPIV3Schema:
       type: object
+      required:
+        - spec
       properties:
         spec: ###
           type: object
+          required: #TODO: Really required? Compare with tenant_types.go
+            - name
+            - displayName
           properties:
             name: ###
               type: string
