@@ -73,6 +73,12 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 	resultChan := make(chan testRun, count)
 	for i := count; i > 0; i-- {
 		run := <-testChan
+		if run.expected != "" && run.result != nil {
+			resultChan <- run
+			log.Printf("Test %q completed", run.name)
+			continue
+		}
+
 		ctx := run.ctx
 		assert.NilError(t, ctx.Err())
 		pr := GetPipelineRun(ctx)
@@ -91,6 +97,7 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 		} else {
 			assert.Assert(t, is.Regexp(run.expected, run.result.Error()))
 		}
+
 	}
 }
 
@@ -99,8 +106,9 @@ func createPipelineRun(pipelineRun *api.PipelineRun, run testRun, chanel chan te
 	stewardClient := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(pipelineRun.GetNamespace())
 	pr, err := stewardClient.Create(pipelineRun)
 	if err != nil {
-		log.Printf("Creation failed: %s", err.Error())
-		// todo return closed channel
+		run.result = fmt.Errorf("pipeline run creation failed: %q", err.Error())
+		chanel <- run
+		return
 	}
 	log.Printf("pipeline run created for test: %s, %s/%s", run.name, pr.GetNamespace(), pr.GetName())
 	ctx = SetPipelineRun(ctx, pr)

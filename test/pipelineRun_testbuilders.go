@@ -33,13 +33,14 @@ var AllTestBuilders = []PipelineRunTestBuilder{
 	PipelineRunFail,
 	PipelineRunOK,
 	PipelineRunWrongExpect,
+	PipelineRunWrongName,
 }
 
 // PipelineRunSleep is a pipelineRunTestBuilder to build pipelineRunTest which sleeps for one second
 func PipelineRunSleep(namespace string) PipelineRunTest {
 	return PipelineRunTest{
 		name: "sleep",
-		pipelineRun: builder.PipelineRun(namespace,
+		pipelineRun: builder.PipelineRun("sleep-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
 					"master",
@@ -55,7 +56,7 @@ func PipelineRunSleep(namespace string) PipelineRunTest {
 func PipelineRunSleepTooLong(namespace string) PipelineRunTest {
 	return PipelineRunTest{
 		name: "sleep_too_long",
-		pipelineRun: builder.PipelineRun(namespace,
+		pipelineRun: builder.PipelineRun("sleeptoolong-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
 					"master",
@@ -72,7 +73,7 @@ func PipelineRunSleepTooLong(namespace string) PipelineRunTest {
 func PipelineRunFail(namespace string) PipelineRunTest {
 	return PipelineRunTest{
 		name: "error",
-		pipelineRun: builder.PipelineRun(namespace,
+		pipelineRun: builder.PipelineRun("error-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
 					"master",
@@ -87,7 +88,7 @@ func PipelineRunFail(namespace string) PipelineRunTest {
 func PipelineRunOK(namespace string) PipelineRunTest {
 	return PipelineRunTest{
 		name: "ok",
-		pipelineRun: builder.PipelineRun(namespace,
+		pipelineRun: builder.PipelineRun("ok-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
 					"master",
@@ -98,11 +99,11 @@ func PipelineRunOK(namespace string) PipelineRunTest {
 	}
 }
 
-// PipelineRunWrongExpect is a pipelineRunTestBuilder to build pipelineRunTest which succeeds
+// PipelineRunWrongExpect is a pipelineRunTestBuilder to build pipelineRunTest which succeeds but test expects wrong result
 func PipelineRunWrongExpect(namespace string) PipelineRunTest {
 	return PipelineRunTest{
 		name: "wrong_expect",
-		pipelineRun: builder.PipelineRun(namespace,
+		pipelineRun: builder.PipelineRun("wrongexpect-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
 					"master",
@@ -111,5 +112,21 @@ func PipelineRunWrongExpect(namespace string) PipelineRunTest {
 		check:    PipelineRunHasStateResult(api.ResultKilled),
 		timeout:  120 * time.Second,
 		expected: `Unexpected result: expecting "killed", got "success"`,
+	}
+}
+
+// PipelineRunWrongName is a pipelineRunTestBuilder to build pipelineRunTest which wrong name
+func PipelineRunWrongName(namespace string) PipelineRunTest {
+	return PipelineRunTest{
+		name: "wrong_name--",
+		pipelineRun: builder.PipelineRun("wrong_name", namespace,
+			builder.PipelineRunSpec(
+				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
+					"master",
+					"success/Jenkinsfile"),
+			)),
+		check:    PipelineRunHasStateResult(api.ResultSuccess),
+		timeout:  120 * time.Second,
+		expected: `pipeline run creation failed: .*wrong_name.*`,
 	}
 }
