@@ -11,8 +11,8 @@ import (
 type PipelineRunCheck func(k8s.PipelineRun) bool
 
 // CreatePipelineRunCondition returns a WaitCondition for a pipelineRun with a dedicated PipelineCheck
-func CreatePipelineRunCondition(pipelineRun *api.PipelineRun, check PipelineRunCheck) WaitCondition {
-	return NewWaitCondition(func(ctx context.Context) (bool, error) {
+func CreatePipelineRunCondition(pipelineRun *api.PipelineRun, check PipelineRunCheck) WaitConditionFunc {
+	return func(ctx context.Context) (bool, error) {
 		fetcher := k8s.NewPipelineRunFetcher(GetClientFactory(ctx))
 		pipelineRun, err := fetcher.ByName(pipelineRun.GetNamespace(), pipelineRun.GetName())
 		if err != nil {
@@ -20,7 +20,7 @@ func CreatePipelineRunCondition(pipelineRun *api.PipelineRun, check PipelineRunC
 		}
 		result := check(pipelineRun)
 		return result, nil
-	})
+	}
 }
 
 // PipelineRunHasStateResult returns a PipelineRunCheck which checks if a pipelineRun has a dedicated result
