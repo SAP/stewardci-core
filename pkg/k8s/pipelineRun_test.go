@@ -11,57 +11,113 @@ import (
 
 const message string = "MyMessage"
 
-func Test__pipelineRun_FetchNotExisting__ReturnsNil(t *testing.T) {
+func Test_pipelineRunFetcher_ByName_NotExisting(t *testing.T) {
+	// SETUP
 	factory := fake.NewClientFactory()
-	pipelineRun, err := NewPipelineRunFetcher(factory).ByName(ns1, "NotExisting1")
+	examinee := NewPipelineRunFetcher(factory)
+
+	// EXERCISE
+	pipelineRun, resultErr := examinee.ByName(ns1, "NotExisting1")
+
+	// VERIFY
 	assert.Assert(t, pipelineRun == nil)
+	assert.NilError(t, resultErr)
+}
+
+func Test_pipelineRunFetcher_ByName_GoodCase(t *testing.T) {
+	// SETUP
+	const (
+		secretName = "secret1"
+	)
+
+	factory := fake.NewClientFactory(
+		newPipelineRunWithSecret(ns1, run1, secretName),
+	)
+	examinee := NewPipelineRunFetcher(factory)
+
+	// EXERCISE
+	resultObj, resultErr := examinee.ByName(ns1, run1)
+
+	// VERIFY
+	assert.NilError(t, resultErr)
+	assert.Equal(t, run1, resultObj.GetName())
+	assert.Equal(t, ns1, resultObj.GetNamespace())
+	assert.Equal(t, api.StateUndefined, resultObj.GetStatus().State, "Initial State should be 'StateUndefined'")
+	assert.Equal(t, secretName, resultObj.GetSpec().Secrets[0])
+}
+
+func Test_pipelineRunFetcher_ByKey_GoodCase(t *testing.T) {
+	// SETUP
+	const (
+		secretName = "secret1"
+	)
+
+	factory := fake.NewClientFactory(
+		newPipelineRunWithSecret(ns1, run1, secretName),
+	)
+	key := fake.ObjectKey(run1, ns1)
+	examinee := NewPipelineRunFetcher(factory)
+
+	// EXERCISE
+	resultObj, resultErr := examinee.ByKey(key)
+
+	// VERIFY
+	assert.NilError(t, resultErr)
+	assert.Equal(t, run1, resultObj.GetName())
+	assert.Equal(t, ns1, resultObj.GetNamespace())
+	assert.Equal(t, api.StateUndefined, resultObj.GetStatus().State, "Initial State should be 'StateUndefined'")
+	assert.Equal(t, secretName, resultObj.GetSpec().Secrets[0])
+}
+
+func Test_pipelineRun_UpdateMessage_GoodCase(t *testing.T) {
+	// SETUP
+	factory := fake.NewClientFactory(
+		newPipelineRunWithEmptySpec(ns1, run1),
+	)
+	examinee, err := NewPipelineRunFetcher(factory).ByName(ns1, run1)
 	assert.NilError(t, err)
+	examinee.UpdateState(api.StatePreparing)
+
+	// EXERCISE
+	examinee.UpdateMessage(message)
+
+	// VERIFY
+	assert.Equal(t, message, examinee.GetStatus().Message)
 }
 
-func Test__pipelineRun_Fetch__ReturnsPipelineRun(t *testing.T) {
-	factory := fake.NewClientFactory(newPipelineRun(ns1, run1))
-	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
-	assert.Equal(t, run1, r.GetName())
-	assert.Equal(t, ns1, r.GetNamespace())
-	assert.Equal(t, api.StateUndefined, r.GetStatus().State, "Initial State should be 'StateUndefined'")
-	assert.Equal(t, "secret1", r.GetSpec().Secrets[0])
+func Test_pipelineRun_UpdateState_NoHistoryAfterFirstCall(t *testing.T) {
+	// SETUP
+	factory := fake.NewClientFactory(
+		newPipelineRunWithEmptySpec(ns1, run1),
+	)
+	examinee, err := NewPipelineRunFetcher(factory).ByName(ns1, run1)
+	assert.NilError(t, err)
+
+	// EXERCISE
+	examinee.UpdateState(api.StatePreparing)
+
+	// VERIFY
+	assert.Equal(t, api.StatePreparing, examinee.GetStatus().State)
+	assert.Equal(t, 0, len(examinee.GetStatus().StateHistory))
 }
 
-func Test__pipelineRun_FetchByKey_ReturnsPipelineRun(t *testing.T) {
-	factory := fake.NewClientFactory(newPipelineRun(ns1, run1))
+func Test_pipelineRun_UpdateState_HistoryAfterSecondCall(t *testing.T) {
+	// SETUP
+	factory := fake.NewClientFactory(
+		newPipelineRunWithEmptySpec(ns1, run1),
+	)
 	key := fake.ObjectKey(run1, ns1)
-	r, _ := NewPipelineRunFetcher(factory).ByKey(key)
-	assert.Equal(t, run1, r.GetName())
-	assert.Equal(t, ns1, r.GetNamespace())
-	assert.Equal(t, api.StateUndefined, r.GetStatus().State, "Initial State should be 'StateUndefined'")
-	assert.Equal(t, "secret1", r.GetSpec().Secrets[0])
-}
+	examinee, err := NewPipelineRunFetcher(factory).ByKey(key)
+	assert.NilError(t, err)
 
-func Test__pipelineRun_UpdateMessage__works(t *testing.T) {
-	factory := fake.NewClientFactory(newPipelineRun(ns1, run1))
-	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
-	r.UpdateState(api.StatePreparing)
-	r.UpdateMessage(message)
-	assert.Equal(t, message, r.GetStatus().Message)
-}
+	examinee.UpdateState(api.StatePreparing) // first call
+	factory.Sleep("let time elapse to check timestamps afterwards")
 
-func Test__pipelineRun_calling_UpdateState_Once__yieldsNoHistory(t *testing.T) {
-	factory := fake.NewClientFactory(newPipelineRun(ns1, run1))
-	r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
-	r.UpdateState(api.StatePreparing)
-	assert.Equal(t, api.StatePreparing, r.GetStatus().State)
-	assert.Equal(t, 0, len(r.GetStatus().StateHistory))
-}
+	// EXERCISE
+	examinee.UpdateState(api.StateRunning) // second call
 
-func Test__pipelineRun_calling_UpdateState_Twice_yieldsHistoryWithOneEntry(t *testing.T) {
-	factory := fake.NewClientFactory(newPipelineRun(ns1, run1))
-	key := fake.ObjectKey(run1, ns1)
-	r, _ := NewPipelineRunFetcher(factory).ByKey(key)
-	r.UpdateState(api.StatePreparing)
-	factory.Sleep("Next State")
-	r.UpdateState(api.StateRunning)
-
-	status := r.GetStatus()
+	// VERIFY
+	status := examinee.GetStatus()
 	assert.Equal(t, api.StatePreparing, status.StateHistory[0].State)
 
 	start := status.StateHistory[0].StartedAt
@@ -70,15 +126,23 @@ func Test__pipelineRun_calling_UpdateState_Twice_yieldsHistoryWithOneEntry(t *te
 	assert.Equal(t, 1, len(status.StateHistory))
 }
 
-func Test__pipelineRun_calling_UpdateState_and_FinishState_yieldsHistoryWithOneEntry(t *testing.T) {
-	factory := fake.NewClientFactory(newPipelineRun(ns1, run1))
+func Test_pipelineRun_FinishState_HistoryIfUpdateStateCalledBefore(t *testing.T) {
+	// SETUP
+	factory := fake.NewClientFactory(
+		newPipelineRunWithEmptySpec(ns1, run1),
+	)
 	key := fake.ObjectKey(run1, ns1)
-	r, _ := NewPipelineRunFetcher(factory).ByKey(key)
-	r.UpdateState(api.StatePreparing)
-	factory.Sleep("Next State")
-	r.FinishState()
+	examinee, err := NewPipelineRunFetcher(factory).ByKey(key)
+	assert.NilError(t, err)
 
-	status := r.GetStatus()
+	examinee.UpdateState(api.StatePreparing) // called before
+	factory.Sleep("let time elapse to check timestamps afterwards")
+
+	// EXERCISE
+	examinee.FinishState()
+
+	// VERIFY
+	status := examinee.GetStatus()
 	assert.Equal(t, api.StatePreparing, status.StateHistory[0].State)
 
 	start := status.StateHistory[0].StartedAt
@@ -100,7 +164,7 @@ func Test_pipelineRun_GetPipelineRepoServerURL_CorrectURLs(t *testing.T) {
 		{url: "http://foo.com:1234/Path", expectedURL: "http://foo.com:1234"},
 	} {
 		t.Run(test.url, func(t *testing.T) {
-			factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, test.url))
+			factory := fake.NewClientFactory(newPipelineRunWithPipelineRepoURL(ns1, run1, test.url))
 			r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
 			url, err := r.GetPipelineRepoServerURL()
 			assert.NilError(t, err)
@@ -117,7 +181,7 @@ func Test_pipelineRun_GetPipelineRepoServerURL_WrongURLs(t *testing.T) {
 		{url: "ftp://foo/bar", expectedErrorPattern: `value "ftp://foo/bar" of field spec.jenkinsFile.url is invalid: scheme not supported: .*`},
 	} {
 		t.Run(test.url, func(t *testing.T) {
-			factory := fake.NewClientFactory(newPipelineRunWithURL(ns1, run1, test.url))
+			factory := fake.NewClientFactory(newPipelineRunWithPipelineRepoURL(ns1, run1, test.url))
 			r, _ := NewPipelineRunFetcher(factory).ByName(ns1, run1)
 			url, err := r.GetPipelineRepoServerURL()
 			assert.Assert(t, is.Regexp(test.expectedErrorPattern, err.Error()))
@@ -126,15 +190,18 @@ func Test_pipelineRun_GetPipelineRepoServerURL_WrongURLs(t *testing.T) {
 	}
 }
 
-func newPipelineRun(ns string, name string) *api.PipelineRun {
+func newPipelineRunWithSecret(ns string, name string, secretName string) *api.PipelineRun {
 	return fake.PipelineRun(name, ns, api.PipelineSpec{
-		Secrets: []string{"secret1"},
+		Secrets: []string{secretName},
 	})
 }
 
-func newPipelineRunWithURL(ns string, name string, url string) *api.PipelineRun {
+func newPipelineRunWithEmptySpec(ns string, name string) *api.PipelineRun {
+	return fake.PipelineRun(name, ns, api.PipelineSpec{})
+}
+
+func newPipelineRunWithPipelineRepoURL(ns string, name string, url string) *api.PipelineRun {
 	return fake.PipelineRun(name, ns, api.PipelineSpec{
-		Secrets:     []string{"secret1"},
 		JenkinsFile: api.JenkinsFile{URL: url},
 	})
 }
