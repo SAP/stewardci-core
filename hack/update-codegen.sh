@@ -69,6 +69,7 @@ else
         "${PROJECT_ROOT}/pkg/tektonclient" \
         "${PROJECT_ROOT}/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go" \
         "${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go" \
+        "${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
         "${GEN_DIR}/github.com" \
         "${GOPATH_1}/bin/"{client-gen,deepcopy-gen,defaulter-gen,informer-gen,lister-gen} \
         || die "Cleanup failed"
