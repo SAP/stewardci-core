@@ -8,17 +8,20 @@ import (
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	fsteward "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/fake"
 	"github.com/SAP/stewardci-core/pkg/k8s"
+	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	k8sfake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
+	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
+	secretMocks "github.com/SAP/stewardci-core/pkg/k8s/secrets/mocks"
 	tektonclientfake "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/fake"
 	"github.com/davecgh/go-spew/spew"
 	gomock "github.com/golang/mock/gomock"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubefake "k8s.io/client-go/kubernetes/fake"
+	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 func Test_RunManager_PrepareRunNamespace_CreatesNamespace(t *testing.T) {
@@ -28,7 +31,6 @@ func Test_RunManager_PrepareRunNamespace_CreatesNamespace(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocks(mockCtrl)
-	preparePredefinedSecrets(mockSecretProvider)
 	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
 
 	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager).(*runManager)
@@ -48,7 +50,6 @@ func Test_RunManager_Start_CreatesTektonTaskRun(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocks(mockCtrl)
-	preparePredefinedSecrets(mockSecretProvider)
 	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
 
 	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager)
@@ -71,7 +72,6 @@ func Test_RunManager_Start_DoesNotSetPipelineRunStatus(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocks(mockCtrl)
-	preparePredefinedSecrets(mockSecretProvider)
 	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
 
 	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager)
@@ -85,6 +85,158 @@ func Test_RunManager_Start_DoesNotSetPipelineRunStatus(t *testing.T) {
 	mockPipelineRun.EXPECT().UpdateState(gomock.Any()).Times(0)
 }
 
+func Test_RunManager_Start_DoesCopySecret(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	spec := &steward.PipelineSpec{
+		JenkinsFile: steward.JenkinsFile{
+			RepoAuthSecret: "scm_secret1",
+		},
+		Secrets: []string{
+			"secret1",
+			"secret2",
+		},
+		ImagePullSecrets: []string{
+			"imagePullSecret1",
+			"imagePullSecret2",
+		},
+	}
+	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocksWithSpec(mockCtrl, spec)
+	// UpdateState should never be called
+	mockPipelineRun.EXPECT().
+		UpdateState(gomock.Any()).
+		Do(func(interface{}) { panic("unexpected call") }).
+		AnyTimes()
+
+	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
+	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager).(*runManager)
+	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
+
+	// inject secret helper mock
+	examinee.testing = &runManagerTesting{
+		getSecretHelperStub: func(string, corev1.SecretInterface) secrets.SecretHelper {
+			return mockSecretHelper
+		},
+	}
+
+	// EXPECT
+	mockSecretHelper.EXPECT().
+		CopySecrets([]string{"scm_secret1"}, nil, gomock.Any()).
+		Return([]string{"scm_secret1"}, nil)
+	mockSecretHelper.EXPECT().
+		CopySecrets([]string{"secret1", "secret2"}, nil, gomock.Any()).
+		Return([]string{"secret1", "secret2"}, nil)
+	mockSecretHelper.EXPECT().
+		CopySecrets([]string{"imagePullSecret1", "imagePullSecret2"}, gomock.Any(), gomock.Any()).
+		Return([]string{"imagePullSecret1", "imagePullSecret2"}, nil)
+
+	// EXERCISE
+	err := examinee.Start(mockPipelineRun)
+	assert.NilError(t, err)
+}
+
+func Test_RunManager_Start_FailsWithContentErrorWhenPipelineCloneSecretNotFound(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	secretName := "secret1"
+	spec := &steward.PipelineSpec{
+		JenkinsFile: steward.JenkinsFile{
+			RepoAuthSecret: secretName}}
+	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocksWithSpec(mockCtrl, spec)
+
+	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
+
+	// VERIFY
+	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager)
+	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
+	mockPipelineRun.EXPECT().UpdateMessage(secrets.NewNotFoundError(secretName).Error())
+	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorContent)
+	mockPipelineRun.EXPECT().FinishState()
+	// EXERCISE
+	err := examinee.Start(mockPipelineRun)
+	assert.Assert(t, err != nil)
+	assert.Assert(t, is.Regexp("failed to copy pipeline clone secret: .*", err.Error()))
+}
+func Test_RunManager_Start_FailsWithContentErrorWhenSecretNotFound(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	secretName := "secret1"
+	spec := &steward.PipelineSpec{Secrets: []string{secretName}}
+	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocksWithSpec(mockCtrl, spec)
+
+	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
+
+	// VERIFY
+	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager)
+	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
+	mockPipelineRun.EXPECT().UpdateMessage(secrets.NewNotFoundError(secretName).Error())
+	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorContent)
+	mockPipelineRun.EXPECT().FinishState()
+	// EXERCISE
+	err := examinee.Start(mockPipelineRun)
+	assert.Assert(t, err != nil)
+	assert.Assert(t, is.Regexp("failed to copy secrets: .*", err.Error()))
+}
+
+func Test_RunManager_Start_FailsWithContentErrorWhenImagePullSecretNotFound(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	secretName := "secret1"
+	spec := &steward.PipelineSpec{ImagePullSecrets: []string{secretName}}
+	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocksWithSpec(mockCtrl, spec)
+
+	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
+
+	// VERIFY
+	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager)
+	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
+	mockPipelineRun.EXPECT().UpdateMessage(secrets.NewNotFoundError(secretName).Error())
+	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorContent)
+	mockPipelineRun.EXPECT().FinishState()
+	// EXERCISE
+	err := examinee.Start(mockPipelineRun)
+	assert.Assert(t, err != nil)
+	assert.Assert(t, is.Regexp("failed to copy image pull secrets: .*", err.Error()))
+}
+
+func Test_RunManager_Start_FailsWithInfraErrorWhenForbidden(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	secretName := "scm_secret1"
+	spec := &steward.PipelineSpec{
+		JenkinsFile: steward.JenkinsFile{
+			RepoAuthSecret: secretName}}
+	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocksWithSpec(mockCtrl, spec)
+
+	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
+
+	// VERIFY
+	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager)
+	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, fmt.Errorf("Forbidden"))
+	mockPipelineRun.EXPECT().UpdateMessage("Forbidden")
+	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorInfra)
+	mockPipelineRun.EXPECT().FinishState()
+	// EXERCISE
+	err := examinee.Start(mockPipelineRun)
+	assert.Assert(t, err != nil)
+}
+
 func Test_RunManager_Cleanup_RemovesNamespace(t *testing.T) {
 	t.Parallel()
 
@@ -92,7 +244,6 @@ func Test_RunManager_Cleanup_RemovesNamespace(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocks(mockCtrl)
-	preparePredefinedSecrets(mockSecretProvider)
 	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
 	mockPipelineRun.EXPECT().FinishState()
 
@@ -143,7 +294,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 		assert.NilError(t, err)
 		examinee = NewRunManager(
 			cf,
-			k8s.NewTenantNamespace(cf, pipelineRun.GetNamespace()),
+			k8s.NewTenantNamespace(cf, pipelineRun.GetNamespace()).GetSecretProvider(),
 			k8s.NewNamespaceManager(cf, "prefix1", 0),
 		).(*runManager)
 		return
@@ -293,15 +444,6 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	}
 }
 
-func preparePredefinedSecrets(mockSecretProvider *mocks.MockSecretProvider) {
-	if scmCloneSecretName != "" {
-		mockSecretProvider.EXPECT().GetSecret(scmCloneSecretName).Return(&v1.Secret{}, nil)
-	}
-	if pullSecretName != "" {
-		mockSecretProvider.EXPECT().GetSecret(pullSecretName).Return(&v1.Secret{}, nil)
-	}
-}
-
 func preparePredefinedClusterRole(t *testing.T, factory *mocks.MockClientFactory, pipelineRun *mocks.MockPipelineRun) {
 	// Uncomment this if unexpected call to FinishState() swallows the error you want to see
 	// pipelineRun.EXPECT().FinishState().AnyTimes()
@@ -311,12 +453,18 @@ func preparePredefinedClusterRole(t *testing.T, factory *mocks.MockClientFactory
 	assert.NilError(t, err)
 }
 
-func prepareMocks(ctrl *gomock.Controller) (*mocks.MockClientFactory, *mocks.MockPipelineRun, *mocks.MockSecretProvider, k8s.NamespaceManager) {
+func prepareMocks(ctrl *gomock.Controller) (*mocks.MockClientFactory, *mocks.MockPipelineRun, *secretMocks.MockSecretProvider, k8s.NamespaceManager) {
+	return prepareMocksWithSpec(ctrl, &steward.PipelineSpec{})
+}
+
+func prepareMocksWithSpec(ctrl *gomock.Controller, spec *steward.PipelineSpec) (*mocks.MockClientFactory, *mocks.MockPipelineRun, *secretMocks.MockSecretProvider, k8s.NamespaceManager) {
 	mockFactory := mocks.NewMockClientFactory(ctrl)
 
-	coreClientSet := kubefake.NewSimpleClientset()
-	mockFactory.EXPECT().CoreV1().Return(coreClientSet.CoreV1()).AnyTimes()
-	mockFactory.EXPECT().RbacV1beta1().Return(coreClientSet.RbacV1beta1()).AnyTimes()
+	kubeClientSet := kubefake.NewSimpleClientset()
+	kubeClientSet.PrependReactor("create", "*", fake.GenerateNameReactor(0))
+
+	mockFactory.EXPECT().CoreV1().Return(kubeClientSet.CoreV1()).AnyTimes()
+	mockFactory.EXPECT().RbacV1beta1().Return(kubeClientSet.RbacV1beta1()).AnyTimes()
 
 	stewardClientset := fsteward.NewSimpleClientset()
 	mockFactory.EXPECT().StewardV1alpha1().Return(stewardClientset.StewardV1alpha1()).AnyTimes()
@@ -326,9 +474,10 @@ func prepareMocks(ctrl *gomock.Controller) (*mocks.MockClientFactory, *mocks.Moc
 
 	runNamespace := ""
 	mockPipelineRun := mocks.NewMockPipelineRun(ctrl)
-	mockPipelineRun.EXPECT().GetSpec().Return(&steward.PipelineSpec{}).AnyTimes()
+	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
 	mockPipelineRun.EXPECT().GetStatus().Return(&steward.PipelineStatus{}).AnyTimes()
 	mockPipelineRun.EXPECT().GetKey().Return("key").AnyTimes()
+	mockPipelineRun.EXPECT().GetPipelineRepoServerURL().Return("server", nil).AnyTimes()
 	mockPipelineRun.EXPECT().GetRunNamespace().DoAndReturn(func() string {
 		return runNamespace
 	}).AnyTimes()
@@ -337,7 +486,7 @@ func prepareMocks(ctrl *gomock.Controller) (*mocks.MockClientFactory, *mocks.Moc
 		runNamespace = arg
 	})
 
-	mockSecretProvider := mocks.NewMockSecretProvider(ctrl)
+	mockSecretProvider := secretMocks.NewMockSecretProvider(ctrl)
 
 	//TODO: Mock when required
 	namespaceManager := k8s.NewNamespaceManager(mockFactory, runNamespacePrefix, runNamespaceRandomLength)

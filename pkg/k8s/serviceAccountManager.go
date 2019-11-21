@@ -15,7 +15,7 @@ const (
 
 //ServiceAccountManager manages serviceAccounts
 type ServiceAccountManager interface {
-	CreateServiceAccount(name string, scmCloneSecretName string, pullSecretName string) (*ServiceAccountWrap, error)
+	CreateServiceAccount(name string, pipelineCloneSecretName string, imagePullSecretNames []string) (*ServiceAccountWrap, error)
 	GetServiceAccount(name string) (*ServiceAccountWrap, error)
 }
 
@@ -43,18 +43,18 @@ func NewServiceAccountManager(factory ClientFactory, namespace string) ServiceAc
 
 // CreateServiceAccount creates a service account on the cluster
 //   name					name of the service account
-//   scmCloneSecretName		(optional) the scm clone secret to attach to this service account (e.g. for fetching the Jenkinsfile)
-//   pullSecretName			(optional) the pull secret to attach to this service account (e.g. for pulling the Jenkinsfile Runner image)
-func (c *serviceAccountManager) CreateServiceAccount(name string, scmCloneSecretName string, pullSecretName string) (*ServiceAccountWrap, error) {
+//   pipelineCloneSecretName		(optional) the name of the secret to be used to authenticate at the Git repository hosting the pipeline definition.
+//   imagePullSecretNames		(optional) a list of image pull secrets to attach to this service account (e.g. for pulling the Jenkinsfile Runner image)
+func (c *serviceAccountManager) CreateServiceAccount(name string, pipelineCloneSecretName string, imagePullSecretNames []string) (*ServiceAccountWrap, error) {
 	serviceAccount := &v1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name}}
-	if scmCloneSecretName != "" {
+	if pipelineCloneSecretName != "" {
 		secretList := make([]v1.ObjectReference, 1)
-		secretList[0] = v1.ObjectReference{Name: scmCloneSecretName}
+		secretList[0] = v1.ObjectReference{Name: pipelineCloneSecretName}
 		serviceAccount.Secrets = secretList
 	}
-	if pullSecretName != "" {
-		refList := make([]v1.LocalObjectReference, 1)
-		refList[0] = v1.LocalObjectReference{Name: pullSecretName}
+	refList := make([]v1.LocalObjectReference, len(imagePullSecretNames))
+	for index, imagePullSecretName := range imagePullSecretNames {
+		refList[index] = v1.LocalObjectReference{Name: imagePullSecretName}
 		serviceAccount.ImagePullSecrets = refList
 	}
 

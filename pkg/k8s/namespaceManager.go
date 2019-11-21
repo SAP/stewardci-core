@@ -1,11 +1,7 @@
 package k8s
 
 import (
-	"crypto/rand"
-	"fmt"
 	"log"
-	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -13,6 +9,8 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+
+	utils "github.com/SAP/stewardci-core/pkg/utils"
 )
 
 //NamespaceManager manages namespaces
@@ -99,22 +97,6 @@ func (m *namespaceManager) Delete(name string) error {
 	return nil
 }
 
-// generateSuffix generates a random string value consisting of [0-9a-z] with a length
-// as configured in the receiver.
-func (m *namespaceManager) generateSuffix() (string, error) {
-	if m.suffixLength == 0 {
-		return "", nil
-	}
-
-	const base = 36 // number of symbols to be used [0-9a-z]
-	maxRandom := new(big.Int).Exp(big.NewInt(base), big.NewInt(int64(m.suffixLength)), nil)
-	randomInt, err := rand.Int(rand.Reader, maxRandom)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%0"+strconv.Itoa(int(m.suffixLength))+"s", randomInt.Text(base)), nil
-}
-
 func (m *namespaceManager) generateName(customPart string) (string, error) {
 	parts := []string{}
 	if m.prefix != "" {
@@ -123,7 +105,7 @@ func (m *namespaceManager) generateName(customPart string) (string, error) {
 	if customPart != "" {
 		parts = append(parts, customPart)
 	}
-	suffix, err := m.generateSuffix()
+	suffix, err := utils.RandomAlphaNumString(int64(m.suffixLength))
 	if err != nil {
 		return "", err
 	}

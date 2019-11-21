@@ -156,7 +156,7 @@ func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) RunManager {
 	tenant := k8s.NewTenantNamespace(c.factory, pipelineRun.GetNamespace())
 	workFactory := tenant.TargetClientFactory()
 	namespaceManager := k8s.NewNamespaceManager(c.factory, runNamespacePrefix, runNamespaceRandomLength)
-	return NewRunManager(workFactory, tenant, namespaceManager)
+	return NewRunManager(workFactory, tenant.GetSecretProvider(), namespaceManager)
 }
 
 // syncHandler compares the actual state with the desired, and attempts to

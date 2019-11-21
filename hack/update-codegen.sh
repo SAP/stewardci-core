@@ -127,9 +127,20 @@ if [ "$VERIFY" = true ]; then
         -destination="${GEN_DIR}/pkg/k8s/mocks/mocks.go" \
         -package=mocks \
         github.com/SAP/stewardci-core/pkg/k8s \
-        PipelineRun,ClientFactory,PipelineRunFetcher,SecretProvider,NamespaceManager \
-        || die "Mock generation failed"
+        PipelineRun,ClientFactory,PipelineRunFetcher,NamespaceManager \
+        || die "'k8s' mock generation failed"
     diff -Naupr ${GEN_DIR}/pkg/k8s/mocks/mocks.go ${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go || die "Regeneration required for apis"
+    set +x
+    echo "## Verify mocks for package 'k8s/secrets' ###############"
+    set -x
+    "$GOPATH_1/bin/mockgen" \
+        -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
+        -destination="${GEN_DIR}/pkg/k8s/secrets/mocks/mocks.go" \
+        -package=mocks \
+        github.com/SAP/stewardci-core/pkg/k8s/secrets \
+        SecretProvider,SecretHelper \
+        || die "'k8s/secrets' mock generation failed"
+    diff -Naupr ${GEN_DIR}/pkg/k8s/secrets/mocks/mocks.go ${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go || die "Regeneration required for apis"
     set +x
 else
     echo "## Generate mocks for package 'k8s' ###############"
@@ -139,8 +150,19 @@ else
         -destination="${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go" \
         -package=mocks \
         github.com/SAP/stewardci-core/pkg/k8s \
-        PipelineRun,ClientFactory,PipelineRunFetcher,SecretProvider,NamespaceManager \
-        || die "Mock generation failed"
+        PipelineRun,ClientFactory,PipelineRunFetcher,NamespaceManager \
+        || die "'k8s' mock generation failed"
+    set +x
+    echo
+    echo "## Generate mocks for package 'k8s/secrets' ###############"
+    set -x
+    "$GOPATH_1/bin/mockgen" \
+        -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
+        -destination="${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
+        -package=mocks \
+        github.com/SAP/stewardci-core/pkg/k8s/secrets \
+        SecretProvider,SecretHelper \
+        || die "'k8s/secrets' mock generation failed"
     set +x
 fi
 
