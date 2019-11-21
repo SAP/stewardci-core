@@ -72,5 +72,15 @@ set -x
     -destination="${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go" \
     -package=mocks \
     github.com/SAP/stewardci-core/pkg/k8s \
-    PipelineRun,ClientFactory,PipelineRunFetcher,SecretProvider,NamespaceManager
+    PipelineRun,ClientFactory,PipelineRunFetcher,NamespaceManager
+set +x
+echo
+echo "## Generate mocks for package 'k8s/secrets' ###############"
+set -x
+"$GOPATH_1/bin/mockgen" \
+    -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
+    -destination="${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
+    -package=mocks \
+    github.com/SAP/stewardci-core/pkg/k8s/secrets \
+    SecretProvider,SecretHelper
 set +x

@@ -7,12 +7,12 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// ObjectMeta returns a fake ObjectMeta with a given name and fake.Namespace1 as namespace
+// ObjectMeta returns a fake ObjectMeta with a given name and namespace
 func ObjectMeta(name string, namespace string) metav1.ObjectMeta {
 	return metav1.ObjectMeta{Name: name, Namespace: namespace}
 }
 
-// ObjectKey returns a fake key string with a given name and fake.Namespace1 as namespace
+// ObjectKey returns a fake key string with a given name and namespace
 func ObjectKey(name string, namespace string) string {
 	meta := ObjectMeta(name, namespace)
 	result, err := cache.MetaNamespaceKeyFunc(&meta)

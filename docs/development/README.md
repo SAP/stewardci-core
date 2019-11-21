@@ -46,11 +46,11 @@ You are welcome to contribute to this project via Pull Requests.
 git clone https://github.com/kubernetes/code-generator.git
 cd code-generator/
 
-# We need a specific version matching to our Tekton version (currently kubernetes-1.13.11)
+# We need a specific version matching to our K8s client-go version (currently kubernetes-1.14.9)
 #
 # Unfortunately old versions are not yet modularized.
 #     We take the module info from a newer release.
-git checkout kubernetes-1.13.11
+git checkout kubernetes-1.14.9
 git checkout kubernetes-1.16.1 -- go.mod go.sum
 
 # CODEGEN_PKG is used by the script to find the code-generator

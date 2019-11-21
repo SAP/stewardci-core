@@ -78,6 +78,11 @@ func (f *ClientFactory) StewardInformerFactory() stewardinformer.SharedInformerF
 	return f.stewardInformerFactory
 }
 
+// KubernetesClientset returns the Kubernetes fake clientset.
+func (f *ClientFactory) KubernetesClientset() *kubernetes.Clientset {
+	return f.kubernetesClientset
+}
+
 // CoreV1 returns fake CoreV1 clients
 func (f *ClientFactory) CoreV1() corev1.CoreV1Interface {
 	return f.kubernetesClientset.CoreV1()
