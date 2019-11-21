@@ -11,6 +11,9 @@ type PipelineRunOp func(*api.PipelineRun)
 // PipelineRunSpecOp is an operation returning a modified PipelineSpec
 type PipelineRunSpecOp func(api.PipelineSpec) api.PipelineSpec
 
+// JenkinsFileOp is an operation returning a modified JenkinsFile
+type JenkinsFileOp func(api.JenkinsFile) api.JenkinsFile
+
 // PipelineRun creates a PipelineRun
 // Any number of PipelineRunOps can be passed
 func PipelineRun(prefix, namespace string, ops ...PipelineRunOp) *api.PipelineRun {
@@ -40,16 +43,33 @@ func PipelineRunSpec(ops ...PipelineRunSpecOp) PipelineRunOp {
 }
 
 // JenkinsFileSpec creates a JenkinsFileSpec
-// TODO: introduce JenkinsFileSpecOp
-func JenkinsFileSpec(url, revision, path string) PipelineRunSpecOp {
+func JenkinsFileSpec(url, path string, ops ...JenkinsFileOp) PipelineRunSpecOp {
 	return func(spec api.PipelineSpec) api.PipelineSpec {
 		spec.JenkinsFile = api.JenkinsFile{
 			URL:      url,
-			Revision: revision,
+			Revision: "master",
 			Path:     path,
 		}
+		for _, op := range ops {
+			spec.JenkinsFile = op(spec.JenkinsFile)
+		}
 		return spec
+	}
+}
 
+// Revision creates a JeninsFileOp setting the revision of the jenkins file
+func Revision(r string) JenkinsFileOp {
+	return func(spec api.JenkinsFile) api.JenkinsFile {
+		spec.Revision = r
+		return spec
+	}
+}
+
+// RepoAuthSecret creates a JenkinsFileOp setting the repo auth secret
+func RepoAuthSecret(name string) JenkinsFileOp {
+	return func(spec api.JenkinsFile) api.JenkinsFile {
+		spec.RepoAuthSecret = name
+		return spec
 	}
 }
 
@@ -77,6 +97,20 @@ func Secret(name string) PipelineRunSpecOp {
 			secrets = append(secrets, name)
 		}
 		spec.Secrets = secrets
+		return spec
+	}
+}
+
+// ImagePullSecret creates a PipelineRUnSpecOp which adds an Image Pull Secret
+func ImagePullSecret(name string) PipelineRunSpecOp {
+	return func(spec api.PipelineSpec) api.PipelineSpec {
+		secrets := spec.ImagePullSecrets
+		if secrets == nil {
+			secrets = []string{name}
+		} else {
+			secrets = append(secrets, name)
+		}
+		spec.ImagePullSecrets = secrets
 		return spec
 	}
 }

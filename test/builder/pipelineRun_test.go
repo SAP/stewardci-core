@@ -10,10 +10,26 @@ import (
 func Test_PipelineRunBuilder_Jenkinsfile(t *testing.T) {
 	pipelineRun := PipelineRun("prefix1", "namespace1",
 		PipelineRunSpec(
-			JenkinsFileSpec("https://foo.bar", "revision1", "path1")))
+			JenkinsFileSpec("https://foo.bar", "path1")))
 	assert.Equal(t, "https://foo.bar", pipelineRun.Spec.JenkinsFile.URL)
-	assert.Equal(t, "revision1", pipelineRun.Spec.JenkinsFile.Revision)
+	assert.Equal(t, "master", pipelineRun.Spec.JenkinsFile.Revision)
 	assert.Equal(t, "path1", pipelineRun.Spec.JenkinsFile.Path)
+}
+
+func Test_PipelineRunBuilder_JenkinsfileWithOps(t *testing.T) {
+	pipelineRun := PipelineRun("prefix1", "namespace1",
+		PipelineRunSpec(
+			JenkinsFileSpec("https://foo.bar", "path1",
+				Revision("revision1"),
+				RepoAuthSecret("secret1"),
+			),
+		),
+	)
+	assert.DeepEqual(t, api.JenkinsFile{URL: "https://foo.bar",
+		Revision:       "revision1",
+		Path:           "path1",
+		RepoAuthSecret: "secret1",
+	}, pipelineRun.Spec.JenkinsFile)
 }
 
 func Test_PipelineRunBuilder_ArgSpec(t *testing.T) {
@@ -30,10 +46,13 @@ func Test_PipelineRunBuilder_Secret(t *testing.T) {
 	pipelineRun := PipelineRun("prefix1", "namespace1",
 		PipelineRunSpec(
 			Secret("foo"),
+			ImagePullSecret("pull1"),
 			Secret("bar"),
+			ImagePullSecret("pull2"),
 		),
 	)
 	assert.DeepEqual(t, []string{"foo", "bar"}, pipelineRun.Spec.Secrets)
+	assert.DeepEqual(t, []string{"pull1", "pull2"}, pipelineRun.Spec.ImagePullSecrets)
 }
 
 func Test_PipelineRunBuilder_RunDetails(t *testing.T) {

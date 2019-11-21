@@ -49,7 +49,6 @@ func PipelineRunSleep(namespace string) PipelineRunTest {
 		pipelineRun: builder.PipelineRun("sleep-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
-					"master",
 					"sleep/Jenkinsfile"),
 				builder.ArgSpec("SLEEP_FOR_SECONDS", "1"),
 			)),
@@ -65,7 +64,6 @@ func PipelineRunSleepTooLong(namespace string) PipelineRunTest {
 		pipelineRun: builder.PipelineRun("sleeptoolong-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
-					"master",
 					"sleep/Jenkinsfile"),
 				builder.ArgSpec("SLEEP_FOR_SECONDS", "10"),
 			)),
@@ -82,7 +80,6 @@ func PipelineRunFail(namespace string) PipelineRunTest {
 		pipelineRun: builder.PipelineRun("error-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
-					"master",
 					"error/Jenkinsfile"),
 			)),
 		check:   PipelineRunHasStateResult(api.ResultErrorContent),
@@ -97,7 +94,6 @@ func PipelineRunOK(namespace string) PipelineRunTest {
 		pipelineRun: builder.PipelineRun("ok-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
-					"master",
 					"success/Jenkinsfile"),
 			)),
 		check:   PipelineRunHasStateResult(api.ResultSuccess),
@@ -112,7 +108,6 @@ func PipelineRunWrongExpect(namespace string) PipelineRunTest {
 		pipelineRun: builder.PipelineRun("wrongexpect-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
-					"master",
 					"success/Jenkinsfile"),
 			)),
 		check:    PipelineRunHasStateResult(api.ResultKilled),
@@ -128,7 +123,6 @@ func PipelineRunWrongName(namespace string) PipelineRunTest {
 		pipelineRun: builder.PipelineRun("wrong_name", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
-					"master",
 					"success/Jenkinsfile"),
 			)),
 		check:    PipelineRunHasStateResult(api.ResultSuccess),
@@ -144,7 +138,6 @@ func PipelineRunWithSecret(namespace string) PipelineRunTest {
 		pipelineRun: builder.PipelineRun("with-secret-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/rinckm/demo-pipelines",
-					"master",
 					"secret/Jenkinsfile"),
 				builder.ArgSpec("SECRETID", "with-secret-foo"),
 				builder.ArgSpec("EXPECTEDUSER", "bar"),
@@ -164,7 +157,6 @@ func PipelineRunMissingSecret(namespace string) PipelineRunTest {
 		pipelineRun: builder.PipelineRun("missing-secret-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/rinckm/demo-pipelines",
-					"master",
 					"secret/Jenkinsfile"),
 				builder.ArgSpec("SECRETID", "foo"),
 				builder.ArgSpec("EXPECTEDUSER", "bar"),
@@ -183,7 +175,6 @@ func PipelineRunWrongJenkinsfileRepo(namespace string) PipelineRunTest {
 		pipelineRun: builder.PipelineRun("wrong-jenkinsfile-repo-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/SAP/steward-foo",
-					"master",
 					"Jenkinsfile"),
 			)),
 		check: PipelineRunMessageOnFinished(`Command ['git' 'clone' 'https://github.com/SAP/steward-foo' '.'] failed with exit code 128
@@ -201,7 +192,6 @@ func PipelineRunWrongJenkinsfilePath(namespace string) PipelineRunTest {
 		pipelineRun: builder.PipelineRun("wrong-jenkinsfile-path-", namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/SAP/stewardci-core",
-					"master",
 					"Jenkinsfile"),
 			)),
 		check: PipelineRunMessageOnFinished(`Command ['/app/bin/jenkinsfile-runner' '-w' '/app/jenkins' '-p' '/usr/share/jenkins/ref/plugins' '--runHome' '/jenkins_home' '--no-sandbox' '--build-number' '1' '-f' 'Jenkinsfile'] failed with exit code 255
