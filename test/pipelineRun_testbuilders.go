@@ -40,7 +40,11 @@ var AllTestBuilders = []PipelineRunTestBuilder{
 	PipelineRunMissingSecret,
 	PipelineRunWrongJenkinsfileRepo,
 	PipelineRunWrongJenkinsfilePath,
+	PipelineRunWrongJenkinsfileRepoWithUser,
 }
+
+const pipelineRepoURL = "https://github.com/SAP-samples/stewardci-example-pipelines"
+const pipelineRepoURLrinckm = "https://github.com/rinckm/stewardci-example-pipelines"
 
 // PipelineRunSleep is a pipelineRunTestBuilder to build pipelineRunTest which sleeps for one second
 func PipelineRunSleep(namespace string) PipelineRunTest {
@@ -48,7 +52,7 @@ func PipelineRunSleep(namespace string) PipelineRunTest {
 		name: "sleep",
 		pipelineRun: builder.PipelineRun("sleep-", namespace,
 			builder.PipelineRunSpec(
-				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
+				builder.JenkinsFileSpec(pipelineRepoURL,
 					"sleep/Jenkinsfile"),
 				builder.ArgSpec("SLEEP_FOR_SECONDS", "1"),
 			)),
@@ -63,7 +67,7 @@ func PipelineRunSleepTooLong(namespace string) PipelineRunTest {
 		name: "sleep_too_long",
 		pipelineRun: builder.PipelineRun("sleeptoolong-", namespace,
 			builder.PipelineRunSpec(
-				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
+				builder.JenkinsFileSpec(pipelineRepoURL,
 					"sleep/Jenkinsfile"),
 				builder.ArgSpec("SLEEP_FOR_SECONDS", "10"),
 			)),
@@ -79,7 +83,7 @@ func PipelineRunFail(namespace string) PipelineRunTest {
 		name: "error",
 		pipelineRun: builder.PipelineRun("error-", namespace,
 			builder.PipelineRunSpec(
-				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
+				builder.JenkinsFileSpec(pipelineRepoURL,
 					"error/Jenkinsfile"),
 			)),
 		check:   PipelineRunHasStateResult(api.ResultErrorContent),
@@ -93,7 +97,7 @@ func PipelineRunOK(namespace string) PipelineRunTest {
 		name: "ok",
 		pipelineRun: builder.PipelineRun("ok-", namespace,
 			builder.PipelineRunSpec(
-				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
+				builder.JenkinsFileSpec(pipelineRepoURL,
 					"success/Jenkinsfile"),
 			)),
 		check:   PipelineRunHasStateResult(api.ResultSuccess),
@@ -107,7 +111,7 @@ func PipelineRunWrongExpect(namespace string) PipelineRunTest {
 		name: "wrong_expect",
 		pipelineRun: builder.PipelineRun("wrongexpect-", namespace,
 			builder.PipelineRunSpec(
-				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
+				builder.JenkinsFileSpec(pipelineRepoURL,
 					"success/Jenkinsfile"),
 			)),
 		check:    PipelineRunHasStateResult(api.ResultKilled),
@@ -122,7 +126,7 @@ func PipelineRunWrongName(namespace string) PipelineRunTest {
 		name: "wrong_name--",
 		pipelineRun: builder.PipelineRun("wrong_name", namespace,
 			builder.PipelineRunSpec(
-				builder.JenkinsFileSpec("https://github.com/sap-production/demo-pipelines",
+				builder.JenkinsFileSpec(pipelineRepoURL,
 					"success/Jenkinsfile"),
 			)),
 		check:    PipelineRunHasStateResult(api.ResultSuccess),
@@ -137,7 +141,7 @@ func PipelineRunWithSecret(namespace string) PipelineRunTest {
 		name: "with-secret",
 		pipelineRun: builder.PipelineRun("with-secret-", namespace,
 			builder.PipelineRunSpec(
-				builder.JenkinsFileSpec("https://github.com/rinckm/demo-pipelines",
+				builder.JenkinsFileSpec(pipelineRepoURLrinckm,
 					"secret/Jenkinsfile"),
 				builder.ArgSpec("SECRETID", "with-secret-foo"),
 				builder.ArgSpec("EXPECTEDUSER", "bar"),
@@ -156,7 +160,7 @@ func PipelineRunMissingSecret(namespace string) PipelineRunTest {
 		name: "missing-secret",
 		pipelineRun: builder.PipelineRun("missing-secret-", namespace,
 			builder.PipelineRunSpec(
-				builder.JenkinsFileSpec("https://github.com/rinckm/demo-pipelines",
+				builder.JenkinsFileSpec(pipelineRepoURLrinckm,
 					"secret/Jenkinsfile"),
 				builder.ArgSpec("SECRETID", "foo"),
 				builder.ArgSpec("EXPECTEDUSER", "bar"),
@@ -185,16 +189,36 @@ fatal: could not read Username for 'https://github.com': No such device or addre
 	}
 }
 
+// PipelineRunWrongJenkinsfileRepoWithUser is a pipelineRunTestBuilder to build pipelineRunTest with wrong jenkinsfile repo url
+func PipelineRunWrongJenkinsfileRepoWithUser(namespace string) PipelineRunTest {
+	return PipelineRunTest{
+		name: "wrong-jenkinsfile-repo-user",
+		pipelineRun: builder.PipelineRun("wrong-jenkinsfile-repo-user-", namespace,
+			builder.PipelineRunSpec(
+				builder.JenkinsFileSpec("https://github.com/SAP/steward-foo",
+					"Jenkinsfile",
+					builder.RepoAuthSecret("repo-auth"),
+				),
+			)),
+		secrets: []*v1.Secret{builder.SecretBasicAuth("repo-auth", namespace, "bar", "baz")},
+		check: PipelineRunMessageOnFinished(`Command ['git' 'clone' 'https://github.com/SAP/steward-foo' '.'] failed with exit code 128
+Error output:
+Cloning into '.'...
+fatal: could not read Username for 'https://github.com': No such device or address`),
+		timeout: 120 * time.Second,
+	}
+}
+
 // PipelineRunWrongJenkinsfilePath is a pipelineRunTestBuilder to build pipelineRunTest with wrong jenkinsfile path
 func PipelineRunWrongJenkinsfilePath(namespace string) PipelineRunTest {
 	return PipelineRunTest{
 		name: "wrong-jenkinsfile-path",
 		pipelineRun: builder.PipelineRun("wrong-jenkinsfile-path-", namespace,
 			builder.PipelineRunSpec(
-				builder.JenkinsFileSpec("https://github.com/SAP/stewardci-core",
-					"Jenkinsfile"),
+				builder.JenkinsFileSpec(pipelineRepoURL,
+					"not_existing_path/Jenkinsfile"),
 			)),
-		check: PipelineRunMessageOnFinished(`Command ['/app/bin/jenkinsfile-runner' '-w' '/app/jenkins' '-p' '/usr/share/jenkins/ref/plugins' '--runHome' '/jenkins_home' '--no-sandbox' '--build-number' '1' '-f' 'Jenkinsfile'] failed with exit code 255
+		check: PipelineRunMessageOnFinished(`Command ['/app/bin/jenkinsfile-runner' '-w' '/app/jenkins' '-p' '/usr/share/jenkins/ref/plugins' '--runHome' '/jenkins_home' '--no-sandbox' '--build-number' '1' '-f' 'not_existing_path/Jenkinsfile'] failed with exit code 255
 Error output:
 no Jenkinsfile in current directory.`),
 		timeout: 120 * time.Second,
