@@ -57,7 +57,7 @@ $ echo $RUN_NAMESPACE
 $ export POD_NAME=$(kubectl -n $RUN_NAMESPACE get pod -o name)
 $ echo $POD_NAME
 $ kubectl -n $RUN_NAMESPACE logs $POD_NAME -c step-jenkinsfile-runner 
-Cloning pipeline repository https://github.com/sap-production/demo-pipelines
+Cloning pipeline repository https://github.com/SAP-samples/stewardci-example-pipelines
 Cloning into '.'...
 Checking out pipeline from revision master
 Your branch is up to date with 'origin/master'.

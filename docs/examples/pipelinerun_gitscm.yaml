@@ -4,11 +4,11 @@ metadata:
   generateName: full
 spec:
   args:
-    GIT_URL: https://github.com/sap-production/demo-pipelines
+    GIT_URL: https://github.com/SAP-samples/stewardci-example-pipelines
     GIT_BRANCH: master
     FILE_TO_SHOW: gitscm/dummy.txt
   jenkinsFile:
-    repoUrl: https://github.com/sap-production/demo-pipelines
+    repoUrl: https://github.com/SAP-samples/stewardci-example-pipelines
     revision: master
     relativePath: gitscm/Jenkinsfile
   #secrets:
