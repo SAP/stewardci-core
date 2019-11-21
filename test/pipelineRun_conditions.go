@@ -35,3 +35,17 @@ func PipelineRunHasStateResult(result api.Result) PipelineRunCheck {
 		return true, fmt.Errorf("Unexpected result: expecting %q, got %q", result, pr.GetStatus().Result)
 	}
 }
+
+// PipelineRunMessageOnFinished returns a PipelineRunCheck which checks if a pipelineRun has a dedicated message when it is in state finished
+func PipelineRunMessageOnFinished(message string) PipelineRunCheck {
+	return func(pr k8s.PipelineRun) (bool, error) {
+		if pr.GetStatus().State == api.StateFinished {
+			if pr.GetStatus().Message == message {
+				return true, nil
+			}
+			return true, fmt.Errorf("Unexpected message: expecting %q, got %q", message, pr.GetStatus().Message)
+
+		}
+		return false, nil
+	}
+}

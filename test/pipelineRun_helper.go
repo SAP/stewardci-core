@@ -73,7 +73,7 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 	resultChan := make(chan testRun, count)
 	for i := count; i > 0; i-- {
 		run := <-testChan
-		if run.expected != "" && run.result != nil {
+		if run.result != nil {
 			resultChan <- run
 			log.Printf("Test %q completed", run.name)
 			continue
@@ -93,7 +93,7 @@ func executePipelineRunTests(t *testing.T, testPlans ...testPlan) {
 		log.Printf("Remaining: %d", i)
 		run := <-resultChan
 		if run.expected == "" {
-			assert.NilError(t, run.result)
+			assert.NilError(t, run.result, fmt.Sprintf("Failing test: %q", run.name))
 		} else {
 			assert.Assert(t, is.Regexp(run.expected, run.result.Error()))
 		}
