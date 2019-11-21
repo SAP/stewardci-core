@@ -46,7 +46,6 @@ spec:
           required: #TODO: Really required? Compare with run_types.go
             - jenkinsFile
             - args
-            - secrets
             - intent
             - logging
           properties:
@@ -63,11 +62,17 @@ spec:
                   type: string
                 relativePath: ###
                   type: string
+                repoAuthSecret: ###
+                  type: string
             args: ### map[string]string
               type: object
               additionalProperties: ###
                 type: string
             secrets: ###
+              type: array
+              items:
+                type: string
+            imagePullSecrets: ###
               type: array
               items:
                 type: string
