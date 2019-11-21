@@ -102,8 +102,8 @@ func (h *secretHelper) CreateSecret(secret *v1.Secret) (*v1.Secret, error) {
 		return h.testing.createSecretStub(secret)
 	}
 	newSecret := &v1.Secret{Data: secret.Data, StringData: secret.StringData, Type: secret.Type}
-	name := secret.GetName()
-	newSecret.SetName(name)
+	newSecret.SetName(secret.GetName())
+	newSecret.SetGenerateName(secret.GetGenerateName())
 	newSecret.SetNamespace(h.namespace)
 	newSecret.SetLabels(secret.GetLabels())
 	newSecret.SetAnnotations(secret.GetAnnotations())

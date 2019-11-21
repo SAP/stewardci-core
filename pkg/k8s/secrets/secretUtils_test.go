@@ -140,7 +140,7 @@ func Test_CreateSecret_GoodCase(t *testing.T) {
 	// SETUP
 	examinee, targetClient := initSecretHelperWithClient()
 	origSecret := fake.SecretOpaque("foo", namespace)
-
+	origSecret.SetGenerateName("bar")
 	// EXERCISE
 	resultSecret, resultErr := examinee.CreateSecret(origSecret.DeepCopy())
 
