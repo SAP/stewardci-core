@@ -37,6 +37,9 @@ var AllTestBuilders = []PipelineRunTestBuilder{
 	PipelineRunWrongExpect,
 	PipelineRunWrongName,
 	PipelineRunWithSecret,
+	PipelineRunMissingSecret,
+	PipelineRunWrongJenkinsfileRepo,
+	PipelineRunWrongJenkinsfilePath,
 }
 
 // PipelineRunSleep is a pipelineRunTestBuilder to build pipelineRunTest which sleeps for one second
@@ -143,13 +146,67 @@ func PipelineRunWithSecret(namespace string) PipelineRunTest {
 				builder.JenkinsFileSpec("https://github.com/rinckm/demo-pipelines",
 					"master",
 					"secret/Jenkinsfile"),
-				builder.ArgSpec("SECRETID", "foo"),
+				builder.ArgSpec("SECRETID", "with-secret-foo"),
 				builder.ArgSpec("EXPECTEDUSER", "bar"),
 				builder.ArgSpec("EXPECTEDPWD", "baz"),
-				builder.Secret("foo"),
+				builder.Secret("with-secret-foo"),
 			)),
 		check:   PipelineRunHasStateResult(api.ResultSuccess),
 		timeout: 120 * time.Second,
-		secrets: []*v1.Secret{builder.SecretBasicAuth("foo", namespace, "bar", "baz")},
+		secrets: []*v1.Secret{builder.SecretBasicAuth("with-secret-foo", namespace, "bar", "baz")},
+	}
+}
+
+// PipelineRunMissingSecret is a pipelineRunTestBuilder to build pipelineRunTest which uses secrets
+func PipelineRunMissingSecret(namespace string) PipelineRunTest {
+	return PipelineRunTest{
+		name: "missing-secret",
+		pipelineRun: builder.PipelineRun("missing-secret-", namespace,
+			builder.PipelineRunSpec(
+				builder.JenkinsFileSpec("https://github.com/rinckm/demo-pipelines",
+					"master",
+					"secret/Jenkinsfile"),
+				builder.ArgSpec("SECRETID", "foo"),
+				builder.ArgSpec("EXPECTEDUSER", "bar"),
+				builder.ArgSpec("EXPECTEDPWD", "baz"),
+			)),
+		check:   PipelineRunHasStateResult(api.ResultErrorContent),
+		timeout: 120 * time.Second,
+		secrets: []*v1.Secret{builder.SecretBasicAuth("missing-secret-foo", namespace, "bar", "baz")},
+	}
+}
+
+// PipelineRunWrongJenkinsfileRepo is a pipelineRunTestBuilder to build pipelineRunTest with wrong jenkinsfile repo url
+func PipelineRunWrongJenkinsfileRepo(namespace string) PipelineRunTest {
+	return PipelineRunTest{
+		name: "wrong-jenkinsfile-repo",
+		pipelineRun: builder.PipelineRun("wrong-jenkinsfile-repo-", namespace,
+			builder.PipelineRunSpec(
+				builder.JenkinsFileSpec("https://github.com/SAP/steward-foo",
+					"master",
+					"Jenkinsfile"),
+			)),
+		check: PipelineRunMessageOnFinished(`Command ['git' 'clone' 'https://github.com/SAP/steward-foo' '.'] failed with exit code 128
+Error output:
+Cloning into '.'...
+fatal: could not read Username for 'https://github.com': No such device or address`),
+		timeout: 120 * time.Second,
+	}
+}
+
+// PipelineRunWrongJenkinsfilePath is a pipelineRunTestBuilder to build pipelineRunTest with wrong jenkinsfile path
+func PipelineRunWrongJenkinsfilePath(namespace string) PipelineRunTest {
+	return PipelineRunTest{
+		name: "wrong-jenkinsfile-path",
+		pipelineRun: builder.PipelineRun("wrong-jenkinsfile-path-", namespace,
+			builder.PipelineRunSpec(
+				builder.JenkinsFileSpec("https://github.com/SAP/stewardci-core",
+					"master",
+					"Jenkinsfile"),
+			)),
+		check: PipelineRunMessageOnFinished(`Command ['/app/bin/jenkinsfile-runner' '-w' '/app/jenkins' '-p' '/usr/share/jenkins/ref/plugins' '--runHome' '/jenkins_home' '--no-sandbox' '--build-number' '1' '-f' 'Jenkinsfile'] failed with exit code 255
+Error output:
+no Jenkinsfile in current directory.`),
+		timeout: 120 * time.Second,
 	}
 }
