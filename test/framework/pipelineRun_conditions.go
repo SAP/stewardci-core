@@ -32,7 +32,7 @@ func PipelineRunHasStateResult(result api.Result) PipelineRunCheck {
 		if pr.GetStatus().Result == result {
 			return true, nil
 		}
-		return true, fmt.Errorf("UnExpected result: Expecting %q, got %q", result, pr.GetStatus().Result)
+		return true, fmt.Errorf("unexpected result: expecting %q, got %q", result, pr.GetStatus().Result)
 	}
 }
 
@@ -43,7 +43,7 @@ func PipelineRunMessageOnFinished(message string) PipelineRunCheck {
 			if pr.GetStatus().Message == message {
 				return true, nil
 			}
-			return true, fmt.Errorf("UnExpected message: Expecting %q, got %q", message, pr.GetStatus().Message)
+			return true, fmt.Errorf("unexpected message: expecting %q, got %q", message, pr.GetStatus().Message)
 
 		}
 		return false, nil
