@@ -1,6 +1,6 @@
-// +build e2e
+// +build frameworktest
 
-package test
+package framework
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package test
+package framework
 
 import (
 	"context"
@@ -8,11 +8,11 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s"
 )
 
-// TenantCheck is a check for a tenant
+// TenantCheck is a Check for a tenant
 type TenantCheck func(*api.Tenant) bool
 
-// CreateTenantCondition creates a WaitCondition for a tenant with a dedicated check
-func CreateTenantCondition(tenant *api.Tenant, check TenantCheck) WaitConditionFunc {
+// CreateTenantCondition creates a WaitCondition for a tenant with a dedicated Check
+func CreateTenantCondition(tenant *api.Tenant, Check TenantCheck) WaitConditionFunc {
 	key := fmt.Sprintf("%s/%s", tenant.GetNamespace(), tenant.GetName())
 	return func(ctx context.Context) (bool, error) {
 		fetcher := k8s.NewTenantFetcher(GetClientFactory(ctx))
@@ -20,11 +20,11 @@ func CreateTenantCondition(tenant *api.Tenant, check TenantCheck) WaitConditionF
 		if err != nil {
 			return true, err
 		}
-		return check(tenant), nil
+		return Check(tenant), nil
 	}
 }
 
-// TenantHasStateResult creates a TenantCheck which checks for a dedicated State
+// TenantHasStateResult creates a TenantCheck which Checks for a dedicated State
 func TenantHasStateResult(result api.TenantResult) TenantCheck {
 	return func(tenant *api.Tenant) bool {
 		return tenant.Status.Result == result

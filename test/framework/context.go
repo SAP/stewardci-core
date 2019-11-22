@@ -1,4 +1,4 @@
-package test
+package framework
 
 import (
 	"context"
@@ -11,8 +11,8 @@ type contextKey string
 
 const (
 	factoryKey     contextKey = "factory"
-	pipelineRunKey contextKey = "pipelineRun"
-	namespaceKey   contextKey = "namespace"
+	pipelineRunKey contextKey = "PipelineRun"
+	namespaceKey   contextKey = "Namespace"
 	testNameKey    contextKey = "testName"
 )
 
@@ -41,17 +41,17 @@ func GetPipelineRun(ctx context.Context) *api.PipelineRun {
 	return ctx.Value(pipelineRunKey).(*api.PipelineRun)
 }
 
-// SetPipelineRun sets the namespace to the context
-func SetPipelineRun(ctx context.Context, pipelineRun *api.PipelineRun) context.Context {
-	return context.WithValue(ctx, pipelineRunKey, pipelineRun)
+// SetPipelineRun sets the Namespace to the context
+func SetPipelineRun(ctx context.Context, PipelineRun *api.PipelineRun) context.Context {
+	return context.WithValue(ctx, pipelineRunKey, PipelineRun)
 }
 
-// GetTestName returns the test name from the context
+// GetTestName returns the test Name from the context
 func GetTestName(ctx context.Context) string {
 	return ctx.Value(testNameKey).(string)
 }
 
-// SetTestName sets the test name to the context
-func SetTestName(ctx context.Context, name string) context.Context {
-	return context.WithValue(ctx, testNameKey, name)
+// SetTestName sets the test Name to the context
+func SetTestName(ctx context.Context, Name string) context.Context {
+	return context.WithValue(ctx, testNameKey, Name)
 }

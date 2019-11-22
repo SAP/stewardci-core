@@ -3,17 +3,19 @@
 package test
 
 import (
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"testing"
+
+	f "github.com/SAP/stewardci-core/test/framework"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 func Test_PipelineRunSingle(t *testing.T) {
 	t.Parallel()
-	allTests := make([]testPlan, len(AllTestBuilders))
+	allTests := make([]f.TestPlan, len(AllTestBuilders))
 	for i, pipelinerunTestBuilder := range AllTestBuilders {
-		allTests[i] = testPlan{testBuilder: pipelinerunTestBuilder,
-			parallel: 1,
+		allTests[i] = f.TestPlan{TestBuilder: pipelinerunTestBuilder,
+			Parallel: 1,
 		}
 	}
-	executePipelineRunTests(t, allTests...)
+	f.ExecutePipelineRunTests(t, allTests...)
 }

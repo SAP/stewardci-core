@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Namespace
 metadata:
   # Specify namespace name here
-  name: steward-test-c
+  name: steward-c-test
   annotations:
-    steward.sap.com/tenant-namespace-prefix: steward-test-c
+    steward.sap.com/tenant-namespace-prefix: steward-t-test
     steward.sap.com/tenant-role: steward-tenant
