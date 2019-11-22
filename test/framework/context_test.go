@@ -4,13 +4,21 @@ import (
 	"context"
 	"testing"
 
+	"github.com/SAP/stewardci-core/pkg/k8s/fake"
+	"github.com/SAP/stewardci-core/test/builder"
 	"gotest.tools/assert"
 )
 
-func Test_Context(t *testing.T) {
+func Test_Set_GetClientFactory(t *testing.T) {
+	ctx := context.Background()
+	factory := fake.NewClientFactory()
+	ctx = SetClientFactory(ctx, factory)
+	assert.Assert(t, factory == GetClientFactory(ctx))
+}
+
+func Test_Set_GetNamespace(t *testing.T) {
 	ctx := context.Background()
 	ctx = SetNamespace(ctx, "ns1")
-	ctx = SetClientFactory(ctx, nil)
 	assert.Equal(t, "ns1", GetNamespace(ctx))
 }
 
@@ -18,4 +26,11 @@ func Test_Set_GetTestName(t *testing.T) {
 	ctx := context.Background()
 	ctx = SetTestName(ctx, "foo")
 	assert.Equal(t, "foo", GetTestName(ctx))
+}
+
+func Test_Set_GetPipelineRun(t *testing.T) {
+	ctx := context.Background()
+	run := builder.PipelineRun("foo", "bar")
+	ctx = SetPipelineRun(ctx, run)
+	assert.DeepEqual(t, run, GetPipelineRun(ctx))
 }

@@ -1,33 +1,99 @@
-// +build xxx
-
 package framework
 
 import (
-	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	"github.com/SAP/stewardci-core/pkg/k8s/fake"
-	"github.com/SAP/stewardci-core/test/builder"
-	"gotest.tools/assert"
 	"testing"
-	"time"
+
+	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
+	gomock "github.com/golang/mock/gomock"
+	"gotest.tools/assert"
 )
 
-func Test_PipelineCondition(t *testing.T) {
-	Check := PipelineRunHasStateResult(api.ResultSuccess)
-	PipelineRun :=
-		builder.PipelineRun("Namespace1")
-	clientFactory := fake.NewClientFactory()
-	ctx := context.Background()
-	ctx.SetClientFactory(clientFactroy)
-	pr, err := createPipelineRun(clientFactory, PipelineRun)
+func Test_PipelineRunHasStateResult_undefinedStatus(t *testing.T) {
+	//SETUP
+	examinee := PipelineRunHasStateResult(api.ResultSuccess)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
+	mockPipelineRun.EXPECT().GetStatus().Return(&api.PipelineStatus{}).AnyTimes()
+	//EXERCISE
+	result, err := examinee(mockPipelineRun)
+	// VERIFY
 	assert.NilError(t, err)
-	PipelineRunCheck := CreatePipelineRunCondition(pr, Check, "Test")
-	errorChan := make(chan error)
+	assert.Assert(t, result == false)
+}
 
-	go func() {
-		errorChan <- WaitFor(ctx, PipelineRunCheck)
-	}()
-	time.Sleep(3 * time.Second)
-	setState(clientFactory, pr, api.ResultSuccess)
-	err = <-errorChan
+func Test_PipelineRunHasStateResult_correctStatus(t *testing.T) {
+	//SETUP
+	examinee := PipelineRunHasStateResult(api.ResultSuccess)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
+	status := &api.PipelineStatus{Result: api.ResultSuccess}
+	mockPipelineRun.EXPECT().GetStatus().Return(status).AnyTimes()
+	//EXERCISE
+	result, err := examinee(mockPipelineRun)
+	// VERIFY
 	assert.NilError(t, err)
+	assert.Assert(t, result)
+}
+
+func Test_PipelineRunHasStateResult_wrongStatus(t *testing.T) {
+	//SETUP
+	examinee := PipelineRunHasStateResult(api.ResultSuccess)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
+	status := &api.PipelineStatus{Result: api.ResultErrorInfra}
+	mockPipelineRun.EXPECT().GetStatus().Return(status).AnyTimes()
+	//EXERCISE
+	result, err := examinee(mockPipelineRun)
+	// VERIFY
+	assert.Equal(t, `unexpected result: expecting "success", got "error_infra"`, err.Error())
+	assert.Assert(t, result)
+}
+
+func Test_PipelineRunMessageOnFinished_undefinedStatus(t *testing.T) {
+	//SETUP
+	examinee := PipelineRunMessageOnFinished("foo")
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
+	mockPipelineRun.EXPECT().GetStatus().Return(&api.PipelineStatus{}).AnyTimes()
+	//EXERCISE
+	result, err := examinee(mockPipelineRun)
+	// VERIFY
+	assert.NilError(t, err)
+	assert.Assert(t, result == false)
+}
+
+func Test_PipelineRunMessageOnFinished_correctMessage(t *testing.T) {
+	//SETUP
+	examinee := PipelineRunMessageOnFinished("foo")
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
+	status := &api.PipelineStatus{State: api.StateFinished,
+		Message: "foo"}
+	mockPipelineRun.EXPECT().GetStatus().Return(status).AnyTimes()
+	//EXERCISE
+	result, err := examinee(mockPipelineRun)
+	// VERIFY
+	assert.NilError(t, err)
+	assert.Assert(t, result)
+}
+
+func Test_PipelineRunMessageOnFinished_wrongMessage(t *testing.T) {
+	//SETUP
+	examinee := PipelineRunMessageOnFinished("foo")
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
+	status := &api.PipelineStatus{State: api.StateFinished}
+	mockPipelineRun.EXPECT().GetStatus().Return(status).AnyTimes()
+	//EXERCISE
+	result, err := examinee(mockPipelineRun)
+	// VERIFY
+	assert.Equal(t, `unexpected message: expecting "foo", got ""`, err.Error())
+	assert.Assert(t, result)
 }
