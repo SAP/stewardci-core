@@ -1,4 +1,4 @@
-package test
+package framework
 
 import (
 	"context"
@@ -8,22 +8,22 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s"
 )
 
-// PipelineRunCheck is a check for a PipelineRun
+// PipelineRunCheck is a Check for a PipelineRun
 type PipelineRunCheck func(k8s.PipelineRun) (bool, error)
 
-// CreatePipelineRunCondition returns a WaitCondition for a pipelineRun with a dedicated PipelineCheck
-func CreatePipelineRunCondition(pipelineRun *api.PipelineRun, check PipelineRunCheck) WaitConditionFunc {
+// CreatePipelineRunCondition returns a WaitCondition for a PipelineRun with a dedicated PipelineCheck
+func CreatePipelineRunCondition(PipelineRun *api.PipelineRun, Check PipelineRunCheck) WaitConditionFunc {
 	return func(ctx context.Context) (bool, error) {
 		fetcher := k8s.NewPipelineRunFetcher(GetClientFactory(ctx))
-		pipelineRun, err := fetcher.ByName(pipelineRun.GetNamespace(), pipelineRun.GetName())
+		PipelineRun, err := fetcher.ByName(PipelineRun.GetNamespace(), PipelineRun.GetName())
 		if err != nil {
 			return true, err
 		}
-		return check(pipelineRun)
+		return Check(PipelineRun)
 	}
 }
 
-// PipelineRunHasStateResult returns a PipelineRunCheck which checks if a pipelineRun has a dedicated result
+// PipelineRunHasStateResult returns a PipelineRunCheck which Checks if a PipelineRun has a dedicated result
 func PipelineRunHasStateResult(result api.Result) PipelineRunCheck {
 	return func(pr k8s.PipelineRun) (bool, error) {
 		if pr.GetStatus().Result == "" {
@@ -32,18 +32,18 @@ func PipelineRunHasStateResult(result api.Result) PipelineRunCheck {
 		if pr.GetStatus().Result == result {
 			return true, nil
 		}
-		return true, fmt.Errorf("Unexpected result: expecting %q, got %q", result, pr.GetStatus().Result)
+		return true, fmt.Errorf("UnExpected result: Expecting %q, got %q", result, pr.GetStatus().Result)
 	}
 }
 
-// PipelineRunMessageOnFinished returns a PipelineRunCheck which checks if a pipelineRun has a dedicated message when it is in state finished
+// PipelineRunMessageOnFinished returns a PipelineRunCheck which Checks if a PipelineRun has a dedicated message when it is in state finished
 func PipelineRunMessageOnFinished(message string) PipelineRunCheck {
 	return func(pr k8s.PipelineRun) (bool, error) {
 		if pr.GetStatus().State == api.StateFinished {
 			if pr.GetStatus().Message == message {
 				return true, nil
 			}
-			return true, fmt.Errorf("Unexpected message: expecting %q, got %q", message, pr.GetStatus().Message)
+			return true, fmt.Errorf("UnExpected message: Expecting %q, got %q", message, pr.GetStatus().Message)
 
 		}
 		return false, nil

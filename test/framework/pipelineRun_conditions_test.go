@@ -1,6 +1,6 @@
 // +build xxx
 
-package test
+package framework
 
 import (
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -12,19 +12,19 @@ import (
 )
 
 func Test_PipelineCondition(t *testing.T) {
-	check := PipelineRunHasStateResult(api.ResultSuccess)
-	pipelineRun :=
-		builder.PipelineRun("namespace1")
+	Check := PipelineRunHasStateResult(api.ResultSuccess)
+	PipelineRun :=
+		builder.PipelineRun("Namespace1")
 	clientFactory := fake.NewClientFactory()
 	ctx := context.Background()
 	ctx.SetClientFactory(clientFactroy)
-	pr, err := createPipelineRun(clientFactory, pipelineRun)
+	pr, err := createPipelineRun(clientFactory, PipelineRun)
 	assert.NilError(t, err)
-	pipelineRunCheck := CreatePipelineRunCondition(pr, check, "Test")
+	PipelineRunCheck := CreatePipelineRunCondition(pr, Check, "Test")
 	errorChan := make(chan error)
 
 	go func() {
-		errorChan <- WaitFor(ctx, pipelineRunCheck)
+		errorChan <- WaitFor(ctx, PipelineRunCheck)
 	}()
 	time.Sleep(3 * time.Second)
 	setState(clientFactory, pr, api.ResultSuccess)

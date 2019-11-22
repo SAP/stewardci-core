@@ -1,4 +1,4 @@
-package test
+package framework
 
 import (
 	"context"
@@ -16,7 +16,7 @@ type TenantTest struct {
 	check  TenantCheck
 }
 
-// TenantSuccessTest is a test checking if a tenant was created successfully
+// TenantSuccessTest is a test Checking if a tenant was created successfully
 func TenantSuccessTest(ctx context.Context) TenantTest {
 	return TenantTest{
 		name:   "success check",
