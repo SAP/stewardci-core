@@ -45,5 +45,7 @@ spec:
           properties:
             name: ###
               type: string
+              pattern: '^[^\s]{1,}.*$'
             displayName: ###
               type: string
+              pattern: '^[^\s]{1,}.*$'

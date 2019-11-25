@@ -58,26 +58,33 @@ spec:
               properties:
                 repoUrl: ###
                   type: string
+                  pattern: '^[^\s]{1,}.*$'
                 revision: ###
                   type: string
+                  pattern: '^[^\s]{1,}.*$'
                 relativePath: ###
                   type: string
+                  pattern: '^[^\s]{1,}.*$'
                 repoAuthSecret: ###
                   type: string
             args: ### map[string]string
               type: object
               additionalProperties: ###
                 type: string
+                pattern: '^[^\s]{1,}.*$'
             secrets: ###
               type: array
               items:
                 type: string
+                pattern: '^[^\s]{1,}.*$'
             imagePullSecrets: ###
               type: array
               items:
                 type: string
+                pattern: '^[^\s]{1,}.*$'
             intent: ###
               type: string
+              pattern: '^[^\s]{1,}.*$'
             logging: ###
               type: object
               required:
@@ -95,8 +102,11 @@ spec:
               properties:
                 jobName: ###
                   type: string
+                  pattern: '^[^\s]{1,}.*$'
                 sequenceNumber: ###
                   type: integer
+                  minimum: 1
                 cause: ###
                   type: string
-            
+                  pattern: '^[^\s]{1,}.*$'
+        
