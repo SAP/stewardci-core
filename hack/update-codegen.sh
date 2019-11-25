@@ -37,18 +37,23 @@ if [[ ! -x "$GOPATH_1/bin/mockgen" ]]; then
     go get github.com/golang/mock/mockgen || die "Installation of mockgen failed"
 fi
 
-if [[ "$1" == "--verify" || "$1" == "-v" ]]; then
-    VERIFY=true
-else    
-    VERIFY=false
-fi
-
 PROJECT_ROOT=$(cd "$(dirname "$BASH_SOURCE")/.."; pwd)
 GEN_DIR="$PROJECT_ROOT/gen"
+
+if [[ "$1" == "--verify" || "$1" == "-v" ]]; then
+    VERIFY=true
+    MOCK_ROOT=${GEN_DIR}
+    ACTION="Verify"
+else    
+    VERIFY=false
+    MOCK_ROOT=${PROJECT_ROOT}
+    ACTION="Generate"
+fi
 
 echo
 echo "PROJECT_ROOT: $PROJECT_ROOT"
 echo "GEN_DIR:      $GEN_DIR"
+echo "MOCK_ROOT:    $MOCK_ROOT"
 echo "CODEGEN_PKG:  $CODEGEN_PKG"
 echo "GOPATH:       $GOPATH_1"
 echo "VERIFY:       $VERIFY"
@@ -99,8 +104,8 @@ set -x
     || die "Code generation failed"
 set +x
 
+echo
 if [ "$VERIFY" = true ]; then
-    echo
     echo "## Verifying generated sources ####################"
     set -x
     diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/client/ ${PROJECT_ROOT}/pkg/client/ || die "Regeneration required for clients"
@@ -108,7 +113,6 @@ if [ "$VERIFY" = true ]; then
     diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go ${PROJECT_ROOT}/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go || die "Regeneration required for apis"
     set +x
 else
-    echo
     echo "## Move generated files ###########################"
     set -x
     mv "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/client" "${PROJECT_ROOT}/pkg/" || die "Moving generated clients failed"
@@ -120,52 +124,35 @@ fi
 
 
 echo
+echo "## ${ACTION} mocks for package 'k8s' ###############"
+set -x
+"$GOPATH_1/bin/mockgen" \
+    -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
+    -destination="${MOCK_ROOT}/pkg/k8s/mocks/mocks.go" \
+    -package=mocks \
+    github.com/SAP/stewardci-core/pkg/k8s \
+    PipelineRun,ClientFactory,PipelineRunFetcher,NamespaceManager \
+    || die "'k8s' mock generation failed"
 if [ "$VERIFY" = true ]; then
-    echo "## Verify mocks for package 'k8s' ###############"
-    set -x
-    "$GOPATH_1/bin/mockgen" \
-        -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
-        -destination="${GEN_DIR}/pkg/k8s/mocks/mocks.go" \
-        -package=mocks \
-        github.com/SAP/stewardci-core/pkg/k8s \
-        PipelineRun,ClientFactory,PipelineRunFetcher,NamespaceManager \
-        || die "'k8s' mock generation failed"
-    diff -Naupr ${GEN_DIR}/pkg/k8s/mocks/mocks.go ${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go || die "Regeneration required for apis"
-    set +x
-    echo "## Verify mocks for package 'k8s/secrets' ###############"
-    set -x
-    "$GOPATH_1/bin/mockgen" \
-        -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
-        -destination="${GEN_DIR}/pkg/k8s/secrets/mocks/mocks.go" \
-        -package=mocks \
-        github.com/SAP/stewardci-core/pkg/k8s/secrets \
-        SecretProvider,SecretHelper \
-        || die "'k8s/secrets' mock generation failed"
-    diff -Naupr ${GEN_DIR}/pkg/k8s/secrets/mocks/mocks.go ${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go || die "Regeneration required for apis"
-    set +x
-else
-    echo "## Generate mocks for package 'k8s' ###############"
-    set -x
-    "$GOPATH_1/bin/mockgen" \
-        -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
-        -destination="${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go" \
-        -package=mocks \
-        github.com/SAP/stewardci-core/pkg/k8s \
-        PipelineRun,ClientFactory,PipelineRunFetcher,NamespaceManager \
-        || die "'k8s' mock generation failed"
-    set +x
-    echo
-    echo "## Generate mocks for package 'k8s/secrets' ###############"
-    set -x
-    "$GOPATH_1/bin/mockgen" \
-        -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
-        -destination="${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
-        -package=mocks \
-        github.com/SAP/stewardci-core/pkg/k8s/secrets \
-        SecretProvider,SecretHelper \
-        || die "'k8s/secrets' mock generation failed"
-    set +x
+    diff -Naupr ${GEN_DIR}/pkg/k8s/mocks/mocks.go ${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go || die "Regeneration required for k8s mocks"
 fi
+set +x
+
+echo
+echo "## ${ACTION} mocks for package 'k8s/secrets' ###############"
+set -x
+"$GOPATH_1/bin/mockgen" \
+    -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
+    -destination="${MOCK_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
+    -package=mocks \
+    github.com/SAP/stewardci-core/pkg/k8s/secrets \
+    SecretProvider,SecretHelper \
+    || die "'k8s/secrets' mock generation failed"
+if [ "$VERIFY" = true ]; then
+    diff -Naupr ${GEN_DIR}/pkg/k8s/secrets/mocks/mocks.go ${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go || die "Regeneration required for k8s/secrets mocks"
+fi
+set +x
+
 
 echo
 if [ "$VERIFY" = true ]; then
