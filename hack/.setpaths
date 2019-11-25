@@ -1,0 +1,2 @@
+PROJECT_ROOT=${PROJECT_ROOT:-$(cd "$(dirname "$BASH_SOURCE")/.." && pwd)} || exit 1
+CODEGEN_PKG=${CODEGEN_PKG:-${PROJECT_ROOT}/temp/code-generator} || exit 1
