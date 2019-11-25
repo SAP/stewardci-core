@@ -67,9 +67,9 @@ source "$HERE/.setpaths"
 read_args "$@"
 
 # Check and prepare build enviroment
+GOPATH=`go env GOPATH`
 if [[ -z $GOPATH ]]; then
-    echo "error: GOPATH not set"
-    exit 1
+    die "GOPATH not set"
 fi
 GOPATH_1=${GOPATH%%:*}  # the first entry of the GOPATH
 
