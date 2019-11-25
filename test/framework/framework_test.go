@@ -23,6 +23,14 @@ var frameworkTestBuilders = []PipelineRunTestBuilder{
 const pipelineRepoURL = "https://github.com/SAP-samples/stewardci-example-pipelines"
 const pipelineRepoURLrinckm = "https://github.com/rinckm/stewardci-example-pipelines"
 
+func Test_FirstFinishBeforeSecondStarts(t *testing.T) {
+	test := TestPlan{TestBuilder: PipelineRunWrongName,
+		Parallel:      2,
+		CreationDelay: time.Second * 1,
+	}
+	ExecutePipelineRunTests(t, test)
+}
+
 func Test_FrameworkTest(t *testing.T) {
 	t.Parallel()
 	allTests := make([]TestPlan, len(frameworkTestBuilders))
@@ -61,7 +69,7 @@ func PipelineRunWrongExpect(Namespace string) PipelineRunTest {
 			)),
 		Check:    PipelineRunHasStateResult(api.ResultKilled),
 		Timeout:  120 * time.Second,
-		Expected: `UnExpected result: Expecting "killed", got "success"`,
+		Expected: `unexpected result: expecting "killed", got "success"`,
 	}
 }
 

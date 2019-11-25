@@ -26,6 +26,7 @@ go test -count=1 -tags=e2e -v --kubeconfig $KUBECONFIG .
 ## Run load tests
 
 ```bash
+cd loadtest
 go test -count=1 -tags=loadtest -v --kubeconfig $KUBECONFIG .
 ```
 

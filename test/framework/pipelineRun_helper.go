@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 	"testing"
 	"time"
 
@@ -37,12 +38,9 @@ func ExecutePipelineRunTests(t *testing.T, TestPlans ...TestPlan) {
 	tenant, err = GetTenant(ctx, tenant)
 	assert.NilError(t, err)
 	tnn := tenant.Status.TenantNamespaceName
-	count := 0
+	var waitWG sync.WaitGroup
 	for _, TestPlan := range TestPlans {
-		count = count + TestPlan.Parallel
-	}
-	testChan := make(chan testRun, count)
-	for _, TestPlan := range TestPlans {
+		waitWG.Add(TestPlan.Parallel)
 		pipelineTest := TestPlan.TestBuilder(tnn)
 		for i := 1; i <= TestPlan.Parallel; i++ {
 			Name :=
@@ -60,49 +58,50 @@ func ExecutePipelineRunTests(t *testing.T, TestPlans ...TestPlan) {
 				Expected: pipelineTest.Expected,
 			}
 			if TestPlan.ParallelCreation {
-				go createPipelineRunTest(pipelineTest, myTestRun, testChan)
-			}
-			if !TestPlan.ParallelCreation {
-				single := make(chan testRun, 1)
-				go createPipelineRunTest(pipelineTest, myTestRun, single)
+				go func(waitWG *sync.WaitGroup) {
+					myTestRun := createPipelineRunTest(pipelineTest, myTestRun)
+					startWait(t, myTestRun, waitWG)
+				}(&waitWG)
+			} else {
+				myTestRun := createPipelineRunTest(pipelineTest, myTestRun)
+				go func(waitWG *sync.WaitGroup) {
+					startWait(t, myTestRun, waitWG)
+				}(&waitWG)
 				time.Sleep(TestPlan.CreationDelay)
-				x := <-single
-				testChan <- x
 			}
 		}
 	}
-	resultChan := make(chan testRun, count)
-	for i := count; i > 0; i-- {
-		run := <-testChan
-		if run.result != nil {
-			resultChan <- run
-			log.Printf("Test %q completed", run.Name)
-			continue
-		}
-
-		ctx := run.ctx
-		assert.NilError(t, ctx.Err())
-		pr := GetPipelineRun(ctx)
-		PipelineRunCheck := CreatePipelineRunCondition(pr, run.Check)
-		go func(PipelineRunCheck WaitConditionFunc) {
-			err = WaitFor(ctx, PipelineRunCheck)
-			run.result = err
-			resultChan <- run
-		}(PipelineRunCheck)
-	}
-	for i := count; i > 0; i-- {
-		log.Printf("Remaining: %d", i)
-		run := <-resultChan
-		if run.Expected == "" {
-			assert.NilError(t, run.result, fmt.Sprintf("Failing test: %q", run.Name))
-		} else {
-			assert.Assert(t, is.Regexp(run.Expected, run.result.Error()))
-		}
-
-	}
+	waitWG.Wait()
 }
 
-func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun, chanel chan testRun) {
+func checkResult(t *testing.T, run testRun) {
+	info := fmt.Sprintf("Failing test: %q", run.Name)
+	if run.Expected == "" {
+		assert.NilError(t, run.result, info)
+	} else {
+		assert.Assert(t, is.Regexp(run.Expected, run.result.Error()), info)
+	}
+	log.Printf("Test %q completed", run.Name)
+}
+
+func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
+	defer func() {
+		waitWG.Done()
+	}()
+	if run.result != nil {
+		checkResult(t, run)
+		return
+	}
+	ctx := run.ctx
+	assert.NilError(t, ctx.Err(), fmt.Sprintf("Test: %q", run.Name))
+	pr := GetPipelineRun(ctx)
+	PipelineRunCheck := CreatePipelineRunCondition(pr, run.Check)
+	err := WaitFor(ctx, PipelineRunCheck)
+	run.result = err
+	checkResult(t, run)
+}
+
+func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
 
 	PipelineRun := pipelineTest.PipelineRun
 	ctx := run.ctx
@@ -113,21 +112,19 @@ func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun, chanel cha
 		_, err := secretInterface.Create(secret)
 		if err != nil {
 			run.result = fmt.Errorf("secret creation failed: %q", err.Error())
-			chanel <- run
-			return
+			return run
 		}
 	}
 	stewardClient := factory.StewardV1alpha1().PipelineRuns(Namespace)
 	pr, err := stewardClient.Create(PipelineRun)
 	if err != nil {
 		run.result = fmt.Errorf("pipeline run creation failed: %q", err.Error())
-		chanel <- run
-		return
+		return run
 	}
 	log.Printf("pipeline run created for test: %s, %s/%s", run.Name, pr.GetNamespace(), pr.GetName())
 	ctx = SetPipelineRun(ctx, pr)
 	run.ctx = ctx
-	chanel <- run
+	return run
 }
 
 func setState(ctx context.Context, PipelineRun *api.PipelineRun, result api.Result) {

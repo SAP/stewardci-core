@@ -6,61 +6,64 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"testing"
 	"time"
+
+	"github.com/SAP/stewardci-core/test"
+	f "github.com/SAP/stewardci-core/test/framework"
 )
 
 func Test_PipelineRuns_delayedCreation(t *testing.T) {
-	executePipelineRunTests(t,
-		testPlan{testBuilder: PipelineRunOK,
-			parallel:      10,
-			creationDelay: time.Duration(5 * time.Second),
+	f.ExecutePipelineRunTests(t,
+		f.TestPlan{TestBuilder: test.PipelineRunOK,
+			Parallel:      10,
+			CreationDelay: time.Duration(5 * time.Second),
 		},
 	)
 }
 
 func Test_PipelineRuns(t *testing.T) {
-	executePipelineRunTests(t,
-		testPlan{testBuilder: PipelineRunSleep,
-			parallel: 3,
+	f.ExecutePipelineRunTests(t,
+		f.TestPlan{TestBuilder: test.PipelineRunSleep,
+			Parallel: 3,
 		},
-		testPlan{testBuilder: PipelineRunFail,
-			parallel: 3,
+		f.TestPlan{TestBuilder: test.PipelineRunFail,
+			Parallel: 3,
 		},
-		testPlan{testBuilder: PipelineRunOK,
-			parallel: 3,
-		},
-	)
-}
-
-func Test_PipelineRuns_parallelCreation(t *testing.T) {
-	executePipelineRunTests(t,
-		testPlan{testBuilder: PipelineRunSleep,
-			parallel:         3,
-			parallelCreation: true,
-		},
-		testPlan{testBuilder: PipelineRunFail,
-			parallel:         3,
-			parallelCreation: true,
-		},
-		testPlan{testBuilder: PipelineRunOK,
-			parallel:         3,
-			parallelCreation: true,
+		f.TestPlan{TestBuilder: test.PipelineRunOK,
+			Parallel: 3,
 		},
 	)
 }
 
-func Test_PipelineRuns_creationDelay(t *testing.T) {
-	executePipelineRunTests(t,
-		testPlan{testBuilder: PipelineRunSleep,
-			parallel:      3,
-			creationDelay: time.Duration(1 * time.Second),
+func Test_PipelineRuns_ParallelCreation(t *testing.T) {
+	f.ExecutePipelineRunTests(t,
+		f.TestPlan{TestBuilder: test.PipelineRunSleep,
+			Parallel:         3,
+			ParallelCreation: true,
 		},
-		testPlan{testBuilder: PipelineRunFail,
-			parallel:      3,
-			creationDelay: time.Duration(1 * time.Second),
+		f.TestPlan{TestBuilder: test.PipelineRunFail,
+			Parallel:         3,
+			ParallelCreation: true,
 		},
-		testPlan{testBuilder: PipelineRunOK,
-			parallel:      3,
-			creationDelay: time.Duration(1 * time.Second),
+		f.TestPlan{TestBuilder: test.PipelineRunOK,
+			Parallel:         3,
+			ParallelCreation: true,
+		},
+	)
+}
+
+func Test_PipelineRuns_CreationDelay(t *testing.T) {
+	f.ExecutePipelineRunTests(t,
+		f.TestPlan{TestBuilder: test.PipelineRunSleep,
+			Parallel:      3,
+			CreationDelay: time.Duration(1 * time.Second),
+		},
+		f.TestPlan{TestBuilder: test.PipelineRunFail,
+			Parallel:      3,
+			CreationDelay: time.Duration(1 * time.Second),
+		},
+		f.TestPlan{TestBuilder: test.PipelineRunOK,
+			Parallel:      3,
+			CreationDelay: time.Duration(1 * time.Second),
 		},
 	)
 }
