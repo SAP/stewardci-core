@@ -8,7 +8,7 @@ import (
 // Tenant creates a Tenant
 func Tenant(name, namespace, displayName string) *api.Tenant {
 	t := &api.Tenant{
-		ObjectMeta: metav1.ObjectMeta{
+                ObjectMeta: metav1.ObjectMeta{
 			Namespace:    namespace,
 			GenerateName: "t-",
 		},
@@ -19,3 +19,15 @@ func Tenant(name, namespace, displayName string) *api.Tenant {
 	}
 	return t
 }
+
+// TenantFixName creates a Tenant with a fixed name
+func TenantFixName(name, namespace string) *api.Tenant {
+        t := &api.Tenant{
+                ObjectMeta: metav1.ObjectMeta{
+                        Namespace:    namespace,
+                        Name: name,
+                },
+        }
+        return t
+}
+
