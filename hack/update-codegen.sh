@@ -1,4 +1,11 @@
 #!/bin/bash
+set -u -o pipefail
+
+# set from args
+unset VERIFY
+
+HERE=$(cd "$(dirname "$BASH_SOURCE")" && pwd) || exit 1
+
 
 function die() {
     if [[ -n "$*" ]]; then
@@ -7,16 +14,57 @@ function die() {
     exit 1
 }
 
-if [[ "$1" == "--help" || "$1" == "-?" ]]; then
-    echo "update-codegen.sh [OPTION]"
-    echo "Without OPTION the code-generator will update all generated code."
-    echo "  -v, --verify    Checks if all generated code is up-to-date."
-    echo "                  No productive code will be overwritten."
-    echo "  -?, --help      display this help and exit"
-    exit 0
-fi
+function read_args() {
+    trap handle_error ERR
 
-PROJECT_ROOT=$(cd "$(dirname "$BASH_SOURCE")/.."; pwd)
+    until [[ -z ${1+x} ]]
+    do
+        case "$1" in
+            "-h" | "--help" )
+                print_usage
+                exit 0
+                ;;
+            "--verify" )
+                VERIFY=1
+                ;;
+            * )
+                echo "error: invalid command line option '$1'" >&2
+                exit 1
+        esac
+        shift
+    done
+}
+
+function print_usage() {
+    echo "usage:"
+    echo ""
+    echo "   $(basename $BASH_SOURCE) [OPTIONS]"
+    echo ""
+    echo "When run without any options, all existing generated code will be regenerated."
+    echo ""
+    echo "OPTIONS"
+    echo ""
+    echo "   -h, --help"
+    echo "      Print usage help and exit. No other operations will be performed."
+    echo ""
+    echo "   --verify"
+    echo "      Verifies that the generated code is up-to-date. The existing generated"
+    echo "      code will not be touched."
+    echo ""
+}
+
+function is_verify_mode() {
+    [[ -n ${VERIFY:-} ]]
+}
+
+
+#
+# main
+#
+
+source "$HERE/.setpaths"
+
+read_args "$@"
 
 # Check and prepare build enviroment
 if [[ -z $GOPATH ]]; then
@@ -24,28 +72,29 @@ if [[ -z $GOPATH ]]; then
     exit 1
 fi
 GOPATH_1=${GOPATH%%:*}  # the first entry of the GOPATH
-if [[ -z $CODEGEN_PKG ]]; then
-    echo "Installing code-generator (path to existing code-generator can be overridden via CODEGEN_PKG)"
-    . ${PROJECT_ROOT}/hack/bootstrap-codegen.sh || die "Installation of code-generator failed"
-fi
-if [[ ! -f $CODEGEN_PKG/generate-groups.sh ]]; then
-    echo "error: CODEGEN_PKG does not point to a directory containing 'generate-groups.sh': $CODEGEN_PKG"
-    exit 1
-fi
-if [[ ! -x "$GOPATH_1/bin/mockgen" ]]; then
-    echo "Installing mockgen"
-    go get github.com/golang/mock/mockgen || die "Installation of mockgen failed"
-fi
 
-PROJECT_ROOT=$(cd "$(dirname "$BASH_SOURCE")/.."; pwd)
+# prepare code generator
+"$HERE/bootstrap-codegen.sh" || die "failed to bootstrap code generator"
+[[ -f $CODEGEN_PKG/generate-groups.sh ]] \
+    || die "\$CODEGEN_PKG ('$CODEGEN_PKG'): file 'generate-groups.sh' does not exist"
+[[ -x $CODEGEN_PKG/generate-groups.sh ]] \
+    || die "\$CODEGEN_PKG ('$CODEGEN_PKG'): file 'generate-groups.sh' is not executable"
+
+# prepare mockgen
+MOCKGEN_EXE="$GOPATH_1/bin/mockgen"
+if [[ ! -x $MOCKGEN_EXE ]]; then
+    echo "Installing mockgen"
+    ( cd "$GOPATH_1" && go get github.com/golang/mock/mockgen ) || die "Installation of mockgen failed"
+fi
+[[ -f $MOCKGEN_EXE ]] || die "'$MOCKGEN_EXE' does not exist"
+[[ -x $MOCKGEN_EXE ]] || die "'$MOCKGEN_EXE' is not executable"
+
 GEN_DIR="$PROJECT_ROOT/gen"
 
-if [[ "$1" == "--verify" || "$1" == "-v" ]]; then
-    VERIFY=true
+if is_verify_mode; then
     MOCK_ROOT=${GEN_DIR}
     ACTION="Verify"
 else    
-    VERIFY=false
     MOCK_ROOT=${PROJECT_ROOT}
     ACTION="Generate"
 fi
@@ -56,11 +105,11 @@ echo "GEN_DIR:      $GEN_DIR"
 echo "MOCK_ROOT:    $MOCK_ROOT"
 echo "CODEGEN_PKG:  $CODEGEN_PKG"
 echo "GOPATH:       $GOPATH_1"
-echo "VERIFY:       $VERIFY"
+echo "VERIFY:       $(if is_verify_mode; then echo "true"; else echo "false"; fi)"
 
 echo
 echo "## Cleanup old generated stuff ####################"
-if [ "$VERIFY" = true ]; then
+if is_verify_mode; then
     set -x
     rm -rf \
         "${GEN_DIR}" \
@@ -105,7 +154,7 @@ set -x
 set +x
 
 echo
-if [ "$VERIFY" = true ]; then
+if is_verify_mode; then
     echo "## Verifying generated sources ####################"
     set -x
     diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/client/ ${PROJECT_ROOT}/pkg/client/ || die "Regeneration required for clients"
@@ -133,7 +182,7 @@ set -x
     github.com/SAP/stewardci-core/pkg/k8s \
     PipelineRun,ClientFactory,PipelineRunFetcher,NamespaceManager \
     || die "'k8s' mock generation failed"
-if [ "$VERIFY" = true ]; then
+if is_verify_mode; then
     diff -Naupr ${GEN_DIR}/pkg/k8s/mocks/mocks.go ${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go || die "Regeneration required for k8s mocks"
 fi
 set +x
@@ -148,15 +197,11 @@ set -x
     github.com/SAP/stewardci-core/pkg/k8s/secrets \
     SecretProvider,SecretHelper \
     || die "'k8s/secrets' mock generation failed"
-if [ "$VERIFY" = true ]; then
+if is_verify_mode; then
     diff -Naupr ${GEN_DIR}/pkg/k8s/secrets/mocks/mocks.go ${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go || die "Regeneration required for k8s/secrets mocks"
 fi
 set +x
 
 
 echo
-if [ "$VERIFY" = true ]; then
-    echo "Verification successful"
-else
-    echo "Generation successful"
-fi
+echo "${ACTION} successful"
