@@ -29,8 +29,9 @@ import (
 )
 
 const (
-	kind                           = "Tenants"
-	tenantNamespaceRoleBindingName = steward.GroupName + "--tenant-role-binding"
+	kind = "Tenants"
+
+	tenantNamespaceRoleBindingNamePrefix = steward.GroupName + "--tenant-role-binding-"
 )
 
 // Controller for Steward Tenants
@@ -46,9 +47,11 @@ type Controller struct {
 }
 
 type controllerTesting struct {
-	getClientConfigStub func(factory k8s.ClientFactory, clientNamespace string) (clientConfig, error)
-	syncRoleBindingStub func(tenant *api.Tenant, namespace string, config clientConfig) (bool, error)
-	updateStatusStub    func(tenant *api.Tenant) (*api.Tenant, error)
+	createRoleBindingStub       func(roleBinding *rbacv1beta1.RoleBinding) (*rbacv1beta1.RoleBinding, error)
+	getClientConfigStub         func(factory k8s.ClientFactory, clientNamespace string) (clientConfig, error)
+	listManagedRoleBindingsStub func(namespace string) (*rbacv1beta1.RoleBindingList, error)
+	syncTenantRoleBindingStub   func(tenant *api.Tenant, namespace string, config clientConfig) (bool, error)
+	updateStatusStub            func(tenant *api.Tenant) (*api.Tenant, error)
 }
 
 // NewController creates new Controller
@@ -262,7 +265,7 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 		return err
 	}
 
-	_, err = c.syncRoleBinding(tenant, nsName, config)
+	_, err = c.syncTenantRoleBinding(tenant, nsName, config)
 	if err != nil {
 		condMsg := fmt.Sprintf("Failed to create the tenant namespace.")
 		tenant.Status.SetCondition(&knativeapis.Condition{
@@ -313,7 +316,7 @@ func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenan
 		return err
 	}
 
-	syncNeeded, err := c.syncRoleBinding(tenant, nsName, config)
+	syncNeeded, err := c.syncTenantRoleBinding(tenant, nsName, config)
 	if err != nil {
 		if syncNeeded {
 			condMsg := fmt.Sprintf(
@@ -436,32 +439,56 @@ func (c *Controller) rollbackTenantNamespace(namespace string, tenant *api.Tenan
 	return nil
 }
 
-func (c *Controller) syncRoleBinding(tenant *api.Tenant, namespace string, config clientConfig) (bool, error) {
-	if c.testing != nil && c.testing.syncRoleBindingStub != nil {
-		return c.testing.syncRoleBindingStub(tenant, namespace, config)
+func (c *Controller) syncTenantRoleBinding(tenant *api.Tenant, namespace string, config clientConfig) (bool, error) {
+	if c.testing != nil && c.testing.syncTenantRoleBindingStub != nil {
+		return c.testing.syncTenantRoleBindingStub(tenant, namespace, config)
 	}
 
-	syncNeeded, err := func() (bool, error) {
-		rbName := tenantNamespaceRoleBindingName
-		current, err := c.getRoleBinding(rbName, namespace)
-		if err != nil {
-			return false, err
-		}
-		clientNamespace := tenant.GetNamespace()
-		expected := c.generateRoleBinding(rbName, namespace, clientNamespace, config)
-		if current == nil ||
-			!equality.Semantic.DeepEqual(expected.GetLabels(), current.GetLabels()) ||
-			!equality.Semantic.DeepEqual(expected.GetAnnotations(), current.GetAnnotations()) ||
-			!equality.Semantic.DeepEqual(expected.RoleRef, current.RoleRef) ||
-			!equality.Semantic.DeepEqual(expected.Subjects, current.Subjects) {
+	/*
+		The roleRef of an existing RoleBinding cannot be updated (prohibited by
+		server). This means we need to create a new RoleBinding when we want to
+		change the tenant role.
+		We cannot simply delete the existing role and create a new one (in that
+		order), because that would revoke permissions for some time and may fail
+		API calls concurrently performed by the respective subjects.
+		Instead we will first create the new RoleBinding and remove the old one
+		afterwards.
+		To deal with remainders from preceding failed attempts, we expect that
+		an arbitrary number of RoleBinding objects may exist. Recreation takes
+		place if the number of existing role bindings is not exactly one, or the
+		single existing role binding is not up-to-date.
+		We manage only those RoleBinding objects that are marked as "managed by
+		Steward". All others will not be touched or taken into account.
+	*/
 
-			_, err = c.createOrReplaceRoleBinding(expected)
-			if err != nil {
-				return true, err
-			}
-			return true, nil
+	syncNeeded := false
+
+	err := func() error {
+		rbList, err := c.listManagedRoleBindings(namespace)
+		if err != nil {
+			return err
 		}
-		return false, nil
+
+		clientNamespace := tenant.GetNamespace()
+		expectedTenantRB := c.generateTenantRoleBinding(namespace, clientNamespace, config)
+
+		if len(rbList.Items) != 1 || !c.isTenantRoleBindingUpToDate(&rbList.Items[0], expectedTenantRB) {
+			syncNeeded = true
+		}
+
+		if syncNeeded {
+			c.logPrintf(tenant, "updating RoleBinding in tenant namespace %q", namespace)
+			_, err = c.createRoleBinding(expectedTenantRB)
+			if err != nil {
+				return err
+			}
+			err = c.deleteRoleBindingsFromList(rbList)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}()
 
 	if err != nil {
@@ -475,16 +502,17 @@ func (c *Controller) syncRoleBinding(tenant *api.Tenant, namespace string, confi
 }
 
 /**
- * generateRoleBinding generates the role binding for a tenant namespace
+ * generateTenantRoleBinding generates the role binding for a tenant namespace
  * as in-memory object only (no persistence in K8s).
  */
-func (c *Controller) generateRoleBinding(
-	name string, tenantNamespace string, clientNamespace string, config clientConfig,
+func (c *Controller) generateTenantRoleBinding(
+	tenantNamespace string, clientNamespace string, config clientConfig,
 ) *rbacv1beta1.RoleBinding {
 	return &rbacv1beta1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: tenantNamespace,
+			// let the server generate a unique name
+			GenerateName: tenantNamespaceRoleBindingNamePrefix,
+			Namespace:    tenantNamespace,
 			Labels: map[string]string{
 				api.LabelSystemManaged: "",
 			},
@@ -514,38 +542,84 @@ func (c *Controller) generateRoleBinding(
 	}
 }
 
-func (c *Controller) getRoleBinding(name string, namespace string) (*rbacv1beta1.RoleBinding, error) {
-	roleBindings := c.factory.RbacV1beta1().RoleBindings(namespace)
-	roleBinding, err := roleBindings.Get(name, metav1.GetOptions{})
+func (c *Controller) isTenantRoleBindingUpToDate(current *rbacv1beta1.RoleBinding, expected *rbacv1beta1.RoleBinding) bool {
+	return true &&
+		equality.Semantic.DeepEqual(expected.GetLabels(), current.GetLabels()) &&
+		equality.Semantic.DeepEqual(expected.GetAnnotations(), current.GetAnnotations()) &&
+		equality.Semantic.DeepEqual(expected.RoleRef, current.RoleRef) &&
+		equality.Semantic.DeepEqual(expected.Subjects, current.Subjects)
+}
+
+func (c *Controller) listManagedRoleBindings(namespace string) (*rbacv1beta1.RoleBindingList, error) {
+	if c.testing != nil && c.testing.listManagedRoleBindingsStub != nil {
+		return c.testing.listManagedRoleBindingsStub(namespace)
+	}
+
+	roleBindingIfc := c.factory.RbacV1beta1().RoleBindings(namespace)
+	listOptions := metav1.ListOptions{
+		LabelSelector: api.LabelSystemManaged,
+	}
+	roleBindingList, err := roleBindingIfc.List(listOptions)
 	if err != nil {
-		if k8serrors.IsNotFound(err) {
-			return nil, nil
-		}
 		err = errors.WithMessagef(err,
-			"failed to get RoleBinding %q in namespace %q",
-			name, namespace,
+			"failed to get all managed RoleBindings from namespace %q",
+			namespace,
 		)
 		return nil, err
 	}
-	return roleBinding, nil
+	return roleBindingList, nil
 }
 
-func (c *Controller) createOrReplaceRoleBinding(roleBinding *rbacv1beta1.RoleBinding) (*rbacv1beta1.RoleBinding, error) {
-	name := roleBinding.GetName()
-	namespace := roleBinding.GetNamespace()
-	roleBindings := c.factory.RbacV1beta1().RoleBindings(roleBinding.GetNamespace())
-	resultingRoleBinding, err := roleBindings.Create(roleBinding)
-	if k8serrors.IsAlreadyExists(err) {
-		resultingRoleBinding, err = roleBindings.Update(roleBinding)
+func (c *Controller) createRoleBinding(roleBinding *rbacv1beta1.RoleBinding) (*rbacv1beta1.RoleBinding, error) {
+	if c.testing != nil && c.testing.createRoleBindingStub != nil {
+		return c.testing.createRoleBindingStub(roleBinding)
 	}
+
+	namespace := roleBinding.GetNamespace()
+	roleBindingIfc := c.factory.RbacV1beta1().RoleBindings(namespace)
+	resultingRoleBinding, err := roleBindingIfc.Create(roleBinding)
 	if err != nil {
 		err = errors.WithMessagef(err,
-			"failed to create/replace RoleBinding %q in namespace %q",
-			name, namespace,
+			"failed to create a RoleBinding in namespace %q",
+			namespace,
 		)
 		return nil, err
 	}
 	return resultingRoleBinding, nil
+}
+
+func (c *Controller) deleteRoleBindingsFromList(roleBindingList *rbacv1beta1.RoleBindingList) error {
+	for _, roleBinding := range roleBindingList.Items {
+		err := c.deleteRoleBinding(&roleBinding)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Controller) deleteRoleBinding(roleBinding *rbacv1beta1.RoleBinding) error {
+	if roleBinding.GetName() == "" || roleBinding.GetUID() == "" {
+		// object is not uniquely identified
+		// treat as if not found
+		return nil
+	}
+	namespace := roleBinding.GetNamespace()
+	roleBindingIfc := c.factory.RbacV1beta1().RoleBindings(namespace)
+	deleteOptions := metav1.NewDeleteOptions(0)
+	deleteOptions.Preconditions = metav1.NewUIDPreconditions(string(roleBinding.GetUID()))
+	err := roleBindingIfc.Delete(roleBinding.GetName(), deleteOptions)
+	if k8serrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		err = errors.WithMessagef(err,
+			"failed to delete RoleBinding %q in namespace %q",
+			roleBinding.GetName(), namespace,
+		)
+		return err
+	}
+	return nil
 }
 
 func (c *Controller) logPrintln(tenant *api.Tenant, v ...interface{}) {

@@ -17,7 +17,7 @@ var kubeconfig string
 
 // Time to wait until the next resync takes place.
 // Resync is only required if events got lost or if the controller restarted (and missed events).
-const resyncPeriod = 5 * time.Minute
+const resyncPeriod = 1 * time.Minute
 
 func init() {
 	log.SetFlags(log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)

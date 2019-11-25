@@ -200,9 +200,11 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 
 	// RoleBinding in tenant namespace
 	{
-		roleBinding, err := cf.RbacV1beta1().RoleBindings(tenant.Status.TenantNamespaceName).
-			Get(tenantNamespaceRoleBindingName, metav1.GetOptions{})
+		roleBindingList, err := cf.RbacV1beta1().RoleBindings(tenant.Status.TenantNamespaceName).
+			List(metav1.ListOptions{LabelSelector: api.LabelSystemManaged})
 		assert.NilError(t, err)
+		assert.Assert(t, len(roleBindingList.Items) == 1)
+		roleBinding := roleBindingList.Items[0]
 
 		_, labelExists := roleBinding.GetLabels()[stewardv1alpha1.LabelSystemManaged]
 		assert.Assert(t, labelExists)
@@ -287,7 +289,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnNamespaceClash(t *te
 	// RoleBinding in tenant namespace NOT created
 	{
 		_, err := cf.RbacV1beta1().RoleBindings(tenant.Status.TenantNamespaceName).
-			Get(tenantNamespaceRoleBindingName, metav1.GetOptions{})
+			Get(tenantNamespaceRoleBindingNamePrefix, metav1.GetOptions{})
 		assert.Assert(t, k8serrors.IsNotFound(err))
 	}
 }
@@ -314,7 +316,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnErrorWhenSyncingRole
 
 	injectedError := errors.New("ERR1")
 	ctl.testing = &controllerTesting{
-		syncRoleBindingStub: func(*api.Tenant, string, clientConfig) (bool, error) {
+		syncTenantRoleBindingStub: func(*api.Tenant, string, clientConfig) (bool, error) {
 			return false, injectedError
 		},
 	}
@@ -405,9 +407,11 @@ func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *tes
 
 	// RoleBinding in tenant namespace
 	{
-		roleBinding, err := cf.RbacV1beta1().RoleBindings(tenant.Status.TenantNamespaceName).
-			Get(tenantNamespaceRoleBindingName, metav1.GetOptions{})
+		roleBindingList, err := cf.RbacV1beta1().RoleBindings(tenant.Status.TenantNamespaceName).
+			List(metav1.ListOptions{LabelSelector: api.LabelSystemManaged})
 		assert.NilError(t, err)
+		assert.Assert(t, len(roleBindingList.Items) == 1)
+		roleBinding := roleBindingList.Items[0]
 
 		_, labelExists := roleBinding.GetLabels()[stewardv1alpha1.LabelSystemManaged]
 		assert.Assert(t, labelExists)
@@ -525,7 +529,7 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnErrorWhenSyncingRoleBi
 
 	injectedError := errors.New("ERR1")
 	ctl.testing = &controllerTesting{
-		syncRoleBindingStub: func(*api.Tenant, string, clientConfig) (bool, error) {
+		syncTenantRoleBindingStub: func(*api.Tenant, string, clientConfig) (bool, error) {
 			return true, injectedError
 		},
 	}
@@ -812,46 +816,163 @@ func Test_Controller_syncHandler_RollbackOnStatusUpdateFailure(t *testing.T) {
 	)
 }
 
-func Test_Controller_createOrReplaceRoleBinding_Replace(t *testing.T) {
+func Test_Controller_syncTenantRoleBinding_FailsOnErrorIn_listManagedRoleBindings(t *testing.T) {
 	// SETUP
 	const (
-		nsName = "namespace1"
-		rbName = "roleBinding1"
+		clientNSName   = "client1"
+		tenantNSName   = "tenantNS1"
+		tenantID       = "tenant1"
+		tenantRoleName = "tenantClusterRole1"
 	)
 
-	cf := fake.NewClientFactory(
-		fake.Namespace(nsName),
-		&rbacv1beta1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      rbName,
-				Namespace: nsName,
-				Labels: map[string]string{
-					"version": "1",
-				},
-			},
-		},
-	)
-	newRoleBinding := &rbacv1beta1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      rbName,
-			Namespace: nsName,
-			Labels: map[string]string{
-				"version": "2",
+	tenant := fake.Tenant(tenantID, "", "", clientNSName)
+	config := &clientConfigImpl{
+		tenantRoleName: tenantRoleName,
+	}
+
+	injectedError := errors.Errorf("injected error 1")
+
+	examinee := &Controller{
+		testing: &controllerTesting{
+			listManagedRoleBindingsStub: func(string) (*rbacv1beta1.RoleBindingList, error) {
+				return nil, injectedError
 			},
 		},
 	}
-	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
 
 	// EXERCISE
-	resultRoleBinding, resultErr := ctl.createOrReplaceRoleBinding(newRoleBinding.DeepCopy())
+	resultSyncNeeded, resultErr := examinee.syncTenantRoleBinding(tenant, tenantNSName, config)
+
+	// VERIFY
+	assert.Error(t, resultErr, fmt.Sprintf(
+		"failed to sync the RoleBinding in tenant namespace \"%s\": injected error 1",
+		tenantNSName,
+	))
+	assert.Assert(t, errors.Cause(resultErr) == injectedError)
+	assert.Assert(t, resultSyncNeeded == false)
+}
+
+func Test_Controller_syncTenantRoleBinding_FailsOnErrorIn_createRoleBinding(t *testing.T) {
+	// SETUP
+	const (
+		clientNSName   = "client1"
+		tenantNSName   = "tenantNS1"
+		tenantID       = "tenant1"
+		tenantRoleName = "tenantClusterRole1"
+	)
+
+	tenant := fake.Tenant(tenantID, "", "", clientNSName)
+	config := &clientConfigImpl{
+		tenantRoleName: tenantRoleName,
+	}
+
+	injectedError := errors.Errorf("injected error 1")
+
+	examinee := &Controller{
+		testing: &controllerTesting{
+			listManagedRoleBindingsStub: func(string) (*rbacv1beta1.RoleBindingList, error) {
+				return &rbacv1beta1.RoleBindingList{}, nil
+			},
+			createRoleBindingStub: func(*rbacv1beta1.RoleBinding) (*rbacv1beta1.RoleBinding, error) {
+				return nil, injectedError
+			},
+		},
+	}
+
+	// EXERCISE
+	resultSyncNeeded, resultErr := examinee.syncTenantRoleBinding(tenant, tenantNSName, config)
+
+	// VERIFY
+	assert.Error(t, resultErr, fmt.Sprintf(
+		"failed to sync the RoleBinding in tenant namespace \"%s\": injected error 1",
+		tenantNSName,
+	))
+	assert.Assert(t, errors.Cause(resultErr) == injectedError)
+	assert.Assert(t, resultSyncNeeded == true)
+}
+
+func Test_Controller_listManagedRoleBindings_GoodCase_WithLabelFilter(t *testing.T) {
+	// SETUP
+	const (
+		nsName = "namespace1"
+	)
+
+	newManagedRoleBinding := func(name string, labelValue string) *rbacv1beta1.RoleBinding {
+		return &rbacv1beta1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: nsName,
+				Labels: map[string]string{
+					api.LabelSystemManaged: labelValue, // SUT's selector should not depend on that value
+				},
+			},
+		}
+	}
+	newUnmanagedRoleBinding := func(name string) *rbacv1beta1.RoleBinding {
+		return &rbacv1beta1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: nsName,
+			},
+		}
+	}
+
+	cf := fake.NewClientFactory(
+		newManagedRoleBinding("roleBinding1", ""),
+		newUnmanagedRoleBinding("roleBinding2"),
+		newManagedRoleBinding("roleBinding3", "dfkghsdfasdfk"),
+		newUnmanagedRoleBinding("roleBinding4"),
+		newManagedRoleBinding("roleBinding5", "false"),
+	)
+
+	examinee := &Controller{factory: cf}
+
+	// EXERCISE
+	resultList, resultErr := examinee.listManagedRoleBindings(nsName)
 
 	// VERIFY
 	assert.NilError(t, resultErr)
-	assert.DeepEqual(t, newRoleBinding, resultRoleBinding)
+	assert.Assert(t, resultList != nil)
 
-	storedRolebinding, err := cf.RbacV1beta1().RoleBindings(nsName).Get(rbName, metav1.GetOptions{})
-	assert.NilError(t, err)
-	assert.DeepEqual(t, newRoleBinding, storedRolebinding)
+	{
+		itemNames := make([]string, len(resultList.Items))
+		for i, item := range resultList.Items {
+			itemNames[i] = item.GetName()
+		}
+		assert.DeepEqual(t,
+			[]string{
+				"roleBinding1",
+				"roleBinding3",
+				"roleBinding5",
+			},
+			itemNames,
+		)
+	}
+}
+
+func Test_Controller_listManagedRoleBindings_FailureCase(t *testing.T) {
+	// SETUP
+	const (
+		nsName = "namespace1"
+	)
+
+	cf := fake.NewClientFactory()
+	injectedError := errors.Errorf("injected error 1")
+	cf.KubernetesClientset().PrependReactor("list", "rolebindings", fake.NewErrorReactor(injectedError))
+
+	examinee := &Controller{factory: cf}
+
+	// EXERCISE
+	resultList, resultErr := examinee.listManagedRoleBindings(nsName)
+
+	// VERIFY
+	assert.Assert(t, resultErr != nil)
+	assert.Error(t, resultErr, fmt.Sprintf(
+		"failed to get all managed RoleBindings from namespace \"%s\": injected error 1",
+		nsName,
+	))
+	assert.Assert(t, errors.Cause(resultErr) == injectedError)
+	assert.Assert(t, resultList == nil)
 }
 
 //Test for ERROR: Failed to update status of tenant '4e93d9d5-276e-47ca-a570-b3a763aaef3e' in namespace 'stu':
