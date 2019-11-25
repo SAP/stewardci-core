@@ -12,14 +12,17 @@ import (
 type PipelineRunCheck func(k8s.PipelineRun) (bool, error)
 
 // CreatePipelineRunCondition returns a WaitCondition for a PipelineRun with a dedicated PipelineCheck
-func CreatePipelineRunCondition(PipelineRun *api.PipelineRun, Check PipelineRunCheck) WaitConditionFunc {
+func CreatePipelineRunCondition(pipelineRunToFind *api.PipelineRun, Check PipelineRunCheck) WaitConditionFunc {
 	return func(ctx context.Context) (bool, error) {
 		fetcher := k8s.NewPipelineRunFetcher(GetClientFactory(ctx))
-		PipelineRun, err := fetcher.ByName(PipelineRun.GetNamespace(), PipelineRun.GetName())
+		pipelineRun, err := fetcher.ByName(pipelineRunToFind.GetNamespace(), pipelineRunToFind.GetName())
 		if err != nil {
 			return true, err
 		}
-		return Check(PipelineRun)
+		if pipelineRun == nil {
+			return true, fmt.Errorf("pipelinerun not found '%s/%s'", pipelineRunToFind.GetNamespace(), pipelineRunToFind.GetName())
+		}
+		return Check(pipelineRun)
 	}
 }
 

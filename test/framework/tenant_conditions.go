@@ -20,6 +20,9 @@ func CreateTenantCondition(tenant *api.Tenant, Check TenantCheck) WaitConditionF
 		if err != nil {
 			return true, err
 		}
+		if tenant == nil {
+			return true, fmt.Errorf("tenant not found %q", key)
+		}
 		return Check(tenant), nil
 	}
 }
