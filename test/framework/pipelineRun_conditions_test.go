@@ -31,7 +31,7 @@ func Test_CreatePipelineRunCondition(t *testing.T) {
 		checkResult    bool
 		checkError     error
 		expectedResult bool
-		expectedError          string
+		expectedError  string
 	}{
 		{true, true, nil, true, ""},
 		{true, false, nil, false, ""},
