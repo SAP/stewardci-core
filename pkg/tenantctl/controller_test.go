@@ -51,7 +51,7 @@ func Test_Controller_syncHandler_FailsIfTenantFetchFails(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
 
-	cf := fake.NewClientFactory()
+	cf := fake.NewClientFactory( /* no objects exist */ )
 
 	fetcher := mocks.NewMockTenantFetcher(mockCtl)
 	fetcherErr := errors.New("fetcher error")
@@ -76,7 +76,9 @@ func Test_Controller_syncHandler_FailsIfClientConfigIsInvalid(t *testing.T) {
 	)
 
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.Namespace(clientNSName), // annotations left out because not needed
+		// the tenant
 		fake.Tenant(tenantID, "", "", clientNSName),
 	)
 	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
@@ -111,10 +113,12 @@ func Test_Controller_syncHandler_AddsFinalizer(t *testing.T) {
 	)
 
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
+		// the tenant
 		fake.Tenant(tenantID, "", "", clientNSName),
 	)
 	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
@@ -151,10 +155,12 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 	)
 
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
+		// the tenant
 		fake.Tenant(tenantID, tenantName, tenantDisplayName, clientNSName),
 	)
 	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
@@ -235,12 +241,15 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnNamespaceClash(t *te
 
 	clashingNamespaceName := fmt.Sprintf("%s-%s", tenantNSPrefix, tenantID)
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix:       tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantNamespaceSuffixLength: "0",
 			stewardv1alpha1.AnnotationTenantRole:                  tenantRoleName,
 		}),
+		// the tenant
 		fake.Tenant(tenantID, "", "", clientNSName),
+		// a namespace with same name as will be used for tenant namespace
 		fake.Namespace(clashingNamespaceName),
 	)
 	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
@@ -293,10 +302,12 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnErrorWhenSyncingRole
 	)
 
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
+		// the tenant
 		fake.Tenant(tenantID, "", "", clientNSName),
 	)
 	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
@@ -353,12 +364,15 @@ func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *tes
 	// no ready condition set because not needed by the reconciler
 
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
-		fake.Namespace(tenantNSName),
+		// the tenant
 		origTenant,
+		// the tenant namespace
+		fake.Namespace(tenantNSName),
 	)
 	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
 
@@ -436,10 +450,12 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnMissingNamespace(t *te
 	// no ready condition set because not needed by the reconciler
 
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
+		// the tenant
 		origTenant,
 		// no tenant namespace here,
 	)
@@ -495,12 +511,15 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnErrorWhenSyncingRoleBi
 	// no ready condition set because not needed by the reconciler
 
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
-		fake.Namespace(tenantNSName),
+		// the tenant
 		origTenant,
+		// the tenant namespace
+		fake.Namespace(tenantNSName),
 	)
 	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
 
@@ -556,10 +575,12 @@ func Test_Controller_syncHandler_RollbackOnDelete_IfFinalizerIsSet(t *testing.T)
 	)
 
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
+		// the tenant
 		fake.Tenant(tenantID, "", "", clientNSName),
 	)
 	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
@@ -620,10 +641,12 @@ func Test_Controller_syncHandler_RollBackOnDelete_SkippedIfFinalizerIsNotSet(t *
 	)
 
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
+		// the tenant
 		fake.Tenant(tenantID, "", "", clientNSName),
 	)
 	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
@@ -686,10 +709,12 @@ func Test_Controller_syncHandler_RollbackOnDelete_IfNamespaceDoesNotExistAnymore
 	)
 
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
+		// the tenant
 		fake.Tenant(tenantID, "", "", clientNSName),
 	)
 	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
@@ -757,10 +782,12 @@ func Test_Controller_syncHandler_RollbackOnStatusUpdateFailure(t *testing.T) {
 	)
 
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
+		// the tenant
 		fake.Tenant(tenantID, "", "", clientNSName),
 	)
 	ctl := NewController(cf, k8s.NewTenantFetcher(cf), NewMetrics())
@@ -841,10 +868,12 @@ func Test_Controller_updateStatus_ConcurrentModification(t *testing.T) {
 	)
 
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: "prefix1",
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
+		// the tenant
 		fake.Tenant(tenantID, "", "", clientNSName),
 	)
 
@@ -887,6 +916,7 @@ func Test_Controller_FullWorkflow(t *testing.T) {
 	)
 
 	cf := fake.NewClientFactory(
+		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix:       tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:                  tenantRoleName,
