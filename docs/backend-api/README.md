@@ -105,15 +105,21 @@ A simple `PipelineRun` resource example can be found in [docs/examples/pipeliner
 | --------- | ----------- |
 | `apiVersion` | `steward.sap.com/v1alpha1` |
 | `kind` | `PipelineRun` |
-| `spec.jenkinsFile` | (object) The configuration of the Jenkins pipeline definition to be executed. |
-| `spec.jenkinsFile.repoUrl` | (string,mandatory) The URL of the Git repository containing the pipeline definition. |
+| `spec.jenkinsFile` | (object,mandatory) The configuration of the Jenkins pipeline definition to be executed. |
+| `spec.jenkinsFile.repoUrl` | (string,mandatory) The URL of the Git repository containing the pipeline definition (aka `Jenkinsfile`). |
 | `spec.jenkinsFile.revision` | (string,mandatory) The revision of the pipeline Git repository to used, e.g. `master`. |
 | `spec.jenkinsFile.relativePath` | (string,mandatory) The relative pathname of the pipeline definition file in the repository check-out, typically `Jenkinsfile`. |
+| `spec.jenkinsFile.repoAuthSecret` | (string,optional) The name of the Kubernetes `v1/Secret` resource object of type `kubernetes.io/basic-auth` that contains the username and password for authentication when cloning from `spec.jenkinsFile.repoUrl`. See [docs/secrets/Secrets.md](../secrets/Secrets.md) for details. |
 | `spec.args` | (object,optional) The parameters to pass to the pipeline, as key-value pairs of type string. |
-| `spec.secrets` | (array,optional) The names of Kubernets secrets in the same (tenant) namespace to be made available to the pipeline execution. See [docs/secrets/Secrets.md](../secrets/Secrets.md) for details. |
+| `spec.secrets` | (array of string,optional) The list of secrets to be made available to the pipeline execution. Each entry in the list is the name of a Kubernetes `v1/Secret` resource object in the same namespace as the PipelineRun object itself. See [docs/secrets/Secrets.md](../secrets/Secrets.md) for details. |
+| `spec.imagePullSecrets` | (array of string,optional) The list of image pull secrets required by the pipeline run to pull images of custom containers from private registries. Each entry in the list is the name of a Kubernetes `v1/Secret` resource object of type `kubernetes.io/dockerconfigjson` in the same namespace as the PipelineRun object itself. See [docs/secrets/Secrets.md](../secrets/Secrets.md) for details. |
 | `spec.logging` | (object,optional) The logging configuration. |
 | `spec.logging.elasticsearch` | (object,optional) The configuration for pipeline logging to Elasticsearch. If not specified, logging to Elasticsearch is disabled and the default Jenkins log implementation is used (stdout of Jenkinsfile Runner container). |
 | `spec.logging.elasticsearch.runID` | (any,optional) The JSON value that should be set as field `runId` in each log entry in Elasticsearch. It can be any JSON value (`null`, boolean, number, string, list, map). |
+| `spec.runDetails` | (object,optional) Properties of the Jenkins build object. |
+| `spec.runDetails.jobName` | (string,optional) The name of the job this pipeline run belongs to. It is used as the name of the Jenkins job and therefore must be a valid Jenkins job name. If null or empty, `job` will be used. |
+| `spec.runDetails.sequenceNumber` | (string,optional) The sequence number of the pipeline run, which translates into the build number of the Jenkins job.  If null or empty, `1` is used. |
+| `spec.runDetails.cause` | (string,optional) A textual description of the cause of this pipeline run. Will be set as cause of the Jenkins job. If null or empty, no cause information will be available. |
 
 
 ### Status

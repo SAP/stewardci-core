@@ -30,9 +30,14 @@ type PipelineRunList struct {
 type PipelineSpec struct {
 	JenkinsFile JenkinsFile       `json:"jenkinsFile"`
 	Args        map[string]string `json:"args"`
-	Secrets     []string          `json:"secrets"`
-	Intent      Intent            `json:"intent"`
-	Logging     *Logging          `json:"logging"`
+	// +optional
+	Secrets []string `json:"secrets"`
+	// +optional
+	ImagePullSecrets []string `json:"imagePullSecrets"`
+	Intent           Intent   `json:"intent"`
+	Logging          *Logging `json:"logging"`
+	// +optional
+	RunDetails *PipelineRunDetails `json:"runDetails"`
 }
 
 // JenkinsFile represents the location from where to get the pipeline
@@ -40,6 +45,8 @@ type JenkinsFile struct {
 	URL      string `json:"repoUrl"`
 	Revision string `json:"revision"`
 	Path     string `json:"relativePath"`
+	// +optional
+	RepoAuthSecret string `json:"repoAuthSecret"`
 }
 
 // Logging contains all logging-specific configuration.
@@ -123,3 +130,13 @@ const (
 	// IntentKill - cancel the pipeline run (if still running)
 	IntentKill Intent = "kill"
 )
+
+// PipelineRunDetails provies details of a pipeline run which are passed to the jenkinsfile-runner.
+type PipelineRunDetails struct {
+	// JobName is the name of the job which is instantiated by the run.
+	JobName string `json:"jobName"`
+	// SequenceNumber is a sequential number of the run
+	SequenceNumber int `json:"sequenceNumber"`
+	// Cause is the cause which triggered the run, e.g. a SCM change, an user action or a timer.
+	Cause string `json:"cause"`
+}

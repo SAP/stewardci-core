@@ -1,98 +1,223 @@
-
-> Here you find a [technical view on our secrets](Secrets_technical.md)
-
 # Secrets
 
-There are different types of secrets in the future Steward scenario (independently of what is defined for the first release) being used in different ways and defined by different personas (Steward Ops, CloudCI Ops, Customer):
+This page describe the different kinds of secrets that are involved in a Steward setup.
 
-- [Docker Pull Secrets](#docker-pull-secrets)
-    - [Steward System Pull Secret](#steward-system-pull-secret) (Steward)
-    - [Jenkinsfile Runner Image Pull Secret](#jenkinsfile-runner-image) (CloudCi & Customer)
-    - [Pipeline Step Image Pull Secret](#pipeline-steps--k8s-plugin) (CloudCi & Customer)
-- [Git Secrets](#git-secrets)
-    - [Jenkinsfile Fetch Git Secret](#jenkinsfile-fetch-git-secret) (CloudCi & Customer)
-    - [Source Project Git Secret](#source-project-git-secret) (Customer)
-- [General Jenkins Credential Secrets](#general-jenkins-credential-secrets) (Customer)
+- [Secrets](#secrets)
+  - [Image Pull Secrets](#image-pull-secrets)
+    - [Steward System Images](#steward-system-images)
+    - [Jenkinsfile Runner Image](#jenkinsfile-runner-image)
+    - [Pipeline Custom Pod Images](#pipeline-custom-pod-images)
+  - [Git Server Authentication](#git-server-authentication)
+    - [Pipeline Clone Secret](#pipeline-clone-secret)
+    - [Source Code Repository Secrets](#source-code-repository-secrets)
+  - [Jenkins Credentials](#jenkins-credentials)
+  - [Other Secrets](#other-secrets)
+    - [Log Storage in ElasticSearch](#log-storage-in-elasticsearch)
+  - [Links](#links)
 
 
-## Docker Pull Secrets
+## Image Pull Secrets
 
-Docker pull secrets are required by Kubernetes to pull Docker images from private registries.
+Image pull secrets are required by Kubernetes to pull container images from private registries.
+This section describes the different areas where image pull secrets are needed in a Steward setup.
 
-### Steward System Pull Secret
 
-> **Note:** Does not apply for GCP. If the registry and the K8s cluster are hosted in the same Google account (region?) then no pull secret is required.
+### Steward System Images
 
-For any Steward internal Pods we need a pull secret to fetch the images. Examples are the `run controller` image or the `tenant controller` images.
+If the images for Steward system pods reside in private registries, image pull secrets must be configured by a Steward operator.
+By default the images are hosted in a public repository on Docker Hub, which does not require authentication when pulling.
 
-**Personas:** `Steward Operator`
+Affected images:
+
+- Tenant Controller pod
+- Run Controller pod
+
+The required image pull secrets must be created in namespace `steward-system` and attached to the `default` service account of that namespace.
+
+More information on how to create image pull secrets in Kubernetes can be found in the Kubernetes documentation:
+
+- [Pull an Image from a Private Registry][k8s_docs-pull_image_private_registry]
+- [Add ImagePullSecrets to a service account][k8s_docs_add_imagepullsecrets_to_service_account]
 
 
 ### Jenkinsfile Runner Image
 
-> **Note:** Does not apply for GCP. If the registry and the K8s cluster are hosted in the same Google account (region?) then no pull secret is required.
+If the image of the Jenkinsfile Runner container resides in a private registry, an image pull secret must be configured by a Steward operator.
+By default the Jenkinsfile Runner image is hosted in a public repository on Docker Hub, which does not require authentication when pulling.
 
-A pull secret needs to be specified to pull the (centrally defined) Jenkinsfile Runner Docker image.
-
-> **Note:** If we decide that different Jenkinsfile Runner images can be used we might need additional custom pull secrets for the Jenkinsfile Runner image.
-
-**Personas:** `CloudCi`. (`Customer` if we would allow custom images)
+__TODO__: How to configure the image pull secret for the Jenkinsfile Runner image
 
 
-### Pipeline Steps / K8s plugin
+### Pipeline Custom Pod Images
 
-Inside pipelines the K8s plugin can be used to execute parts of the pipeline in Docker images, spawned on the K8s cluster.
+Pipelines may start additional pods to execute steps in containers, either via the Jenkins Kubernetes plugin or by other means using the Kubernetes API.
+If the required container images are hosted in private registries, image pull secrets must be provided by the respective Steward client (on behalf on end users).
 
-Also for those images K8s requires pull secrets. Since our customers will be able to define arbitrary custom images they have to be able to provide the secrets.
+A Steward PipelineRun resource object specifies the names of all image pull secrets required for that pipeline run:
 
-> **Decision:** Customers provide pull secrets as [General Jenkins Secrets](#general-jenkins-secrets) (see below) and specify them in the pipeline / K8s plugin. The plugin will take care to store the credentials as pull secrets in the run namespace. Therefore no need for us to create pull secrets upfront.
-> Disadvantage: **All** pipelines have to specify which credential(s) to use. To enable using images without specifying a credential in the future we could decide to attach the pull secrets to the service account which is executing the pipeline run. In this case the secrets are used for the image pull automatically and don't need to be defined in the pipeline.
+```yaml
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+spec:
+    ...
+    imagePullSecrets:
+    - secret1
+    - secret2
+    - secret3
+```
 
-**Personas:** `CloudCi` & `Customer`
+If no image pull secrets are required, `spec.imagePullSecrets` can be omitted or have an empty list value.
 
-## Git Secrets
+The given secrets are standard Kubernetes `v1/Secret` resource objects that must exist in the same namespace as the PipelineRun object that references them.
+The secrets must be of the correct type (`kubernetes.io/dockerconfigjson`) to be usable for Kubernetes as image pull secret.
+Besides that there are no further requirements like special annotations or labels.
 
-### Jenkinsfile Fetch Secret
+When a pipeline gets executed in a transient sandbox namespace, the secrets listed in `spec.imagePullSecrets` of the corresponding PipelineRun resource object are copied to the sandbox namespace with a different name.
+The Kubernetes service account of the Jenkinsfile Runner container has all those secrets attached as default image pull secrets.
+Therefore, they will be used automatically when that service account creates pods based on images from private registries.
+The pipeline and/or tools used by the pipeline to start additional pods are not required to specify image pull secrets in each pod specification, although this is still possible.
 
-We need credentials to fetch the Jenkinsfile, before we execute it.
-The fetch is done inside our Jenkinsfile Runner image in the start script. The Git credentials are [injected by Tekton](https://github.com/tektoncd/pipeline/blob/master/docs/auth.md)) and the script can simply do a `git clone` without prior login.
+__:warning: Warning:__ Any code that gets executed by a pipeline AND has access to the Kubernetes service account token can read all image pull secrets! This is especially important to consider if untrusted code may get executed, e.g. a pipeline processing pull requests from untrusted users.
 
-As first step we only plan to support our predefined Jenkinsfile. But in future teams will be able to use custom pipelines, either from the project sources or another custom git repo.
+The following code has access to image pull secrets:
 
-- **Centrally defined Jenkinsfile**: The credentials have to be provided by us.
-- **Custom Jenkinsfile**: Credentials have to be provided by customer
-    - **In Sources**: Same as [Project Source Fetch Secrets]() (see below)
-    - **Separate Repo**: Separate Credentials
+- Any code running in the Jenkinsfile Runner container, because this container has the service account token mounted.
+- Any code running in additional containers that have the service account token mounted.
 
-**Personas:** `CloudCi` & `Customer`
+To prevent access to secrets, untrusted code must be executed in containers where the service account token will not be supplied to (mounting of service account token disabled via pod spec and token not passed into the container in any other way).
 
+More information on how to create image pull secrets in Kubernetes can be found in the Kubernetes documentation:
 
-### Source Project Secret
-
-Once the pipeline is running it needs to sync the project sources. This secret might also require write permissions to the repository, e.g. to create a tag, send status feedback, push an updated version commit.
-
-The required credentials can be provided by customers as [General Jenkins Secrets]() (see below).
-
-**Personas:** `Customer`
+- [Pull an Image from a Private Registry][k8s_docs-pull_image_private_registry]
+- [Add ImagePullSecrets to a service account][k8s_docs_add_imagepullsecrets_to_service_account]
 
 
-## General Jenkins Secrets
+## Git Server Authentication
 
-Customers can define secrets which will be made available to the Jenkins pipeline as regular `Jenkins Credentials` via the `K8s Credential Provider` plugin. Those credentials can be used inside the pipeline, e.g. to deploy to Cloud Foundry, but also to fetch sources from a specific Git repository, etc.
+### Pipeline Clone Secret
 
-**Personas:** `CloudCi` & `Customer`
+Before Steward can run a pipeline, it needs to fetch the pipeline definition (Jenkinsfile) from a Git repository.
+If cloning this Git repository requires authentication, a secret must be provided by the respective Steward client (on behalf of end users).
 
-### Jenkins Credential Types
+A Steward PipelineRun resource object can specify the secret to be used to authenticate at the Git server from where the pipeline definition should be taken:
 
-- Username with password
-- Secret file
-- Secret text
-- SSH Username with private key
-- Certificate
+```yaml
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+spec:
+    ...
+    jenkinsFile:
+        repoUrl: https://github.com/org1/pipelines
+        ...
+        repoAuthSecret: github-com-token1
+```
 
-More examples:
+If authentication is not required when cloning the pipeline repository, `spec.jenkinsFile.repoAuthSecret` can be omitted or set to an empty string value.
 
-- Docker Host Certificate Authentication
-- Kubernetes Service Account
-- OpenShift OAuth token
-- OpenShift Username and Password
+The value of `spec.jenkinsFile.repoAuthSecret` is the name of a Kubernetes `v1/Secret` resource object of type `kubernetes.io/basic-auth` that contains the username and password for authentication when cloning from `spec.jenkinsFile.repoUrl`.
+Besides that there are no further requirements like special annotations or labels.
+
+When a pipeline gets executed in a transient sandbox namespace, the pipeline clone secret specified in `spec.jenkinsFile.repoAuthSecret` of the corresponding PipelineRun resource object is copied to the sandbox namespace with a different name.
+The Jenkinsfile Runner container has a generated Git credential file (`$HOME/.git-credentials`) that configures the username and password from that secret for the respective Git server.
+This means that any further Git commands executed in the Jenkinsfile Runner container will use these credentials (for the respective Git server) if not explicitly overridden.
+
+__:warning: Warning:__ Any code that gets executed by a pipeline AND runs in the Jenkinsfile Runner container or has access to the Kubernetes service account token can read the pipeline clone secret!
+This is especially important to consider if untrusted code may get executed, e.g. a pipeline processing pull requests from untrusted users.
+
+The following code has access to a pipeline sync secret:
+
+- Any code running in the Jenkinsfile Runner container, because this container has the credentials in `$HOME/.git-credentials` and has the service account token mounted.
+- Any code running in additional containers that have the service account token mounted.
+
+To prevent access to secret, untrusted code must be executed in containers where the service account token will not be supplied to (mounting of service account token disabled via pod spec and token not passed into the container in any other way).
+
+
+### Source Code Repository Secrets
+
+Pipelines usually clone source from one or more Git repositories.
+They may even need write access to them, for instance to create tags, send status feedback or push generated commits.
+If this requires authentication, secrets must be provided by the respective Steward client (on behalf of end users).
+
+In the special case where the __pipeline definition (Jenkinsfile) and the sources are located in the same repository__, only the [Pipeline Clone Secret](#pipeline-clone-secret) needs to be configured.
+If the pipeline clone secret should be available as Jenkins credential, e.g. because the pipeline must fetch sources in a container other than the Jenkinsfile Runner container, the respective Kubernetes Secret resource object should have the required annotations (see [Jenkins Credentials](#jenkins-credentials) below).
+
+In all other cases, credentials needed to access source code repositories have to be configured as [Jenkins Credentials](#jenkins-credentials) as described below.
+
+
+## Jenkins Credentials
+
+Pipelines typically need credentials of different kinds to access protected resources and services, e.g. source code repositories, artifact repositories and deployment targets.
+
+Steward allows to define those credentials as regular Kubernetes `v1/Secret` resource objects and makes them available in Jenkins as regular Jenkins credentials with the help of the [Jenkins Kubernetes Credentials Provider Plugin][jenkins_k8s_credential_provider_plugin].
+The secrets are provided by the respective Steward client (on behalf of end users).
+
+A Steward PipelineRun resource object specifies the names of all secrets to be used as Jenkins credentials for that pipeline run:
+
+```yaml
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+spec:
+    ...
+    secrets:
+    - secret1
+    - secret2
+    - secret3
+```
+
+If no Jenkins credentials are required, `spec.secrets` can be omitted or have an empty list value.
+
+The given secrets are standard Kubernetes `v1/Secret` resource objects that must exist in the same namespace as the PipelineRun object that references them.
+
+The Kubernetes Credentials Provider Plugin requires Secret resource objects to be of __certain types and carry special labels and annotations__ in order to map correctly them to Jenkins credential types.
+Details can be found on the [Examples page][jenkins_k8s_credential_provider_plugin_examples] of the plugin.
+
+When a pipeline gets executed in a transient sandbox namespace, the secrets listed in `spec.secrets` of the corresponding PipelineRun resource object are copied to the sandbox namespace with the same name.
+The Jenkins Kubernetes Credentials Provider Plugin will use the secrets from the sandbox namespace only.
+Any secret that is not listed in `spec.secrets` will not be available as Jenkins credential.
+
+__:warning: Warning:__ Any code that gets executed by a pipeline AND has access to the Kubernetes service account token can read all image pull secrets! This is especially important to consider if untrusted code may get executed, e.g. a pipeline processing pull requests from untrusted users.
+
+The following code has access to Jenkins credential secrets:
+
+- Any code running in the Jenkinsfile Runner container, because this container has the service account token mounted.
+- Any code running in additional containers that have the service account token mounted.
+
+To prevent access to secrets, untrusted code must be executed in containers where the service account token will not be supplied to (mounting of service account token disabled via pod spec and token not passed into the container in any other way).
+
+
+## Other Secrets
+
+### Log Storage in ElasticSearch
+
+The log output of pipeline runs can be send to an Elasticsearch server.
+The credentials to authenticate at the Elasticsearch server must be provided by the Steward client.
+
+See documenation page [Sending Pipeline Logs to Elasticsearch](../pipeline-logs-elasticsearch/README.md).
+
+__TODO:__ How to configure credentials for Elasticseach logging
+
+
+## Links
+
+- Kubernetes Secrets:
+    - the concept of [Secrets][k8s_docs_secrets] (K8s docs)
+    - the definition of secret types in the [source code][k8s_secret_types_src]
+    - [Pull an Image from a Private Registry][k8s_docs-pull_image_private_registry] (K8s docs)
+    - [Add ImagePullSecrets to a service account][k8s_docs_add_imagepullsecrets_to_service_account] (K8s docs)
+    - [Distribute Credentials Securely Using Secrets][k8s_docs_distribute_credentials_secure] (K8s docs)
+
+<p/>
+
+- Jenkins Kubernetes Credentials Provider Plugin:
+    - [Home Page][jenkins_k8s_credential_provider_plugin]
+    - [Examples][jenkins_k8s_credential_provider_plugin_examples]
+
+
+
+[jenkins_k8s_credential_provider_plugin]: https://jenkinsci.github.io/kubernetes-credentials-provider-plugin/
+[jenkins_k8s_credential_provider_plugin_examples]: https://jenkinsci.github.io/kubernetes-credentials-provider-plugin/examples/
+[k8s_docs-pull_image_private_registry]: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+[k8s_docs_add_imagepullsecrets_to_service_account]: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-imagepullsecrets-to-a-service-account
+[k8s_docs_secrets]: https://kubernetes.io/docs/concepts/configuration/secret/
+[k8s_docs_distribute_credentials_secure]: https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/
+[k8s_secret_types_src]: https://github.com/kubernetes/kubernetes/blob/e09f5c40b55c91f681a46ee17f9bc447eeacee57/pkg/apis/core/types.go#L4360-L4444

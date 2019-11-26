@@ -1,4 +1,4 @@
-package k8s
+package utils
 
 // AddStringIfMissing adds a string to a slice of strings
 // returns true, list with appended string if string was not in the list

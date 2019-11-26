@@ -34,8 +34,6 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	StewardV1alpha1() stewardv1alpha1.StewardV1alpha1Interface
-	// Deprecated: please explicitly pick a version if possible.
-	Steward() stewardv1alpha1.StewardV1alpha1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -47,12 +45,6 @@ type Clientset struct {
 
 // StewardV1alpha1 retrieves the StewardV1alpha1Client
 func (c *Clientset) StewardV1alpha1() stewardv1alpha1.StewardV1alpha1Interface {
-	return c.stewardV1alpha1
-}
-
-// Deprecated: Steward retrieves the default version of StewardClient.
-// Please explicitly pick a version.
-func (c *Clientset) Steward() stewardv1alpha1.StewardV1alpha1Interface {
 	return c.stewardV1alpha1
 }
 

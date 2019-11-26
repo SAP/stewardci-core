@@ -516,7 +516,7 @@ func (c *Controller) generateRoleBinding(
 
 func (c *Controller) getRoleBinding(name string, namespace string) (*rbacv1beta1.RoleBinding, error) {
 	roleBindings := c.factory.RbacV1beta1().RoleBindings(namespace)
-	roleBinding, err := roleBindings.Get(name, metav1.GetOptions{IncludeUninitialized: true})
+	roleBinding, err := roleBindings.Get(name, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, nil
