@@ -87,7 +87,6 @@ func Test_WaitFor_success(t *testing.T) {
 			t.Parallel()
 			ctx := context.Background()
 			ctx = SetWaitInterval(ctx, time.Duration(100)*time.Millisecond)
-			ctx = SetTestName(ctx, test.name)
 			if test.timeout >= 0 {
 				var cancel context.CancelFunc
 				ctx, cancel = context.WithTimeout(ctx, time.Duration(test.timeout)*GetWaitInterval(ctx))
