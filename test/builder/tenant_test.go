@@ -24,12 +24,12 @@ func Test_Tenant(t *testing.T) {
 }
 
 func Test_TenantFixName(t *testing.T) {
-        tenant := TenantFixName("foo","bar")
-        expected := &api.Tenant{
-                ObjectMeta: metav1.ObjectMeta{
-                        Namespace: "bar",
-                        Name: "foo",
-                },
-        }
-        assert.DeepEqual(t,expected,tenant)
+	tenant := TenantFixName("foo", "bar")
+	expected := &api.Tenant{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "bar",
+			Name:      "foo",
+		},
+	}
+	assert.DeepEqual(t, expected, tenant)
 }

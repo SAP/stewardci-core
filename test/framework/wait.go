@@ -2,15 +2,9 @@ package framework
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
-)
-
-const (
-	interval = 1 * time.Second
-	timeout  = 2 * time.Minute
 )
 
 // WaitConditionFunc is a function waiting for a condition
@@ -20,11 +14,11 @@ const (
 type WaitConditionFunc func(context.Context) (bool, error)
 
 // WaitFor waits for a condition
-// it returns an error if condition is not fullfilled
-func WaitFor(ctx context.Context, conditionFunc WaitConditionFunc) error {
+// it returns the duration the waiting took
+// it returns an error if condition cannot be fullfilled anymore
+func WaitFor(ctx context.Context, conditionFunc WaitConditionFunc) (time.Duration, error) {
 	startTime := time.Now()
-	log.Printf("wait for %s", GetTestName(ctx))
-	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
+	err := wait.PollImmediateInfinite(GetWaitInterval(ctx), func() (bool, error) {
 		select {
 		case <-ctx.Done():
 			return false, ctx.Err()
@@ -32,6 +26,5 @@ func WaitFor(ctx context.Context, conditionFunc WaitConditionFunc) error {
 		}
 		return conditionFunc(ctx)
 	})
-	log.Printf("waiting completed for %s after %s", GetTestName(ctx), time.Now().Sub(startTime))
-	return err
+	return time.Now().Sub(startTime), err
 }

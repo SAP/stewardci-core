@@ -19,6 +19,6 @@ func Test_TenantCreation(t *testing.T) {
 	defer DeleteTenant(ctx, tenant)
 	ctx = SetTestName(ctx, fmt.Sprintf("Create tenant %s", tenant.GetName()))
 	check := CreateTenantCondition(tenant, test.check)
-	err = WaitFor(ctx, check)
+	_, err = WaitFor(ctx, check)
 	assert.NilError(t, err)
 }

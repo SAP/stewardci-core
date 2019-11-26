@@ -33,7 +33,7 @@ func ExecutePipelineRunTests(t *testing.T, TestPlans ...TestPlan) {
 	defer DeleteTenant(ctx, tenant)
 	ctx = SetTestName(ctx, fmt.Sprintf("Create tenant for pipelineruns: %s", tenant.GetName()))
 	Check := CreateTenantCondition(tenant, test.check)
-	err = WaitFor(ctx, Check)
+	_, err = WaitFor(ctx, Check)
 	assert.NilError(t, err)
 	tenant, err = GetTenant(ctx, tenant)
 	assert.NilError(t, err)
@@ -96,7 +96,8 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 	assert.NilError(t, ctx.Err(), fmt.Sprintf("Test: %q", run.Name))
 	pr := GetPipelineRun(ctx)
 	PipelineRunCheck := CreatePipelineRunCondition(pr, run.Check)
-	err := WaitFor(ctx, PipelineRunCheck)
+	duration, err := WaitFor(ctx, PipelineRunCheck)
+	log.Printf("Test: %q waited for %s", run.Name, duration)
 	run.result = err
 	checkResult(t, run)
 }
