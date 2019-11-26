@@ -2,7 +2,6 @@ package framework
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -55,13 +54,11 @@ func getTenantInterface(ctx context.Context) steward.TenantInterface {
 func ensureTenant(ctx context.Context, t *testing.T) (func(), context.Context) {
 	tenantNamespace := GetTenantNamespace(ctx)
 	if tenantNamespace == "" {
-		test := TenantSuccessTest(ctx)
-		tenant := test.tenant
+		tenant := builder.Tenant("name", GetNamespace(ctx), "displayName")
 		tenant, err := CreateTenant(ctx, tenant)
 		assert.NilError(t, err)
-		ctx = SetTestName(ctx, fmt.Sprintf("Create tenant for pipelineruns: %s", tenant.GetName()))
-		Check := CreateTenantCondition(tenant, test.check)
-		_, err = WaitFor(ctx, Check)
+		check := CreateTenantCondition(tenant, TenantHasStateResult(api.TenantResultSuccess))
+		_, err = WaitFor(ctx, check)
 		assert.NilError(t, err)
 		tenant, err = GetTenant(ctx, tenant)
 		assert.NilError(t, err)
