@@ -4,22 +4,20 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"sync"
 	"testing"
 	"time"
 
-	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	"github.com/SAP/stewardci-core/pkg/k8s"
 	"gotest.tools/assert"
-	is "gotest.tools/assert/cmp"
 )
 
 type testRun struct {
-	Name     string
+	name     string
 	ctx      context.Context
-	Check    PipelineRunCheck
+	check    PipelineRunCheck
 	result   error
-	Expected string
+	expected string
 }
 
 // ExecutePipelineRunTests execute a set of TestPlans
@@ -43,19 +41,19 @@ func ExecutePipelineRunTests(t *testing.T, TestPlans ...TestPlan) {
 		waitWG.Add(TestPlan.Parallel)
 		pipelineTest := TestPlan.TestBuilder(tnn)
 		for i := 1; i <= TestPlan.Parallel; i++ {
-			Name :=
+			name :=
 				fmt.Sprintf("%s_%d", pipelineTest.Name, i)
-			ctx = SetTestName(ctx, Name)
+			ctx = SetTestName(ctx, name)
 
 			ctx, cancel := context.WithTimeout(ctx, pipelineTest.Timeout)
 			defer cancel()
 
-			log.Printf("Create Test: %s", Name)
+			log.Printf("Create Test: %s", name)
 			myTestRun := testRun{
-				Name:     Name,
+				name:     name,
 				ctx:      ctx,
-				Check:    pipelineTest.Check,
-				Expected: pipelineTest.Expected,
+				check:    pipelineTest.Check,
+				expected: pipelineTest.Expected,
 			}
 			if TestPlan.ParallelCreation {
 				go func(waitWG *sync.WaitGroup) {
@@ -74,14 +72,21 @@ func ExecutePipelineRunTests(t *testing.T, TestPlans ...TestPlan) {
 	waitWG.Wait()
 }
 
-func checkResult(t *testing.T, run testRun) {
-	info := fmt.Sprintf("Failing test: %q", run.Name)
-	if run.Expected == "" {
-		assert.NilError(t, run.result, info)
+func checkResult(run testRun) error {
+	if run.expected == "" {
+		if run.result != nil {
+			return fmt.Errorf("unexpected error %q", run.result)
+		}
 	} else {
-		assert.Assert(t, is.Regexp(run.Expected, run.result.Error()), info)
+		pattern, err := regexp.Compile(run.expected)
+		if err != nil {
+			return fmt.Errorf("cannot compile expected %q", run.expected)
+		}
+		if !pattern.MatchString(run.result.Error()) {
+			return fmt.Errorf("unexpected error, got %q expected %q", run.result.Error(), run.expected)
+		}
 	}
-	log.Printf("Test %q completed", run.Name)
+	return nil
 }
 
 func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
@@ -89,17 +94,17 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 		waitWG.Done()
 	}()
 	if run.result != nil {
-		checkResult(t, run)
+		assert.NilError(t, checkResult(run))
 		return
 	}
 	ctx := run.ctx
-	assert.NilError(t, ctx.Err(), fmt.Sprintf("Test: %q", run.Name))
+	assert.NilError(t, ctx.Err(), fmt.Sprintf("Test: %q", run.name))
 	pr := GetPipelineRun(ctx)
-	PipelineRunCheck := CreatePipelineRunCondition(pr, run.Check)
+	PipelineRunCheck := CreatePipelineRunCondition(pr, run.check)
 	duration, err := WaitFor(ctx, PipelineRunCheck)
-	log.Printf("Test: %q waited for %s", run.Name, duration)
+	log.Printf("Test: %q waited for %s", run.name, duration)
 	run.result = err
-	checkResult(t, run)
+	assert.NilError(t, checkResult(run))
 }
 
 func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
@@ -122,14 +127,8 @@ func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
 		run.result = fmt.Errorf("pipeline run creation failed: %q", err.Error())
 		return run
 	}
-	log.Printf("pipeline run created for test: %s, %s/%s", run.Name, pr.GetNamespace(), pr.GetName())
+	log.Printf("pipeline run created for test: %s, %s/%s", run.name, pr.GetNamespace(), pr.GetName())
 	ctx = SetPipelineRun(ctx, pr)
 	run.ctx = ctx
 	return run
-}
-
-func setState(ctx context.Context, PipelineRun *api.PipelineRun, result api.Result) {
-	fetcher := k8s.NewPipelineRunFetcher(GetClientFactory(ctx))
-	pr, _ := fetcher.ByName(PipelineRun.GetNamespace(), PipelineRun.GetName())
-	pr.UpdateResult(result)
 }
