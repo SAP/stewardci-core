@@ -20,34 +20,27 @@ type testRun struct {
 	expected string
 }
 
-// ExecutePipelineRunTests execute a set of TestPlans
-func ExecutePipelineRunTests(t *testing.T, TestPlans ...TestPlan) {
-	ctx := setup(t)
-	test := TenantSuccessTest(ctx)
-	tenant := test.tenant
-	tenant, err := CreateTenant(ctx, tenant)
-	assert.NilError(t, err)
+// ExecutePipelineRunTests execute a set of testPlans
+func ExecutePipelineRunTests(t *testing.T, testPlans ...TestPlan) {
+	executePipelineRunTests(setup(t), t, testPlans...)
+}
 
-	defer DeleteTenant(ctx, tenant)
-	ctx = SetTestName(ctx, fmt.Sprintf("Create tenant for pipelineruns: %s", tenant.GetName()))
-	Check := CreateTenantCondition(tenant, test.check)
-	_, err = WaitFor(ctx, Check)
-	assert.NilError(t, err)
-	tenant, err = GetTenant(ctx, tenant)
-	assert.NilError(t, err)
-	tnn := tenant.Status.TenantNamespaceName
+func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...TestPlan) {
+	rollback, ctx := ensureTenant(ctx, t)
+	defer rollback()
+	tnn := GetTenantNamespace(ctx)
 	var waitWG sync.WaitGroup
-	for _, TestPlan := range TestPlans {
-		waitWG.Add(TestPlan.Parallel)
-		pipelineTest := TestPlan.TestBuilder(tnn)
-		for i := 1; i <= TestPlan.Parallel; i++ {
+	for _, testPlan := range testPlans {
+		waitWG.Add(testPlan.Parallel)
+		pipelineTest := testPlan.TestBuilder(tnn)
+		for i := 1; i <= testPlan.Parallel; i++ {
 			name :=
 				fmt.Sprintf("%s_%d", pipelineTest.Name, i)
 			ctx = SetTestName(ctx, name)
 
 			ctx, cancel := context.WithTimeout(ctx, pipelineTest.Timeout)
 			defer cancel()
-
+			pipelineTest := testPlan.TestBuilder(tnn)
 			log.Printf("Create Test: %s", name)
 			myTestRun := testRun{
 				name:     name,
@@ -55,7 +48,7 @@ func ExecutePipelineRunTests(t *testing.T, TestPlans ...TestPlan) {
 				check:    pipelineTest.Check,
 				expected: pipelineTest.Expected,
 			}
-			if TestPlan.ParallelCreation {
+			if testPlan.ParallelCreation {
 				go func(waitWG *sync.WaitGroup) {
 					myTestRun := createPipelineRunTest(pipelineTest, myTestRun)
 					startWait(t, myTestRun, waitWG)
@@ -65,7 +58,7 @@ func ExecutePipelineRunTests(t *testing.T, TestPlans ...TestPlan) {
 				go func(waitWG *sync.WaitGroup) {
 					startWait(t, myTestRun, waitWG)
 				}(&waitWG)
-				time.Sleep(TestPlan.CreationDelay)
+				time.Sleep(testPlan.CreationDelay)
 			}
 		}
 	}
@@ -104,7 +97,7 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 	duration, err := WaitFor(ctx, PipelineRunCheck)
 	log.Printf("Test: %q waited for %s", run.name, duration)
 	run.result = err
-	assert.NilError(t, checkResult(run))
+	assert.NilError(t, checkResult(run), fmt.Sprintf("Test: %q", run.name))
 }
 
 func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {

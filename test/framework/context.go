@@ -10,10 +10,11 @@ import (
 type contextKey string
 
 const (
-	factoryKey     contextKey = "factory"
-	pipelineRunKey contextKey = "PipelineRun"
-	namespaceKey   contextKey = "Namespace"
-	testNameKey    contextKey = "testName"
+	factoryKey         contextKey = "factory"
+	pipelineRunKey     contextKey = "PipelineRun"
+	namespaceKey       contextKey = "Namespace"
+	tenantNamespaceKey contextKey = "TenantNamespace"
+	testNameKey        contextKey = "testName"
 )
 
 // GetClientFactory returns the client factory from the context
@@ -26,14 +27,28 @@ func SetClientFactory(ctx context.Context, clientFactory k8s.ClientFactory) cont
 	return context.WithValue(ctx, factoryKey, clientFactory)
 }
 
-// GetNamespace returns the namespace from the context
+// GetNamespace returns the client namespace from the context
 func GetNamespace(ctx context.Context) string {
 	return ctx.Value(namespaceKey).(string)
 }
 
-// SetNamespace sets the namespace to the context
+// SetNamespace sets the client namespace to the context
 func SetNamespace(ctx context.Context, namespace string) context.Context {
 	return context.WithValue(ctx, namespaceKey, namespace)
+}
+
+// GetTenantNamespace returns the tenant namespace from the context
+func GetTenantNamespace(ctx context.Context) string {
+	val := ctx.Value(tenantNamespaceKey)
+	if val == nil {
+		return ""
+	}
+	return val.(string)
+}
+
+// SetTenantNamespace sets the tenant namespace to the context
+func SetTenantNamespace(ctx context.Context, namespace string) context.Context {
+	return context.WithValue(ctx, tenantNamespaceKey, namespace)
 }
 
 // GetPipelineRun returns the pipeline run from the context

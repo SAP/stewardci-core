@@ -3,6 +3,8 @@
 package framework
 
 import (
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+
 	"fmt"
 	"testing"
 

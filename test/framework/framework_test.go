@@ -28,7 +28,8 @@ func Test_FirstFinishBeforeSecondStarts(t *testing.T) {
 		Parallel:      2,
 		CreationDelay: time.Second * 1,
 	}
-	ExecutePipelineRunTests(t, test)
+	ctx := setup(t)
+	executePipelineRunTests(ctx, t, test)
 }
 
 func Test_FrameworkTest(t *testing.T) {
@@ -39,7 +40,8 @@ func Test_FrameworkTest(t *testing.T) {
 			Parallel: 1,
 		}
 	}
-	ExecutePipelineRunTests(t, allTests...)
+	ctx := setup(t)
+	executePipelineRunTests(ctx, t, allTests...)
 }
 
 // PipelineRunSleepTooLong is a PipelineRunTestBuilder to test if Timeout works correctly
