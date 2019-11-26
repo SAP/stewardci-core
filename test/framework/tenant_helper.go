@@ -2,11 +2,15 @@ package framework
 
 import (
 	"context"
+	"fmt"
+	"testing"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	steward "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/test/builder"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"gotest.tools/assert"
 )
 
 // TenantTest is a test for a Tenant
@@ -46,4 +50,22 @@ func DeleteTenant(ctx context.Context, tenant *api.Tenant) error {
 
 func getTenantInterface(ctx context.Context) steward.TenantInterface {
 	return GetClientFactory(ctx).StewardV1alpha1().Tenants(GetNamespace(ctx))
+}
+
+func ensureTenant(ctx context.Context, t *testing.T) (func(), context.Context) {
+	tenantNamespace := GetTenantNamespace(ctx)
+	if tenantNamespace == "" {
+		test := TenantSuccessTest(ctx)
+		tenant := test.tenant
+		tenant, err := CreateTenant(ctx, tenant)
+		assert.NilError(t, err)
+		ctx = SetTestName(ctx, fmt.Sprintf("Create tenant for pipelineruns: %s", tenant.GetName()))
+		Check := CreateTenantCondition(tenant, test.check)
+		_, err = WaitFor(ctx, Check)
+		assert.NilError(t, err)
+		tenant, err = GetTenant(ctx, tenant)
+		assert.NilError(t, err)
+		return func() { DeleteTenant(ctx, tenant) }, SetTenantNamespace(ctx, tenant.Status.TenantNamespaceName)
+	}
+	return func() {}, ctx
 }

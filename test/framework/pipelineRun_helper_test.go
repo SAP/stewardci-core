@@ -3,15 +3,55 @@ package framework
 import (
 	"context"
 	"fmt"
-	"log"
 	"testing"
+	"time"
 
+	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
+	"github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/SAP/stewardci-core/test/builder"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func setupTestContext() context.Context {
+	ctx := context.Background()
+	ctx = SetNamespace(ctx, "ns1")
+	factory := fake.NewClientFactory()
+	ctx = SetTenantNamespace(ctx, "ns1")
+	return SetClientFactory(ctx, factory)
+}
+
+func pipelineWithStatusSuccess(namespace string) PipelineRunTest {
+	randomName, _ := utils.RandomAlphaNumString(5)
+	pipelineRun := pipelineRun(randomName, namespace)
+	pipelineRun.Status = api.PipelineStatus{Result: api.ResultSuccess}
+	return PipelineRunTest{
+		Name:        "name",
+		PipelineRun: pipelineRun,
+		Check:       PipelineRunHasStateResult(api.ResultSuccess),
+		Timeout:     time.Second,
+	}
+}
+
+func Test_ExecutePipelineRunTests(t *testing.T) {
+	test := []TestPlan{
+		TestPlan{TestBuilder: pipelineWithStatusSuccess,
+			Parallel:      5,
+			CreationDelay: time.Millisecond * 10,
+		},
+		TestPlan{TestBuilder: pipelineWithStatusSuccess,
+			Parallel:         5,
+			ParallelCreation: true,
+		},
+		TestPlan{TestBuilder: pipelineWithStatusSuccess,
+			Parallel: 5,
+		},
+	}
+	ctx := setupTestContext()
+	executePipelineRunTests(ctx, t, test...)
+}
 
 func Test_CheckResult(t *testing.T) {
 	t.Parallel()
@@ -75,10 +115,7 @@ func Test_CreatePipelineRunTest(t *testing.T) {
 			test := test
 			t.Parallel()
 			//SETUP
-			ctx := context.Background()
-			factory := fake.NewClientFactory()
-			ctx = SetClientFactory(ctx, factory)
-			ctx = SetNamespace(ctx, "ns1")
+			ctx := setupTestContext()
 			run := testRun{ctx: ctx}
 			// EXERCISE
 			testRun := createPipelineRunTest(test.test, run)
@@ -88,9 +125,8 @@ func Test_CreatePipelineRunTest(t *testing.T) {
 				assert.Equal(t, testRun.result.Error(), test.expectedResult)
 			} else {
 				assert.NilError(t, testRun.result)
-				secretInterface := factory.CoreV1().Secrets(GetNamespace(ctx))
+				secretInterface := GetClientFactory(ctx).CoreV1().Secrets(GetNamespace(ctx))
 				secretList, err := secretInterface.List(metav1.ListOptions{})
-				log.Printf("Secrets: %+v", secretList)
 				assert.NilError(t, err)
 
 				assert.Equal(t, len(test.expectedSecretsByName), len(secretList.Items))
@@ -99,7 +135,7 @@ func Test_CreatePipelineRunTest(t *testing.T) {
 					assert.NilError(t, err)
 					assert.Equal(t, secret.GetName(), secretName)
 				}
-				pipelineRunInterface := factory.StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
+				pipelineRunInterface := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
 				pipelineRunName := GetPipelineRun(testRun.ctx).GetName()
 
 				pipelineRun, err := pipelineRunInterface.Get(pipelineRunName, metav1.GetOptions{})

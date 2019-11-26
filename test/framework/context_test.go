@@ -22,6 +22,17 @@ func Test_Set_GetNamespace(t *testing.T) {
 	assert.Equal(t, "ns1", GetNamespace(ctx))
 }
 
+func Test_Set_GetTenantNamespace(t *testing.T) {
+	ctx := context.Background()
+	ctx = SetTenantNamespace(ctx, "ns1")
+	assert.Equal(t, "ns1", GetTenantNamespace(ctx))
+}
+
+func Test_GetTenantNamespace_defaultsToEmptyString(t *testing.T) {
+	ctx := context.Background()
+	assert.Equal(t, "", GetTenantNamespace(ctx))
+}
+
 func Test_Set_GetTestName(t *testing.T) {
 	ctx := context.Background()
 	ctx = SetTestName(ctx, "foo")
