@@ -8,12 +8,16 @@ import (
 	"gotest.tools/assert"
 )
 
-func Test_GetTenant(t *testing.T) {
-	// SETUP
+func setupClientContext() context.Context {
 	ctx := context.Background()
 	clientFactory := fake.NewClientFactory()
 	ctx = SetClientFactory(ctx, clientFactory)
-	ctx = SetNamespace(ctx, "ns1")
+	return SetNamespace(ctx, "ns1")
+}
+
+func Test_GetTenant(t *testing.T) {
+	// SETUP
+	ctx := setupClientContext()
 
 	tenantTest := TenantSuccessTest(ctx)
 	tenant := tenantTest.tenant
@@ -28,10 +32,7 @@ func Test_GetTenant(t *testing.T) {
 
 func Test_DeleteTenant(t *testing.T) {
 	// SETUP
-	ctx := context.Background()
-	clientFactory := fake.NewClientFactory()
-	ctx = SetClientFactory(ctx, clientFactory)
-	ctx = SetNamespace(ctx, "ns1")
+	ctx := setupClientContext()
 
 	tenantTest := TenantSuccessTest(ctx)
 	tenant := tenantTest.tenant
