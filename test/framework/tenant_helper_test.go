@@ -8,7 +8,7 @@ import (
 	"gotest.tools/assert"
 )
 
-func GetTenantTest(t *testing.T) {
+func Test_GetTenant(t *testing.T) {
 	// SETUP
 	ctx := context.Background()
 	clientFactory := fake.NewClientFactory()
@@ -26,7 +26,7 @@ func GetTenantTest(t *testing.T) {
 	assert.Equal(t, "ns1", lodedTenant.GetNamespace())
 }
 
-func DeleteTenantTest(t *testing.T) {
+func Test_DeleteTenant(t *testing.T) {
 	// SETUP
 	ctx := context.Background()
 	clientFactory := fake.NewClientFactory()
