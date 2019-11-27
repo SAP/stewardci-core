@@ -6,9 +6,9 @@ The Steward backend API is based on Kubernetes resources. Clients use the Kubern
 
 Each (frontend) client connecting to the Steward backend gets its own _client namespace_.
 
-Inside its _client namespace_ the client creates `tenant` resources for each tenant it serves. Steward will prepare a separate _tenant namespace_ for each tenant (resource).
+Inside its _client namespace_ the client creates Tenant resources for each of its own tenants. Steward will prepare a separate _tenant namespace_ for each tenant (resource).
 
-Inside a _tenant namespace_ the client creates `pipelinerun` resources for each pipeline execution. Steward will then create a sandbox namespace for each pipelinerun and start a Jenkinsfile runner pod which executes the pipeline.
+Inside a _tenant namespace_ the client creates PipelineRun resources for each pipeline execution. Steward will then create a sandbox namespace for each pipeline run and start a Jenkinsfile runner pod which executes the pipeline.
 
 
 ## Tenant Resource
@@ -17,7 +17,7 @@ Inside a _tenant namespace_ the client creates `pipelinerun` resources for each 
 
 #### Examples
 
-A simple `Tenant` resource example can be found in [docs/examples/tenant.yaml](../examples/tenant.yaml).
+A simple Tenant resource example can be found in [docs/examples/tenant.yaml](../examples/tenant.yaml).
 
 
 #### Fields
@@ -31,9 +31,9 @@ A simple `Tenant` resource example can be found in [docs/examples/tenant.yaml](.
 
 ### Status
 
-The `status` section of the `Tenant` resources lets clients know about the tenant namespace assigned exclusively to a tenant.
+The `status` section of the Tenant resources lets clients know about the tenant namespace assigned exclusively to a tenant.
 
-After a client created a new `Tenant` resource, the Steward controller tries to achieve the hereby requested state:
+After a client created a __new Tenant resource__, the Steward controller tries to create the hereby requested state, which is this:
 
 - A tenant namespace exists that is exclusively assigned to this tenant.
 
@@ -41,14 +41,29 @@ After a client created a new `Tenant` resource, the Steward controller tries to 
 
 - Service account `<client_namespace>::default` (where `<client_namespace>` is the namespace where the `Tenant` resource belongs to) has the permissions needed to manage further resources in the tenant namespace.
 
-The Steward controller periodically checks the actual state of the resource and tries to change it to the desired state:
+Once the controller has finished the initialization successfully, field `status.tenantNamespaceName` will be set and will not change anymore during the lifetime of the Tenant resource object.
 
-- The role binding in the tenant namespace gets updated/recreated if needed, for instance if the client namespace's annotation `steward.sap.com/tenant-role` (defining the RBAC role to be assigned to the above-mentioned service accounts) has changed.
+The Steward controller periodically checks the actual state of all __existing Tenant resources__ and tries to change it to the desired state if there are deviations (reconciliation):
 
-- If `status.tenantNamespaceName` refers to a namespace that does not exist anymore, the ready condition is set to `False` indicating that the tenant is no longer ready to be used. As this never happens under normal circumstances and probably means that data has been lost, the tenant namespace will not be recreated automatically. Operators should monitor tenants, and must  analyze and fix the underlying issue if such situations occur.
+- The role binding in the tenant namespace gets updated/recreated if needed, for instance if the client namespace's annotation `steward.sap.com/tenant-role` (defining the RBAC role to be assigned to the above-mentioned service accounts) has changed or the role binding does not exist anymore.
+
+- If `status.tenantNamespaceName` refers to a namespace that does not exist anymore, the reconciliation fails and the status is set accordingly (see below).
+  As this never happens under normal circumstances and probably means that data has been lost, the tenant namespace will not be recreated automatically.
+  A Steward operator may resolve the issue by restoring the tenant namespace with all its former contents from a backup.
+
+In case the __initialization or reconciliation fails__, the Steward controller sets the _ready condition_ (see below) to status `False` to indicate that the Tenant is not ready for use.
+However, clients are _not_ required to check the status before each operation they perform in the tenant namespace.
+Instead they should check the response of Kubernetes API calls for errors.
+
+Steward operators should monitor the status of all Tenant resource objects and react on:
+
+- Uninitialized resource objects older than a certain threshold, e.g. 10 seconds.
+- Resource objects with the ready condition being `False` for longer than a certain threshold, e.g. 10 seconds.
 
 
 ### Examples
+
+The initialization was successful:
 
 ```yaml
 apiVersion: steward.sap.com/v1apha1
@@ -64,30 +79,85 @@ status:
   tenantNamespaceName: steward-t-client1-tenant1-83a4cf
 ```
 
+The initialization has failed because the tenant namespace could not be created:
+
+```yaml
+apiVersion: steward.sap.com/v1apha1
+kind: Tenant
+metadata:
+  name: tenant1
+  namespace: steward-c-client1
+status:
+  conditions:
+  - type: Ready
+    status: "False"
+    reason: Failed
+    message: |
+      Failed to create the tenant namespace.
+    lastTransitionTime: "2019-11-02T07:35:16Z"
+  # no tenantNamespaceName set
+```
+
+The reconciliation failed because the tenant namespace does not exist anymore:
+
+```yaml
+apiVersion: steward.sap.com/v1apha1
+kind: Tenant
+metadata:
+  name: tenant1
+  namespace: steward-c-client1
+status:
+  conditions:
+  - type: Ready
+    status: "False"
+    reason: InvalidDependentResource
+    message: |
+      The tenant namespace "steward-t-client1-tenant1-83a4cf" does not exist anymore.
+      This issue must be analyzed and fixed by an operator.
+    lastTransitionTime: "2019-11-02T07:35:16Z"
+  tenantNamespaceName: steward-t-client1-tenant1-83a4cf
+```
+
 
 #### Fields
 
 | Field | Description |
 | --------- | ----------- |
-| `status.conditions` | (array) A list of condition objects describing the lastest observed state of the resource. For each type of condition at most one entry exists. See _Conditions_ below. |
-| `status.conditions[*].type` | (string) The type of the condition. See _Conditions_ below. |
-| `status.conditions[*].status` | (string,optional) The status of the condition with one of the values `True`, `False` and `Unknown`. A condition that is not listed in `status.conditions` has status `Unknown`. |
+| `status.conditions` | (array,optional) A list of condition objects describing the lastest observed state of the resource. For each type of condition at most one entry exists. Omitting this field is equivalent to specifying it with an empty array value. See [_Conditions_](#conditions) below for a specification of condition types defined for Tenant resources. |
+| `status.conditions[*].type` | (string) The type of the condition as a unique, one-word, lower-case string. |
+| `status.conditions[*].status` | (string,optional) The status of the condition with one of the values `True`, `False` and `Unknown`. Any condition not listed in `status.conditions` must be treated as if it has status `Unknown`. |
 | `status.conditions[*].reason` | (string,optional) A unique, one-word, camel-case reason for the condition's last transition. |
 | `status.conditions[*].message` | (string,optional) A human-readable message indicating the details of the condition's last transition. |
-| `status.conditions[*].lastTransitionTime` | (time) The time of the condition's last transition. |
-| `status.tenantNamespaceName` | (string) The name of the namespace assigned exclusively to this tenant. As long as the tenant namespace has not been created successfully, this field is not set. |
+| `status.conditions[*].lastTransitionTime` | (time,optional) The time of the condition's last transition. |
+| `status.tenantNamespaceName` | (string,optional) The name of the namespace assigned exclusively to this tenant. As long as the tenant namespace has not been created successfully, this field is not set. |
 
 
 #### Conditions
 
-Currently the following types of conditions are defined:
+##### Ready Condition
 
-- `ready`: The ready condition is the main condition. If its status is `True`, `status.tenantNamespaceName` is guaranteed to be set and the tenant namespace was correctly set up last time the Steward controller verified the resource state. Note that since then the state might have changed again but not yet been recognized by the Steward controller.
+The condition of type `ready` is the main condition of a Tenant resource (and currently the only one, which might change in the future).
+
+If the condition's status is `True` the resource's `status.tenantNamespaceName` is guaranteed to be set and the tenant namespace was correctly set up last time the Steward controller verified the resource state.
+Note that since then the state might have changed again but not yet been recognized by the Steward controller.
+Fields `reason` and `message` are not specified if `status` is `True`.
+
+If the condition's status in `False`, fields `reason` and `message` will be set.
+Possible values of `reason` are:
+
+- `Failed`: Indicates that the reason for the status is an unspecified failure.
+- `InvalidDependentResource`: Indicates that the reason for the status is the state of another resource controlled by this resource, e.g. the tenant namespace or the role binding in the tenant namespace.
+
+Consumers of the resource status should not strongly rely on the value of the `reason` field, as the set of possible values might change in future versions of Steward without considering this as incompatibility.
+The `reason` and `message` fields have informative character only.
+If consumers must rely on detailed information about the status of non-ready resource objects, new condition types must be introduced with a new Steward versions.
+
+Field `lastTransitionTime` is always set, except when the condition is not specified in the resource status at all (which for instance is the case for newly created resource objects).
 
 
 ### Deletion
 
-When a `Tenant` resource is deleted the assigned namespace will be deleted automatically, including all resources within that namespace.
+When a Tenant resource is deleted the assigned namespace will be deleted automatically, including all resources within that namespace.
 
 
 ## PipelineRun Resource
@@ -96,7 +166,7 @@ When a `Tenant` resource is deleted the assigned namespace will be deleted autom
 
 #### Examples
 
-A simple `PipelineRun` resource example can be found in [docs/examples/pipelinerun_ok.yaml](../examples/pipelinerun_ok.yaml). A more complex `PipelineRun` is [docs/examples/pipelinerun_gitscm.yaml](../examples/pipelinerun_gitscm.yaml).
+A simple PipelineRun resource example can be found in [docs/examples/pipelinerun_ok.yaml](../examples/pipelinerun_ok.yaml). A more complex PipelineRun is [docs/examples/pipelinerun_gitscm.yaml](../examples/pipelinerun_gitscm.yaml).
 
 
 #### Fields
@@ -183,9 +253,9 @@ status:
 
 ### Deletion
 
-Steward currently does not delete `PipelineRun` resources automatically. It is the clients' responsibility to delete them when they are no longer needed, reached a certain age or whatever the deletion criterion is.
+Steward currently does not delete PipelineRun resources automatically. It is the clients' responsibility to delete them when they are no longer needed, reached a certain age or whatever the deletion criterion is.
 
-The sandbox namespace of a `PipelineRun` gets deleted immediately after the pipeline run has finished &ndash; no need to delete the PipelineRun resource itself to clean up.
+The sandbox namespace of a PipelineRun gets deleted immediately after the pipeline run has finished &ndash; no need to delete the PipelineRun resource itself to clean up.
 
 
 
