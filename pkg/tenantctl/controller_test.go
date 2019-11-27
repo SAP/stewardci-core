@@ -316,7 +316,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnErrorWhenSyncingRole
 
 	injectedError := errors.New("ERR1")
 	ctl.testing = &controllerTesting{
-		syncTenantRoleBindingStub: func(*api.Tenant, string, clientConfig) (bool, error) {
+		reconcileTenantRoleBindingStub: func(*api.Tenant, string, clientConfig) (bool, error) {
 			return false, injectedError
 		},
 	}
@@ -529,7 +529,7 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnErrorWhenSyncingRoleBi
 
 	injectedError := errors.New("ERR1")
 	ctl.testing = &controllerTesting{
-		syncTenantRoleBindingStub: func(*api.Tenant, string, clientConfig) (bool, error) {
+		reconcileTenantRoleBindingStub: func(*api.Tenant, string, clientConfig) (bool, error) {
 			return true, injectedError
 		},
 	}
@@ -816,7 +816,7 @@ func Test_Controller_syncHandler_CleanupOnStatusUpdateFailure(t *testing.T) {
 	)
 }
 
-func Test_Controller_syncTenantRoleBinding_FailsOnErrorIn_listManagedRoleBindings(t *testing.T) {
+func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_listManagedRoleBindings(t *testing.T) {
 	// SETUP
 	const (
 		clientNSName   = "client1"
@@ -841,7 +841,7 @@ func Test_Controller_syncTenantRoleBinding_FailsOnErrorIn_listManagedRoleBinding
 	}
 
 	// EXERCISE
-	resultSyncNeeded, resultErr := examinee.syncTenantRoleBinding(tenant, tenantNSName, config)
+	resultUpdateNeeded, resultErr := examinee.reconcileTenantRoleBinding(tenant, tenantNSName, config)
 
 	// VERIFY
 	assert.Error(t, resultErr, fmt.Sprintf(
@@ -849,10 +849,10 @@ func Test_Controller_syncTenantRoleBinding_FailsOnErrorIn_listManagedRoleBinding
 		tenantNSName,
 	))
 	assert.Assert(t, errors.Cause(resultErr) == injectedError)
-	assert.Assert(t, resultSyncNeeded == false)
+	assert.Assert(t, resultUpdateNeeded == false)
 }
 
-func Test_Controller_syncTenantRoleBinding_FailsOnErrorIn_createRoleBinding(t *testing.T) {
+func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_createRoleBinding(t *testing.T) {
 	// SETUP
 	const (
 		clientNSName   = "client1"
@@ -880,7 +880,7 @@ func Test_Controller_syncTenantRoleBinding_FailsOnErrorIn_createRoleBinding(t *t
 	}
 
 	// EXERCISE
-	resultSyncNeeded, resultErr := examinee.syncTenantRoleBinding(tenant, tenantNSName, config)
+	resultUpdateNeeded, resultErr := examinee.reconcileTenantRoleBinding(tenant, tenantNSName, config)
 
 	// VERIFY
 	assert.Error(t, resultErr, fmt.Sprintf(
@@ -888,7 +888,7 @@ func Test_Controller_syncTenantRoleBinding_FailsOnErrorIn_createRoleBinding(t *t
 		tenantNSName,
 	))
 	assert.Assert(t, errors.Cause(resultErr) == injectedError)
-	assert.Assert(t, resultSyncNeeded == true)
+	assert.Assert(t, resultUpdateNeeded == true)
 }
 
 func Test_Controller_listManagedRoleBindings_GoodCase_WithLabelFilter(t *testing.T) {

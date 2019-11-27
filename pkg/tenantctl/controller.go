@@ -47,11 +47,11 @@ type Controller struct {
 }
 
 type controllerTesting struct {
-	createRoleBindingStub       func(roleBinding *rbacv1beta1.RoleBinding) (*rbacv1beta1.RoleBinding, error)
-	getClientConfigStub         func(factory k8s.ClientFactory, clientNamespace string) (clientConfig, error)
-	listManagedRoleBindingsStub func(namespace string) (*rbacv1beta1.RoleBindingList, error)
-	syncTenantRoleBindingStub   func(tenant *api.Tenant, namespace string, config clientConfig) (bool, error)
-	updateStatusStub            func(tenant *api.Tenant) (*api.Tenant, error)
+	createRoleBindingStub          func(roleBinding *rbacv1beta1.RoleBinding) (*rbacv1beta1.RoleBinding, error)
+	getClientConfigStub            func(factory k8s.ClientFactory, clientNamespace string) (clientConfig, error)
+	listManagedRoleBindingsStub    func(namespace string) (*rbacv1beta1.RoleBindingList, error)
+	reconcileTenantRoleBindingStub func(tenant *api.Tenant, namespace string, config clientConfig) (bool, error)
+	updateStatusStub               func(tenant *api.Tenant) (*api.Tenant, error)
 }
 
 // NewController creates new Controller
@@ -265,7 +265,7 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 		return err
 	}
 
-	_, err = c.syncTenantRoleBinding(tenant, nsName, config)
+	_, err = c.reconcileTenantRoleBinding(tenant, nsName, config)
 	if err != nil {
 		condMsg := fmt.Sprintf("Failed to create the tenant namespace.")
 		tenant.Status.SetCondition(&knativeapis.Condition{
@@ -316,9 +316,9 @@ func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenan
 		return err
 	}
 
-	syncNeeded, err := c.syncTenantRoleBinding(tenant, nsName, config)
+	updateNeeded, err := c.reconcileTenantRoleBinding(tenant, nsName, config)
 	if err != nil {
-		if syncNeeded {
+		if updateNeeded {
 			condMsg := fmt.Sprintf(
 				"The RoleBinding in tenant namespace %q is outdated but could not be updated.",
 				nsName,
@@ -439,9 +439,24 @@ func (c *Controller) deleteTenantNamespace(namespace string, tenant *api.Tenant,
 	return nil
 }
 
-func (c *Controller) syncTenantRoleBinding(tenant *api.Tenant, namespace string, config clientConfig) (bool, error) {
-	if c.testing != nil && c.testing.syncTenantRoleBindingStub != nil {
-		return c.testing.syncTenantRoleBindingStub(tenant, namespace, config)
+/*
+reconcileTenantRoleBinding compares the actual state of the role binding
+in the tenant namespace with the desired state.
+In case of a mismatch it tries to achieve the desired state by replacing
+the existing role binding resource object(s) by a new one.
+
+Output parameter `updateNeeded` indicates whether the need for an update
+has been detected, and will be returned both in case of success and error.
+In case of success it indicates whether an update has been performed.
+In case of error a value of `true` indicates that an update would have to
+be performed (and maybe has been done partially), while a value of 'false'
+does NOT mean that no update is necessary BUT that in the moment the error
+occurred the need for an update has not been detected (a subtle but yet
+important difference).
+*/
+func (c *Controller) reconcileTenantRoleBinding(tenant *api.Tenant, namespace string, config clientConfig) (updateNeeded bool, err error) {
+	if c.testing != nil && c.testing.reconcileTenantRoleBindingStub != nil {
+		return c.testing.reconcileTenantRoleBindingStub(tenant, namespace, config)
 	}
 
 	/*
@@ -461,9 +476,7 @@ func (c *Controller) syncTenantRoleBinding(tenant *api.Tenant, namespace string,
 		Steward". All others will not be touched or taken into account.
 	*/
 
-	syncNeeded := false
-
-	err := func() error {
+	err = func() error {
 		rbList, err := c.listManagedRoleBindings(namespace)
 		if err != nil {
 			return err
@@ -473,10 +486,10 @@ func (c *Controller) syncTenantRoleBinding(tenant *api.Tenant, namespace string,
 		expectedTenantRB := c.generateTenantRoleBinding(namespace, clientNamespace, config)
 
 		if len(rbList.Items) != 1 || !c.isTenantRoleBindingUpToDate(&rbList.Items[0], expectedTenantRB) {
-			syncNeeded = true
+			updateNeeded = true
 		}
 
-		if syncNeeded {
+		if updateNeeded {
 			c.logPrintf(tenant, "updating RoleBinding in tenant namespace %q", namespace)
 			_, err = c.createRoleBinding(expectedTenantRB)
 			if err != nil {
@@ -493,12 +506,12 @@ func (c *Controller) syncTenantRoleBinding(tenant *api.Tenant, namespace string,
 
 	if err != nil {
 		err = errors.WithMessagef(err,
-			"failed to sync the RoleBinding in tenant namespace %q",
+			"failed to reconcile the RoleBinding in tenant namespace %q",
 			namespace,
 		)
 		c.logPrintln(tenant, err)
 	}
-	return syncNeeded, err
+	return
 }
 
 /**
