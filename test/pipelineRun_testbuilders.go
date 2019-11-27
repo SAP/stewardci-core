@@ -26,7 +26,6 @@ const pipelineRepoURLrinckm = "https://github.com/rinckm/stewardci-example-pipel
 // PipelineRunSleep is a PipelineRunTestBuilder to build PipelineRunTest which sleeps for one second
 func PipelineRunSleep(Namespace string) f.PipelineRunTest {
 	return f.PipelineRunTest{
-		Name: "sleep",
 		PipelineRun: builder.PipelineRun("sleep-", Namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec(pipelineRepoURL,
@@ -41,7 +40,6 @@ func PipelineRunSleep(Namespace string) f.PipelineRunTest {
 // PipelineRunFail is a PipelineRunTestBuilder to build PipelineRunTest which fails
 func PipelineRunFail(Namespace string) f.PipelineRunTest {
 	return f.PipelineRunTest{
-		Name: "error",
 		PipelineRun: builder.PipelineRun("error-", Namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec(pipelineRepoURL,
@@ -55,7 +53,6 @@ func PipelineRunFail(Namespace string) f.PipelineRunTest {
 // PipelineRunOK is a PipelineRunTestBuilder to build PipelineRunTest which succeeds
 func PipelineRunOK(Namespace string) f.PipelineRunTest {
 	return f.PipelineRunTest{
-		Name: "ok",
 		PipelineRun: builder.PipelineRun("ok-", Namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec(pipelineRepoURL,
@@ -69,7 +66,6 @@ func PipelineRunOK(Namespace string) f.PipelineRunTest {
 // PipelineRunWithSecret is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets
 func PipelineRunWithSecret(Namespace string) f.PipelineRunTest {
 	return f.PipelineRunTest{
-		Name: "with-secret",
 		PipelineRun: builder.PipelineRun("with-secret-", Namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec(pipelineRepoURLrinckm,
@@ -88,7 +84,6 @@ func PipelineRunWithSecret(Namespace string) f.PipelineRunTest {
 // PipelineRunMissingSecret is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets
 func PipelineRunMissingSecret(Namespace string) f.PipelineRunTest {
 	return f.PipelineRunTest{
-		Name: "missing-secret",
 		PipelineRun: builder.PipelineRun("missing-secret-", Namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec(pipelineRepoURLrinckm,
@@ -106,7 +101,6 @@ func PipelineRunMissingSecret(Namespace string) f.PipelineRunTest {
 // PipelineRunWrongJenkinsfileRepo is a PipelineRunTestBuilder to build PipelineRunTest with wrong jenkinsfile repo url
 func PipelineRunWrongJenkinsfileRepo(Namespace string) f.PipelineRunTest {
 	return f.PipelineRunTest{
-		Name: "wrong-jenkinsfile-repo",
 		PipelineRun: builder.PipelineRun("wrong-jenkinsfile-repo-", Namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/SAP/steward-foo",
@@ -123,7 +117,6 @@ fatal: could not read Username for 'https://github.com': No such device or addre
 // PipelineRunWrongJenkinsfileRepoWithUser is a PipelineRunTestBuilder to build PipelineRunTest with wrong jenkinsfile repo url
 func PipelineRunWrongJenkinsfileRepoWithUser(Namespace string) f.PipelineRunTest {
 	return f.PipelineRunTest{
-		Name: "wrong-jenkinsfile-repo-user",
 		PipelineRun: builder.PipelineRun("wrong-jenkinsfile-repo-user-", Namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec("https://github.com/SAP/steward-foo",
@@ -143,7 +136,6 @@ fatal: could not read Username for 'https://github.com': No such device or addre
 // PipelineRunWrongJenkinsfilePath is a PipelineRunTestBuilder to build PipelineRunTest with wrong jenkinsfile path
 func PipelineRunWrongJenkinsfilePath(Namespace string) f.PipelineRunTest {
 	return f.PipelineRunTest{
-		Name: "wrong-jenkinsfile-path",
 		PipelineRun: builder.PipelineRun("wrong-jenkinsfile-path-", Namespace,
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec(pipelineRepoURL,
