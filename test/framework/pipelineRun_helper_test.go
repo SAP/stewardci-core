@@ -35,6 +35,7 @@ func pipelineWithStatusSuccess(namespace string) PipelineRunTest {
 }
 
 func Test_ExecutePipelineRunTests(t *testing.T) {
+	// SETUP
 	test := []TestPlan{
 		TestPlan{Name: "parallel5delay10mili",
 			TestBuilder:   pipelineWithStatusSuccess,
@@ -52,7 +53,14 @@ func Test_ExecutePipelineRunTests(t *testing.T) {
 		},
 	}
 	ctx := setupTestContext()
+	//EXERCISE
 	executePipelineRunTests(ctx, t, test...)
+	//VERIFY
+	assert.NilError(t, ctx.Err())
+	pipelineRunInterface := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
+	pipelineRuns, err := pipelineRunInterface.List(metav1.ListOptions{})
+	assert.NilError(t, err)
+	assert.Equal(t, 15, len(pipelineRuns.Items))
 }
 
 func Test_CheckResult(t *testing.T) {
@@ -121,7 +129,7 @@ func Test_CreatePipelineRunTest(t *testing.T) {
 			run := testRun{ctx: ctx}
 			// EXERCISE
 			testRun := createPipelineRunTest(test.test, run)
-			//VALIDATE
+			//VERIFY
 			if test.expectedResult != "" {
 				assert.Assert(t, testRun.result != nil)
 				assert.Equal(t, testRun.result.Error(), test.expectedResult)
