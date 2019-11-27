@@ -13,7 +13,8 @@ import (
 
 func Test_PipelineRuns_delayedCreation(t *testing.T) {
 	f.ExecutePipelineRunTests(t,
-		f.TestPlan{TestBuilder: test.PipelineRunOK,
+		f.TestPlan{
+			TestBuilder:   test.PipelineRunOK,
 			Parallel:      10,
 			CreationDelay: time.Duration(5 * time.Second),
 		},

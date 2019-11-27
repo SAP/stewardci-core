@@ -32,15 +32,14 @@ func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...Tes
 	var waitWG sync.WaitGroup
 	for _, testPlan := range testPlans {
 		waitWG.Add(testPlan.Parallel)
-		pipelineTest := testPlan.TestBuilder(tnn)
 		for i := 1; i <= testPlan.Parallel; i++ {
 			name :=
-				fmt.Sprintf("%s_%d", pipelineTest.Name, i)
+				fmt.Sprintf("%s_%d", getTestPlanName(testPlan), i)
 			ctx = SetTestName(ctx, name)
+			pipelineTest := testPlan.TestBuilder(tnn)
 
 			ctx, cancel := context.WithTimeout(ctx, pipelineTest.Timeout)
 			defer cancel()
-			pipelineTest := testPlan.TestBuilder(tnn)
 			log.Printf("Create Test: %s", name)
 			myTestRun := testRun{
 				name:     name,

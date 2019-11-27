@@ -28,7 +28,6 @@ func pipelineWithStatusSuccess(namespace string) PipelineRunTest {
 	pipelineRun := pipelineRun(randomName, namespace)
 	pipelineRun.Status = api.PipelineStatus{Result: api.ResultSuccess}
 	return PipelineRunTest{
-		Name:        "name",
 		PipelineRun: pipelineRun,
 		Check:       PipelineRunHasStateResult(api.ResultSuccess),
 		Timeout:     time.Second,
@@ -37,16 +36,19 @@ func pipelineWithStatusSuccess(namespace string) PipelineRunTest {
 
 func Test_ExecutePipelineRunTests(t *testing.T) {
 	test := []TestPlan{
-		TestPlan{TestBuilder: pipelineWithStatusSuccess,
+		TestPlan{Name: "parallel5delay10mili",
+			TestBuilder:   pipelineWithStatusSuccess,
 			Parallel:      5,
 			CreationDelay: time.Millisecond * 10,
 		},
-		TestPlan{TestBuilder: pipelineWithStatusSuccess,
+		TestPlan{Name: "parallel5parallelcreation",
+			TestBuilder:      pipelineWithStatusSuccess,
 			Parallel:         5,
 			ParallelCreation: true,
 		},
-		TestPlan{TestBuilder: pipelineWithStatusSuccess,
-			Parallel: 5,
+		TestPlan{Name: "parallel5nodelay",
+			TestBuilder: pipelineWithStatusSuccess,
+			Parallel:    5,
 		},
 	}
 	ctx := setupTestContext()
