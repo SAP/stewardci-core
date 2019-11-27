@@ -14,7 +14,7 @@ func Test_PipelineRunSingle(t *testing.T) {
 	allTests := make([]f.TestPlan, len(AllTestBuilders))
 	for i, pipelinerunTestBuilder := range AllTestBuilders {
 		allTests[i] = f.TestPlan{TestBuilder: pipelinerunTestBuilder,
-			Parallel: 1,
+			Count: 1,
 		}
 	}
 	f.ExecutePipelineRunTests(t, allTests...)

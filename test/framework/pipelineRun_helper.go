@@ -31,8 +31,8 @@ func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...Tes
 	tnn := GetTenantNamespace(ctx)
 	var waitWG sync.WaitGroup
 	for _, testPlan := range testPlans {
-		waitWG.Add(testPlan.Parallel)
-		for i := 1; i <= testPlan.Parallel; i++ {
+		waitWG.Add(testPlan.Count)
+		for i := 1; i <= testPlan.Count; i++ {
 			name :=
 				fmt.Sprintf("%s_%d", getTestPlanName(testPlan), i)
 			ctx = SetTestName(ctx, name)
@@ -40,7 +40,7 @@ func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...Tes
 
 			ctx, cancel := context.WithTimeout(ctx, pipelineTest.Timeout)
 			defer cancel()
-			log.Printf("Create Test: %s", name)
+			log.Printf("Test: %q start", name)
 			myTestRun := testRun{
 				name:     name,
 				ctx:      ctx,
@@ -119,7 +119,7 @@ func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
 		run.result = fmt.Errorf("pipeline run creation failed: %q", err.Error())
 		return run
 	}
-	log.Printf("pipeline run created for test: %s, %s/%s", run.name, pr.GetNamespace(), pr.GetName())
+	log.Printf("Test: %q pipeline run created '%s/%s'", run.name, pr.GetNamespace(), pr.GetName())
 	ctx = SetPipelineRun(ctx, pr)
 	run.ctx = ctx
 	return run

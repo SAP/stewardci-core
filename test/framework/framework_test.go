@@ -25,7 +25,7 @@ const pipelineRepoURLrinckm = "https://github.com/rinckm/stewardci-example-pipel
 
 func Test_FirstFinishBeforeSecondStarts(t *testing.T) {
 	test := TestPlan{TestBuilder: PipelineRunWrongName,
-		Parallel:      2,
+		Count:         2,
 		CreationDelay: time.Second * 1,
 		Name:          "FirstFinishBeforeSecondStartsu",
 	}
@@ -38,7 +38,7 @@ func Test_FrameworkTest(t *testing.T) {
 	allTests := make([]TestPlan, len(frameworkTestBuilders))
 	for i, pipelinerunTestBuilder := range frameworkTestBuilders {
 		allTests[i] = TestPlan{TestBuilder: pipelinerunTestBuilder,
-			Parallel: 1,
+			Count: 1,
 		}
 	}
 	ctx := setup(t)
