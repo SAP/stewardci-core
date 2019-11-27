@@ -32,10 +32,10 @@ func setup(t *testing.T) context.Context {
 	if testClient == "" {
 		t.Fatalf("environment variable STEWARD_TEST_CLIENT undefined")
 	}
-        tenantNamespace := os.Getenv("STEWARD_TEST_TENANT")
+	tenantNamespace := os.Getenv("STEWARD_TEST_TENANT")
 	ctx := context.Background()
 	ctx = SetNamespace(ctx, testClient)
-        ctx = SetTenantNamespace(ctx,tenantNamespace)	
-        ctx = SetClientFactory(ctx, factory)
+	ctx = SetTenantNamespace(ctx, tenantNamespace)
+	ctx = SetClientFactory(ctx, factory)
 	return ctx
 }

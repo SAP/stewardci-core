@@ -38,17 +38,17 @@ func Test_ExecutePipelineRunTests(t *testing.T) {
 	test := []TestPlan{
 		TestPlan{Name: "parallel5delay10mili",
 			TestBuilder:   pipelineWithStatusSuccess,
-			Parallel:      5,
+			Count:         5,
 			CreationDelay: time.Millisecond * 10,
 		},
 		TestPlan{Name: "parallel5parallelcreation",
 			TestBuilder:      pipelineWithStatusSuccess,
-			Parallel:         5,
+			Count:            5,
 			ParallelCreation: true,
 		},
 		TestPlan{Name: "parallel5nodelay",
 			TestBuilder: pipelineWithStatusSuccess,
-			Parallel:    5,
+			Count:       5,
 		},
 	}
 	ctx := setupTestContext()

@@ -1,8 +1,10 @@
 package framework
 
 import (
+	"fmt"
 	"reflect"
 	"runtime"
+	"strings"
 	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -25,7 +27,7 @@ type PipelineRunTestBuilder = func(string) PipelineRunTest
 type TestPlan struct {
 	Name             string
 	TestBuilder      PipelineRunTestBuilder
-	Parallel         int
+	Count            int
 	ParallelCreation bool
 	CreationDelay    time.Duration
 }
@@ -34,6 +36,22 @@ func getTestPlanName(plan TestPlan) string {
 	name := plan.Name
 	if name == "" {
 		name = runtime.FuncForPC(reflect.ValueOf(plan.TestBuilder).Pointer()).Name()
+		names := strings.Split(name, "/")
+
+		name = names[len(names)-1]
+		names = strings.Split(name, ".")
+		name = names[1]
+	}
+	if plan.Count > 1 {
+		delay := "parallel"
+		if !plan.ParallelCreation {
+			if plan.CreationDelay > 0 {
+				delay = fmt.Sprintf("delay:%.1fs", plan.CreationDelay.Seconds())
+			} else {
+				delay = "nodelay"
+			}
+		}
+		return fmt.Sprintf("%s_c%d_%s", name, plan.Count, delay)
 	}
 	return name
 }
