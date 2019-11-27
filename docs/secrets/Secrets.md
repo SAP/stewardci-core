@@ -57,7 +57,7 @@ A Steward PipelineRun resource object specifies the names of all image pull secr
 
 ```yaml
 apiVersion: steward.sap.com/v1alpha1
-kind: Tenant
+kind: PipelineRun
 spec:
     ...
     imagePullSecrets:
@@ -103,7 +103,7 @@ A Steward PipelineRun resource object can specify the secret to be used to authe
 
 ```yaml
 apiVersion: steward.sap.com/v1alpha1
-kind: Tenant
+kind: PipelineRun
 spec:
     ...
     jenkinsFile:
@@ -155,7 +155,7 @@ A Steward PipelineRun resource object specifies the names of all secrets to be u
 
 ```yaml
 apiVersion: steward.sap.com/v1alpha1
-kind: Tenant
+kind: PipelineRun
 spec:
     ...
     secrets:
