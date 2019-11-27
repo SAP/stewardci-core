@@ -67,7 +67,7 @@ source "$HERE/.setpaths"
 read_args "$@"
 
 # Check and prepare build enviroment
-GOPATH=`go env GOPATH`
+export GOPATH=`go env GOPATH`
 if [[ -z $GOPATH ]]; then
     die "GOPATH not set"
 fi
@@ -109,14 +109,13 @@ echo "VERIFY:       $(if is_verify_mode; then echo "true"; else echo "false"; fi
 
 echo
 echo "## Cleanup old generated stuff ####################"
-if is_verify_mode; then
-    set -x
-    rm -rf \
-        "${GEN_DIR}" \
-        "${GOPATH_1}/bin/"{client-gen,deepcopy-gen,defaulter-gen,informer-gen,lister-gen} \
-        || die "Cleanup failed"
-    set +x
-else
+set -x
+rm -rf \
+    "${GEN_DIR}" \
+    "${GOPATH_1}/bin/"{client-gen,deepcopy-gen,defaulter-gen,informer-gen,lister-gen} \
+    || die "Cleanup failed"
+{ set +x; } 2>/dev/null
+if ! is_verify_mode; then
     set -x
     rm -rf \
         "${PROJECT_ROOT}/pkg/client" \
@@ -124,10 +123,8 @@ else
         "${PROJECT_ROOT}/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go" \
         "${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go" \
         "${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
-        "${GEN_DIR}/github.com" \
-        "${GOPATH_1}/bin/"{client-gen,deepcopy-gen,defaulter-gen,informer-gen,lister-gen} \
         || die "Cleanup failed"
-    set +x
+    { set +x; } 2>/dev/null
 fi
 
 echo
@@ -141,7 +138,7 @@ set -x
     --go-header-file "${PROJECT_ROOT}/hack/boilerplate.go.txt" \
     --output-base "${GEN_DIR}" \
     || die "Code generation failed"
-set +x
+{ set +x; } 2>/dev/null
 set -x
 "${CODEGEN_PKG}/generate-groups.sh" \
     "client,informer,lister" \
@@ -151,7 +148,7 @@ set -x
     --go-header-file "${PROJECT_ROOT}/hack/boilerplate.go.txt" \
     --output-base "${GEN_DIR}" \
     || die "Code generation failed"
-set +x
+{ set +x; } 2>/dev/null
 
 echo
 if is_verify_mode; then
@@ -160,7 +157,7 @@ if is_verify_mode; then
     diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/client/ ${PROJECT_ROOT}/pkg/client/ || die "Regeneration required for clients"
     diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/tektonclient/ ${PROJECT_ROOT}/pkg/tektonclient/ || die "Regeneration required for tektonclients"
     diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go ${PROJECT_ROOT}/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go || die "Regeneration required for apis"
-    set +x
+    { set +x; } 2>/dev/null
 else
     echo "## Move generated files ###########################"
     set -x
@@ -168,7 +165,7 @@ else
     mv "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/tektonclient" "${PROJECT_ROOT}/pkg/" || die "Moving generated tektonclients failed"
     cp -r "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/apis" "${PROJECT_ROOT}/pkg/" || die "Copying generated apis failed"
     rm -rf "${GEN_DIR}/github.com" || die "Cleanup gen dir failed"
-    set +x
+    { set +x; } 2>/dev/null
 fi
 
 
@@ -182,10 +179,12 @@ set -x
     github.com/SAP/stewardci-core/pkg/k8s \
     PipelineRun,ClientFactory,PipelineRunFetcher,NamespaceManager \
     || die "'k8s' mock generation failed"
+{ set +x; } 2>/dev/null
 if is_verify_mode; then
+    set -x
     diff -Naupr ${GEN_DIR}/pkg/k8s/mocks/mocks.go ${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go || die "Regeneration required for k8s mocks"
+    { set +x; } 2>/dev/null
 fi
-set +x
 
 echo
 echo "## ${ACTION} mocks for package 'k8s/secrets' ###############"
@@ -197,10 +196,12 @@ set -x
     github.com/SAP/stewardci-core/pkg/k8s/secrets \
     SecretProvider,SecretHelper \
     || die "'k8s/secrets' mock generation failed"
+{ set +x; } 2>/dev/null
 if is_verify_mode; then
+    set -x
     diff -Naupr ${GEN_DIR}/pkg/k8s/secrets/mocks/mocks.go ${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go || die "Regeneration required for k8s/secrets mocks"
+    { set +x; } 2>/dev/null
 fi
-set +x
 
 
 echo
