@@ -569,7 +569,7 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnErrorWhenSyncingRoleBi
 	)
 }
 
-func Test_Controller_syncHandler_RollbackOnDelete_IfFinalizerIsSet(t *testing.T) {
+func Test_Controller_syncHandler_CleanupOnDelete_IfFinalizerIsSet(t *testing.T) {
 	// SETUP
 	const (
 		clientNSName   = "client1"
@@ -635,7 +635,7 @@ func Test_Controller_syncHandler_RollbackOnDelete_IfFinalizerIsSet(t *testing.T)
 	assertThatExactlyTheseTenantsExistInNamespace(t, cf, clientNSName /*none*/)
 }
 
-func Test_Controller_syncHandler_RollBackOnDelete_SkippedIfFinalizerIsNotSet(t *testing.T) {
+func Test_Controller_syncHandler_CleanupOnDelete_SkippedIfFinalizerIsNotSet(t *testing.T) {
 	// SETUP
 	const (
 		clientNSName   = "client1"
@@ -703,7 +703,7 @@ func Test_Controller_syncHandler_RollBackOnDelete_SkippedIfFinalizerIsNotSet(t *
 	assertThatExactlyTheseFinalizersExist(t, &tenant.ObjectMeta, "not-our-finalizer")
 }
 
-func Test_Controller_syncHandler_RollbackOnDelete_IfNamespaceDoesNotExistAnymore(t *testing.T) {
+func Test_Controller_syncHandler_CleanupOnDelete_IfNamespaceDoesNotExistAnymore(t *testing.T) {
 	// SETUP
 	const (
 		clientNSName   = "client1"
@@ -776,7 +776,7 @@ func Test_Controller_syncHandler_RollbackOnDelete_IfNamespaceDoesNotExistAnymore
 	assertThatExactlyTheseTenantsExistInNamespace(t, cf, clientNSName /*none*/)
 }
 
-func Test_Controller_syncHandler_RollbackOnStatusUpdateFailure(t *testing.T) {
+func Test_Controller_syncHandler_CleanupOnStatusUpdateFailure(t *testing.T) {
 	// SETUP
 	const (
 		clientNSName   = "client1"

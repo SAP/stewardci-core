@@ -40,16 +40,16 @@ type TenantStatus struct {
 	TenantNamespaceName string `json:"tenantNamespaceName,omitempty"`
 }
 
-var tenantCondSet = knativeapis.NewLivingConditionSet()
+var tenantConditionSet = knativeapis.NewLivingConditionSet()
 
 // GetCondition returns the condition matching the given condition type.
 func (s *TenantStatus) GetCondition(condType knativeapis.ConditionType) *knativeapis.Condition {
-	return tenantCondSet.Manage(s).GetCondition(condType)
+	return tenantConditionSet.Manage(s).GetCondition(condType)
 }
 
 // SetCondition sets the given condition.
 func (s *TenantStatus) SetCondition(cond *knativeapis.Condition) {
 	if cond != nil {
-		tenantCondSet.Manage(s).SetCondition(*cond)
+		tenantConditionSet.Manage(s).SetCondition(*cond)
 	}
 }

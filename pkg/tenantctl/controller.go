@@ -200,7 +200,7 @@ func (c *Controller) syncHandler(key string) error {
 			c.logPrintln(tenant, "dependent resources cleaned already, nothing to do")
 			return nil
 		}
-		err = c.rollbackTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config)
+		err = c.deleteTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config)
 		if err != nil {
 			return err
 		}
@@ -222,7 +222,7 @@ func (c *Controller) syncHandler(key string) error {
 	if !equality.Semantic.DeepEqual(origTenant.Status, tenant.Status) {
 		if _, err := c.updateStatus(tenant); err != nil {
 			if !c.isInitialized(origTenant) && c.isInitialized(tenant) {
-				c.rollbackTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config)
+				c.deleteTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config)
 			}
 			return err
 		}
@@ -274,7 +274,7 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 			Reason:  api.StatusReasonFailed,
 			Message: condMsg,
 		})
-		c.rollbackTenantNamespace(nsName, tenant, config) // clean-up ignoring error
+		c.deleteTenantNamespace(nsName, tenant, config) // clean-up ignoring error
 		return err
 	}
 
@@ -424,7 +424,7 @@ func (c *Controller) createTenantNamespace(config clientConfig, tenant *api.Tena
 	return nsName, err
 }
 
-func (c *Controller) rollbackTenantNamespace(namespace string, tenant *api.Tenant, config clientConfig) error {
+func (c *Controller) deleteTenantNamespace(namespace string, tenant *api.Tenant, config clientConfig) error {
 	if namespace == "" {
 		return nil
 	}
@@ -432,7 +432,7 @@ func (c *Controller) rollbackTenantNamespace(namespace string, tenant *api.Tenan
 	namespaceManager := c.getNamespaceManager(config)
 	err := namespaceManager.Delete(namespace)
 	if err != nil {
-		err = errors.WithMessagef(err, "failed to rollback tenant namespace %q", namespace)
+		err = errors.WithMessagef(err, "failed to delete tenant namespace %q", namespace)
 		c.logPrintln(tenant, err)
 		return err
 	}
