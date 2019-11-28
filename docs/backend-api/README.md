@@ -63,6 +63,7 @@ A simple `PipelineRun` resource example can be found in [docs/examples/pipeliner
 
 | Parameter | Description |
 | --------- | ----------- |
+| `spec.intent` | (string,optional) The intention of the client regarding the way this pipeline run should be processed. The value `run` indicates that the pipeline should run to completion, while the value `abort` indicates that the pipeline processing should be stopped as soon as possible. Omitting the field  or specifying an empty string value is equivalent to value `run`. |
 | `spec.jenkinsFile.repoUrl` | the git repository containing the Jenkinsfile to be executed |
 | `spec.jenkinsFile.revision` | the branch/revision containing the Jenkinsfile to be executed |
 | `spec.jenkinsFile.relativePath` | the relative path to the Jenkinsfile inside the git repository + revision |
@@ -75,6 +76,21 @@ A simple `PipelineRun` resource example can be found in [docs/examples/pipeliner
 | `spec.runDetails.jobName` | The name of the job this pipeline run belongs to. It is used as the name of the Jenkins job and therefore must be a valid Jenkins job name. If null or empty, `job` will be used. |
 | `spec.runDetails.sequenceNumber` | The sequence number of the pipeline run, which translates into the build number of the Jenkins job.  If null or empty, `1` is used. |
 | `spec.runDetails.cause` | A textual description of the cause of this pipeline run. Will be set as cause of the Jenkins job. If null or empty, no cause information will be available. |
+
+
+#### Mutability
+
+All fields except those described below MUST NOT be changed after a PipelineRun resource has been created.
+
+Mutable fields:
+
+- `spec.intent`: The following transitions are allowed:
+
+    - from unspecified to one of {empty string, `run`, `abort`}
+    - from empty string to one of {unspecified, `run`, `abort`}
+    - from `run` to one of {unspecified, empty string, `abort`}
+
+  All other transitions are prohibited.
 
 
 ```bash

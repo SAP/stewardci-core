@@ -115,8 +115,8 @@ const (
 	ResultErrorInfra Result = "error_infra"
 	// ResultErrorContent -  the pipeline run failed due to an content problem
 	ResultErrorContent Result = "error_content"
-	// ResultKilled - the pipeline run has been cancelled
-	ResultKilled Result = "killed"
+	// ResultAborted - the pipeline run has been aborted
+	ResultAborted Result = "aborted"
 	// ResultTimeout - the pipeline run timed out
 	ResultTimeout Result = "timeout"
 )
@@ -125,10 +125,11 @@ const (
 type Intent string
 
 const (
-	// IntentRun - run the pipeline
+	// IntentRun indicates that the pipeline should run to completion.
 	IntentRun Intent = "run"
-	// IntentKill - cancel the pipeline run (if still running)
-	IntentKill Intent = "kill"
+	// IntentAbort indicates that the pipeline run should be aborted
+	// if it is not completed already.
+	IntentAbort Intent = "abort"
 )
 
 // PipelineRunDetails provies details of a pipeline run which are passed to the jenkinsfile-runner.
