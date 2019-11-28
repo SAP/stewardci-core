@@ -11,60 +11,70 @@ import (
 	f "github.com/SAP/stewardci-core/test/framework"
 )
 
-func Test_PipelineRuns_delayedCreation(t *testing.T) {
+func Test_Loadtest_delay(t *testing.T) {
+	var delays = []time.Duration{
+		time.Duration(5 * time.Second),
+		time.Duration(2 * time.Second),
+		time.Duration(1 * time.Second),
+	}
+
+	var tests = make([]f.TestPlan, len(delays))
+	for i, delay := range delays {
+		tests[i] =
+			f.TestPlan{
+				TestBuilder:   test.PipelineRunOK,
+				Count:         300,
+				CreationDelay: delay,
+			}
+	}
+	f.ExecutePipelineRunTests(t, tests...)
+}
+
+func Test_Loadtest(t *testing.T) {
 	f.ExecutePipelineRunTests(t,
+		f.TestPlan{
+			TestBuilder: test.PipelineRunOK,
+			Count:       2,
+		},
+		f.TestPlan{
+			TestBuilder:      test.PipelineRunOK,
+			Count:            2,
+			ParallelCreation: true,
+		},
+		f.TestPlan{
+			TestBuilder:   test.PipelineRunOK,
+			Count:         2,
+			CreationDelay: time.Duration(5 * time.Second),
+		},
+
+		f.TestPlan{
+			TestBuilder: test.PipelineRunOK,
+			Count:       10,
+		},
+		f.TestPlan{
+			TestBuilder:      test.PipelineRunOK,
+			Count:            10,
+			ParallelCreation: true,
+		},
 		f.TestPlan{
 			TestBuilder:   test.PipelineRunOK,
 			Count:         10,
 			CreationDelay: time.Duration(5 * time.Second),
 		},
-	)
-}
 
-func Test_PipelineRuns(t *testing.T) {
-	f.ExecutePipelineRunTests(t,
-		f.TestPlan{TestBuilder: test.PipelineRunSleep,
-			Count: 3,
+		f.TestPlan{
+			TestBuilder: test.PipelineRunOK,
+			Count:       100,
 		},
-		f.TestPlan{TestBuilder: test.PipelineRunFail,
-			Count: 3,
-		},
-		f.TestPlan{TestBuilder: test.PipelineRunOK,
-			Count: 3,
-		},
-	)
-}
-
-func Test_PipelineRuns_ParallelCreation(t *testing.T) {
-	f.ExecutePipelineRunTests(t,
-		f.TestPlan{TestBuilder: test.PipelineRunSleep,
-			Count:            3,
+		f.TestPlan{
+			TestBuilder:      test.PipelineRunOK,
+			Count:            100,
 			ParallelCreation: true,
 		},
-		f.TestPlan{TestBuilder: test.PipelineRunFail,
-			Count:            3,
-			ParallelCreation: true,
-		},
-		f.TestPlan{TestBuilder: test.PipelineRunOK,
-			Count:            3,
-			ParallelCreation: true,
-		},
-	)
-}
-
-func Test_PipelineRuns_CreationDelay(t *testing.T) {
-	f.ExecutePipelineRunTests(t,
-		f.TestPlan{TestBuilder: test.PipelineRunSleep,
-			Count:         3,
-			CreationDelay: time.Duration(1 * time.Second),
-		},
-		f.TestPlan{TestBuilder: test.PipelineRunFail,
-			Count:         3,
-			CreationDelay: time.Duration(1 * time.Second),
-		},
-		f.TestPlan{TestBuilder: test.PipelineRunOK,
-			Count:         3,
-			CreationDelay: time.Duration(1 * time.Second),
+		f.TestPlan{
+			TestBuilder:   test.PipelineRunOK,
+			Count:         100,
+			CreationDelay: time.Duration(5 * time.Second),
 		},
 	)
 }
