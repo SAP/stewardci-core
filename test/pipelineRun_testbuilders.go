@@ -33,7 +33,7 @@ func PipelineRunSleep(Namespace string) f.PipelineRunTest {
 				builder.ArgSpec("SLEEP_FOR_SECONDS", "1"),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultSuccess),
-		Timeout: 120 * time.Second,
+		Timeout: 600 * time.Second,
 	}
 }
 
@@ -46,7 +46,7 @@ func PipelineRunFail(Namespace string) f.PipelineRunTest {
 					"error/Jenkinsfile"),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
-		Timeout: 120 * time.Second,
+		Timeout: 600 * time.Second,
 	}
 }
 
@@ -59,7 +59,7 @@ func PipelineRunOK(Namespace string) f.PipelineRunTest {
 					"success/Jenkinsfile"),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultSuccess),
-		Timeout: 120 * time.Second,
+		Timeout: 600 * time.Second,
 	}
 }
 
