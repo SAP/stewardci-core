@@ -129,7 +129,7 @@ status:
 | `status.conditions[*].reason` | (string,optional) A unique, one-word, camel-case reason for the condition's last transition. |
 | `status.conditions[*].message` | (string,optional) A human-readable message indicating the details of the condition's last transition. |
 | `status.conditions[*].lastTransitionTime` | (time,optional) The time of the condition's last transition. |
-| `status.tenantNamespaceName` | (string,optional) The name of the namespace assigned exclusively to this tenant. As long as the tenant namespace has not been created successfully, this field is not set. |
+| `status.tenantNamespaceName` | (string,optional) The name of the namespace assigned exclusively to this tenant. As long as the Tenant resource is not successfully initialized, this field is not set. |
 
 
 #### Conditions
@@ -186,13 +186,13 @@ A simple PipelineRun resource example can be found in [docs/examples/pipelinerun
 | `spec.args` | (object,optional) The parameters to pass to the pipeline, as key-value pairs of type string. |
 | `spec.secrets` | (array of string,optional) The list of secrets to be made available to the pipeline execution. Each entry in the list is the name of a Kubernetes `v1/Secret` resource object in the same namespace as the PipelineRun object itself. See [docs/secrets/Secrets.md](../secrets/Secrets.md) for details. |
 | `spec.imagePullSecrets` | (array of string,optional) The list of image pull secrets required by the pipeline run to pull images of custom containers from private registries. Each entry in the list is the name of a Kubernetes `v1/Secret` resource object of type `kubernetes.io/dockerconfigjson` in the same namespace as the PipelineRun object itself. See [docs/secrets/Secrets.md](../secrets/Secrets.md) for details. |
-| `spec.logging` | (object,optional) The logging configuration. |
-| `spec.logging.elasticsearch` | (object,optional) The configuration for pipeline logging to Elasticsearch. If not specified, logging to Elasticsearch is disabled and the default Jenkins log implementation is used (stdout of Jenkinsfile Runner container). |
-| `spec.logging.elasticsearch.runID` | (any,optional) The JSON value that should be set as field `runId` in each log entry in Elasticsearch. It can be any JSON value (`null`, boolean, number, string, list, map). |
 | `spec.runDetails` | (object,optional) Properties of the Jenkins build object. |
 | `spec.runDetails.jobName` | (string,optional) The name of the job this pipeline run belongs to. It is used as the name of the Jenkins job and therefore must be a valid Jenkins job name. If null or empty, `job` will be used. |
 | `spec.runDetails.sequenceNumber` | (string,optional) The sequence number of the pipeline run, which translates into the build number of the Jenkins job.  If null or empty, `1` is used. |
 | `spec.runDetails.cause` | (string,optional) A textual description of the cause of this pipeline run. Will be set as cause of the Jenkins job. If null or empty, no cause information will be available. |
+| `spec.logging` | (object,optional) The logging configuration. |
+| `spec.logging.elasticsearch` | (object,optional) The configuration for pipeline logging to Elasticsearch. If not specified, logging to Elasticsearch is disabled and the default Jenkins log implementation is used (stdout of Jenkinsfile Runner container). |
+| `spec.logging.elasticsearch.runID` | (any,optional) The JSON value that should be set as field `runId` in each log entry in Elasticsearch. It can be any JSON value (`null`, boolean, number, string, list, map). |
 
 
 ### Status
