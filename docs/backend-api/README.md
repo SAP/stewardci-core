@@ -134,6 +134,9 @@ status:
 
 #### Conditions
 
+The Kubernetes API conventions [recommends conditions][k8s_api_conventions_conditions] as the means to communicate the latest observed state of a resource.
+Conditions are used by many Kubernetes resource types.
+
 ##### Ready Condition
 
 The condition of type `ready` is the main condition of a Tenant resource (and currently the only one, which might change in the future).
@@ -258,7 +261,15 @@ Steward currently does not delete PipelineRun resources automatically. It is the
 The sandbox namespace of a PipelineRun gets deleted immediately after the pipeline run has finished &ndash; no need to delete the PipelineRun resource itself to clean up.
 
 
+## Links
+
+- [Kubernetes Design Principles][k8s_design_principles]
+- [Kubernetes API conventions][k8s_api_conventions]
+
 
 
 [k8s_pod_conditions]: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-conditions
 [k8s_node_conditions]: https://kubernetes.io/docs/concepts/architecture/nodes/#condition
+[k8s_api_conventions]: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md
+[k8s_api_conventions_conditions]: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+[k8s_design_principles]: https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/principles.md
