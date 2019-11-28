@@ -94,13 +94,17 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 	pr := GetPipelineRun(ctx)
 	PipelineRunCheck := CreatePipelineRunCondition(pr, run.check)
 	duration, err := WaitFor(ctx, PipelineRunCheck)
-	log.Printf("Test: %q waited for %s", run.name, duration)
+	log.Printf("Test: %q waited for %.2f s", run.name, duration.Seconds())
 	run.result = err
 	assert.NilError(t, checkResult(run), fmt.Sprintf("Test: %q", run.name))
 }
 
 func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
-
+        startTime := time.Now()
+        defer func() {
+            duration := time.Now().Sub(startTime)
+            log.Printf("Test: %q setup took %.2f s", run.name, duration.Seconds())        
+        }()
 	PipelineRun := pipelineTest.PipelineRun
 	ctx := run.ctx
 	factory := GetClientFactory(ctx)
