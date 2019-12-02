@@ -6,11 +6,13 @@ import (
 	"log"
 	"time"
 
+	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
@@ -18,9 +20,9 @@ import (
 const (
 	runNamespacePrefix       = "steward-run"
 	runNamespaceRandomLength = 16
-	serviceAccountName       = "run-bot"
+	serviceAccountName       = "default"
 
-	annotationPipelineRunKey = "steward.sap.com/pipeline-run-key"
+	annotationPipelineRunKey = steward.GroupName + "/pipeline-run-key"
 
 	// tektonClusterTaskName is the name of the Tekton ClusterTask
 	// that should be used to execute the Jenkinsfile Runner
@@ -129,12 +131,27 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to copy image pull secrets")
 	}
-	//Create Service Account in Run Namespace
-	accountManager := k8s.NewServiceAccountManager(c.factory, runNamespace)
 
+	// configure service account in run namespace
+	accountManager := k8s.NewServiceAccountManager(c.factory, runNamespace)
 	serviceAccount, err := accountManager.CreateServiceAccount(serviceAccountName, pipelineCloneSecretName, imagePullSecrets)
 	if err != nil {
-		return errors.Wrap(err, "failed to create service account")
+		if !k8serrors.IsAlreadyExists(err) {
+			return errors.Wrapf(err, "failed to create service account %q", serviceAccountName)
+		}
+
+		serviceAccount, err = accountManager.GetServiceAccount(serviceAccountName)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
+		}
+		if pipelineCloneSecretName != "" {
+			serviceAccount.AttachSecrets(pipelineCloneSecretName)
+		}
+		serviceAccount.AttachImagePullSecrets(imagePullSecrets...)
+		err = serviceAccount.Update()
+		if err != nil {
+			return errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
+		}
 	}
 
 	//Add Role Binding to Service Account
