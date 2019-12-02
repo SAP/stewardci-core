@@ -66,8 +66,12 @@ type Elasticsearch struct {
 
 // PipelineStatus represents the status of the pipeline
 type PipelineStatus struct {
-	StartedAt    metav1.Time           `json:"startedAt"`
-	FinishedAt   metav1.Time           `json:"finishedAt"`
+	// StartedAt is the time the pipeline run has been started.
+	// +optional
+	StartedAt    *metav1.Time           `json:"startedAt,omitempty"`
+	// FinishedAt is the time the pipeline run has been finished.
+	// +optional
+	FinishedAt   *metav1.Time           `json:"finishedAt"`
 	State        State                 `json:"state"`
 	StateDetails StateItem             `json:"stateDetails"`
 	StateHistory []StateItem           `json:"stateHistory"`

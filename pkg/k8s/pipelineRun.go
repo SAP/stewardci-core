@@ -159,7 +159,7 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 }
 
 // FinishState set end time stamp of the current (defined) state and add it to the history
-// if no current state is defined a new pickup state (A) with cretiontime of the pipelinerun as start time is created.
+// If no current state is defined a new pickup state (A) with creation time of the PipelineRun as start time is created.
 // Returns the state details
 func (r *pipelineRun) FinishState() (*api.StateItem, error) {
 	state := r.cached.Status.StateDetails
