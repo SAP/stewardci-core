@@ -71,7 +71,7 @@ type PipelineStatus struct {
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
 	// FinishedAt is the time the pipeline run has been finished.
 	// +optional
-	FinishedAt   *metav1.Time          `json:"finishedAt"`
+	FinishedAt   *metav1.Time          `json:"finishedAt,omitempty"`
 	State        State                 `json:"state"`
 	StateDetails StateItem             `json:"stateDetails"`
 	StateHistory []StateItem           `json:"stateHistory"`
