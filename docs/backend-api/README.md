@@ -178,6 +178,7 @@ A simple PipelineRun resource example can be found in [docs/examples/pipelinerun
 | --------- | ----------- |
 | `apiVersion` | `steward.sap.com/v1alpha1` |
 | `kind` | `PipelineRun` |
+| `spec.intent` | (string,optional) The intention of the client regarding the way this pipeline run should be processed. The value `run` indicates that the pipeline should run to completion, while the value `abort` indicates that the pipeline processing should be stopped as soon as possible. Omitting the field  or specifying an empty string value is equivalent to value `run`. |
 | `spec.jenkinsFile` | (object,mandatory) The configuration of the Jenkins pipeline definition to be executed. |
 | `spec.jenkinsFile.repoUrl` | (string,mandatory) The URL of the Git repository containing the pipeline definition (aka `Jenkinsfile`). |
 | `spec.jenkinsFile.revision` | (string,mandatory) The revision of the pipeline Git repository to used, e.g. `master`. |
@@ -193,6 +194,21 @@ A simple PipelineRun resource example can be found in [docs/examples/pipelinerun
 | `spec.logging` | (object,optional) The logging configuration. |
 | `spec.logging.elasticsearch` | (object,optional) The configuration for pipeline logging to Elasticsearch. If not specified, logging to Elasticsearch is disabled and the default Jenkins log implementation is used (stdout of Jenkinsfile Runner container). |
 | `spec.logging.elasticsearch.runID` | (any,optional) The JSON value that should be set as field `runId` in each log entry in Elasticsearch. It can be any JSON value (`null`, boolean, number, string, list, map). |
+
+
+#### Mutability
+
+All fields except those described below MUST NOT be changed after a PipelineRun resource has been created.
+
+Mutable fields:
+
+- `spec.intent`: The following transitions are allowed:
+
+    - from unspecified to one of {empty string, `run`, `abort`}
+    - from empty string to one of {unspecified, `run`, `abort`}
+    - from `run` to one of {unspecified, empty string, `abort`}
+
+  All other transitions are prohibited.
 
 
 ### Status
