@@ -143,6 +143,7 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 
 func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	// UpdateState set end time of current (defined) state (A) and store it to the history.
+	// if no current state is defined a new pickup state (A) with cretiontime of the pipelinerun as start time is created.
 	// It also creates a new current state (B) with start time.
 	// Returns the state details of state A
 	log.Printf("New State: %s", state)
@@ -158,22 +159,27 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 }
 
 // FinishState set end time stamp of the current (defined) state and add it to the history
+// if no current state is defined a new pickup state (A) with cretiontime of the pipelinerun as start time is created.
 // Returns the state details
 func (r *pipelineRun) FinishState() (*api.StateItem, error) {
 	state := r.cached.Status.StateDetails
-	if state.State != api.StateUndefined {
-		state.FinishedAt = metav1.Now()
-		his := r.cached.Status.StateHistory
-		his = append(his, state)
-		r.cached.Status.StateHistory = his
-		return &state, r.updateStatus()
+	now := metav1.Now()
+	if state.State == api.StateUndefined {
+		state.State = api.StatePickup
+		state.StartedAt = r.cached.ObjectMeta.CreationTimestamp
+		r.cached.Status.StartedAt = now
 	}
-	return nil, r.updateStatus()
+	state.FinishedAt = now
+	his := r.cached.Status.StateHistory
+	his = append(his, state)
+	r.cached.Status.StateHistory = his
+	return &state, r.updateStatus()
 }
 
 // UpdateResult of the pipeline run
 func (r *pipelineRun) UpdateResult(result api.Result) error {
 	r.cached.Status.Result = result
+	r.cached.Status.FinishedAt = metav1.Now()
 	return r.updateStatus()
 }
 

@@ -7,6 +7,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const message string = "MyMessage"
@@ -85,11 +86,12 @@ func Test_pipelineRun_UpdateMessage_GoodCase(t *testing.T) {
 	assert.Equal(t, message, examinee.GetStatus().Message)
 }
 
-func Test_pipelineRun_UpdateState_NoHistoryAfterFirstCall(t *testing.T) {
+func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	// SETUP
-	factory := fake.NewClientFactory(
-		newPipelineRunWithEmptySpec(ns1, run1),
-	)
+	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
+	creationTimestamp := metav1.Now()
+	pipelineRun.ObjectMeta.CreationTimestamp = creationTimestamp
+	factory := fake.NewClientFactory(pipelineRun)
 	examinee, err := NewPipelineRunFetcher(factory).ByName(ns1, run1)
 	assert.NilError(t, err)
 
@@ -98,10 +100,14 @@ func Test_pipelineRun_UpdateState_NoHistoryAfterFirstCall(t *testing.T) {
 
 	// VERIFY
 	assert.Equal(t, api.StatePreparing, examinee.GetStatus().State)
-	assert.Equal(t, 0, len(examinee.GetStatus().StateHistory))
+	assert.Equal(t, 1, len(examinee.GetStatus().StateHistory))
+	assert.Equal(t, api.StatePickup, examinee.GetStatus().StateHistory[0].State)
+	assert.Equal(t, creationTimestamp, examinee.GetStatus().StateHistory[0].StartedAt)
+	assert.Assert(t, !examinee.GetStatus().StartedAt.IsZero())
+	assert.Equal(t, examinee.GetStatus().StartedAt, examinee.GetStatus().StateHistory[0].FinishedAt)
 }
 
-func Test_pipelineRun_UpdateState_HistoryAfterSecondCall(t *testing.T) {
+func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	// SETUP
 	factory := fake.NewClientFactory(
 		newPipelineRunWithEmptySpec(ns1, run1),
@@ -118,12 +124,13 @@ func Test_pipelineRun_UpdateState_HistoryAfterSecondCall(t *testing.T) {
 
 	// VERIFY
 	status := examinee.GetStatus()
-	assert.Equal(t, api.StatePreparing, status.StateHistory[0].State)
+	assert.Equal(t, 2, len(status.StateHistory))
+	assert.Equal(t, api.StatePickup, examinee.GetStatus().StateHistory[0].State)
+	assert.Equal(t, api.StatePreparing, status.StateHistory[1].State)
 
-	start := status.StateHistory[0].StartedAt
-	end := status.StateHistory[0].FinishedAt
+	start := status.StateHistory[1].StartedAt
+	end := status.StateHistory[1].FinishedAt
 	assert.Assert(t, factory.CheckTimeOrder(start, end))
-	assert.Equal(t, 1, len(status.StateHistory))
 }
 
 func Test_pipelineRun_FinishState_HistoryIfUpdateStateCalledBefore(t *testing.T) {
@@ -143,12 +150,30 @@ func Test_pipelineRun_FinishState_HistoryIfUpdateStateCalledBefore(t *testing.T)
 
 	// VERIFY
 	status := examinee.GetStatus()
-	assert.Equal(t, api.StatePreparing, status.StateHistory[0].State)
+	assert.Equal(t, 2, len(status.StateHistory))
+	assert.Equal(t, api.StatePreparing, status.StateHistory[1].State)
 
-	start := status.StateHistory[0].StartedAt
-	end := status.StateHistory[0].FinishedAt
+	start := status.StateHistory[1].StartedAt
+	end := status.StateHistory[1].FinishedAt
 	assert.Assert(t, factory.CheckTimeOrder(start, end))
-	assert.Equal(t, 1, len(status.StateHistory))
+}
+
+func Test_pipelineRun_UpdateResult(t *testing.T) {
+	// SETUP
+	factory := fake.NewClientFactory(
+		newPipelineRunWithEmptySpec(ns1, run1),
+	)
+	key := fake.ObjectKey(run1, ns1)
+	examinee, err := NewPipelineRunFetcher(factory).ByKey(key)
+	assert.NilError(t, err)
+	assert.Assert(t, examinee.GetStatus().FinishedAt.IsZero())
+	// EXERCISE
+	examinee.UpdateResult(api.ResultSuccess)
+	// VERIFY
+	status := examinee.GetStatus()
+	assert.Equal(t, api.ResultSuccess, status.Result)
+	assert.Assert(t, !examinee.GetStatus().FinishedAt.IsZero())
+
 }
 
 func Test_pipelineRun_GetPipelineRepoServerURL_CorrectURLs(t *testing.T) {

@@ -66,6 +66,8 @@ type Elasticsearch struct {
 
 // PipelineStatus represents the status of the pipeline
 type PipelineStatus struct {
+	StartedAt    metav1.Time           `json:"startedAt"`
+	FinishedAt   metav1.Time           `json:"finishedAt"`
 	State        State                 `json:"state"`
 	StateDetails StateItem             `json:"stateDetails"`
 	StateHistory []StateItem           `json:"stateHistory"`
@@ -91,6 +93,8 @@ type State string
 const (
 	// StateUndefined - the state was not yet set
 	StateUndefined State = ""
+	// StatePickup - pipeline run is first checked by the controller
+	StatePickup State = "pickup"
 	// StatePreparing - the namespace for the execution is prepared
 	StatePreparing State = "preparing"
 	// StateWaiting - the pipeline run is waiting to be processed
