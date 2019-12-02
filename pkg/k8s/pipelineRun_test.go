@@ -101,10 +101,11 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	// VERIFY
 	assert.Equal(t, api.StatePreparing, examinee.GetStatus().State)
 	assert.Equal(t, 1, len(examinee.GetStatus().StateHistory))
-	assert.Equal(t, api.StatePickup, examinee.GetStatus().StateHistory[0].State)
+	assert.Equal(t, api.StateNew, examinee.GetStatus().StateHistory[0].State)
 	assert.Equal(t, creationTimestamp, examinee.GetStatus().StateHistory[0].StartedAt)
-	assert.Assert(t, !examinee.GetStatus().StartedAt.IsZero())
-	assert.Equal(t, examinee.GetStatus().StartedAt, examinee.GetStatus().StateHistory[0].FinishedAt)
+	startedAt := examinee.GetStatus().StartedAt
+	assert.Assert(t, !startedAt.IsZero())
+	assert.Equal(t, *startedAt, examinee.GetStatus().StateHistory[0].FinishedAt)
 }
 
 func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
@@ -125,7 +126,7 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	// VERIFY
 	status := examinee.GetStatus()
 	assert.Equal(t, 2, len(status.StateHistory))
-	assert.Equal(t, api.StatePickup, examinee.GetStatus().StateHistory[0].State)
+	assert.Equal(t, api.StateNew, examinee.GetStatus().StateHistory[0].State)
 	assert.Equal(t, api.StatePreparing, status.StateHistory[1].State)
 
 	start := status.StateHistory[1].StartedAt

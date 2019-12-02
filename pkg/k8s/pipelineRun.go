@@ -141,11 +141,11 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 	return &r.cached.Spec
 }
 
+// UpdateState set end time of current (defined) state (A) and store it to the history.
+// if no current state is defined a new state (A) with cretiontime of the pipelinerun as start time is created.
+// It also creates a new current state (B) with start time.
+// Returns the state details of state A
 func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
-	// UpdateState set end time of current (defined) state (A) and store it to the history.
-	// if no current state is defined a new pickup state (A) with cretiontime of the pipelinerun as start time is created.
-	// It also creates a new current state (B) with start time.
-	// Returns the state details of state A
 	log.Printf("New State: %s", state)
 	now := metav1.Now()
 	oldstate, err := r.FinishState()
@@ -159,15 +159,15 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 }
 
 // FinishState set end time stamp of the current (defined) state and add it to the history
-// If no current state is defined a new pickup state (A) with creation time of the PipelineRun as start time is created.
+// If no current state is defined a new state (A) with creation time of the PipelineRun as start time is created.
 // Returns the state details
 func (r *pipelineRun) FinishState() (*api.StateItem, error) {
 	state := r.cached.Status.StateDetails
 	now := metav1.Now()
 	if state.State == api.StateUndefined {
-		state.State = api.StatePickup
+		state.State = api.StateNew
 		state.StartedAt = r.cached.ObjectMeta.CreationTimestamp
-		r.cached.Status.StartedAt = now
+		r.cached.Status.StartedAt = &now
 	}
 	state.FinishedAt = now
 	his := r.cached.Status.StateHistory
@@ -179,7 +179,8 @@ func (r *pipelineRun) FinishState() (*api.StateItem, error) {
 // UpdateResult of the pipeline run
 func (r *pipelineRun) UpdateResult(result api.Result) error {
 	r.cached.Status.Result = result
-	r.cached.Status.FinishedAt = metav1.Now()
+	now := metav1.Now()
+	r.cached.Status.FinishedAt = &now
 	return r.updateStatus()
 }
 
