@@ -185,8 +185,8 @@ func (c *Controller) syncHandler(key string) error {
 	}
 	pipelineRun.AddFinalizer()
 
-	// Check if pipeline run is killed or completed
-	if c.skipKilledOrCompleted(pipelineRun) {
+	// Check if pipeline run is aborted or completed
+	if c.skipFinished(pipelineRun) {
 		return nil
 	}
 
@@ -254,25 +254,18 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-// skipKilledOrCompleted checks if pipeline run is killed or completed.
-func (c *Controller) skipKilledOrCompleted(pipelineRun k8s.PipelineRun) bool {
+// skipFinished checks if pipeline run is finished or should be aborted.
+// If the user requested abortion and the pipeline run is not finished
+// already, it updates message, result and state.
+func (c *Controller) skipFinished(pipelineRun k8s.PipelineRun) bool {
 	intent := pipelineRun.GetSpec().Intent
-	if intent == api.IntentKill {
-		switch result := pipelineRun.GetStatus().Result; result {
-		case api.ResultUndefined:
-			pipelineRun.UpdateMessage("Killed by user")
-			pipelineRun.UpdateResult(api.ResultKilled)
+	if intent == api.IntentAbort {
+		if pipelineRun.GetStatus().Result == api.ResultUndefined {
+			pipelineRun.UpdateMessage("Aborted")
+			pipelineRun.UpdateResult(api.ResultAborted)
 			c.changeState(pipelineRun, api.StateCleaning)
-			return true
-		case api.ResultKilled:
-			return true
-		default:
-			message := "Cannot kill completed pipeline run"
-			if !(message == pipelineRun.GetStatus().Message) {
-				pipelineRun.UpdateMessage(message)
-			}
-			return true
 		}
+		return true
 	}
 	return false
 }
