@@ -42,6 +42,8 @@ After a client created a __new Tenant resource__, the Steward controller tries t
 - Service account `<client_namespace>::default` (where `<client_namespace>` is the namespace where the `Tenant` resource belongs to) has the permissions needed to manage further resources in the tenant namespace.
 
 Once the controller has finished the initialization successfully, field `status.tenantNamespaceName` will be set and will not change anymore during the lifetime of the Tenant resource object.
+Note that Steward does _not_ give any guarantees on how long the initialization takes.
+Clients must watch or poll the resource object until field `status.tenantNamespaceName` is set, before using the tenant namespace.
 
 The Steward controller periodically checks the actual state of all __existing Tenant resources__ and tries to change it to the desired state if there are deviations (reconciliation):
 
@@ -51,14 +53,15 @@ The Steward controller periodically checks the actual state of all __existing Te
   As this never happens under normal circumstances and probably means that data has been lost, the tenant namespace will not be recreated automatically.
   A Steward operator may resolve the issue by restoring the tenant namespace with all its former contents from a backup.
 
-In case the __initialization or reconciliation fails__, the Steward controller sets the _ready condition_ (see below) to status `False` to indicate that the Tenant is not ready for use.
-However, clients are _not_ required to check the status before each operation they perform in the tenant namespace.
-Instead they should check the response of Kubernetes API calls for errors.
+In case the __initialization or reconciliation fails__, the Steward controller sets the _ready condition's_ status to `False` to indicate that the Tenant is not ready for use (the ready condition is explained below).
 
 Steward operators should monitor the status of all Tenant resource objects and react on:
 
 - Uninitialized resource objects older than a certain threshold, e.g. 10 seconds.
 - Resource objects with the ready condition being `False` for longer than a certain threshold, e.g. 10 seconds.
+
+Clients are _not_ required to check the status of the Tenant resource object before each operation they perform in the respective tenant namespace.
+Instead they should try the operations (Kubernetes API calls) and check the response for errors.
 
 
 ### Examples
