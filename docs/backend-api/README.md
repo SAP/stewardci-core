@@ -264,11 +264,16 @@ status:
 
 | Field | Description |
 | --------- | ----------- |
-|`status.message` | A message describing the latest status |
-|`status.result`  | The result of the pipeline run. Possible values:<br>`['success', 'error_infra', 'error_content', 'killed', 'timeout']` |
-|`status.state`   | The current state of the pipeline run. Possible values:<br>`['', 'preparing', 'waiting', 'running', 'cleaning', 'finished']` |
-|`status.stateDetails` | Details of the latest state, like start time and finish time |
-|`status.stateHistory` | The history of all state (changes) including details like start time and finish time |
+| `status.startedAt` | (time,optional) The time the pipeline run has been started at. It gets set on start and remains unchanged for the object's remaining lifetime. |
+| `status.finishedAt` | (time,optional) The time the pipeline run has been finished at. It gets set when finished (`status.result` is also set) and remains unchanged for the object's remaining lifetime. |
+| `status.result` | (string,optional) The result code of the pipeline run as single-word string. Possible values are `success`, `error_infra`, `error_content`, `aborted` and `timeout`. |
+| `status.message` | (string,optional) A message describing the reason for the latest status. May not be set or an empty string in case no message is provided. |
+| `status.state` | (string,optional) The name of the current state in the pipeline run process as a single-word string. Possible values are `new`, `preparing`, `waiting`, `running`, `cleaning` and `finished`. An omitted field,`null` value or an empty string value is equivalent to `new`. |
+| `status.stateDetails` | (object,optional) Details of the current state (`status.state`). It is set if `status.state` is set. |
+| `status.stateDetails.state` | (string,mandatory) The name of the state in the pipeline run process as a single-word string. See `status.state`. |
+| `status.stateDetails.startedAt` | (time,mandatory) The time the state has been entered. |
+| `status.stateDetails.finishedAt` | (time,optional) The time the state has been left. It is not set (omitted or `null` value) as long as the state has not been left. |
+| `status.stateHistory` | (array,optional) The history of states the pipeline run process has had so far. The elements are objects of the same structure as `status.stateDetails`. |
 
 :warning: The `status` section is about to change! There will be conditions (like for [pods][k8s_pod_conditions] or [nodes][k8s_node_conditions] replacing `state`, `result` and `message`. The fields `container`, `logUrl`, `stateDetails` and `stateHistory` will possibly be removed.
 
