@@ -63,7 +63,7 @@ func Test_Controller_Success(t *testing.T) {
 
 	assert.Assert(t, !strings.Contains(status.Message, "ERROR"), status.Message)
 	assert.Equal(t, api.StateWaiting, status.State)
-	assert.Equal(t, 1, len(status.StateHistory))
+	assert.Equal(t, 2, len(status.StateHistory))
 }
 
 func Test_Controller_Running(t *testing.T) {
