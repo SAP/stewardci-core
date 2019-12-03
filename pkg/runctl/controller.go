@@ -10,7 +10,6 @@ import (
 	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	listers "github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,21 +26,21 @@ type Controller struct {
 	factory              k8s.ClientFactory
 	pipelineRunFetcher   k8s.PipelineRunFetcher
 	pipelineRunSynced    cache.InformerSynced
-	pipelineRunLister    listers.PipelineRunLister
 	tektonTaskRunsSynced cache.InformerSynced
 	workqueue            workqueue.RateLimitingInterface
 	metrics              metrics.Metrics
 }
 
 // NewController creates new Controller
-func NewController(factory k8s.ClientFactory, pipelineRunFetcher k8s.PipelineRunFetcher, metrics metrics.Metrics) *Controller {
+func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controller {
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
+	pipelineRunFetcher := k8s.NewPipelineRunListerFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1alpha1().TaskRuns()
 	controller := &Controller{
-		factory:              factory,
-		pipelineRunFetcher:   pipelineRunFetcher,
-		pipelineRunSynced:    pipelineRunInformer.Informer().HasSynced,
-		pipelineRunLister:    pipelineRunInformer.Lister(),
+		factory:            factory,
+		pipelineRunFetcher: pipelineRunFetcher,
+		pipelineRunSynced:  pipelineRunInformer.Informer().HasSynced,
+
 		tektonTaskRunsSynced: tektonTaskRunInformer.Informer().HasSynced,
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
 		metrics:              metrics,
@@ -163,16 +162,15 @@ func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) RunManager {
 // converge the two. It then updates the Status block of the Foo resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
-	pipelineRun, err := c.pipelineRunFetcher.ByKey(key)
+	pipelineRunAPI, err := c.pipelineRunFetcher.ByKey(key)
 	if err != nil {
 		return err
 	}
-
 	// If pipelineRun is not found there is nothing to sync
-	if pipelineRun == nil {
+	if pipelineRunAPI == nil {
 		return nil
 	}
-
+	pipelineRun := k8s.NewPipelineRun(pipelineRunAPI, c.pipelineRunFetcher, c.factory)
 	// Check if object has deletion timestamp
 	// If not, try to add finalizer if missing
 	if pipelineRun.HasDeletionTimestamp() {

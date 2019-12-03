@@ -31,7 +31,6 @@ import (
 	v1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	v1alpha10 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	externalversions "github.com/SAP/stewardci-core/pkg/client/informers/externalversions"
-	k8s "github.com/SAP/stewardci-core/pkg/k8s"
 	v1alpha11 "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/typed/pipeline/v1alpha1"
 	externalversions0 "github.com/SAP/stewardci-core/pkg/tektonclient/informers/externalversions"
 	gomock "github.com/golang/mock/gomock"
@@ -448,10 +447,10 @@ func (m *MockPipelineRunFetcher) EXPECT() *MockPipelineRunFetcherMockRecorder {
 }
 
 // ByKey mocks base method
-func (m *MockPipelineRunFetcher) ByKey(arg0 string) (k8s.PipelineRun, error) {
+func (m *MockPipelineRunFetcher) ByKey(arg0 string) (*v1alpha1.PipelineRun, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ByKey", arg0)
-	ret0, _ := ret[0].(k8s.PipelineRun)
+	ret0, _ := ret[0].(*v1alpha1.PipelineRun)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -463,10 +462,10 @@ func (mr *MockPipelineRunFetcherMockRecorder) ByKey(arg0 interface{}) *gomock.Ca
 }
 
 // ByName mocks base method
-func (m *MockPipelineRunFetcher) ByName(arg0, arg1 string) (k8s.PipelineRun, error) {
+func (m *MockPipelineRunFetcher) ByName(arg0, arg1 string) (*v1alpha1.PipelineRun, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ByName", arg0, arg1)
-	ret0, _ := ret[0].(k8s.PipelineRun)
+	ret0, _ := ret[0].(*v1alpha1.PipelineRun)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

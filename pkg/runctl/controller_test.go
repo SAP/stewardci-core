@@ -135,8 +135,8 @@ func Test_Controller_syncHandler_givesUp_onPipelineRunNotFound(t *testing.T) {
 		Return(nil, nil)
 
 	// EXERCISE
-	examinee := NewController(cf, mockPipelineRunFetcher, metrics.NewMetrics())
-
+	examinee := NewController(cf, metrics.NewMetrics())
+	examinee.pipelineRunFetcher = mockPipelineRunFetcher
 	// VERIFY
 	assert.NilError(t, examinee.syncHandler("foo/bar"))
 }
@@ -154,7 +154,8 @@ func Test_Controller_syncHandler_initiatesRetrying_on500DuringPipelineRunFetch(t
 		Return(nil, k8serrors.NewInternalError(fmt.Errorf(message)))
 
 	// EXERCISE
-	examinee := NewController(cf, mockPipelineRunFetcher, metrics.NewMetrics())
+	examinee := NewController(cf, metrics.NewMetrics())
+	examinee.pipelineRunFetcher = mockPipelineRunFetcher
 
 	// VERIFY
 	assert.ErrorContains(t, examinee.syncHandler("foo/bar"), message)
@@ -242,7 +243,7 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 	stopCh := make(chan struct{}, 0)
 	metrics := metrics.NewMetrics()
-	controller := NewController(cf, k8s.NewPipelineRunFetcher(cf), metrics)
+	controller := NewController(cf, metrics)
 	cf.StewardInformerFactory().Start(stopCh)
 	cf.TektonInformerFactory().Start(stopCh)
 	go start(t, controller, stopCh)
@@ -269,8 +270,9 @@ func resource(resource string) schema.GroupResource {
 // Return nil if not found.
 func getPipelineRun(name string, namespace string, cf *fake.ClientFactory) k8s.PipelineRun {
 	key := fake.ObjectKey(name, namespace)
-	pipelineRun, _ := k8s.NewPipelineRunFetcher(cf).ByKey(key)
-	return pipelineRun
+	fetcher := k8s.NewPipelineRunFetcher(cf)
+	pipelineRun, _ := fetcher.ByKey(key)
+	return k8s.NewPipelineRun(pipelineRun, fetcher, cf)
 }
 
 func getRun(name, namespace string, cf *fake.ClientFactory) (*api.PipelineRun, error) {

@@ -10,7 +10,6 @@ import (
 	utils "github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 )
@@ -38,56 +37,21 @@ type PipelineRun interface {
 }
 
 type pipelineRun struct {
-	namespace string
-	client    stewardv1alpha1.PipelineRunInterface
-	name      string
-	cached    *api.PipelineRun
+	client  stewardv1alpha1.PipelineRunInterface
+	fetcher PipelineRunFetcher
+	cached  *api.PipelineRun
 }
 
-// PipelineRunFetcher has methods to fetch PipelineRun objects from Kubernetes
-type PipelineRunFetcher interface {
-	ByName(namespace string, name string) (PipelineRun, error)
-	ByKey(key string) (PipelineRun, error)
-}
-
-type pipelineRunFetcher struct {
-	factory ClientFactory
-}
-
-// NewPipelineRunFetcher returns an operative implementation of PipelineRunFetcher
-func NewPipelineRunFetcher(factory ClientFactory) PipelineRunFetcher {
-	return &pipelineRunFetcher{factory: factory}
-}
-
-// ByName fetches PipelineRun resource from Kubernetes by name and namespace
-// Return nil,nil if specified pipeline does not exist
-func (rf *pipelineRunFetcher) ByName(namespace string, name string) (PipelineRun, error) {
-	client := rf.factory.StewardV1alpha1().PipelineRuns(namespace)
-	result := &pipelineRun{client: client, name: name, namespace: namespace}
-	var err error
-	result.cached, err = result.fetch()
-	if err != nil {
-		if k8serrors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, errors.Wrap(err,
-			fmt.Sprintf("Failed to fetch PipelineRun '%s' in namespace '%s'", name, namespace))
+// NewPipelineRun creates a managed pipeline run object
+func NewPipelineRun(cached *api.PipelineRun, fetcher PipelineRunFetcher, factory ClientFactory) PipelineRun {
+	result := &pipelineRun{
+		fetcher: fetcher,
+		cached:  cached,
 	}
-	return result, nil
-}
-
-// ByKey fetches PipelineRun resource from Kubernetes
-// Return nil,nil if pipeline with key does not exist
-func (rf *pipelineRunFetcher) ByKey(key string) (PipelineRun, error) {
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return &pipelineRun{}, err
+	if factory != nil {
+		result.client = factory.StewardV1alpha1().PipelineRuns(cached.GetNamespace())
 	}
-	return rf.ByName(namespace, name)
-}
-
-func (r *pipelineRun) fetch() (*api.PipelineRun, error) {
-	return r.client.Get(r.name, metav1.GetOptions{})
+	return result
 }
 
 func (r *pipelineRun) update() error {
@@ -128,7 +92,7 @@ func (r *pipelineRun) GetPipelineRepoServerURL() (string, error) {
 }
 
 func (r *pipelineRun) GetName() string {
-	return r.name
+	return r.cached.GetName()
 }
 
 // GetStatus return the Status
@@ -256,7 +220,7 @@ func (r *pipelineRun) DeleteFinalizerIfExists() error {
 }
 
 func (r *pipelineRun) updateStatus() error {
-	pipelineRun, err := r.fetch()
+	pipelineRun, err := r.fetcher.ByName(r.cached.GetNamespace(), r.cached.GetName())
 	if err != nil {
 		return err
 	}
@@ -264,7 +228,7 @@ func (r *pipelineRun) updateStatus() error {
 	result, err := r.client.UpdateStatus(pipelineRun)
 	if err != nil {
 		return errors.Wrap(err,
-			fmt.Sprintf("Failed to update status of PipelineRun '%s' in namespace '%s'", r.name, r.namespace))
+			fmt.Sprintf("Failed to update status of PipelineRun '%s' in namespace '%s'", r.cached.GetName(), r.cached.GetNamespace()))
 	}
 	r.cached = result
 	return nil
