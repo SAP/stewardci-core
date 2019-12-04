@@ -845,7 +845,7 @@ func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_listManagedRoleBi
 
 	// VERIFY
 	assert.Error(t, resultErr, fmt.Sprintf(
-		"failed to sync the RoleBinding in tenant namespace \"%s\": injected error 1",
+		"failed to reconcile the RoleBinding in tenant namespace \"%s\": injected error 1",
 		tenantNSName,
 	))
 	assert.Assert(t, errors.Cause(resultErr) == injectedError)
@@ -884,7 +884,7 @@ func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_createRoleBinding
 
 	// VERIFY
 	assert.Error(t, resultErr, fmt.Sprintf(
-		"failed to sync the RoleBinding in tenant namespace \"%s\": injected error 1",
+		"failed to reconcile the RoleBinding in tenant namespace \"%s\": injected error 1",
 		tenantNSName,
 	))
 	assert.Assert(t, errors.Cause(resultErr) == injectedError)
