@@ -23,6 +23,19 @@ var AllTestBuilders = []f.PipelineRunTestBuilder{
 const pipelineRepoURL = "https://github.com/SAP-samples/stewardci-example-pipelines"
 const pipelineRepoURLrinckm = "https://github.com/rinckm/stewardci-example-pipelines"
 
+// PipelineRunAbort is a PipelineRunTestBuilder to build a PipelineRunTest with aborted pipeline
+func PipelineRunAbort(Namespace string) f.PipelineRunTest {
+	return f.PipelineRunTest{
+		PipelineRun: builder.PipelineRun("sleep-", Namespace,
+			builder.PipelineRunSpec(
+				builder.Abort(),
+			)),
+		Check:   f.PipelineRunHasStateResult(api.ResultAborted),
+		Timeout: 10 * time.Second,
+	}
+
+}
+
 // PipelineRunSleep is a PipelineRunTestBuilder to build PipelineRunTest which sleeps for one second
 func PipelineRunSleep(Namespace string) f.PipelineRunTest {
 	return f.PipelineRunTest{

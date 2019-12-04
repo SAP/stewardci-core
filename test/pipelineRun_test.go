@@ -4,8 +4,6 @@ package test
 
 import (
 	"testing"
-"time"
-"log"
 
 	f "github.com/SAP/stewardci-core/test/framework"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -23,17 +21,10 @@ func Test_PipelineRunSingle(t *testing.T) {
 }
 
 func Test_ClusterWithFinishedPipelines(t *testing.T) {
-	for round := 0; round < 5; round++ {
-		log.Printf("Round %d", round)
-		tests := []f.TestPlan{
-			f.TestPlan{TestBuilder: PipelineRunOK,
-				Count:         2,
-				CreationDelay: time.Second * 10,
-			},
-			f.TestPlan{TestBuilder: PipelineRunWrongJenkinsfileRepo,
-				Count: 10,
-			},
-		}
-  f.ExecutePipelineRunTests(t, tests...)
- 	}
+	tests := []f.TestPlan{
+		f.TestPlan{TestBuilder: PipelineRunAbort,
+			Count: 20,
+		},
+	}
+	f.ExecutePipelineRunTests(t, tests...)
 }

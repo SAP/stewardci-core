@@ -100,11 +100,11 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 }
 
 func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
-        startTime := time.Now()
-        defer func() {
-            duration := time.Now().Sub(startTime)
-            log.Printf("Test: %q setup took %.2f s", run.name, duration.Seconds())        
-        }()
+	startTime := time.Now()
+	defer func() {
+		duration := time.Now().Sub(startTime)
+		log.Printf("Test: %q setup took %.2f s", run.name, duration.Seconds())
+	}()
 	PipelineRun := pipelineTest.PipelineRun
 	ctx := run.ctx
 	factory := GetClientFactory(ctx)
