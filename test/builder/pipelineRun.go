@@ -126,3 +126,11 @@ func RunDetails(jobName, cause string, sequenceNumber int) PipelineRunSpecOp {
 		return spec
 	}
 }
+
+// Abort creates a PipelineRunSpecOp which adds Intent abort to the PipelineRun
+func Abort() PipelineRunSpecOp {
+	return func(spec api.PipelineSpec) api.PipelineSpec {
+		spec.Intent = api.IntentAbort
+		return spec
+	}
+}

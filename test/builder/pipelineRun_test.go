@@ -67,3 +67,13 @@ func Test_PipelineRunBuilder_RunDetails(t *testing.T) {
 		Cause:          "cause1",
 	}, pipelineRun.Spec.RunDetails)
 }
+
+func Test_PipelineRunAbort(t *testing.T) {
+	pipelineRun := PipelineRun("prefix1", "namespace1",
+		PipelineRunSpec(
+			Abort(),
+		),
+	)
+	assert.Equal(t, api.IntentAbort,
+		pipelineRun.Spec.Intent)
+}
