@@ -25,11 +25,11 @@ require (
 	github.com/tektoncd/pipeline v0.7.0
 	go.uber.org/zap v1.13.0 // indirect
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.0.0-20191004102349-159aefb8556b
-	k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689
-	k8s.io/client-go v11.0.1-0.20191029005444-8e4128053008+incompatible
+	k8s.io/api v0.0.0-20180904230853-4e7be11eab3f
+	k8s.io/apimachinery v0.0.0-20180904193909-def12e63c512
+	k8s.io/client-go v0.0.0-20180910083459-2cefa64ff137
 	k8s.io/utils v0.0.0-20191114200735-6ca3b61696b6 // indirect
-	knative.dev/pkg v0.0.0-20191107185656-884d50f09454
+	knative.dev/pkg v0.0.0-00010101000000-000000000000
 )
 
 replace (
