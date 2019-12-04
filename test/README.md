@@ -42,5 +42,5 @@ go test -count=1 -tags=loadtest -v --kubeconfig $KUBECONFIG .
 
 ## Cleanup
 ```bash
-kubectl delete $STEWARD_TEST_CLIENT
+kubectl delete namespace $STEWARD_TEST_CLIENT
 ```
