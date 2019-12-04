@@ -162,15 +162,15 @@ func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) RunManager {
 // converge the two. It then updates the Status block of the Foo resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
-	pipelineRunAPI, err := c.pipelineRunFetcher.ByKey(key)
+	pipelineRunAPIObj, err := c.pipelineRunFetcher.ByKey(key)
 	if err != nil {
 		return err
 	}
 	// If pipelineRun is not found there is nothing to sync
-	if pipelineRunAPI == nil {
+	if pipelineRunAPIObj == nil {
 		return nil
 	}
-	pipelineRun := k8s.NewPipelineRun(pipelineRunAPI, c.pipelineRunFetcher, c.factory)
+	pipelineRun := k8s.NewPipelineRun(pipelineRunAPIObj, c.pipelineRunFetcher, c.factory)
 	// Check if object has deletion timestamp
 	// If not, try to add finalizer if missing
 	if pipelineRun.HasDeletionTimestamp() {

@@ -10,7 +10,7 @@ import (
 func Test_pipelineRunFetcher_ByName_NotExisting(t *testing.T) {
 	// SETUP
 	factory := fake.NewClientFactory()
-	examinee := NewPipelineRunFetcher(factory)
+	examinee := NewClientBasedPipelineRunFetcher(factory)
 
 	// EXERCISE
 	pipelineRun, resultErr := examinee.ByName(ns1, "NotExisting1")
@@ -27,7 +27,7 @@ func Test_pipelineRunFetcher_ByName_GoodCase(t *testing.T) {
 	)
 	run := newPipelineRunWithSecret(ns1, run1, secretName)
 	factory := fake.NewClientFactory(run)
-	examinee := NewPipelineRunFetcher(factory)
+	examinee := NewClientBasedPipelineRunFetcher(factory)
 
 	// EXERCISE
 	resultObj, resultErr := examinee.ByName(ns1, run1)
@@ -45,7 +45,7 @@ func Test_pipelineRunFetcher_ByKey_GoodCase(t *testing.T) {
 	run := newPipelineRunWithSecret(ns1, run1, secretName)
 	factory := fake.NewClientFactory(run)
 	key := fake.ObjectKey(run1, ns1)
-	examinee := NewPipelineRunFetcher(factory)
+	examinee := NewClientBasedPipelineRunFetcher(factory)
 
 	// EXERCISE
 	resultObj, resultErr := examinee.ByKey(key)

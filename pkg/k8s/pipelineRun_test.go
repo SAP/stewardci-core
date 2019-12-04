@@ -16,7 +16,7 @@ func Test_pipelineRun_UpdateMessage_GoodCase(t *testing.T) {
 	// SETUP
 	run := newPipelineRunWithEmptySpec(ns1, run1)
 	factory := fake.NewClientFactory(run)
-	fetcher := NewPipelineRunFetcher(factory)
+	fetcher := NewClientBasedPipelineRunFetcher(factory)
 	examinee := NewPipelineRun(run, fetcher, factory)
 
 	// EXERCISE
@@ -32,7 +32,7 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	creationTimestamp := metav1.Now()
 	pipelineRun.ObjectMeta.CreationTimestamp = creationTimestamp
 	factory := fake.NewClientFactory(pipelineRun)
-	fetcher := NewPipelineRunFetcher(factory)
+	fetcher := NewClientBasedPipelineRunFetcher(factory)
 	examinee := NewPipelineRun(pipelineRun, fetcher, factory)
 
 	// EXERCISE
@@ -52,7 +52,7 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	// SETUP
 	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
 	factory := fake.NewClientFactory(pipelineRun)
-	fetcher := NewPipelineRunFetcher(factory)
+	fetcher := NewClientBasedPipelineRunFetcher(factory)
 	examinee := NewPipelineRun(pipelineRun, fetcher, factory)
 
 	examinee.UpdateState(api.StatePreparing) // first call
@@ -76,7 +76,7 @@ func Test_pipelineRun_FinishState_HistoryIfUpdateStateCalledBefore(t *testing.T)
 	// SETUP
 	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
 	factory := fake.NewClientFactory(pipelineRun)
-	fetcher := NewPipelineRunFetcher(factory)
+	fetcher := NewClientBasedPipelineRunFetcher(factory)
 	examinee := NewPipelineRun(pipelineRun, fetcher, factory)
 
 	examinee.UpdateState(api.StatePreparing) // called before
@@ -99,7 +99,7 @@ func Test_pipelineRun_UpdateResult(t *testing.T) {
 	// SETUP
 	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
 	factory := fake.NewClientFactory(pipelineRun)
-	fetcher := NewPipelineRunFetcher(factory)
+	fetcher := NewClientBasedPipelineRunFetcher(factory)
 	examinee := NewPipelineRun(pipelineRun, fetcher, factory)
 
 	assert.Assert(t, examinee.GetStatus().FinishedAt.IsZero())

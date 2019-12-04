@@ -57,8 +57,8 @@ type pipelineRunFetcher struct {
 	factory ClientFactory
 }
 
-// NewPipelineRunFetcher returns an operative implementation of PipelineRunFetcher
-func NewPipelineRunFetcher(factory ClientFactory) PipelineRunFetcher {
+// NewClientBasedPipelineRunFetcher returns an operative implementation of PipelineRunFetcher
+func NewClientBasedPipelineRunFetcher(factory ClientFactory) PipelineRunFetcher {
 	return &pipelineRunFetcher{factory: factory}
 }
 
