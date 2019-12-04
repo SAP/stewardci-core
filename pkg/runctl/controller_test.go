@@ -260,7 +260,7 @@ func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 	stopCh := make(chan struct{}, 0)
 	metrics := metrics.NewMetrics()
 	controller := NewController(cf, metrics)
-	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(cf)
+	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(cf.StewardV1alpha1())
 	cf.StewardInformerFactory().Start(stopCh)
 	cf.TektonInformerFactory().Start(stopCh)
 	go start(t, controller, stopCh)
@@ -287,7 +287,7 @@ func resource(resource string) schema.GroupResource {
 // Return nil if not found.
 func getPipelineRun(name string, namespace string, cf *fake.ClientFactory) (k8s.PipelineRun, error) {
 	key := fake.ObjectKey(name, namespace)
-	fetcher := k8s.NewClientBasedPipelineRunFetcher(cf)
+	fetcher := k8s.NewClientBasedPipelineRunFetcher(cf.StewardV1alpha1())
 	pipelineRun, err := fetcher.ByKey(key)
 	return k8s.NewPipelineRun(pipelineRun, fetcher, cf), err
 }

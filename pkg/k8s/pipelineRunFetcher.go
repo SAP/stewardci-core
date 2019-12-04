@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	stewardLister "github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -53,23 +54,24 @@ func (f *listerBasedPipelineRunFetcher) ByKey(key string) (*api.PipelineRun, err
 	return byKey(f, key)
 }
 
-type pipelineRunFetcher struct {
-	factory ClientFactory
+type clientBasedPipelineRunFetcher struct {
+	client stewardv1alpha1.StewardV1alpha1Interface
 }
 
 // NewClientBasedPipelineRunFetcher returns an operative implementation of PipelineRunFetcher
-func NewClientBasedPipelineRunFetcher(factory ClientFactory) PipelineRunFetcher {
-	return &pipelineRunFetcher{factory: factory}
+func NewClientBasedPipelineRunFetcher(client stewardv1alpha1.StewardV1alpha1Interface) PipelineRunFetcher {
+	return &clientBasedPipelineRunFetcher{client: client}
 }
 
 // ByName implements interface PipelineRunByNameFetcher
-func (rf *pipelineRunFetcher) ByName(namespace string, name string) (*api.PipelineRun, error) {
-	client := rf.factory.StewardV1alpha1().PipelineRuns(namespace)
-	return returnCopyOrNilOnNotFound(client.Get(name, metav1.GetOptions{}))
+func (rf *clientBasedPipelineRunFetcher) ByName(namespace string, name string) (*api.PipelineRun, error) {
+	client := rf.client.PipelineRuns(namespace)
+	run, err := client.Get(name, metav1.GetOptions{})
+	return returnCopyOrNilOnNotFound(run, err)
 }
 
 // ByKey implements interface PipelineRunByKeyFetcher
-func (rf *pipelineRunFetcher) ByKey(key string) (*api.PipelineRun, error) {
+func (rf *clientBasedPipelineRunFetcher) ByKey(key string) (*api.PipelineRun, error) {
 	return byKey(rf, key)
 }
 
