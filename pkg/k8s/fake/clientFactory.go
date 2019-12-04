@@ -73,6 +73,11 @@ func (f *ClientFactory) StewardV1alpha1() stewardv1alpha1.StewardV1alpha1Interfa
 	return f.stewardClientset.StewardV1alpha1()
 }
 
+// StewardClientset returns Steward clientset.
+func (f *ClientFactory) StewardClientset() *steward.Clientset {
+	return f.stewardClientset
+}
+
 // StewardInformerFactory returns the informer factory for Steward
 func (f *ClientFactory) StewardInformerFactory() stewardinformer.SharedInformerFactory {
 	return f.stewardInformerFactory

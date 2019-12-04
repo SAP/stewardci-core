@@ -2,6 +2,7 @@ package runctl
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"testing"
 
@@ -20,19 +21,20 @@ import (
 )
 
 func Test_Controller_MissingSecret(t *testing.T) {
-	// SETUP
-	cf := fake.NewClientFactory(
-		fake.PipelineRun("run1", "ns1", api.PipelineSpec{
-			Secrets: []string{"secret1"},
-		}),
-		// no "secret1" here
-	)
+	t.Parallel()
+        // SETUP
+	cf := fake.NewClientFactory()
+	pr := fake.PipelineRun("run1", "ns1", api.PipelineSpec{
+		Secrets: []string{"secret1"},
+	})
+	// no "secret1" here
 
 	// EXERCISE
 	stopCh := startController(t, cf)
 	defer stopController(t, stopCh)
-
+	createRun(pr, cf)
 	// VERIFY
+
 	run := getPipelineRun("run1", "ns1", cf)
 	status := run.GetStatus()
 
@@ -44,19 +46,20 @@ func Test_Controller_MissingSecret(t *testing.T) {
 }
 
 func Test_Controller_Success(t *testing.T) {
-	// SETUP
+	t.Parallel()
+        // SETUP
 	cf := fake.NewClientFactory(
-		fake.PipelineRun("run1", "ns1", api.PipelineSpec{
-			Secrets: []string{"secret1"},
-		}),
 		fake.SecretOpaque("secret1", "ns1"),
 		fake.ClusterRole(string(runClusterRoleName)),
 	)
+	pr := fake.PipelineRun("run1", "ns1", api.PipelineSpec{
+		Secrets: []string{"secret1"},
+	})
 
 	// EXERCISE
 	stopCh := startController(t, cf)
 	defer stopController(t, stopCh)
-
+	createRun(pr, cf)
 	// VERIFY
 	run := getPipelineRun("run1", "ns1", cf)
 	status := run.GetStatus()
@@ -67,19 +70,20 @@ func Test_Controller_Success(t *testing.T) {
 }
 
 func Test_Controller_Running(t *testing.T) {
-	// SETUP
+	t.Parallel()
+        // SETUP
 	cf := fake.NewClientFactory(
-		fake.PipelineRun("run1", "ns1", api.PipelineSpec{
-			Secrets: []string{"secret1"},
-		}),
 		fake.SecretOpaque("secret1", "ns1"),
 		fake.ClusterRole(string(runClusterRoleName)),
 	)
+	pr := fake.PipelineRun("run1", "ns1", api.PipelineSpec{
+		Secrets: []string{"secret1"},
+	})
 
 	// EXERCISE
 	stopCh := startController(t, cf)
 	defer stopController(t, stopCh)
-
+	createRun(pr, cf)
 	// VERIFY
 	run := getPipelineRun("run1", "ns1", cf)
 	runNs := run.GetRunNamespace()
@@ -94,12 +98,12 @@ func Test_Controller_Running(t *testing.T) {
 }
 
 func Test_Controller_Deletion(t *testing.T) {
-	// SETUP
+	t.Parallel()
+        // SETUP
 	pr := fake.PipelineRun("run1", "ns1", api.PipelineSpec{
 		Secrets: []string{"secret1"},
 	})
 	cf := fake.NewClientFactory(
-		pr,
 		fake.SecretOpaque("secret1", "ns1"),
 		fake.ClusterRole(string(runClusterRoleName)),
 	)
@@ -107,7 +111,7 @@ func Test_Controller_Deletion(t *testing.T) {
 	// EXERCISE
 	stopCh := startController(t, cf)
 	defer stopController(t, stopCh)
-
+	createRun(pr, cf)
 	// VERIFY
 	run, _ := getRun("run1", "ns1", cf)
 
@@ -124,7 +128,8 @@ func Test_Controller_Deletion(t *testing.T) {
 }
 
 func Test_Controller_syncHandler_givesUp_onPipelineRunNotFound(t *testing.T) {
-	// SETUP
+	t.Parallel()
+        // SETUP
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -142,7 +147,8 @@ func Test_Controller_syncHandler_givesUp_onPipelineRunNotFound(t *testing.T) {
 }
 
 func Test_Controller_syncHandler_initiatesRetrying_on500DuringPipelineRunFetch(t *testing.T) {
-	// SETUP
+	t.Parallel()
+        // SETUP
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -162,7 +168,8 @@ func Test_Controller_syncHandler_initiatesRetrying_on500DuringPipelineRunFetch(t
 }
 
 func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
-	// SETUP
+	t.Parallel()
+        // SETUP
 	cf := fake.NewClientFactory(
 
 		// the tenant namespace
@@ -241,9 +248,12 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 }
 
 func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
+	cs := cf.StewardClientset()
+	cs.PrependReactor("create", "*", fake.NewCreationTimestampReactor())
 	stopCh := make(chan struct{}, 0)
 	metrics := metrics.NewMetrics()
 	controller := NewController(cf, metrics)
+	controller.pipelineRunFetcher = k8s.NewPipelineRunFetcher(cf)
 	cf.StewardInformerFactory().Start(stopCh)
 	cf.TektonInformerFactory().Start(stopCh)
 	go start(t, controller, stopCh)
@@ -252,7 +262,7 @@ func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 }
 
 func stopController(t *testing.T, stopCh chan struct{}) {
-	t.Log("Trigger controller stop")
+	log.Printf("Trigger controller stop")
 	stopCh <- struct{}{}
 }
 
@@ -273,6 +283,14 @@ func getPipelineRun(name string, namespace string, cf *fake.ClientFactory) k8s.P
 	fetcher := k8s.NewPipelineRunFetcher(cf)
 	pipelineRun, _ := fetcher.ByKey(key)
 	return k8s.NewPipelineRun(pipelineRun, fetcher, cf)
+}
+
+func createRun(run *api.PipelineRun, cf *fake.ClientFactory) error {
+	_, err := cf.StewardV1alpha1().PipelineRuns(run.GetNamespace()).Create(run)
+	if err == nil {
+		cf.Sleep("wait for controller to pick up run")
+	}
+	return err
 }
 
 func getRun(name, namespace string, cf *fake.ClientFactory) (*api.PipelineRun, error) {

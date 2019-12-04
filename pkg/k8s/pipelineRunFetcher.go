@@ -11,37 +11,45 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// PipelineRunFetcher has methods to fetch PipelineRun objects from Kubernetes
+// PipelineRunFetcher combines PipelineRunByKeyFetcher and PipelineRunByNameFetcher
 type PipelineRunFetcher interface {
-	pipelineRunNameFetcher
+	PipelineRunByKeyFetcher
+	PipelineRunByNameFetcher
+}
+
+// PipelineRunByKeyFetcher provides a function to fetch PipelineRuns by their key
+type PipelineRunByKeyFetcher interface {
+	// ByKey fetches PipelineRun resource from Kubernetes
+	// Return nil,nil if pipeline with key does not exist
 	ByKey(key string) (*api.PipelineRun, error)
 }
 
-type pipelineRunNameFetcher interface {
+// PipelineRunByNameFetcher provides a function to fetch PipelineRuns by their name
+type PipelineRunByNameFetcher interface {
+	// ByName fetches PipelineRun resource from Kubernetes by name and namespace
+	// Return nil,nil if specified pipeline does not exist
 	ByName(namespace, name string) (*api.PipelineRun, error)
 }
 
-type pipelineRunListerFetcher struct {
+type listerBasedPipelineRunFetcher struct {
 	lister stewardLister.PipelineRunLister
 }
 
-// NewPipelineRunListerFetcher returns an operative implementation of PipelineRunFetcher
-func NewPipelineRunListerFetcher(lister stewardLister.PipelineRunLister) PipelineRunFetcher {
-	return &pipelineRunListerFetcher{
+// NewListerBasedPipelineRunFetcher returns an operative implementation of PipelineRunFetcher
+func NewListerBasedPipelineRunFetcher(lister stewardLister.PipelineRunLister) PipelineRunFetcher {
+	return &listerBasedPipelineRunFetcher{
 		lister: lister,
 	}
 }
 
-// ByName fetches PipelineRun resource from Kubernetes by name and namespace
-// Return nil,nil if specified pipeline does not exist
-func (f *pipelineRunListerFetcher) ByName(namespace, name string) (*api.PipelineRun, error) {
+// ByName implements interface PipelineRunByNameFetcher
+func (f *listerBasedPipelineRunFetcher) ByName(namespace, name string) (*api.PipelineRun, error) {
 	lister := f.lister.PipelineRuns(namespace)
 	return returnCopyOrNilOnNotFound(lister.Get(name))
 }
 
-// ByKey fetches PipelineRun resource from Kubernetes
-// Return nil,nil if pipeline with key does not exist
-func (f *pipelineRunListerFetcher) ByKey(key string) (*api.PipelineRun, error) {
+// ByKey implements interface PipelineRunByKeyFetcher
+func (f *listerBasedPipelineRunFetcher) ByKey(key string) (*api.PipelineRun, error) {
 	return byKey(f, key)
 }
 
@@ -54,20 +62,18 @@ func NewPipelineRunFetcher(factory ClientFactory) PipelineRunFetcher {
 	return &pipelineRunFetcher{factory: factory}
 }
 
-// ByName fetches PipelineRun resource from Kubernetes by name and namespace
-// Return nil,nil if specified pipeline does not exist
+// ByName implements interface PipelineRunByNameFetcher
 func (rf *pipelineRunFetcher) ByName(namespace string, name string) (*api.PipelineRun, error) {
 	client := rf.factory.StewardV1alpha1().PipelineRuns(namespace)
 	return returnCopyOrNilOnNotFound(client.Get(name, metav1.GetOptions{}))
 }
 
-// ByKey fetches PipelineRun resource from Kubernetes
-// Return nil,nil if pipeline with key does not exist
+// ByKey implements interface PipelineRunByKeyFetcher
 func (rf *pipelineRunFetcher) ByKey(key string) (*api.PipelineRun, error) {
 	return byKey(rf, key)
 }
 
-func byKey(rf pipelineRunNameFetcher, key string) (*api.PipelineRun, error) {
+func byKey(rf PipelineRunByNameFetcher, key string) (*api.PipelineRun, error) {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return nil, err

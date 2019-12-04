@@ -34,7 +34,7 @@ type Controller struct {
 // NewController creates new Controller
 func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controller {
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
-	pipelineRunFetcher := k8s.NewPipelineRunListerFetcher(pipelineRunInformer.Lister())
+	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1alpha1().TaskRuns()
 	controller := &Controller{
 		factory:            factory,

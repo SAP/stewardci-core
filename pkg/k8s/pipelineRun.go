@@ -39,43 +39,43 @@ type PipelineRun interface {
 type pipelineRun struct {
 	client  stewardv1alpha1.PipelineRunInterface
 	fetcher PipelineRunFetcher
-	cached  *api.PipelineRun
+	apiObj  *api.PipelineRun
 }
 
 // NewPipelineRun creates a managed pipeline run object
-func NewPipelineRun(cached *api.PipelineRun, fetcher PipelineRunFetcher, factory ClientFactory) PipelineRun {
+func NewPipelineRun(apiObj *api.PipelineRun, fetcher PipelineRunFetcher, factory ClientFactory) PipelineRun {
 	result := &pipelineRun{
 		fetcher: fetcher,
-		cached:  cached,
+		apiObj:  apiObj,
 	}
 	if factory != nil {
-		result.client = factory.StewardV1alpha1().PipelineRuns(cached.GetNamespace())
+		result.client = factory.StewardV1alpha1().PipelineRuns(apiObj.GetNamespace())
 	}
 	return result
 }
 
 func (r *pipelineRun) update() error {
-	result, err := r.client.Update(r.cached)
+	result, err := r.client.Update(r.apiObj)
 	if err == nil {
-		r.cached = result
+		r.apiObj = result
 	}
 	return err
 }
 
 // GetRunNamespace returns the namespace in which the build takes place
 func (r *pipelineRun) GetRunNamespace() string {
-	return r.cached.Status.Namespace
+	return r.apiObj.Status.Namespace
 }
 
 // GetKey returns the key of the pipelineRun
 func (r *pipelineRun) GetKey() string {
-	key, _ := cache.MetaNamespaceKeyFunc(r.cached)
+	key, _ := cache.MetaNamespaceKeyFunc(r.apiObj)
 	return key
 }
 
 // GetNamespace returns the namespace of the underlying pipelineRun object
 func (r *pipelineRun) GetNamespace() string {
-	return r.cached.GetNamespace()
+	return r.apiObj.GetNamespace()
 }
 
 // GetPipelineRepoServerURL returns the server hosting the Jenkinsfile repository
@@ -92,17 +92,17 @@ func (r *pipelineRun) GetPipelineRepoServerURL() (string, error) {
 }
 
 func (r *pipelineRun) GetName() string {
-	return r.cached.GetName()
+	return r.apiObj.GetName()
 }
 
 // GetStatus return the Status
 func (r *pipelineRun) GetStatus() *api.PipelineStatus {
-	return &r.cached.Status
+	return &r.apiObj.Status
 }
 
 // GetSpec return the spec part of the PipelineRun resource
 func (r *pipelineRun) GetSpec() *api.PipelineSpec {
-	return &r.cached.Spec
+	return &r.apiObj.Spec
 }
 
 // UpdateState set end time of current (defined) state (A) and store it to the history.
@@ -117,8 +117,8 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 		return nil, err
 	}
 	newState := api.StateItem{State: state, StartedAt: now}
-	r.cached.Status.StateDetails = newState
-	r.cached.Status.State = state
+	r.apiObj.Status.StateDetails = newState
+	r.apiObj.Status.State = state
 	return oldstate, r.updateStatus()
 }
 
@@ -126,25 +126,25 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 // If no current state is defined a new state (A) with creation time of the PipelineRun as start time is created.
 // Returns the state details
 func (r *pipelineRun) FinishState() (*api.StateItem, error) {
-	state := r.cached.Status.StateDetails
+	state := r.apiObj.Status.StateDetails
 	now := metav1.Now()
 	if state.State == api.StateUndefined {
 		state.State = api.StateNew
-		state.StartedAt = r.cached.ObjectMeta.CreationTimestamp
-		r.cached.Status.StartedAt = &now
+		state.StartedAt = r.apiObj.ObjectMeta.CreationTimestamp
+		r.apiObj.Status.StartedAt = &now
 	}
 	state.FinishedAt = now
-	his := r.cached.Status.StateHistory
+	his := r.apiObj.Status.StateHistory
 	his = append(his, state)
-	r.cached.Status.StateHistory = his
+	r.apiObj.Status.StateHistory = his
 	return &state, r.updateStatus()
 }
 
 // UpdateResult of the pipeline run
 func (r *pipelineRun) UpdateResult(result api.Result) error {
-	r.cached.Status.Result = result
+	r.apiObj.Status.Result = result
 	now := metav1.Now()
-	r.cached.Status.FinishedAt = &now
+	r.apiObj.Status.FinishedAt = &now
 	return r.updateStatus()
 }
 
@@ -153,7 +153,7 @@ func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
 	if c == nil {
 		return nil
 	}
-	r.cached.Status.Container = *c
+	r.apiObj.Status.Container = *c
 	return r.updateStatus()
 }
 
@@ -169,41 +169,41 @@ func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 
 // UpdateMessage stores string as message in the status
 func (r *pipelineRun) UpdateMessage(message string) error {
-	old := r.cached.Status.Message
+	old := r.apiObj.Status.Message
 	if old != "" {
-		his := r.cached.Status.History
+		his := r.apiObj.Status.History
 		his = append(his, old)
-		r.cached.Status.History = his
+		r.apiObj.Status.History = his
 	}
-	r.cached.Status.Message = utils.Trim(message)
-	r.cached.Status.MessageShort = utils.ShortenMessage(message, 100)
+	r.apiObj.Status.Message = utils.Trim(message)
+	r.apiObj.Status.MessageShort = utils.ShortenMessage(message, 100)
 	return r.updateStatus()
 }
 
 // UpdateRunNamespace overrides the namespace in which the builds happens
 func (r *pipelineRun) UpdateRunNamespace(ns string) error {
-	r.cached.Status.Namespace = ns
+	r.apiObj.Status.Namespace = ns
 	return r.updateStatus()
 }
 
 // UpdateLog ...
 func (r *pipelineRun) UpdateLog() {
-	if r.cached.Status.Namespace != "" {
-		r.cached.Status.LogURL = "dummy://foo"
+	if r.apiObj.Status.Namespace != "" {
+		r.apiObj.Status.LogURL = "dummy://foo"
 		r.updateStatus()
 	}
 }
 
 //HasDeletionTimestamp returns true if deletion timestamp is set
 func (r *pipelineRun) HasDeletionTimestamp() bool {
-	return !r.cached.ObjectMeta.DeletionTimestamp.IsZero()
+	return !r.apiObj.ObjectMeta.DeletionTimestamp.IsZero()
 }
 
 // AddFinalizer adds a finalizer to pipeline run
 func (r *pipelineRun) AddFinalizer() error {
-	changed, finalizerList := utils.AddStringIfMissing(r.cached.ObjectMeta.Finalizers, FinalizerName)
+	changed, finalizerList := utils.AddStringIfMissing(r.apiObj.ObjectMeta.Finalizers, FinalizerName)
 	if changed {
-		r.cached.ObjectMeta.Finalizers = finalizerList
+		r.apiObj.ObjectMeta.Finalizers = finalizerList
 		return r.update()
 	}
 	return nil
@@ -211,25 +211,25 @@ func (r *pipelineRun) AddFinalizer() error {
 
 // DeleteFinalizerIfExists deletes a finalizer from pipeline run
 func (r *pipelineRun) DeleteFinalizerIfExists() error {
-	changed, finalizerList := utils.RemoveString(r.cached.ObjectMeta.Finalizers, FinalizerName)
+	changed, finalizerList := utils.RemoveString(r.apiObj.ObjectMeta.Finalizers, FinalizerName)
 	if changed {
-		r.cached.ObjectMeta.Finalizers = finalizerList
+		r.apiObj.ObjectMeta.Finalizers = finalizerList
 		return r.update()
 	}
 	return nil
 }
 
 func (r *pipelineRun) updateStatus() error {
-	pipelineRun, err := r.fetcher.ByName(r.cached.GetNamespace(), r.cached.GetName())
+	pipelineRun, err := r.fetcher.ByName(r.apiObj.GetNamespace(), r.apiObj.GetName())
 	if err != nil {
 		return err
 	}
-	pipelineRun.Status = r.cached.Status
+	pipelineRun.Status = r.apiObj.Status
 	result, err := r.client.UpdateStatus(pipelineRun)
 	if err != nil {
 		return errors.Wrap(err,
-			fmt.Sprintf("Failed to update status of PipelineRun '%s' in namespace '%s'", r.cached.GetName(), r.cached.GetNamespace()))
+			fmt.Sprintf("Failed to update status of PipelineRun '%s' in namespace '%s'", r.apiObj.GetName(), r.apiObj.GetNamespace()))
 	}
-	r.cached = result
+	r.apiObj = result
 	return nil
 }
