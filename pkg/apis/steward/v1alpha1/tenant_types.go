@@ -2,6 +2,8 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	knativeapis "knative.dev/pkg/apis"
+	knativeduck "knative.dev/pkg/apis/duck/v1"
 )
 
 // Tenant is representing a Tenant and its status
@@ -33,42 +35,21 @@ type TenantSpec struct {
 
 // TenantStatus contains the status of a Tenant
 type TenantStatus struct {
-	Progress            TenantCreationProgress `json:"progress"`
-	Result              TenantResult           `json:"result"`
-	Message             string                 `json:"message"`
-	TenantNamespaceName string                 `json:"tenantNamespaceName"`
+	knativeduck.Status `json:",inline"`
+
+	TenantNamespaceName string `json:"tenantNamespaceName,omitempty"`
 }
 
-// TenantCreationProgress of the Tenant
-type TenantCreationProgress string
+var tenantConditionSet = knativeapis.NewLivingConditionSet()
 
-const (
-	//TenantProgressUndefined Did not start yet
-	TenantProgressUndefined TenantCreationProgress = ""
-	//TenantProgressInProcess Just started, nothing done yet
-	TenantProgressInProcess TenantCreationProgress = "InProcess"
-	//TenantProgressCreateNamespace current step create namespace
-	TenantProgressCreateNamespace TenantCreationProgress = "CreateNamespace"
-	//TenantProgressGetServiceAccount current step get service account
-	TenantProgressGetServiceAccount TenantCreationProgress = "GetServiceAccount"
-	//TenantProgressAddRoleBinding current step add role binding
-	TenantProgressAddRoleBinding TenantCreationProgress = "AddRoleBinding"
-	//TenantProgressFinalize current step finalize, all steps before were successful.
-	TenantProgressFinalize TenantCreationProgress = "Finalize"
-	//TenantProgressFinished process finished
-	TenantProgressFinished TenantCreationProgress = "Finished"
-)
+// GetCondition returns the condition matching the given condition type.
+func (s *TenantStatus) GetCondition(condType knativeapis.ConditionType) *knativeapis.Condition {
+	return tenantConditionSet.Manage(s).GetCondition(condType)
+}
 
-// TenantResult of the tenant processing
-type TenantResult string
-
-const (
-	// TenantResultUndefined - undefined TenantResult
-	TenantResultUndefined TenantResult = ""
-	// TenantResultSuccess - the tenant has been set up successfully
-	TenantResultSuccess TenantResult = "success"
-	// TenantResultErrorInfra - the tentant setup failed due to an infrastructure problem
-	TenantResultErrorInfra TenantResult = "error_infra"
-	// TenantResultErrorContent -  the tenant setup failed due to an content problem
-	TenantResultErrorContent TenantResult = "error_content"
-)
+// SetCondition sets the given condition.
+func (s *TenantStatus) SetCondition(cond *knativeapis.Condition) {
+	if cond != nil {
+		tenantConditionSet.Manage(s).SetCondition(*cond)
+	}
+}

@@ -1,0 +1,12 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: steward-tenant-controller-metrics 
+  namespace: steward-system 
+spec:
+  selector:
+    matchLabels:
+      app: steward-tenant-controller
+  endpoints:
+  - port:  http-metrics
+
