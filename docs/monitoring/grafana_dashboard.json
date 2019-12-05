@@ -63,7 +63,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(steward_pipeline_runs_started_total_count)-sum(steward_pipeline_runs_completed_total_count)",
+          "expr": "sum(steward_pipelineruns_started_total_count)-sum(steward_pipelineruns_completed_total_count)",
           "hide": false,
           "legendFormat": "running pipelines",
           "refId": "A"
@@ -181,13 +181,13 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "increase(steward_pipeline_runs_started_total_count[1m])",
+          "expr": "increase(steward_pipelineruns_started_total_count[1m])",
           "hide": false,
           "legendFormat": "started",
           "refId": "C"
         },
         {
-          "expr": "increase(steward_pipeline_runs_completed_total_count[1m])",
+          "expr": "increase(steward_pipelineruns_completed_total_count[1m])",
           "hide": false,
           "legendFormat": "finished_{{result}}",
           "refId": "A"
@@ -293,7 +293,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(steward_pipeline_run_duration_seconds_sum[1m])/rate(steward_pipeline_run_duration_seconds_count[1m])",
+          "expr": "rate(steward_pipelinerun_duration_seconds_sum[1m])/rate(steward_pipelinerun_duration_seconds_count[1m])",
           "legendFormat": "{{state}}",
           "refId": "A"
         }
@@ -382,22 +382,22 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.5,sum(rate(steward_pipeline_run_duration_seconds_bucket{}[1m])) by (le))",
+          "expr": "histogram_quantile(0.5,sum(rate(steward_pipelinerun_duration_seconds_bucket{}[1m])) by (le))",
           "legendFormat": "50%",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.8,sum(rate(steward_pipeline_run_duration_seconds_bucket{}[1m])) by (le))",
+          "expr": "histogram_quantile(0.8,sum(rate(steward_pipelinerun_duration_seconds_bucket{}[1m])) by (le))",
           "legendFormat": "80%",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.9,sum(rate(steward_pipeline_run_duration_seconds_bucket{}[1m])) by (le))",
+          "expr": "histogram_quantile(0.9,sum(rate(steward_pipelinerun_duration_seconds_bucket{}[1m])) by (le))",
           "legendFormat": "90%",
           "refId": "C"
         },
         {
-          "expr": "histogram_quantile(0.99,sum(rate(steward_pipeline_run_duration_seconds_bucket{}[1m])) by (le))",
+          "expr": "histogram_quantile(0.99,sum(rate(steward_pipelinerun_duration_seconds_bucket{}[1m])) by (le))",
           "legendFormat": "99%",
           "refId": "D"
         }
