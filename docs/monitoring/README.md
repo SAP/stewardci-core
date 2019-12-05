@@ -28,16 +28,16 @@ There is also an [example dashbord] for [Grafana] available to display the metri
 
 ### Install Prometheus Operator
 ```
-helm install --namespace monitoring --name monitoring stable/prometheus-operator
-kubectl apply -f serviceMonitors
-kubectl -n steward-system label serviceMonitor --all release=monitoring
+helm install --namespace monitoring --name monitoring stable/prometheus-operator \
+&& kubectl apply -f serviceMonitors \
+&& kubectl -n steward-system label serviceMonitor --all release=monitoring
 ```
 
 ### Install Grafana Dashboards
 ```
-kubectl -n monitoring create configmap monitoring-prometheus-oper-steward --from-file grafana_dashboard.json
-kubectl -n monitoring label configmap  monitoring-prometheus-oper-steward grafana_dashboard=1
-kubectl -n monitoring --selector=app=grafana delete pod
+kubectl -n monitoring create configmap monitoring-prometheus-oper-steward --from-file grafana_dashboard.json \
+&& kubectl -n monitoring label configmap  monitoring-prometheus-oper-steward grafana_dashboard=1 \
+&& kubectl -n monitoring --selector=app=grafana delete pod \
 ```
 
 ### Establish Port Forwarding to Grafana
