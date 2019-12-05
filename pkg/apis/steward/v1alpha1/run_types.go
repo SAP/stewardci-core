@@ -77,7 +77,6 @@ type PipelineStatus struct {
 	StateHistory []StateItem           `json:"stateHistory"`
 	Result       Result                `json:"result"`
 	Container    corev1.ContainerState `json:"container,omitempty"`
-	LogURL       string                `json:"logUrl"`
 	MessageShort string                `json:"messageShort"`
 	Message      string                `json:"message"`
 	History      []string              `json:"history"`

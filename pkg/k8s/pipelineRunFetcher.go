@@ -50,7 +50,7 @@ func NewListerBasedPipelineRunFetcher(lister stewardLister.PipelineRunLister) Pi
 // ByName implements interface PipelineRunByNameFetcher
 func (f *listerBasedPipelineRunFetcher) ByName(namespace, name string) (*api.PipelineRun, error) {
 	lister := f.lister.PipelineRuns(namespace)
-	return returnCopyOrNilOnNotFound(lister.Get(name))
+	return returnNilOnNotFound(lister.Get(name))
 }
 
 // ByKey implements interface PipelineRunByKeyFetcher
@@ -72,7 +72,7 @@ func NewClientBasedPipelineRunFetcher(client stewardv1alpha1.StewardV1alpha1Inte
 func (rf *clientBasedPipelineRunFetcher) ByName(namespace string, name string) (*api.PipelineRun, error) {
 	client := rf.client.PipelineRuns(namespace)
 	run, err := client.Get(name, metav1.GetOptions{})
-	return returnCopyOrNilOnNotFound(run, err)
+	return returnNilOnNotFound(run, err)
 }
 
 // ByKey implements interface PipelineRunByKeyFetcher
@@ -88,7 +88,7 @@ func byKey(rf PipelineRunByNameFetcher, key string) (*api.PipelineRun, error) {
 	return rf.ByName(namespace, name)
 }
 
-func returnCopyOrNilOnNotFound(run *api.PipelineRun, err error) (*api.PipelineRun, error) {
+func returnNilOnNotFound(run *api.PipelineRun, err error) (*api.PipelineRun, error) {
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, nil
@@ -96,5 +96,5 @@ func returnCopyOrNilOnNotFound(run *api.PipelineRun, err error) (*api.PipelineRu
 		return nil, errors.Wrap(err,
 			fmt.Sprintf("Failed to fetch PipelineRun '%s' in namespace '%s'", run.GetName(), run.GetNamespace()))
 	}
-	return run.DeepCopy(), err
+	return run, err
 }

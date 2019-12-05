@@ -33,33 +33,27 @@ type PipelineRun interface {
 	StoreErrorAsMessage(error, string) error
 	UpdateRunNamespace(string) error
 	UpdateMessage(string) error
-	UpdateLog()
 }
 
 type pipelineRun struct {
 	client  stewardv1alpha1.PipelineRunInterface
 	fetcher PipelineRunFetcher
 	apiObj  *api.PipelineRun
+	copied  bool
 }
 
 // NewPipelineRun creates a managed pipeline run object
+// the provided PipelineRun object is never modified and copied as late as possible
 func NewPipelineRun(apiObj *api.PipelineRun, fetcher PipelineRunFetcher, factory ClientFactory) PipelineRun {
 	result := &pipelineRun{
 		fetcher: fetcher,
 		apiObj:  apiObj,
+		copied:  false,
 	}
 	if factory != nil {
 		result.client = factory.StewardV1alpha1().PipelineRuns(apiObj.GetNamespace())
 	}
 	return result
-}
-
-func (r *pipelineRun) update() error {
-	result, err := r.client.Update(r.apiObj)
-	if err == nil {
-		r.apiObj = result
-	}
-	return err
 }
 
 // GetRunNamespace returns the namespace in which the build takes place
@@ -96,11 +90,14 @@ func (r *pipelineRun) GetName() string {
 }
 
 // GetStatus return the Status
+// the returned PipelineStatus MUST NOT be modified
+// use the prodided Update* functions instead
 func (r *pipelineRun) GetStatus() *api.PipelineStatus {
 	return &r.apiObj.Status
 }
 
 // GetSpec return the spec part of the PipelineRun resource
+// the returned PipelineSpec MUST NOT be modified
 func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 	return &r.apiObj.Spec
 }
@@ -110,6 +107,7 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 // It also creates a new current state (B) with start time.
 // Returns the state details of state A
 func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
+	r.ensureCopy()
 	log.Printf("New State: %s", state)
 	now := metav1.Now()
 	oldstate, err := r.FinishState()
@@ -126,6 +124,7 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 // If no current state is defined a new state (A) with creation time of the PipelineRun as start time is created.
 // Returns the state details
 func (r *pipelineRun) FinishState() (*api.StateItem, error) {
+	r.ensureCopy()
 	state := r.apiObj.Status.StateDetails
 	now := metav1.Now()
 	if state.State == api.StateUndefined {
@@ -142,6 +141,7 @@ func (r *pipelineRun) FinishState() (*api.StateItem, error) {
 
 // UpdateResult of the pipeline run
 func (r *pipelineRun) UpdateResult(result api.Result) error {
+	r.ensureCopy()
 	r.apiObj.Status.Result = result
 	now := metav1.Now()
 	r.apiObj.Status.FinishedAt = &now
@@ -153,6 +153,7 @@ func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
 	if c == nil {
 		return nil
 	}
+	r.ensureCopy()
 	r.apiObj.Status.Container = *c
 	return r.updateStatus()
 }
@@ -169,6 +170,7 @@ func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 
 // UpdateMessage stores string as message in the status
 func (r *pipelineRun) UpdateMessage(message string) error {
+	r.ensureCopy()
 	old := r.apiObj.Status.Message
 	if old != "" {
 		his := r.apiObj.Status.History
@@ -182,16 +184,9 @@ func (r *pipelineRun) UpdateMessage(message string) error {
 
 // UpdateRunNamespace overrides the namespace in which the builds happens
 func (r *pipelineRun) UpdateRunNamespace(ns string) error {
+	r.ensureCopy()
 	r.apiObj.Status.Namespace = ns
 	return r.updateStatus()
-}
-
-// UpdateLog ...
-func (r *pipelineRun) UpdateLog() {
-	if r.apiObj.Status.Namespace != "" {
-		r.apiObj.Status.LogURL = "dummy://foo"
-		r.updateStatus()
-	}
 }
 
 //HasDeletionTimestamp returns true if deletion timestamp is set
@@ -203,8 +198,7 @@ func (r *pipelineRun) HasDeletionTimestamp() bool {
 func (r *pipelineRun) AddFinalizer() error {
 	changed, finalizerList := utils.AddStringIfMissing(r.apiObj.ObjectMeta.Finalizers, FinalizerName)
 	if changed {
-		r.apiObj.ObjectMeta.Finalizers = finalizerList
-		return r.update()
+		r.updateFinalizers(finalizerList)
 	}
 	return nil
 }
@@ -213,23 +207,36 @@ func (r *pipelineRun) AddFinalizer() error {
 func (r *pipelineRun) DeleteFinalizerIfExists() error {
 	changed, finalizerList := utils.RemoveString(r.apiObj.ObjectMeta.Finalizers, FinalizerName)
 	if changed {
-		r.apiObj.ObjectMeta.Finalizers = finalizerList
-		return r.update()
+		return r.updateFinalizers(finalizerList)
 	}
 	return nil
 }
 
-func (r *pipelineRun) updateStatus() error {
-	pipelineRun, err := r.fetcher.ByName(r.apiObj.GetNamespace(), r.apiObj.GetName())
+func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
+	r.ensureCopy()
+	r.apiObj.ObjectMeta.Finalizers = finalizerList
+	result, err := r.client.Update(r.apiObj)
 	if err != nil {
-		return err
+		return errors.Wrap(err,
+			fmt.Sprintf("Failed to update finalizers of PipelineRun '%s' in namespace '%s'", r.apiObj.GetName(), r.apiObj.GetNamespace()))
 	}
-	pipelineRun.Status = r.apiObj.Status
-	result, err := r.client.UpdateStatus(pipelineRun)
+	r.apiObj = result
+	return nil
+}
+
+func (r *pipelineRun) updateStatus() error {
+	result, err := r.client.UpdateStatus(r.apiObj)
 	if err != nil {
 		return errors.Wrap(err,
 			fmt.Sprintf("Failed to update status of PipelineRun '%s' in namespace '%s'", r.apiObj.GetName(), r.apiObj.GetNamespace()))
 	}
 	r.apiObj = result
 	return nil
+}
+
+func (r *pipelineRun) ensureCopy() {
+	if !r.copied {
+		r.apiObj = r.apiObj.DeepCopy()
+		r.copied = true
+	}
 }

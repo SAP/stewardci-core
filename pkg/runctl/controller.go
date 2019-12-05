@@ -170,6 +170,12 @@ func (c *Controller) syncHandler(key string) error {
 	if pipelineRunAPIObj == nil {
 		return nil
 	}
+
+	// fast exit
+	if pipelineRunAPIObj.Status.State == api.StateFinished && pipelineRunAPIObj.GetDeletionTimestamp().IsZero() {
+		return nil
+	}
+
 	pipelineRun := k8s.NewPipelineRun(pipelineRunAPIObj, c.pipelineRunFetcher, c.factory)
 	// Check if object has deletion timestamp
 	// If not, try to add finalizer if missing

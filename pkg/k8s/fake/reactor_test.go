@@ -85,9 +85,10 @@ func Test_GenerateNameReactor_PanicsIfActionIsNotACreateAction(t *testing.T) {
 
 func Test_CreationTimeReactor(t *testing.T) {
 	// SETUP
-	namespace := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{
-		Name: "foo",
-	},
+	namespace := &v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+		},
 	}
 	factory := NewClientFactory()
 	cs := factory.KubernetesClientset()
