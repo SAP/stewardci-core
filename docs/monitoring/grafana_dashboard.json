@@ -63,13 +63,13 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(steward_pipelineruns_started_total_count)-sum(steward_pipelineruns_completed_total_count)",
+          "expr": "sum(steward_pipelineruns_started_total)-sum(steward_pipelineruns_completed_total)",
           "hide": false,
           "legendFormat": "running pipelines",
           "refId": "A"
         },
         {
-          "expr": "sum(steward_tenant_total_number)",
+          "expr": "sum(steward_tenants_total)",
           "hide": false,
           "legendFormat": "tenants",
           "refId": "B"
@@ -181,13 +181,13 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "increase(steward_pipelineruns_started_total_count[1m])",
+          "expr": "increase(steward_pipelineruns_started_total[1m])",
           "hide": false,
           "legendFormat": "started",
           "refId": "C"
         },
         {
-          "expr": "increase(steward_pipelineruns_completed_total_count[1m])",
+          "expr": "increase(steward_pipelineruns_completed_total[1m])",
           "hide": false,
           "legendFormat": "finished_{{result}}",
           "refId": "A"

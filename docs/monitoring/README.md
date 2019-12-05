@@ -7,14 +7,14 @@ There is also an [example dashbord] for [Grafana] available to display the metri
 
 | name | type | description |
 | ---- | ---- | ----------- |
-| steward_tenant_total_number | gauge | number of tenants in the cluster |
+| steward_tenants_total | gauge | number of tenants in the cluster |
 
 ## Pipelinerun Controller Metrics
 
 | name | type | label | description |
 | ---- | ---- | ----- | ----------- |
-| steward_pipelineruns_started_total_count   | counter   | _none_ | counter is increased by every started pipeline run |
-| steward_pipelineruns_completed_total_count | counter   | result | counters with result label are increased when result of pipeline run is set |
+| steward_pipelineruns_started_total   | counter   | _none_ | counter is increased by every started pipeline run |
+| steward_pipelineruns_completed_total | counter   | result | counters with result label are increased when result of pipeline run is set |
 | steward_pipelinerun_duration_seconds | histogram | state  | histogram with 15 exponential buckets starting from 125ms with factor 2 for the different pipelinerun states |
 
 ## Example Installation with Prometheus Operator

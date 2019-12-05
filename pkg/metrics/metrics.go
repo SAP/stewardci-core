@@ -30,11 +30,11 @@ type metrics struct {
 func NewMetrics() Metrics {
 	return &metrics{
 		Started: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "steward_pipelineruns_started_total_count",
+			Name: "steward_pipelineruns_started_total",
 			Help: "total number of started pipelines",
 		}),
 		Completed: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "steward_pipelineruns_completed_total_count",
+			Name: "steward_pipelineruns_completed_total",
 			Help: "completed pipelines",
 		},
 			[]string{"result"}),
