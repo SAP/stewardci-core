@@ -36,7 +36,11 @@ type listerBasedPipelineRunFetcher struct {
 	lister stewardLister.PipelineRunLister
 }
 
-// NewListerBasedPipelineRunFetcher returns an operative implementation of PipelineRunFetcher
+// NewListerBasedPipelineRunFetcher returns a PipelineRunFetcher that retrieves
+// the objects from the given `PipelineRunLister`.
+// The returned fetcher provides the original pointers from the lister. Typically the lister
+// is backed by a shared cache which must not be modified. Consumers should not
+// mutate the original objects, but create deep copies when modification is required.
 func NewListerBasedPipelineRunFetcher(lister stewardLister.PipelineRunLister) PipelineRunFetcher {
 	return &listerBasedPipelineRunFetcher{
 		lister: lister,
