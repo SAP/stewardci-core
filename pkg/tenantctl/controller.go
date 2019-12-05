@@ -255,7 +255,7 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 
 	nsName, err := c.createTenantNamespace(config, tenant)
 	if err != nil {
-		condMsg := fmt.Sprintf("Failed to create the tenant namespace.")
+		condMsg := fmt.Sprintf("Failed to create a new tenant namespace.")
 		tenant.Status.SetCondition(&knativeapis.Condition{
 			Type:    knativeapis.ConditionReady,
 			Status:  corev1.ConditionFalse,
@@ -267,7 +267,7 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 
 	_, err = c.reconcileTenantRoleBinding(tenant, nsName, config)
 	if err != nil {
-		condMsg := fmt.Sprintf("Failed to create the tenant namespace.")
+		condMsg := fmt.Sprintf("Failed to initialize a new tenant namespace because the RoleBinding could not be created.")
 		tenant.Status.SetCondition(&knativeapis.Condition{
 			Type:    knativeapis.ConditionReady,
 			Status:  corev1.ConditionFalse,
@@ -316,9 +316,9 @@ func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenan
 		return err
 	}
 
-	updateNeeded, err := c.reconcileTenantRoleBinding(tenant, nsName, config)
+	needForUpdateDetected, err := c.reconcileTenantRoleBinding(tenant, nsName, config)
 	if err != nil {
-		if updateNeeded {
+		if needForUpdateDetected {
 			condMsg := fmt.Sprintf(
 				"The RoleBinding in tenant namespace %q is outdated but could not be updated.",
 				nsName,
@@ -445,16 +445,15 @@ in the tenant namespace with the desired state.
 In case of a mismatch it tries to achieve the desired state by replacing
 the existing role binding resource object(s) by a new one.
 
-Output parameter `updateNeeded` indicates whether the need for an update
-has been detected, and will be returned both in case of success and error.
-In case of success it indicates whether an update has been performed.
-In case of error a value of `true` indicates that an update would have to
-be performed (and maybe has been done partially), while a value of 'false'
-does NOT mean that no update is necessary BUT that in the moment the error
-occurred the need for an update has not been detected (a subtle but yet
-important difference).
+Output parameter `needForUpdateDetected` indicates whether the need for an
+update has been detected, and will be set accordingly both in case of success
+and error. In case of success (err == nil) it indicates whether an update
+_has been_ performed. In case of error (err != nil) a value of `true`
+indicates that an update _would have_ to be performed (and maybe has been
+done partially), while a value of `false` indicates that _it is unknown_
+whether an update is necessary (due to the error).
 */
-func (c *Controller) reconcileTenantRoleBinding(tenant *api.Tenant, namespace string, config clientConfig) (updateNeeded bool, err error) {
+func (c *Controller) reconcileTenantRoleBinding(tenant *api.Tenant, namespace string, config clientConfig) (needForUpdateDetected bool, err error) {
 	if c.testing != nil && c.testing.reconcileTenantRoleBindingStub != nil {
 		return c.testing.reconcileTenantRoleBindingStub(tenant, namespace, config)
 	}
@@ -468,7 +467,7 @@ func (c *Controller) reconcileTenantRoleBinding(tenant *api.Tenant, namespace st
 		API calls concurrently performed by the respective subjects.
 		Instead we will first create the new RoleBinding and remove the old one
 		afterwards.
-		To deal with remainders from preceding failed attempts, we expect that
+		To deal with remainders from previously failed attempts, we expect that
 		an arbitrary number of RoleBinding objects may exist. Recreation takes
 		place if the number of existing role bindings is not exactly one, or the
 		single existing role binding is not up-to-date.
@@ -486,10 +485,10 @@ func (c *Controller) reconcileTenantRoleBinding(tenant *api.Tenant, namespace st
 		expectedTenantRB := c.generateTenantRoleBinding(namespace, clientNamespace, config)
 
 		if len(rbList.Items) != 1 || !c.isTenantRoleBindingUpToDate(&rbList.Items[0], expectedTenantRB) {
-			updateNeeded = true
+			needForUpdateDetected = true
 		}
 
-		if updateNeeded {
+		if needForUpdateDetected {
 			c.logPrintf(tenant, "updating RoleBinding in tenant namespace %q", namespace)
 			_, err = c.createRoleBinding(expectedTenantRB)
 			if err != nil {

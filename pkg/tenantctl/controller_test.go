@@ -276,7 +276,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnNamespaceClash(t *te
 			readyCond := tenant.Status.GetCondition(knativeapis.ConditionReady)
 			assert.Assert(t, readyCond.IsFalse(), dump)
 			assert.Equal(t, stewardv1alpha1.StatusReasonFailed, readyCond.Reason, dump)
-			assert.Equal(t, "Failed to create the tenant namespace.", readyCond.Message, dump)
+			assert.Equal(t, "Failed to create a new tenant namespace.", readyCond.Message, dump)
 		}
 		assert.Equal(t, "", tenant.Status.TenantNamespaceName, dump)
 	}
@@ -338,7 +338,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnErrorWhenSyncingRole
 			readyCond := tenant.Status.GetCondition(knativeapis.ConditionReady)
 			assert.Assert(t, readyCond.IsFalse(), dump)
 			assert.Equal(t, stewardv1alpha1.StatusReasonFailed, readyCond.Reason, dump)
-			assert.Equal(t, "Failed to create the tenant namespace.", readyCond.Message, dump)
+			assert.Equal(t, "Failed to initialize a new tenant namespace because the RoleBinding could not be created.", readyCond.Message, dump)
 		}
 		assert.Equal(t, "", tenant.Status.TenantNamespaceName, dump)
 	}
