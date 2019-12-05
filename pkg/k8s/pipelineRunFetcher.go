@@ -62,7 +62,8 @@ type clientBasedPipelineRunFetcher struct {
 	client stewardv1alpha1.StewardV1alpha1Interface
 }
 
-// NewClientBasedPipelineRunFetcher returns an operative implementation of PipelineRunFetcher
+// NewClientBasedPipelineRunFetcher returns a PipelineRunFetcher that retrieves
+// the objects from the given API client.
 func NewClientBasedPipelineRunFetcher(client stewardv1alpha1.StewardV1alpha1Interface) PipelineRunFetcher {
 	return &clientBasedPipelineRunFetcher{client: client}
 }
