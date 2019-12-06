@@ -10,6 +10,8 @@ import (
 	"github.com/SAP/stewardci-core/test/builder"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
+	corev1 "k8s.io/api/core/v1"
+	knativeapis "knative.dev/pkg/apis"
 )
 
 // TODO: Check with clientFactory returning error on get
@@ -55,34 +57,36 @@ func Test_CreateTenantCondition(t *testing.T) {
 	}
 }
 
-func Test_TenantHasStateResult(t *testing.T) {
+func Test_TenantIsReady(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
-		tenant         *api.Tenant
-		desiredResult  api.TenantResult
+		condition      *knativeapis.Condition
 		expectedResult bool
 	}{{
-		tenant:         &api.Tenant{Status: api.TenantStatus{Result: api.TenantResultSuccess}},
-		desiredResult:  api.TenantResultSuccess,
+		condition: &knativeapis.Condition{
+			Type:   knativeapis.ConditionReady,
+			Status: corev1.ConditionTrue,
+		},
 		expectedResult: true,
 	}, {
-		tenant:         &api.Tenant{Status: api.TenantStatus{Result: api.TenantResultSuccess}},
-		desiredResult:  api.TenantResultErrorInfra,
+		condition:      nil,
 		expectedResult: false,
 	}, {
-		tenant:         &api.Tenant{Status: api.TenantStatus{Result: api.TenantResultErrorInfra}},
-		desiredResult:  api.TenantResultSuccess,
+		condition: &knativeapis.Condition{
+			Type:   knativeapis.ConditionReady,
+			Status: corev1.ConditionFalse,
+		},
 		expectedResult: false,
-	}, {
-		tenant:         &api.Tenant{Status: api.TenantStatus{Result: api.TenantResultErrorInfra}},
-		desiredResult:  api.TenantResultErrorInfra,
-		expectedResult: true,
 	},
 	} {
 		// SETUP
-		examine := TenantHasStateResult(test.desiredResult)
+		examine := TenantIsReady()
+		tenant := builder.TenantFixName("foo", "bar")
+		if test.condition != nil {
+			tenant.Status.SetCondition(test.condition)
+		}
 		// EXERCISE
-		result := examine(test.tenant)
+		result := examine(tenant)
 		// VERIFY
 		assert.Assert(t, result == test.expectedResult)
 	}

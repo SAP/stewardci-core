@@ -19,12 +19,3 @@ func Test_PipelineRunSingle(t *testing.T) {
 	}
 	f.ExecutePipelineRunTests(t, allTests...)
 }
-
-func Test_ClusterWithFinishedPipelines(t *testing.T) {
-	tests := []f.TestPlan{
-		f.TestPlan{TestBuilder: PipelineRunAbort,
-			Count: 20,
-		},
-	}
-	f.ExecutePipelineRunTests(t, tests...)
-}

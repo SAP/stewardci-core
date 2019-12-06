@@ -24,7 +24,7 @@ func TenantSuccessTest(ctx context.Context) TenantTest {
 	return TenantTest{
 		name:   "success check",
 		tenant: builder.Tenant("name", GetNamespace(ctx), "displayName"),
-		check:  TenantHasStateResult(api.TenantResultSuccess),
+		check:  TenantIsReady(),
 	}
 }
 
@@ -57,7 +57,7 @@ func ensureTenant(ctx context.Context, t *testing.T) (func(), context.Context) {
 		tenant := builder.Tenant("name", GetNamespace(ctx), "displayName")
 		tenant, err := CreateTenant(ctx, tenant)
 		assert.NilError(t, err)
-		check := CreateTenantCondition(tenant, TenantHasStateResult(api.TenantResultSuccess))
+		check := CreateTenantCondition(tenant, TenantIsReady())
 		_, err = WaitFor(ctx, check)
 		assert.NilError(t, err)
 		tenant, err = GetTenant(ctx, tenant)

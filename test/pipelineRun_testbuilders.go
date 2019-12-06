@@ -11,6 +11,7 @@ import (
 
 // AllTestBuilders is a list of all test builders
 var AllTestBuilders = []f.PipelineRunTestBuilder{
+	PipelineRunAbort,
 	PipelineRunSleep,
 	PipelineRunFail,
 	PipelineRunOK,

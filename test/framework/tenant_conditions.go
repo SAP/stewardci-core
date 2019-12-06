@@ -6,6 +6,8 @@ import (
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
+	corev1 "k8s.io/api/core/v1"
+	knativeapis "knative.dev/pkg/apis"
 )
 
 // TenantCheck is a Check for a tenant
@@ -27,9 +29,13 @@ func CreateTenantCondition(tenant *api.Tenant, Check TenantCheck) WaitConditionF
 	}
 }
 
-// TenantHasStateResult creates a TenantCheck which Checks for a dedicated State
-func TenantHasStateResult(result api.TenantResult) TenantCheck {
+// TenantIsReady creates a TenantCheck which Checks if tenant has readyCondition wiht status true
+func TenantIsReady() TenantCheck {
 	return func(tenant *api.Tenant) bool {
-		return tenant.Status.Result == result
+		readyCondition := tenant.Status.GetCondition(knativeapis.ConditionReady)
+		if readyCondition == nil {
+			return false
+		}
+		return readyCondition.Status == corev1.ConditionTrue
 	}
 }
