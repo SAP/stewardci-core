@@ -52,7 +52,7 @@ func main() {
 	metrics.StartServer()
 
 	log.Printf("Create Controller")
-	controller := tenantctl.NewController(factory, k8s.NewTenantFetcher(factory), metrics)
+	controller := tenantctl.NewController(factory, metrics)
 
 	log.Printf("Create Signal Handler")
 	stopCh := signals.SetupSignalHandler()
