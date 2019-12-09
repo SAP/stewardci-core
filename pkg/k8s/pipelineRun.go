@@ -36,19 +36,17 @@ type PipelineRun interface {
 }
 
 type pipelineRun struct {
-	client  stewardv1alpha1.PipelineRunInterface
-	fetcher PipelineRunFetcher
-	apiObj  *api.PipelineRun
-	copied  bool
+	client stewardv1alpha1.PipelineRunInterface
+	apiObj *api.PipelineRun
+	copied bool
 }
 
 // NewPipelineRun creates a managed pipeline run object
 // the provided PipelineRun object is never modified and copied as late as possible
-func NewPipelineRun(apiObj *api.PipelineRun, fetcher PipelineRunFetcher, factory ClientFactory) PipelineRun {
+func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) PipelineRun {
 	result := &pipelineRun{
-		fetcher: fetcher,
-		apiObj:  apiObj,
-		copied:  false,
+		apiObj: apiObj,
+		copied: false,
 	}
 	if factory != nil {
 		result.client = factory.StewardV1alpha1().PipelineRuns(apiObj.GetNamespace())

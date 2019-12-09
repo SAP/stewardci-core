@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"fmt"
 	"testing"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -12,12 +13,93 @@ import (
 
 const message string = "MyMessage"
 
+func Test_GetRunNamespace(t *testing.T) {
+	//SETUP
+	run := &api.PipelineRun{
+		Status: api.PipelineStatus{
+			Namespace: "foo",
+		},
+	}
+	examinee := NewPipelineRun(run, nil)
+	// EXERCISE
+	ns := examinee.GetRunNamespace()
+	// VERIFY
+	assert.Equal(t, "foo", ns)
+}
+
+func Test_GetKey(t *testing.T) {
+	// SETUP
+	run := newPipelineRunWithEmptySpec("ns1", "foo")
+	examinee := NewPipelineRun(run, nil)
+	// EXERCISE
+	key := examinee.GetKey()
+	// VERIFY
+	assert.Equal(t, "ns1/foo", key)
+}
+
+func Test_GetNamespace(t *testing.T) {
+	// SETUP
+	run := newPipelineRunWithEmptySpec("ns1", "foo")
+	examinee := NewPipelineRun(run, nil)
+	// EXERCISE
+	key := examinee.GetNamespace()
+	// VERIFY
+	assert.Equal(t, "ns1", key)
+}
+
+func Test_GetName(t *testing.T) {
+	// SETUP
+	run := newPipelineRunWithEmptySpec("ns1", "foo")
+	examinee := NewPipelineRun(run, nil)
+	// EXERCISE
+	key := examinee.GetName()
+	// VERIFY
+	assert.Equal(t, "foo", key)
+}
+
+func Test_StoreErrorAsMessage(t *testing.T) {
+	// SETUP
+	run := newPipelineRunWithEmptySpec(ns1, "foo")
+	factory := fake.NewClientFactory(run)
+	examinee := NewPipelineRun(run, factory)
+	errorToStore := fmt.Errorf("error1")
+	message := "message1"
+	// EXERCISE
+	examinee.StoreErrorAsMessage(errorToStore, message)
+	// VERIFY
+	client := factory.StewardV1alpha1().PipelineRuns(ns1)
+	run, err := client.Get("foo", metav1.GetOptions{})
+	assert.NilError(t, err)
+	assert.Equal(t, "ERROR: message1 (foo - status:): error1", run.Status.Message)
+}
+
+func Test_HasDeletionTimestamp_false(t *testing.T) {
+	// SETUP
+	run := newPipelineRunWithEmptySpec("ns1", "foo")
+	examinee := NewPipelineRun(run, nil)
+	// EXERCISE
+	deleted := examinee.HasDeletionTimestamp()
+	// VERIFY
+	assert.Assert(t, deleted == false)
+}
+
+func Test_HasDeletionTimestamp_true(t *testing.T) {
+	// SETUP
+	run := newPipelineRunWithEmptySpec("ns1", "foo")
+	now := metav1.Now()
+	run.SetDeletionTimestamp(&now)
+	examinee := NewPipelineRun(run, nil)
+	// EXERCISE
+	deleted := examinee.HasDeletionTimestamp()
+	// VERIFY
+	assert.Assert(t, deleted == true)
+}
+
 func Test_pipelineRun_UpdateMessage_GoodCase(t *testing.T) {
 	// SETUP
 	run := newPipelineRunWithEmptySpec(ns1, run1)
 	factory := fake.NewClientFactory(run)
-	fetcher := NewClientBasedPipelineRunFetcher(factory.StewardV1alpha1())
-	examinee := NewPipelineRun(run, fetcher, factory)
+	examinee := NewPipelineRun(run, factory)
 
 	// EXERCISE
 	examinee.UpdateMessage(message)
@@ -32,8 +114,7 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	creationTimestamp := metav1.Now()
 	pipelineRun.ObjectMeta.CreationTimestamp = creationTimestamp
 	factory := fake.NewClientFactory(pipelineRun)
-	fetcher := NewClientBasedPipelineRunFetcher(factory.StewardV1alpha1())
-	examinee := NewPipelineRun(pipelineRun, fetcher, factory)
+	examinee := NewPipelineRun(pipelineRun, factory)
 
 	// EXERCISE
 	examinee.UpdateState(api.StatePreparing)
@@ -52,8 +133,7 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	// SETUP
 	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
 	factory := fake.NewClientFactory(pipelineRun)
-	fetcher := NewClientBasedPipelineRunFetcher(factory.StewardV1alpha1())
-	examinee := NewPipelineRun(pipelineRun, fetcher, factory)
+	examinee := NewPipelineRun(pipelineRun, factory)
 
 	examinee.UpdateState(api.StatePreparing) // first call
 	factory.Sleep("let time elapse to check timestamps afterwards")
@@ -76,8 +156,7 @@ func Test_pipelineRun_FinishState_HistoryIfUpdateStateCalledBefore(t *testing.T)
 	// SETUP
 	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
 	factory := fake.NewClientFactory(pipelineRun)
-	fetcher := NewClientBasedPipelineRunFetcher(factory.StewardV1alpha1())
-	examinee := NewPipelineRun(pipelineRun, fetcher, factory)
+	examinee := NewPipelineRun(pipelineRun, factory)
 
 	examinee.UpdateState(api.StatePreparing) // called before
 	factory.Sleep("let time elapse to check timestamps afterwards")
@@ -99,8 +178,7 @@ func Test_pipelineRun_UpdateResult(t *testing.T) {
 	// SETUP
 	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
 	factory := fake.NewClientFactory(pipelineRun)
-	fetcher := NewClientBasedPipelineRunFetcher(factory.StewardV1alpha1())
-	examinee := NewPipelineRun(pipelineRun, fetcher, factory)
+	examinee := NewPipelineRun(pipelineRun, factory)
 
 	assert.Assert(t, examinee.GetStatus().FinishedAt.IsZero())
 	// EXERCISE
@@ -127,7 +205,7 @@ func Test_pipelineRun_GetPipelineRepoServerURL_CorrectURLs(t *testing.T) {
 		t.Run(test.url, func(t *testing.T) {
 			// SETUP
 			run := newPipelineRunWithPipelineRepoURL(ns1, run1, test.url)
-			r := NewPipelineRun(run, nil, nil)
+			r := NewPipelineRun(run, nil)
 			// EXERCISE
 			url, err := r.GetPipelineRepoServerURL()
 			// VERIFY
@@ -147,7 +225,7 @@ func Test_pipelineRun_GetPipelineRepoServerURL_WrongURLs(t *testing.T) {
 		t.Run(test.url, func(t *testing.T) {
 			// SETUP
 			run := newPipelineRunWithPipelineRepoURL(ns1, run1, test.url)
-			r := NewPipelineRun(run, nil, nil)
+			r := NewPipelineRun(run, nil)
 			// EXERCISE
 			url, err := r.GetPipelineRepoServerURL()
 			// VERIFY
