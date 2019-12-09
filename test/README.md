@@ -10,7 +10,7 @@ export STEWARD_TEST_CLIENT=${STEWARD_TEST_CLIENT#*/}
 ```
 
 ### Prepare test tenant
-This setp is optional. If no test tenant is created it will be created automatically by the test and cleaned up after the test completed.
+This setup is optional. If no test tenant is created it will be created automatically by the test and cleaned up after the test completed.
 
 If you want to keep the tenant after the test prepare one manually and clean it up manually after the tests.
 ```bash

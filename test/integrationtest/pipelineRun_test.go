@@ -5,8 +5,8 @@ package integrationtest
 import (
 	"testing"
 
-	test "github.com/SAP/stewardci-core/test"
-	f "github.com/SAP/stewardci-core/test/frameworkth/gcp"
+	f "github.com/SAP/stewardci-core/test/framework"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 func Test_PipelineRunSingle(t *testing.T) {

@@ -68,7 +68,7 @@ func PipelineRunWrongExpect(Namespace string) PipelineRunTest {
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"success/Jenkinsfile"),
 			)),
-		Check:    PipelineRunHasStateResult(api.ResultKilled),
+		Check:    PipelineRunHasStateResult(api.ResultAborted),
 		Timeout:  120 * time.Second,
 		Expected: `unexpected result: expecting "killed", got "success"`,
 	}
