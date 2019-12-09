@@ -247,18 +247,6 @@ func (mr *MockPipelineRunMockRecorder) UpdateContainer(arg0 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateContainer", reflect.TypeOf((*MockPipelineRun)(nil).UpdateContainer), arg0)
 }
 
-// UpdateLog mocks base method
-func (m *MockPipelineRun) UpdateLog() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateLog")
-}
-
-// UpdateLog indicates an expected call of UpdateLog
-func (mr *MockPipelineRunMockRecorder) UpdateLog() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLog", reflect.TypeOf((*MockPipelineRun)(nil).UpdateLog))
-}
-
 // UpdateMessage mocks base method
 func (m *MockPipelineRun) UpdateMessage(arg0 string) error {
 	m.ctrl.T.Helper()
