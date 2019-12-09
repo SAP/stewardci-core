@@ -1,11 +1,13 @@
 package k8s
 
 import (
+	"fmt"
 	"testing"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardLister "github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
+	"github.com/pkg/errors"
 	"gotest.tools/assert"
 	"k8s.io/client-go/tools/cache"
 )
@@ -22,6 +24,38 @@ func Test_ClientBasedPipelineRunFetcher_ByName_NotExisting(t *testing.T) {
 	// VERIFY
 	assert.Assert(t, pipelineRun == nil)
 	assert.NilError(t, resultErr)
+}
+
+func Test_ClientBasedPipelineRunFetcher_ByName_OtherError(t *testing.T) {
+	// SETUP
+	factory := fake.NewClientFactory()
+	expectedError := fmt.Errorf("expected")
+	expectedReturnedError := errors.Wrap(expectedError,
+		"Failed to fetch PipelineRun 'Any' in namespace 'namespace1'")
+	factory.StewardClientset().PrependReactor("get", "*", fake.NewErrorReactor(expectedError))
+	client := factory.StewardV1alpha1()
+	examinee := NewClientBasedPipelineRunFetcher(client)
+
+	// EXERCISE
+	pipelineRun, resultErr := examinee.ByName(ns1, "Any")
+
+	// VERIFY
+	assert.Assert(t, pipelineRun == nil)
+	assert.Equal(t, expectedReturnedError.Error(), resultErr.Error())
+}
+
+func Test_ClientBasedPipelineRunFetcher_ByKey_BadKey(t *testing.T) {
+	// SETUP
+	factory := fake.NewClientFactory()
+	client := factory.StewardV1alpha1()
+	examinee := NewClientBasedPipelineRunFetcher(client)
+	badKey := "this/is/a/bad/key"
+	// EXERCISE
+	pipelineRun, resultErr := examinee.ByKey(badKey)
+
+	// VERIFY
+	assert.Assert(t, pipelineRun == nil)
+	assert.ErrorContains(t, resultErr, badKey)
 }
 
 func Test_ClientBasedPipelineRunFetcher_ByName_GoodCase(t *testing.T) {
