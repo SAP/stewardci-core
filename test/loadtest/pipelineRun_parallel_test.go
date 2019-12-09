@@ -1,14 +1,14 @@
 // +build loadtest
 
-package test
+package loadtest
 
 import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"testing"
 	"time"
 
-	"github.com/SAP/stewardci-core/test"
 	f "github.com/SAP/stewardci-core/test/framework"
+	test "github.com/SAP/stewardci-core/test/integrationtest"
 )
 
 func Test_Loadtest_delay(t *testing.T) {

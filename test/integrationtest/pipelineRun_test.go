@@ -1,12 +1,12 @@
 // +build e2e
 
-package test
+package integrationtest
 
 import (
 	"testing"
 
-	f "github.com/SAP/stewardci-core/test/framework"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	test "github.com/SAP/stewardci-core/test"
+	f "github.com/SAP/stewardci-core/test/frameworkth/gcp"
 )
 
 func Test_PipelineRunSingle(t *testing.T) {

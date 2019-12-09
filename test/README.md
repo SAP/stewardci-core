@@ -33,6 +33,7 @@ go test -count=1 -tags=frameworktest -v --kubeconfig $KUBECONFIG .
 ### Integration tests
 
 ```bash
+cd integrationtest
 go test -count=1 -tags=e2e -v --kubeconfig $KUBECONFIG .
 ```
 

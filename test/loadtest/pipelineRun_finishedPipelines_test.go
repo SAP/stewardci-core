@@ -1,12 +1,12 @@
 // +build loadtest
 
-package test
+package loadtest
 
 import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"testing"
 
-	"github.com/SAP/stewardci-core/test"
+	test "github.com/SAP/stewardci-core/test/integrationtest"
 	f "github.com/SAP/stewardci-core/test/framework"
 )
 

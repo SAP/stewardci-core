@@ -1,10 +1,10 @@
-package test
+package integrationtest
 
 import (
 	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	"github.com/SAP/stewardci-core/test/builder"
+	builder "github.com/SAP/stewardci-core/test/builder"
 	f "github.com/SAP/stewardci-core/test/framework"
 	v1 "k8s.io/api/core/v1"
 )
