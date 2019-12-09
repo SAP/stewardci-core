@@ -94,7 +94,7 @@ GEN_DIR="$PROJECT_ROOT/gen"
 if is_verify_mode; then
     MOCK_ROOT=${GEN_DIR}
     ACTION="Verify"
-else    
+else
     MOCK_ROOT=${PROJECT_ROOT}
     ACTION="Generate"
 fi
@@ -177,7 +177,7 @@ set -x
     -destination="${MOCK_ROOT}/pkg/k8s/mocks/mocks.go" \
     -package=mocks \
     github.com/SAP/stewardci-core/pkg/k8s \
-    PipelineRun,ClientFactory,PipelineRunFetcher,NamespaceManager \
+    "ClientFactory,NamespaceManager,PipelineRun,PipelineRunFetcher,TenantFetcher" \
     || die "'k8s' mock generation failed"
 { set +x; } 2>/dev/null
 if is_verify_mode; then
@@ -194,7 +194,7 @@ set -x
     -destination="${MOCK_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
     -package=mocks \
     github.com/SAP/stewardci-core/pkg/k8s/secrets \
-    SecretProvider,SecretHelper \
+    "SecretHelper,SecretProvider" \
     || die "'k8s/secrets' mock generation failed"
 { set +x; } 2>/dev/null
 if is_verify_mode; then
