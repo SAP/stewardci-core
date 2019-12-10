@@ -87,100 +87,36 @@ var tenantTests = []SchemaValidationTest{
 
 	// ###################################################################
 	SchemaValidationTest{
-		name:       "spec.name missing",
-		dataFormat: json,
-		data: fmt.Sprintf(`
-		{
-			%v,
-			"spec": {
-				"displayName": "displayName1"
-			}
-		}`, tenantHeader),
-		check: func(t *testing.T, err error) {
-			assert.NilError(t, err)
-		},
-	},
-
-	// ###################################################################
-	SchemaValidationTest{
-		name:       "spec.name empty",
+		name:       "spec values are empty",
 		dataFormat: json,
 		data: fmt.Sprintf(`
 		{
 			%v,
 			"spec": {
 				"name": "",
-				"displayName": "displayName1"
-			}
-		}`, tenantHeader),
-		check: func(t *testing.T, err error) {
-			assert.ErrorContains(t, err, "spec.name in body should match '^[^\\s]{1,}.*$'")
-		},
-	},
-
-	// ###################################################################
-	SchemaValidationTest{
-		name:       "spec.name is number",
-		dataFormat: json,
-		data: fmt.Sprintf(`
-		{
-			%v,
-			"spec": {
-				"name": 1,
-				"displayName": "displayName1"
-			}
-		}`, tenantHeader),
-		check: func(t *testing.T, err error) {
-			assert.ErrorContains(t, err, "spec.name in body must be of type string: \"integer\"")
-		},
-	},
-
-	// ###################################################################
-	SchemaValidationTest{
-		name:       "spec.displayName missing",
-		dataFormat: json,
-		data: fmt.Sprintf(`
-		{
-			%v,
-			"spec": {
-				"name": "name1"
-			}
-		}`, tenantHeader),
-		check: func(t *testing.T, err error) {
-			assert.NilError(t, err)
-		},
-	},
-
-	// ###################################################################
-	SchemaValidationTest{
-		name:       "spec.displayName empty",
-		dataFormat: json,
-		data: fmt.Sprintf(`
-		{
-			%v,
-			"spec": {
-				"name": "name1",
 				"displayName": ""
 			}
 		}`, tenantHeader),
 		check: func(t *testing.T, err error) {
+			assert.ErrorContains(t, err, "spec.name in body should match '^[^\\s]{1,}.*$'")
 			assert.ErrorContains(t, err, "spec.displayName in body should match '^[^\\s]{1,}.*$'")
 		},
 	},
 
 	// ###################################################################
 	SchemaValidationTest{
-		name:       "spec.displayName is number",
+		name:       "spec values are number",
 		dataFormat: json,
 		data: fmt.Sprintf(`
 		{
 			%v,
 			"spec": {
-				"name": "name1",
+				"name": 1,
 				"displayName": 1
 			}
 		}`, tenantHeader),
 		check: func(t *testing.T, err error) {
+			assert.ErrorContains(t, err, "spec.name in body must be of type string: \"integer\"")
 			assert.ErrorContains(t, err, "spec.displayName in body must be of type string: \"integer\"")
 		},
 	},
