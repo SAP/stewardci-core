@@ -20,7 +20,7 @@ type clientBasedTenantFetcher struct {
 	factory ClientFactory
 }
 
-//NewClientBasedTenantFetcher retruns an operative implementation of TenantFetcher
+//NewClientBasedTenantFetcher returns an operative implementation of TenantFetcher
 func NewClientBasedTenantFetcher(factory ClientFactory) TenantFetcher {
 	return &clientBasedTenantFetcher{factory: factory}
 }
