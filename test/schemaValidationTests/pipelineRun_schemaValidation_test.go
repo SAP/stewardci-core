@@ -1,6 +1,6 @@
 // +build e2e
 
-package schema-validation
+package schemavalidationtests
 
 import (
 	"fmt"

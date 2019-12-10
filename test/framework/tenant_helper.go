@@ -33,6 +33,32 @@ func CreateTenant(ctx context.Context, tenant *api.Tenant) (*api.Tenant, error) 
 	return getTenantInterface(ctx).Create(tenant)
 }
 
+// CreateTenantFromJSON creates a Tenant resource on a client
+func CreateTenantFromJSON(ctx context.Context, tenantJSON string) (result *api.Tenant, err error) {
+	return createTenantFromString(ctx, tenantJSON, "application/json")
+}
+
+// CreateTenantFromYAML creates a Tenant resource on a client
+func CreateTenantFromYAML(ctx context.Context, tenantYAML string) (result *api.Tenant, err error) {
+	return createTenantFromString(ctx, tenantYAML, "application/yaml")
+}
+
+func createTenantFromString(ctx context.Context, tenantString string, contentType string) (result *api.Tenant, err error) {
+	client := GetClientFactory(ctx).StewardV1alpha1().RESTClient()
+	result = &api.Tenant{}
+	err = client.Post().
+		Namespace(GetNamespace(ctx)).
+		Resource("tenants").
+		Body([]byte(tenantString)).
+		SetHeader("Content-Type", contentType).
+		Do().
+		Into(result)
+	if err != nil {
+		result = nil
+	}
+	return
+}
+
 // GetTenant returns a Tenant resource from a client
 func GetTenant(ctx context.Context, tenant *api.Tenant) (*api.Tenant, error) {
 	return getTenantInterface(ctx).Get(tenant.GetName(), metav1.GetOptions{})
@@ -40,6 +66,9 @@ func GetTenant(ctx context.Context, tenant *api.Tenant) (*api.Tenant, error) {
 
 // DeleteTenant deletes a Tenant resource from a client
 func DeleteTenant(ctx context.Context, tenant *api.Tenant) error {
+	if tenant == nil {
+		return nil
+	}
 	stewardClient := getTenantInterface(ctx)
 	uid := tenant.GetObjectMeta().GetUID()
 	return stewardClient.Delete(tenant.GetName(), &metav1.DeleteOptions{

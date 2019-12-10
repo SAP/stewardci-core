@@ -1,10 +1,12 @@
-package schema-validation
+// +build e2e
+
+package schemavalidationtests
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	framework "github.com/SAP/stewardci-core/test/framework"
 	"gotest.tools/assert"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -24,7 +26,7 @@ func Test_TenantSchemaValidation(t *testing.T) {
 
 			// VERIFY
 			check := checks[testName]
-			check.(func(t *testing.T, tenant *v1alpha1.Tenant, err error))(t, tenant, err)
+			check.(func(t *testing.T, tenant *api.Tenant, err error))(t, tenant, err)
 		})
 	}
 }
@@ -52,7 +54,7 @@ func getTenantSchemaTestData() (data map[string]string, checks map[string]interf
 				"displayName": "displayName1"
 			}
 		}`, tenantHeader)
-	checks[testName] = func(t *testing.T, tenant *v1alpha1.Tenant, err error) {
+	checks[testName] = func(t *testing.T, tenant *api.Tenant, err error) {
 		assert.NilError(t, err)
 	}
 
@@ -63,7 +65,7 @@ func getTenantSchemaTestData() (data map[string]string, checks map[string]interf
 		%v,
 		"spec": {}
 	}`, tenantHeader)
-	checks[testName] = func(t *testing.T, tenant *v1alpha1.Tenant, err error) {
+	checks[testName] = func(t *testing.T, tenant *api.Tenant, err error) {
 		assert.NilError(t, err)
 	}
 
@@ -76,7 +78,7 @@ func getTenantSchemaTestData() (data map[string]string, checks map[string]interf
 			"name": "tenant1"
 		}
 	}`
-	checks[testName] = func(t *testing.T, tenant *v1alpha1.Tenant, err error) {
+	checks[testName] = func(t *testing.T, tenant *api.Tenant, err error) {
 		assert.NilError(t, err)
 	}
 
@@ -89,7 +91,7 @@ func getTenantSchemaTestData() (data map[string]string, checks map[string]interf
 			"displayName": "displayName1"
 		}
 	}`, tenantHeader)
-	checks[testName] = func(t *testing.T, tenant *v1alpha1.Tenant, err error) {
+	checks[testName] = func(t *testing.T, tenant *api.Tenant, err error) {
 		assert.NilError(t, err)
 	}
 
@@ -102,7 +104,7 @@ func getTenantSchemaTestData() (data map[string]string, checks map[string]interf
 			"displayName": "displayName1"
 		}
 	}`, tenantHeader)
-	checks[testName] = func(t *testing.T, tenant *v1alpha1.Tenant, err error) {
+	checks[testName] = func(t *testing.T, tenant *api.Tenant, err error) {
 		assert.ErrorContains(t, err, "spec.name in body should match '^[^\\s]{1,}.*$'")
 	}
 
@@ -115,7 +117,7 @@ func getTenantSchemaTestData() (data map[string]string, checks map[string]interf
 			"displayName": "displayName1"
 		}
 	}`, tenantHeader)
-	checks[testName] = func(t *testing.T, tenant *v1alpha1.Tenant, err error) {
+	checks[testName] = func(t *testing.T, tenant *api.Tenant, err error) {
 		assert.ErrorContains(t, err, "spec.name in body must be of type string: \"integer\"")
 	}
 
@@ -128,7 +130,7 @@ func getTenantSchemaTestData() (data map[string]string, checks map[string]interf
 			"name": "name1"
 		}
 	}`, tenantHeader)
-	checks[testName] = func(t *testing.T, tenant *v1alpha1.Tenant, err error) {
+	checks[testName] = func(t *testing.T, tenant *api.Tenant, err error) {
 		assert.NilError(t, err)
 	}
 
@@ -141,7 +143,7 @@ func getTenantSchemaTestData() (data map[string]string, checks map[string]interf
 			"displayName": ""
 		}
 	}`, tenantHeader)
-	checks[testName] = func(t *testing.T, tenant *v1alpha1.Tenant, err error) {
+	checks[testName] = func(t *testing.T, tenant *api.Tenant, err error) {
 		assert.ErrorContains(t, err, "spec.displayName in body should match '^[^\\s]{1,}.*$'")
 	}
 
@@ -154,7 +156,7 @@ func getTenantSchemaTestData() (data map[string]string, checks map[string]interf
 			"displayName": 1
 		}
 	}`, tenantHeader)
-	checks[testName] = func(t *testing.T, tenant *v1alpha1.Tenant, err error) {
+	checks[testName] = func(t *testing.T, tenant *api.Tenant, err error) {
 		assert.ErrorContains(t, err, "spec.displayName in body must be of type string: \"integer\"")
 	}
 
