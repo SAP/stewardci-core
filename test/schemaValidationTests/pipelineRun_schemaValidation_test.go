@@ -3,7 +3,6 @@
 package schemavalidationtests
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -41,18 +40,18 @@ var pipelineRunTests = []SchemaValidationTest{
 	SchemaValidationTest{
 		name:       "minimal good case",
 		dataFormat: yaml,
-		data: fixIndent(fmt.Sprintf(`%v
-spec:
-	jenkinsFile:
-		repoUrl: repoUrl1
-		revision: revision1
-		relativePath: relativePath1
-	args: {}
-	intent: intent1
-	logging:
-		elasticsearch:
-			runID: {}
-`, pipelineRunHeaderYAML)),
+		data: fixIndent(2, `%v
+		spec:
+			jenkinsFile:
+				repoUrl: repoUrl1
+				revision: revision1
+				relativePath: relativePath1
+			args: {}
+			intent: intent1
+			logging:
+				elasticsearch:
+					runID: {}
+		`, pipelineRunHeaderYAML),
 		check: func(t *testing.T, err error) {
 			assert.NilError(t, err)
 		},
@@ -62,9 +61,9 @@ spec:
 	SchemaValidationTest{
 		name:       "spec empty",
 		dataFormat: yaml,
-		data: fixIndent(fmt.Sprintf(`%v
-spec: {}
-`, pipelineRunHeaderYAML)),
+		data: fixIndent(2, `%v
+		spec: {}
+		`, pipelineRunHeaderYAML),
 		check: func(t *testing.T, err error) {
 			assert.ErrorContains(t, err, "spec.jenkinsFile in body is required")
 			assert.ErrorContains(t, err, "spec.args in body is required")
@@ -79,7 +78,7 @@ spec: {}
 	SchemaValidationTest{
 		name:       "spec missing",
 		dataFormat: yaml,
-		data:       fixIndent(fmt.Sprintf(`%v`, pipelineRunHeaderYAML)),
+		data:       fixIndent(0, `%v`, pipelineRunHeaderYAML),
 		check: func(t *testing.T, err error) {
 			assert.ErrorContains(t, err, ".spec in body is required")
 		},
@@ -89,15 +88,15 @@ spec: {}
 	SchemaValidationTest{
 		name:       "spec.jenkinsFile entries missing",
 		dataFormat: yaml,
-		data: fixIndent(fmt.Sprintf(`%v
-spec:
-	jenkinsFile: {}			#empty
-	args: {}
-	intent: intent1
-	logging:
-		elasticsearch:
-			runID: {}
-`, pipelineRunHeaderYAML)),
+		data: fixIndent(2, `%v
+		spec:
+			jenkinsFile: {}			#empty
+			args: {}
+			intent: intent1
+			logging:
+				elasticsearch:
+					runID: {}
+		`, pipelineRunHeaderYAML),
 		check: func(t *testing.T, err error) {
 			assert.ErrorContains(t, err, "spec.jenkinsFile.repoUrl in body is required")
 			assert.ErrorContains(t, err, "spec.jenkinsFile.revision in body is required")
@@ -111,18 +110,18 @@ spec:
 	SchemaValidationTest{
 		name:       "spec entry keys empty strings",
 		dataFormat: yaml,
-		data: fixIndent(fmt.Sprintf(`%v
-spec:
-	jenkinsFile:
-		repoUrl: "" 		#empty
-		revision: "" 		#empty
-		relativePath: "" 	#empty
-	args: "" 				#empty
-	intent: "" 				#empty
-	logging:
-		elasticsearch:
-			runID: "" 		#empty
-`, pipelineRunHeaderYAML)),
+		data: fixIndent(2, `%v
+		spec:
+			jenkinsFile:
+				repoUrl: "" 		#empty
+				revision: "" 		#empty
+				relativePath: "" 	#empty
+			args: "" 				#empty
+			intent: "" 				#empty
+			logging:
+				elasticsearch:
+					runID: "" 		#empty
+		`, pipelineRunHeaderYAML),
 		check: func(t *testing.T, err error) {
 			assert.ErrorContains(t, err, "spec.jenkinsFile.repoUrl in body should match '^[^\\s]{1,}.*$'")
 			assert.ErrorContains(t, err, "spec.jenkinsFile.revision in body should match '^[^\\s]{1,}.*$'")
@@ -139,18 +138,18 @@ spec:
 	SchemaValidationTest{
 		name:       "spec entry values unset",
 		dataFormat: yaml,
-		data: fixIndent(fmt.Sprintf(`%v
-spec:
-	jenkinsFile:
-		repoUrl:			#unset 
-		revision: 			#unset
-		relativePath: 		#unset
-	args: 					#unset
-	intent:					#unset
-	logging:
-		elasticsearch:
-			runID: 			#unset
-`, pipelineRunHeaderYAML)),
+		data: fixIndent(2, `%v
+		spec:
+			jenkinsFile:
+				repoUrl:			#unset 
+				revision: 			#unset
+				relativePath: 		#unset
+			args: 					#unset
+			intent:					#unset
+			logging:
+				elasticsearch:
+					runID: 			#unset
+		`, pipelineRunHeaderYAML),
 		check: func(t *testing.T, err error) {
 			assert.ErrorContains(t, err, "spec.jenkinsFile.relativePath in body must be of type string: \"null\"")
 			assert.ErrorContains(t, err, "spec.jenkinsFile.repoUrl in body must be of type string: \"null\"")

@@ -1,7 +1,7 @@
 package schemavalidationtests
 
 import (
-	"github.com/lithammer/dedent"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -23,10 +23,15 @@ const (
 
 // fixIndent removes common leading whitespace from all lines
 // and replaces all tabs by spaces
-func fixIndent(s string) (out string) {
-	const TAB = "   "
-	out = s
-	out = dedent.Dedent(out)
+func fixIndent(tabsToRemove int, s string, param string) (out string) {
+	const TAB = "  "
+	out = ""
+	for _, line := range strings.Split(s, "\n") {
+		out += strings.Replace(line, "\t", "", tabsToRemove) + "\n"
+	}
+	if param != "" {
+		out = fmt.Sprintf(out, param)
+	}
 	out = strings.ReplaceAll(out, "\t", TAB)
 	return
 }
