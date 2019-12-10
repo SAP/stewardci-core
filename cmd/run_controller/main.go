@@ -56,8 +56,7 @@ func main() {
 	metrics.StartServer()
 
 	log.Printf("Create Controller")
-	pipelineRunFetcher := k8s.NewPipelineRunFetcher(factory)
-	controller := runctl.NewController(factory, pipelineRunFetcher, metrics)
+	controller := runctl.NewController(factory, metrics)
 
 	log.Printf("Create Signal Handler")
 	stopCh := signals.SetupSignalHandler()

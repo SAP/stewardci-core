@@ -22,7 +22,7 @@ type metrics struct {
 func NewMetrics() Metrics {
 	return &metrics{
 		TenantCount: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "steward_tenant_total_number",
+			Name: "steward_tenants_total",
 			Help: "total number of tenants",
 		}),
 	}

@@ -19,23 +19,17 @@ require (
 	github.com/lithammer/dedent v1.1.0
 	github.com/markbates/inflect v1.0.4 // indirect
 	github.com/mattbaird/jsonpatch v0.0.0-20171005235357-81af80346b1a // indirect
+	github.com/openzipkin/zipkin-go v0.2.2 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.2.1
 	github.com/tektoncd/pipeline v0.7.0
-	go.opencensus.io v0.22.2 // indirect
 	go.uber.org/zap v1.13.0 // indirect
-	golang.org/x/crypto v0.0.0-20191117063200-497ca9f6d64f // indirect
-	golang.org/x/net v0.0.0-20191116160921-f9c825593386 // indirect
-	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
-	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
-	google.golang.org/api v0.14.0 // indirect
-	gopkg.in/yaml.v2 v2.2.5 // indirect
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.0.0-20191004102349-159aefb8556b
-	k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689
-	k8s.io/client-go v11.0.1-0.20191029005444-8e4128053008+incompatible
+	k8s.io/api v0.0.0-20180904230853-4e7be11eab3f
+	k8s.io/apimachinery v0.0.0-20180904193909-def12e63c512
+	k8s.io/client-go v0.0.0-20180910083459-2cefa64ff137
 	k8s.io/utils v0.0.0-20191114200735-6ca3b61696b6 // indirect
-	knative.dev/pkg v0.0.0-20191107185656-884d50f09454
+	knative.dev/pkg v0.0.0-00010101000000-000000000000
 )
 
 replace (

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  # Specify namespace name here
+  name: steward-test-client
+  annotations:
+    steward.sap.com/tenant-namespace-prefix: steward-test-tenant
+    steward.sap.com/tenant-role: steward-tenant

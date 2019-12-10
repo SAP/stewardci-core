@@ -19,4 +19,10 @@ const (
 	// namespace defining the name of the ClusterRole to be assigned to the
 	// default service account of a tenant namespace.
 	AnnotationTenantRole = steward.GroupName + "/tenant-role"
+
+	// LabelSystemManaged is the key of the label whose presence indicates
+	// that this resource is managed by the Steward system and should not be
+	// modified otherwise.
+	// The value of the label is ignored and should be empty.
+	LabelSystemManaged = steward.GroupName + "/system-managed"
 )

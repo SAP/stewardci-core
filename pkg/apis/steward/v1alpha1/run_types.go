@@ -66,12 +66,17 @@ type Elasticsearch struct {
 
 // PipelineStatus represents the status of the pipeline
 type PipelineStatus struct {
+	// StartedAt is the time the pipeline run has been started.
+	// +optional
+	StartedAt *metav1.Time `json:"startedAt,omitempty"`
+	// FinishedAt is the time the pipeline run has been finished.
+	// +optional
+	FinishedAt   *metav1.Time          `json:"finishedAt,omitempty"`
 	State        State                 `json:"state"`
 	StateDetails StateItem             `json:"stateDetails"`
 	StateHistory []StateItem           `json:"stateHistory"`
 	Result       Result                `json:"result"`
 	Container    corev1.ContainerState `json:"container,omitempty"`
-	LogURL       string                `json:"logUrl"`
 	MessageShort string                `json:"messageShort"`
 	Message      string                `json:"message"`
 	History      []string              `json:"history"`
@@ -91,6 +96,8 @@ type State string
 const (
 	// StateUndefined - the state was not yet set
 	StateUndefined State = ""
+	// StateNew - pipeline run is first checked by the controller
+	StateNew State = "new"
 	// StatePreparing - the namespace for the execution is prepared
 	StatePreparing State = "preparing"
 	// StateWaiting - the pipeline run is waiting to be processed
@@ -115,8 +122,8 @@ const (
 	ResultErrorInfra Result = "error_infra"
 	// ResultErrorContent -  the pipeline run failed due to an content problem
 	ResultErrorContent Result = "error_content"
-	// ResultKilled - the pipeline run has been cancelled
-	ResultKilled Result = "killed"
+	// ResultAborted - the pipeline run has been aborted
+	ResultAborted Result = "aborted"
 	// ResultTimeout - the pipeline run timed out
 	ResultTimeout Result = "timeout"
 )
@@ -125,10 +132,11 @@ const (
 type Intent string
 
 const (
-	// IntentRun - run the pipeline
+	// IntentRun indicates that the pipeline should run to completion.
 	IntentRun Intent = "run"
-	// IntentKill - cancel the pipeline run (if still running)
-	IntentKill Intent = "kill"
+	// IntentAbort indicates that the pipeline run should be aborted
+	// if it is not completed already.
+	IntentAbort Intent = "abort"
 )
 
 // PipelineRunDetails provies details of a pipeline run which are passed to the jenkinsfile-runner.

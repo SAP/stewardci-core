@@ -68,6 +68,11 @@ func groupObjectsByAPI(objects []runtime.Object) (
 	return
 }
 
+// StewardClientset returns the Steward fake clientset.
+func (f *ClientFactory) StewardClientset() *steward.Clientset {
+	return f.stewardClientset
+}
+
 // StewardV1alpha1 returns Steward clients.
 func (f *ClientFactory) StewardV1alpha1() stewardv1alpha1.StewardV1alpha1Interface {
 	return f.stewardClientset.StewardV1alpha1()
@@ -96,6 +101,11 @@ func (f *ClientFactory) RbacV1beta1() rbacv1beta1.RbacV1beta1Interface {
 // TektonInformerFactory returns the Tekton informer factory
 func (f *ClientFactory) TektonInformerFactory() tektoninformers.SharedInformerFactory {
 	return f.tektonInformerFactory
+}
+
+// TektonClientset returns the Tekton fake clientset.
+func (f *ClientFactory) TektonClientset() *tektonclientfake.Clientset {
+	return f.tektonClientset
 }
 
 // TektonV1alpha1 returns the Tekton v1alpha1 client

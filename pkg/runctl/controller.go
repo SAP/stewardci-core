@@ -10,7 +10,6 @@ import (
 	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	listers "github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,21 +26,21 @@ type Controller struct {
 	factory              k8s.ClientFactory
 	pipelineRunFetcher   k8s.PipelineRunFetcher
 	pipelineRunSynced    cache.InformerSynced
-	pipelineRunLister    listers.PipelineRunLister
 	tektonTaskRunsSynced cache.InformerSynced
 	workqueue            workqueue.RateLimitingInterface
 	metrics              metrics.Metrics
 }
 
 // NewController creates new Controller
-func NewController(factory k8s.ClientFactory, pipelineRunFetcher k8s.PipelineRunFetcher, metrics metrics.Metrics) *Controller {
+func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controller {
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
+	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1alpha1().TaskRuns()
 	controller := &Controller{
-		factory:              factory,
-		pipelineRunFetcher:   pipelineRunFetcher,
-		pipelineRunSynced:    pipelineRunInformer.Informer().HasSynced,
-		pipelineRunLister:    pipelineRunInformer.Lister(),
+		factory:            factory,
+		pipelineRunFetcher: pipelineRunFetcher,
+		pipelineRunSynced:  pipelineRunInformer.Informer().HasSynced,
+
 		tektonTaskRunsSynced: tektonTaskRunInformer.Informer().HasSynced,
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
 		metrics:              metrics,
@@ -163,16 +162,21 @@ func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) RunManager {
 // converge the two. It then updates the Status block of the Foo resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
-	pipelineRun, err := c.pipelineRunFetcher.ByKey(key)
+	pipelineRunAPIObj, err := c.pipelineRunFetcher.ByKey(key)
 	if err != nil {
 		return err
 	}
-
 	// If pipelineRun is not found there is nothing to sync
-	if pipelineRun == nil {
+	if pipelineRunAPIObj == nil {
 		return nil
 	}
 
+	// fast exit
+	if pipelineRunAPIObj.Status.State == api.StateFinished && pipelineRunAPIObj.GetDeletionTimestamp().IsZero() {
+		return nil
+	}
+
+	pipelineRun := k8s.NewPipelineRun(pipelineRunAPIObj, c.factory)
 	// Check if object has deletion timestamp
 	// If not, try to add finalizer if missing
 	if pipelineRun.HasDeletionTimestamp() {
@@ -185,8 +189,8 @@ func (c *Controller) syncHandler(key string) error {
 	}
 	pipelineRun.AddFinalizer()
 
-	// Check if pipeline run is killed or completed
-	if c.skipKilledOrCompleted(pipelineRun) {
+	// Check if pipeline run is aborted or completed
+	if c.skipFinished(pipelineRun) {
 		return nil
 	}
 
@@ -254,25 +258,18 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-// skipKilledOrCompleted checks if pipeline run is killed or completed.
-func (c *Controller) skipKilledOrCompleted(pipelineRun k8s.PipelineRun) bool {
+// skipFinished checks if pipeline run is finished or should be aborted.
+// If the user requested abortion and the pipeline run is not finished
+// already, it updates message, result and state.
+func (c *Controller) skipFinished(pipelineRun k8s.PipelineRun) bool {
 	intent := pipelineRun.GetSpec().Intent
-	if intent == api.IntentKill {
-		switch result := pipelineRun.GetStatus().Result; result {
-		case api.ResultUndefined:
-			pipelineRun.UpdateMessage("Killed by user")
-			pipelineRun.UpdateResult(api.ResultKilled)
+	if intent == api.IntentAbort {
+		if pipelineRun.GetStatus().Result == api.ResultUndefined {
+			pipelineRun.UpdateMessage("Aborted")
+			pipelineRun.UpdateResult(api.ResultAborted)
 			c.changeState(pipelineRun, api.StateCleaning)
-			return true
-		case api.ResultKilled:
-			return true
-		default:
-			message := "Cannot kill completed pipeline run"
-			if !(message == pipelineRun.GetStatus().Message) {
-				pipelineRun.UpdateMessage(message)
-			}
-			return true
 		}
+		return true
 	}
 	return false
 }

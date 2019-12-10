@@ -13,24 +13,24 @@ spec:
   subresources:
     status: {}
   additionalPrinterColumns:
-    - name: Age
-      type: date
-      JSONPath: .metadata.creationTimestamp
-    - name: Progress
-      type: string
-      description: The current progress of tenant preparation
-      JSONPath: .status.progress
-      priority: 1
-    - name: Result
-      type: string
-      description: The current result of tenant preparation
-      JSONPath: .status.result
-      priority: 0
-    - name: Tenant-Namespace
-      type: string
-      description: The name of the namespace for this tenant
-      JSONPath: .status.tenantNamespaceName
-      priority: 0
+  - name: Ready
+    type: string
+    JSONPath: ".status.conditions[?(@.type==\"Ready\")].status"
+  - name: Reason
+    type: string
+    JSONPath: ".status.conditions[?(@.type==\"Ready\")].reason"
+    priority: 1
+  - name: Message
+    type: string
+    JSONPath: ".status.conditions[?(@.type==\"Ready\")].message"
+    priority: 1
+  - name: Tenant-Namespace
+    type: string
+    description: The name of the namespace for this tenant.
+    JSONPath: .status.tenantNamespaceName
+  - name: Age
+    type: date
+    JSONPath: .metadata.creationTimestamp
   validation:
     openAPIV3Schema:
       type: object
