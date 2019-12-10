@@ -6,10 +6,7 @@ import (
 	"testing"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
-	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
-	gomock "github.com/golang/mock/gomock"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +47,7 @@ func Test_CreatePipelineRunCondition(t *testing.T) {
 				assert.NilError(t, err, "Setup error")
 			}
 			ctx = SetClientFactory(ctx, clientFactory)
-			check := func(k8s.PipelineRun) (bool, error) {
+			check := func(*api.PipelineRun) (bool, error) {
 				return test.checkResult, test.checkError
 			}
 			// EXERCISE
@@ -73,58 +70,57 @@ func Test_PipelineRunCondition(t *testing.T) {
 	for _, test := range []struct {
 		name           string
 		examine        PipelineRunCheck
-		pipelineStatus *api.PipelineStatus
+		pipelineStatus api.PipelineStatus
 		expectedResult bool
 		expectedError  string
 	}{
 		{name: "empty status",
 			examine:        PipelineRunHasStateResult(api.ResultSuccess),
-			pipelineStatus: &api.PipelineStatus{},
+			pipelineStatus: api.PipelineStatus{},
 			expectedResult: false,
 			expectedError:  ""},
 		{name: "success",
 			examine:        PipelineRunHasStateResult(api.ResultSuccess),
-			pipelineStatus: &api.PipelineStatus{Result: api.ResultSuccess},
+			pipelineStatus: api.PipelineStatus{Result: api.ResultSuccess},
 			expectedResult: true,
 			expectedError:  ""},
 		{name: "wrongStatus",
 			examine:        PipelineRunHasStateResult(api.ResultSuccess),
-			pipelineStatus: &api.PipelineStatus{Result: api.ResultErrorInfra},
+			pipelineStatus: api.PipelineStatus{Result: api.ResultErrorInfra},
 			expectedResult: true,
 			expectedError:  `unexpected result: expecting "success", got "error_infra"`},
 		{name: "undefined status",
 			examine:        PipelineRunMessageOnFinished("foo"),
-			pipelineStatus: &api.PipelineStatus{},
+			pipelineStatus: api.PipelineStatus{},
 			expectedResult: false,
 			expectedError:  "",
 		},
 		{name: "correct message",
 			examine: PipelineRunMessageOnFinished("foo"),
-			pipelineStatus: &api.PipelineStatus{State: api.StateFinished,
+			pipelineStatus: api.PipelineStatus{State: api.StateFinished,
 				Message: "foo"},
 			expectedResult: true,
 			expectedError:  "",
 		},
 		{name: "wrong message",
 			examine: PipelineRunMessageOnFinished("foo"),
-			pipelineStatus: &api.PipelineStatus{State: api.StateFinished,
+			pipelineStatus: api.PipelineStatus{State: api.StateFinished,
 				Message: "bar"},
 			expectedResult: true,
 			expectedError:  `unexpected message: expecting "foo", got "bar"`,
 		},
 		{name: "empty message",
 			examine:        PipelineRunMessageOnFinished("foo"),
-			pipelineStatus: &api.PipelineStatus{State: api.StateFinished},
+			pipelineStatus: api.PipelineStatus{State: api.StateFinished},
 			expectedResult: true,
 			expectedError:  `unexpected message: expecting "foo", got ""`,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			//SETUP
-			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
-			mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
-			mockPipelineRun.EXPECT().GetStatus().Return(test.pipelineStatus).AnyTimes()
+			mockPipelineRun := &api.PipelineRun{
+				Status: test.pipelineStatus,
+			}
 			//EXERCISE
 			result, err := test.examine(mockPipelineRun)
 			// VERIFY

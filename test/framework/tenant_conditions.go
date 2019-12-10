@@ -17,7 +17,7 @@ type TenantCheck func(*api.Tenant) bool
 func CreateTenantCondition(tenant *api.Tenant, Check TenantCheck) WaitConditionFunc {
 	key := fmt.Sprintf("%s/%s", tenant.GetNamespace(), tenant.GetName())
 	return func(ctx context.Context) (bool, error) {
-		fetcher := k8s.NewTenantFetcher(GetClientFactory(ctx))
+		fetcher := k8s.NewClientBasedTenantFetcher(GetClientFactory(ctx))
 		tenant, err := fetcher.ByKey(key)
 		if err != nil {
 			return true, err

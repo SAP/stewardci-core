@@ -9,12 +9,12 @@ import (
 )
 
 // PipelineRunCheck is a Check for a PipelineRun
-type PipelineRunCheck func(k8s.PipelineRun) (bool, error)
+type PipelineRunCheck func(*api.PipelineRun) (bool, error)
 
 // CreatePipelineRunCondition returns a WaitCondition for a PipelineRun with a dedicated PipelineCheck
-func CreatePipelineRunCondition(pipelineRunToFind *api.PipelineRun, Check PipelineRunCheck) WaitConditionFunc {
+func CreatePipelineRunCondition(pipelineRunToFind *api.PipelineRun, check PipelineRunCheck) WaitConditionFunc {
 	return func(ctx context.Context) (bool, error) {
-		fetcher := k8s.NewPipelineRunFetcher(GetClientFactory(ctx))
+		fetcher := k8s.NewClientBasedPipelineRunFetcher(GetClientFactory(ctx).StewardV1alpha1())
 		pipelineRun, err := fetcher.ByName(pipelineRunToFind.GetNamespace(), pipelineRunToFind.GetName())
 		if err != nil {
 			return true, err
@@ -22,31 +22,31 @@ func CreatePipelineRunCondition(pipelineRunToFind *api.PipelineRun, Check Pipeli
 		if pipelineRun == nil {
 			return true, fmt.Errorf("pipelinerun not found '%s/%s'", pipelineRunToFind.GetNamespace(), pipelineRunToFind.GetName())
 		}
-		return Check(pipelineRun)
+		return check(pipelineRun)
 	}
 }
 
 // PipelineRunHasStateResult returns a PipelineRunCheck which Checks if a PipelineRun has a dedicated result
 func PipelineRunHasStateResult(result api.Result) PipelineRunCheck {
-	return func(pr k8s.PipelineRun) (bool, error) {
-		if pr.GetStatus().Result == "" {
+	return func(pr *api.PipelineRun) (bool, error) {
+		if pr.Status.Result == "" {
 			return false, nil
 		}
-		if pr.GetStatus().Result == result {
+		if pr.Status.Result == result {
 			return true, nil
 		}
-		return true, fmt.Errorf("unexpected result: expecting %q, got %q", result, pr.GetStatus().Result)
+		return true, fmt.Errorf("unexpected result: expecting %q, got %q", result, pr.Status.Result)
 	}
 }
 
 // PipelineRunMessageOnFinished returns a PipelineRunCheck which Checks if a PipelineRun has a dedicated message when it is in state finished
 func PipelineRunMessageOnFinished(message string) PipelineRunCheck {
-	return func(pr k8s.PipelineRun) (bool, error) {
-		if pr.GetStatus().State == api.StateFinished {
-			if pr.GetStatus().Message == message {
+	return func(pr *api.PipelineRun) (bool, error) {
+		if pr.Status.State == api.StateFinished {
+			if pr.Status.Message == message {
 				return true, nil
 			}
-			return true, fmt.Errorf("unexpected message: expecting %q, got %q", message, pr.GetStatus().Message)
+			return true, fmt.Errorf("unexpected message: expecting %q, got %q", message, pr.Status.Message)
 
 		}
 		return false, nil
