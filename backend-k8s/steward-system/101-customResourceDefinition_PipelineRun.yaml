@@ -67,6 +67,7 @@ spec:
                   pattern: '^[^\s]{1,}.*$'
                 repoAuthSecret: ###
                   type: string
+                  pattern: '^[^\s]{1,}.*$'
             args: ### map[string]string
               type: object
               additionalProperties: ###
@@ -84,7 +85,7 @@ spec:
                 pattern: '^[^\s]{1,}.*$'
             intent: ###
               type: string
-              pattern: '^[^\s]{1,}.*$'
+              pattern: '^[^\s]{1,}.*$' #TODO: Check consts
             logging: ###
               type: object
               required:
@@ -99,6 +100,10 @@ spec:
                       type: object
             runDetails: ###
               type: object
+              required: #TODO: Really required? Compare with run_types.go
+                - jobName
+                - sequenceNumber
+                - cause
               properties:
                 jobName: ###
                   type: string
