@@ -55,8 +55,9 @@ type controllerTesting struct {
 }
 
 // NewController creates new Controller
-func NewController(factory k8s.ClientFactory, fetcher k8s.TenantFetcher, metrics Metrics) *Controller {
+func NewController(factory k8s.ClientFactory, metrics Metrics) *Controller {
 	informer := factory.StewardInformerFactory().Steward().V1alpha1().Tenants()
+	fetcher := k8s.NewListerBasedTenantFetcher(informer.Lister())
 	controller := &Controller{
 		factory:      factory,
 		fetcher:      fetcher,
