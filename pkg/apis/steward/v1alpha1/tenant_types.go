@@ -15,7 +15,8 @@ type Tenant struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// +optional
 	Status TenantStatus `json:"status"`
-	Spec   TenantSpec   `json:"spec"`
+	// +optional
+	Spec TenantSpec `json:"spec"` //TODO: Remove spec and children?
 }
 
 // TenantList is a list of Tenants
@@ -29,8 +30,10 @@ type TenantList struct {
 
 // TenantSpec is a spec of a Tenant
 type TenantSpec struct {
-	Name        string `json:"name"`
-	DisplayName string `json:"displayName"`
+	// +optional
+	Name string `json:"name"` //TODO: remove
+	// +optional
+	DisplayName string `json:"displayName"` //TODO: remove?
 }
 
 // TenantStatus contains the status of a Tenant

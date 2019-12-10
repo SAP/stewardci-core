@@ -31,3 +31,18 @@ spec:
   - name: Age
     type: date
     JSONPath: .metadata.creationTimestamp
+  validation:
+    openAPIV3Schema:
+      type: object
+      required: []
+      properties:
+        spec: ###
+          type: object
+          required: []
+          properties:
+            name: ### deprecated
+              type: string
+              pattern: '^[^\s]{1,}.*$'
+            displayName: ### deprecated
+              type: string
+              pattern: '^[^\s]{1,}.*$'
