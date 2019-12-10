@@ -83,6 +83,26 @@ func Test_GenerateNameReactor_PanicsIfActionIsNotACreateAction(t *testing.T) {
 	}))
 }
 
+func Test_CreationTimeReactor(t *testing.T) {
+	// SETUP
+	namespace := &v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+		},
+	}
+	factory := NewClientFactory()
+	cs := factory.KubernetesClientset()
+	cs.PrependReactor("create", "*", NewCreationTimestampReactor())
+	client := cs.CoreV1().Namespaces()
+	// EXERCISE
+	client.Create(namespace)
+	// VERIFY
+	ns, err := client.Get("foo", metav1.GetOptions{})
+	assert.NilError(t, err)
+	created := ns.GetCreationTimestamp()
+	assert.Assert(t, false == (&created).IsZero())
+}
+
 type objectWithoutMetadataForTests struct{}
 
 func (*objectWithoutMetadataForTests) GetObjectKind() schema.ObjectKind {

@@ -3,6 +3,7 @@ package fake
 import (
 	utils "github.com/SAP/stewardci-core/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/testing"
 )
@@ -40,5 +41,18 @@ func GenerateNameReactor(randomLength int64) testing.ReactionFunc {
 func NewErrorReactor(expectedErr error) testing.ReactionFunc {
 	return func(action testing.Action) (handled bool, ret runtime.Object, err error) {
 		return true, nil, expectedErr
+	}
+}
+
+// NewCreationTimestampReactor returns a new ReactorFunc setting the creation time
+func NewCreationTimestampReactor() testing.ReactionFunc {
+	return func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+		createAction := action.(testing.CreateAction)
+		accessor, err := meta.Accessor(createAction.GetObject())
+		if err != nil {
+			panic(err)
+		}
+		accessor.SetCreationTimestamp(metav1.Now())
+		return false, createAction.GetObject(), nil
 	}
 }
