@@ -22,7 +22,6 @@ var AllTestBuilders = []f.PipelineRunTestBuilder{
 }
 
 const pipelineRepoURL = "https://github.com/SAP-samples/stewardci-example-pipelines"
-const pipelineRepoURLrinckm = "https://github.com/rinckm/stewardci-example-pipelines"
 
 // PipelineRunAbort is a PipelineRunTestBuilder to build a PipelineRunTest with aborted pipeline
 func PipelineRunAbort(Namespace string) f.PipelineRunTest {
@@ -82,7 +81,7 @@ func PipelineRunWithSecret(Namespace string) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("with-secret-", Namespace,
 			builder.PipelineRunSpec(
-				builder.JenkinsFileSpec(pipelineRepoURLrinckm,
+				builder.JenkinsFileSpec(pipelineRepoURL,
 					"secret/Jenkinsfile"),
 				builder.ArgSpec("SECRETID", "with-secret-foo"),
 				builder.ArgSpec("EXPECTEDUSER", "bar"),
@@ -100,7 +99,7 @@ func PipelineRunMissingSecret(Namespace string) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("missing-secret-", Namespace,
 			builder.PipelineRunSpec(
-				builder.JenkinsFileSpec(pipelineRepoURLrinckm,
+				builder.JenkinsFileSpec(pipelineRepoURL,
 					"secret/Jenkinsfile"),
 				builder.ArgSpec("SECRETID", "foo"),
 				builder.ArgSpec("EXPECTEDUSER", "bar"),

@@ -21,7 +21,6 @@ var frameworkTestBuilders = []PipelineRunTestBuilder{
 }
 
 const pipelineRepoURL = "https://github.com/SAP-samples/stewardci-example-pipelines"
-const pipelineRepoURLrinckm = "https://github.com/rinckm/stewardci-example-pipelines"
 
 func Test_FirstFinishBeforeSecondStarts(t *testing.T) {
 	test := TestPlan{TestBuilder: PipelineRunWrongName,
