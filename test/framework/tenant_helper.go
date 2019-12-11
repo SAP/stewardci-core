@@ -23,7 +23,7 @@ type TenantTest struct {
 func TenantSuccessTest(ctx context.Context) TenantTest {
 	return TenantTest{
 		name:   "success check",
-		tenant: builder.Tenant("name", GetNamespace(ctx), "displayName"),
+		tenant: builder.Tenant(GetNamespace(ctx)),
 		check:  TenantIsReady(),
 	}
 }
@@ -83,7 +83,7 @@ func getTenantInterface(ctx context.Context) steward.TenantInterface {
 func ensureTenant(ctx context.Context, t *testing.T) (func(), context.Context) {
 	tenantNamespace := GetTenantNamespace(ctx)
 	if tenantNamespace == "" {
-		tenant := builder.Tenant("name", GetNamespace(ctx), "displayName")
+		tenant := builder.Tenant(GetNamespace(ctx))
 		tenant, err := CreateTenant(ctx, tenant)
 		assert.NilError(t, err)
 		check := CreateTenantCondition(tenant, TenantIsReady())
