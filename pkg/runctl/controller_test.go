@@ -20,32 +20,6 @@ import (
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func Test_Controller_MissingSecret(t *testing.T) {
-	t.Parallel()
-	// SETUP
-	cf := fake.NewClientFactory()
-	pr := fake.PipelineRun("run1", "ns1", api.PipelineSpec{
-		Secrets: []string{"secret1"},
-	})
-	// no "secret1" here
-
-	// EXERCISE
-	stopCh := startController(t, cf)
-	defer stopController(t, stopCh)
-	createRun(pr, cf)
-	// VERIFY
-
-	run, err := getPipelineRun("run1", "ns1", cf)
-	assert.NilError(t, err)
-	status := run.GetStatus()
-
-	assert.Equal(t, api.StateFinished, status.State)
-	assert.Equal(t, api.ResultErrorContent, status.Result)
-	//TODO: namespace is deleted twice, second fails. We need to check why and make sure the correct error is in the message.
-	// MR: namespaceManager changed to return nil error if not existing ns is deleted
-	assert.Assert(t, is.Regexp("failed to copy secrets: .*", status.Message))
-}
-
 func Test_Controller_Success(t *testing.T) {
 	t.Parallel()
 	// SETUP
@@ -149,6 +123,114 @@ func Test_Controller_syncHandler_givesUp_onPipelineRunNotFound(t *testing.T) {
 	err := examinee.syncHandler("foo/bar")
 	// VERIFY
 	assert.NilError(t, err)
+}
+
+func newController(runs ...*api.PipelineRun) (*Controller, *fake.ClientFactory) {
+	cf := fake.NewClientFactory(fake.ClusterRole(string(runClusterRoleName)))
+	cs := cf.StewardClientset()
+	cs.PrependReactor("create", "*", fake.NewCreationTimestampReactor())
+	client := cf.StewardV1alpha1()
+	for _, run := range runs {
+		client.PipelineRuns(run.GetNamespace()).Create(run)
+	}
+	metrics := metrics.NewMetrics()
+	controller := NewController(cf, metrics)
+	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(client)
+	return controller, cf
+}
+
+func getAPIPipelineRun(cf *fake.ClientFactory, name, namespace string) (*api.PipelineRun, error) {
+	cs := cf.StewardClientset()
+	return cs.StewardV1alpha1().PipelineRuns(namespace).Get(name, metav1.GetOptions{})
+}
+
+func Test_Controller_syncHandler(t *testing.T) {
+	for _, test := range []struct {
+		name            string
+		pipelineSpec    api.PipelineSpec
+		currentStatus   api.PipelineStatus
+		runManagerError error
+		expectedResult  api.Result
+		expectedState   api.State
+		expectedMessage string
+	}{
+		{name: "new_ok",
+			pipelineSpec:    api.PipelineSpec{},
+			currentStatus:   api.PipelineStatus{},
+			runManagerError: nil,
+			expectedResult:  api.ResultUndefined,
+			expectedState:   api.StateWaiting,
+		},
+		{name: "new_fail",
+			pipelineSpec:    api.PipelineSpec{},
+			currentStatus:   api.PipelineStatus{},
+			runManagerError: fmt.Errorf("expected"),
+			expectedResult:  api.ResultErrorInfra,
+			expectedState:   api.StateCleaning,
+			expectedMessage: ".*Failed to create run namespace.*",
+		},
+		{name: "new_missing_secret",
+			pipelineSpec: api.PipelineSpec{
+				Secrets: []string{"secret1"},
+			},
+			currentStatus:   api.PipelineStatus{},
+			runManagerError: nil,
+			expectedResult:  api.ResultErrorContent,
+			expectedState:   api.StateCleaning,
+			expectedMessage: "failed to copy secrets: .*",
+		},
+		{name: "waiting_fail",
+			pipelineSpec: api.PipelineSpec{},
+			currentStatus: api.PipelineStatus{
+				State: api.StateWaiting},
+			runManagerError: fmt.Errorf("expected"),
+			expectedResult:  api.ResultErrorInfra,
+			expectedState:   api.StateCleaning,
+		},
+		{name: "skip_new",
+			pipelineSpec: api.PipelineSpec{},
+			currentStatus: api.PipelineStatus{
+				State: api.StateNew},
+			runManagerError: nil,
+			expectedResult:  "",
+			expectedState:   api.StateNew,
+		},
+		{name: "skip_finished",
+			pipelineSpec: api.PipelineSpec{},
+			currentStatus: api.PipelineStatus{
+				State: api.StateFinished},
+			runManagerError: nil,
+			expectedResult:  "",
+			expectedState:   api.StateFinished,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			test := test
+			t.Parallel()
+			// SETUP
+			run := fake.PipelineRun("foo", "ns1", test.pipelineSpec)
+			run.Status = test.currentStatus
+			controller, cf := newController(run)
+			if test.runManagerError != nil {
+				// TODO: Inject runManager mock instead of creating errors with reactor
+				cf.KubernetesClientset().PrependReactor("create", "*", fake.NewErrorReactor(test.runManagerError))
+			}
+			// EXERCISE
+			err := controller.syncHandler("ns1/foo")
+			// VERIFY
+			assert.NilError(t, err)
+			result, err := getAPIPipelineRun(cf, "foo", "ns1")
+			assert.NilError(t, err)
+			log.Printf("%+v", result.Status)
+			assert.Equal(t, test.expectedResult, result.Status.Result, test.name)
+			assert.Equal(t, test.expectedState, result.Status.State, test.name)
+
+			if test.expectedMessage != "" {
+				assert.Assert(t, is.Regexp(test.expectedMessage, result.Status.Message))
+
+			}
+		})
+	}
 }
 
 func Test_Controller_syncHandler_initiatesRetrying_on500DuringPipelineRunFetch(t *testing.T) {

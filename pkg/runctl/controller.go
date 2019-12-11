@@ -201,20 +201,26 @@ func (c *Controller) syncHandler(key string) error {
 	// Runs might be left in state `preparing` after a controller crash.
 	// Those must be recovered.
 	case api.StateUndefined:
+		c.metrics.CountStart()
 		c.changeState(pipelineRun, api.StatePreparing)
 		err = runManager.Start(pipelineRun)
 		if err != nil {
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
+			if pipelineRun.GetStatus().Result == api.ResultUndefined {
+				pipelineRun.UpdateResult(api.ResultErrorInfra)
+			}
 			c.changeState(pipelineRun, api.StateCleaning)
+			c.metrics.CountResult(pipelineRun.GetStatus().Result)
 			return nil
 		}
-		c.metrics.CountStart()
 		c.changeState(pipelineRun, api.StateWaiting)
 	case api.StateWaiting:
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
 			c.changeState(pipelineRun, api.StateCleaning)
+			pipelineRun.UpdateResult(api.ResultErrorInfra)
+			c.metrics.CountResult(api.ResultErrorInfra)
 			return nil
 		}
 		started := run.GetStartTime()
