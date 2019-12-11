@@ -9,7 +9,7 @@ import (
 )
 
 func Test_Tenant(t *testing.T) {
-	tenant := Tenant("foo", "bar", "baz")
+	tenant := Tenant("bar")
 	expectedtenant := &api.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    "bar",
