@@ -43,11 +43,8 @@ spec:
       properties:
         spec: ###
           type: object
-          required: #TODO: Really required? Compare with run_types.go
+          required:
             - jenkinsFile
-            - args
-            - intent
-            - logging
           properties:
             jenkinsFile: ###
               type: object
@@ -100,7 +97,7 @@ spec:
                       type: object
             runDetails: ###
               type: object
-              required: #TODO: Really required? Compare with run_types.go
+              required:
                 - jobName
                 - sequenceNumber
                 - cause
