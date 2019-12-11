@@ -12,10 +12,6 @@ func Tenant(name, namespace, displayName string) *api.Tenant {
 			Namespace:    namespace,
 			GenerateName: "t-",
 		},
-		Spec: api.TenantSpec{
-			Name:        name,
-			DisplayName: displayName,
-		},
 	}
 	return t
 }

@@ -66,11 +66,8 @@ var pipelineRunTests = []SchemaValidationTest{
 		`, pipelineRunHeaderYAML),
 		check: func(t *testing.T, err error) {
 			assert.ErrorContains(t, err, "spec.jenkinsFile in body is required")
-			assert.ErrorContains(t, err, "spec.args in body is required")
-			assert.ErrorContains(t, err, "spec.intent in body is required")
-			assert.ErrorContains(t, err, "spec.logging in body is required")
 			count := strings.Count(err.Error(), "spec.")
-			assert.Assert(t, count == 4, "Unexpected number of validation failures: %v : %v ", count, err.Error())
+			assert.Assert(t, count == 1, "Unexpected number of validation failures: %v : %v ", count, err.Error())
 		},
 	},
 

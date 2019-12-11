@@ -51,7 +51,7 @@ func Test__ListerBasedTenantFetcher_ByKey_InvalidKey_ReturnsError(t *testing.T) 
 }
 
 func newTenant(name string) *api.Tenant {
-	return fake.Tenant(name, name, name, ns1)
+	return fake.Tenant(name, ns1)
 }
 
 func createTenantLister(tenants ...*api.Tenant) stewardLister.TenantLister {

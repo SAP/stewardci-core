@@ -15,10 +15,6 @@ func Test_Tenant(t *testing.T) {
 			Namespace:    "bar",
 			GenerateName: "t-",
 		},
-		Spec: api.TenantSpec{
-			Name:        "foo",
-			DisplayName: "baz",
-		},
 	}
 	assert.DeepEqual(t, expectedtenant, tenant)
 }
