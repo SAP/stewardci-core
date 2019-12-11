@@ -9,7 +9,9 @@ import (
 	"testing"
 	"time"
 
+	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"gotest.tools/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type testRun struct {
@@ -22,7 +24,7 @@ type testRun struct {
 
 // ExecutePipelineRunTests execute a set of testPlans
 func ExecutePipelineRunTests(t *testing.T, testPlans ...TestPlan) {
-	executePipelineRunTests(setup(t), t, testPlans...)
+	executePipelineRunTests(Setup(t), t, testPlans...)
 }
 
 func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...TestPlan) {
@@ -127,4 +129,42 @@ func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
 	ctx = SetPipelineRun(ctx, pr)
 	run.ctx = ctx
 	return run
+}
+
+// CreatePipelineRunFromJSON creates a Tenant resource on a client
+func CreatePipelineRunFromJSON(ctx context.Context, pipelineRunJSON string) (result *api.PipelineRun, err error) {
+	return createPipelineRunFromString(ctx, pipelineRunJSON, "application/json")
+}
+
+// CreatePipelineRunFromYAML creates a Tenant resource on a client
+func CreatePipelineRunFromYAML(ctx context.Context, pipelineRunYAML string) (result *api.PipelineRun, err error) {
+	return createPipelineRunFromString(ctx, pipelineRunYAML, "application/yaml")
+}
+
+func createPipelineRunFromString(ctx context.Context, pipelineRunString string, contentType string) (result *api.PipelineRun, err error) {
+	client := GetClientFactory(ctx).StewardV1alpha1().RESTClient()
+	result = &api.PipelineRun{}
+	err = client.Post().
+		Namespace(GetNamespace(ctx)).
+		Resource("pipelineruns").
+		Body([]byte(pipelineRunString)).
+		SetHeader("Content-Type", contentType).
+		Do().
+		Into(result)
+	if err != nil {
+		result = nil
+	}
+	return
+}
+
+// DeletePipelineRun deletes a Tenant resource from a client
+func DeletePipelineRun(ctx context.Context, pipelineRun *api.PipelineRun) error {
+	if pipelineRun == nil {
+		return nil
+	}
+	stewardClient := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
+	uid := pipelineRun.GetObjectMeta().GetUID()
+	return stewardClient.Delete(pipelineRun.GetName(), &metav1.DeleteOptions{
+		Preconditions: &metav1.Preconditions{UID: &uid},
+	})
 }

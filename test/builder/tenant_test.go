@@ -9,15 +9,11 @@ import (
 )
 
 func Test_Tenant(t *testing.T) {
-	tenant := Tenant("foo", "bar", "baz")
+	tenant := Tenant("bar")
 	expectedtenant := &api.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    "bar",
 			GenerateName: "t-",
-		},
-		Spec: api.TenantSpec{
-			Name:        "foo",
-			DisplayName: "baz",
 		},
 	}
 	assert.DeepEqual(t, expectedtenant, tenant)

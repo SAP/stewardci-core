@@ -6,15 +6,11 @@ import (
 )
 
 // Tenant creates a Tenant
-func Tenant(name, namespace, displayName string) *api.Tenant {
+func Tenant(namespace string) *api.Tenant {
 	t := &api.Tenant{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    namespace,
 			GenerateName: "t-",
-		},
-		Spec: api.TenantSpec{
-			Name:        name,
-			DisplayName: displayName,
 		},
 	}
 	return t

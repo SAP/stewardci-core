@@ -15,7 +15,8 @@ import (
 // Resync is only required if events got lost or if the controller restarted (and missed events).
 const resyncPeriod = 5 * time.Minute
 
-func setup(t *testing.T) context.Context {
+// Setup prepares the test environment
+func Setup(t *testing.T) context.Context {
 	t.Helper()
 	kubeconfig := knativetest.Flags.Kubeconfig
 	clusterName := knativetest.Flags.Cluster

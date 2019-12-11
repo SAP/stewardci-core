@@ -31,3 +31,7 @@ spec:
   - name: Age
     type: date
     JSONPath: .metadata.creationTimestamp
+  validation:
+    openAPIV3Schema:
+      type: object
+      required: []

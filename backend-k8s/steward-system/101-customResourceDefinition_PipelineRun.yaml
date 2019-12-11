@@ -35,3 +35,80 @@ spec:
       description: The message of the pipeline run
       JSONPath: .status.messageShort
       priority: 2
+  validation:
+    openAPIV3Schema:
+      type: object
+      required:
+        - spec
+      properties:
+        spec: ###
+          type: object
+          required:
+            - jenkinsFile
+          properties:
+            jenkinsFile: ###
+              type: object
+              required:
+                - repoUrl
+                - revision
+                - relativePath
+              properties:
+                repoUrl: ###
+                  type: string
+                  pattern: '^[^\s]{1,}.*$'
+                revision: ###
+                  type: string
+                  pattern: '^[^\s]{1,}.*$'
+                relativePath: ###
+                  type: string
+                  pattern: '^[^\s]{1,}.*$'
+                repoAuthSecret: ###
+                  type: string
+                  pattern: '^[^\s]{1,}.*$'
+            args: ### map[string]string
+              type: object
+              additionalProperties: ###
+                type: string
+                pattern: '^[^\s]{1,}.*$'
+            secrets: ###
+              type: array
+              items:
+                type: string
+                pattern: '^[^\s]{1,}.*$'
+            imagePullSecrets: ###
+              type: array
+              items:
+                type: string
+                pattern: '^[^\s]{1,}.*$'
+            intent: ###
+              type: string
+              pattern: '^run|abort$'
+            logging: ###
+              type: object
+              required:
+                - elasticsearch
+              properties:
+                elasticsearch: ###
+                  type: object
+                  required:
+                    - runID
+                  properties:
+                    runID: ###
+                      type: object
+            runDetails: ###
+              type: object
+              required:
+                - jobName
+                - sequenceNumber
+                - cause
+              properties:
+                jobName: ###
+                  type: string
+                  pattern: '^[^\s]{1,}.*$'
+                sequenceNumber: ###
+                  type: integer
+                  minimum: 1
+                cause: ###
+                  type: string
+                  pattern: '^[^\s]{1,}.*$'
+        

@@ -81,7 +81,7 @@ func Test_Controller_syncHandler_FailsIfClientConfigIsInvalid(t *testing.T) {
 		// the client namespace
 		fake.Namespace(clientNSName), // annotations left out because not needed
 		// the tenant
-		fake.Tenant(tenantID, "", "", clientNSName),
+		fake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, NewMetrics())
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -122,7 +122,7 @@ func Test_Controller_syncHandler_AddsFinalizer(t *testing.T) {
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, "", "", clientNSName),
+		fake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, NewMetrics())
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -150,12 +150,10 @@ func Test_Controller_syncHandler_AddsFinalizer(t *testing.T) {
 func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 	// SETUP
 	const (
-		clientNSName      = "client1"
-		tenantNSPrefix    = "prefix1"
-		tenantID          = "tenant1"
-		tenantName        = "tenantName1"
-		tenantDisplayName = "tenantDisplayName1"
-		tenantRoleName    = "tenantClusterRole1"
+		clientNSName   = "client1"
+		tenantNSPrefix = "prefix1"
+		tenantID       = "tenant1"
+		tenantRoleName = "tenantClusterRole1"
 	)
 
 	cf := fake.NewClientFactory(
@@ -165,7 +163,7 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, tenantName, tenantDisplayName, clientNSName),
+		fake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, NewMetrics())
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -181,9 +179,6 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 	// tenant
 	{
 		dump := fmt.Sprintf("\n\n%v", spew.Sdump(tenant))
-
-		assert.Equal(t, tenantName, tenant.Spec.Name, dump)
-		assert.Equal(t, tenantDisplayName, tenant.Spec.DisplayName, dump)
 		{
 			readyCond := tenant.Status.GetCondition(knativeapis.ConditionReady)
 			assert.Assert(t, readyCond.IsTrue(), dump)
@@ -255,7 +250,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnNamespaceClash(t *te
 			stewardv1alpha1.AnnotationTenantRole:                  tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, "", "", clientNSName),
+		fake.Tenant(tenantID, clientNSName),
 		// a namespace with same name as will be used for tenant namespace
 		fake.Namespace(clashingNamespaceName),
 	)
@@ -316,7 +311,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnErrorWhenSyncingRole
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, "", "", clientNSName),
+		fake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, NewMetrics())
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -358,17 +353,15 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnErrorWhenSyncingRole
 func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *testing.T) {
 	// SETUP
 	const (
-		clientNSName      = "client1"
-		tenantNSPrefix    = "prefix1"
-		tenantID          = "tenant1"
-		tenantName        = "tenantName1"
-		tenantDisplayName = "tenantDisplayName1"
-		tenantRoleName    = "tenantClusterRole1"
+		clientNSName   = "client1"
+		tenantNSPrefix = "prefix1"
+		tenantID       = "tenant1"
+		tenantRoleName = "tenantClusterRole1"
 
 		tenantNSName = "somename1"
 	)
 
-	origTenant := fake.Tenant(tenantID, tenantName, tenantDisplayName, clientNSName)
+	origTenant := fake.Tenant(tenantID, clientNSName)
 	origTenant.Status.TenantNamespaceName = tenantNSName
 	// no ready condition set because not needed by the reconciler
 
@@ -397,9 +390,6 @@ func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *tes
 	// tenant
 	{
 		dump := fmt.Sprintf("\n\n%v", spew.Sdump(tenant))
-
-		assert.Equal(t, tenantName, tenant.Spec.Name, dump)
-		assert.Equal(t, tenantDisplayName, tenant.Spec.DisplayName, dump)
 		{
 			readyCond := tenant.Status.GetCondition(knativeapis.ConditionReady)
 			assert.Assert(t, readyCond.IsTrue(), dump)
@@ -457,7 +447,7 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnMissingNamespace(t *te
 		tenantNSName   = "somename1"
 	)
 
-	origTenant := fake.Tenant(tenantID, "", "", clientNSName)
+	origTenant := fake.Tenant(tenantID, clientNSName)
 	origTenant.Status.TenantNamespaceName = tenantNSName
 	// no ready condition set because not needed by the reconciler
 
@@ -519,7 +509,7 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnErrorWhenSyncingRoleBi
 		tenantNSName   = "somename1"
 	)
 
-	origTenant := fake.Tenant(tenantID, "", "", clientNSName)
+	origTenant := fake.Tenant(tenantID, clientNSName)
 	origTenant.Status.TenantNamespaceName = tenantNSName
 	// no ready condition set because not needed by the reconciler
 
@@ -595,7 +585,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfFinalizerIsSet(t *testing.T) 
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, "", "", clientNSName),
+		fake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, NewMetrics())
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -662,7 +652,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_SkippedIfFinalizerIsNotSet(t *t
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, "", "", clientNSName),
+		fake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, NewMetrics())
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -731,7 +721,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfNamespaceDoesNotExistAnymore(
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, "", "", clientNSName),
+		fake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, NewMetrics())
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -805,7 +795,7 @@ func Test_Controller_syncHandler_CleanupOnStatusUpdateFailure(t *testing.T) {
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, "", "", clientNSName),
+		fake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, NewMetrics())
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -839,7 +829,7 @@ func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_listManagedRoleBi
 		tenantRoleName = "tenantClusterRole1"
 	)
 
-	tenant := fake.Tenant(tenantID, "", "", clientNSName)
+	tenant := fake.Tenant(tenantID, clientNSName)
 	config := &clientConfigImpl{
 		tenantRoleName: tenantRoleName,
 	}
@@ -875,7 +865,7 @@ func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_createRoleBinding
 		tenantRoleName = "tenantClusterRole1"
 	)
 
-	tenant := fake.Tenant(tenantID, "", "", clientNSName)
+	tenant := fake.Tenant(tenantID, clientNSName)
 	config := &clientConfigImpl{
 		tenantRoleName: tenantRoleName,
 	}
@@ -1009,7 +999,7 @@ func Test_Controller_updateStatus_ConcurrentModification(t *testing.T) {
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, "", "", clientNSName),
+		fake.Tenant(tenantID, clientNSName),
 	)
 
 	// EXERCISE + VERIFY
@@ -1075,7 +1065,7 @@ func Test_Controller_FullWorkflow(t *testing.T) {
 	{
 		syncCount := controller.getSyncCount()
 
-		_, err := tenantsIfc.Create(fake.Tenant(tenantID, "", "", clientNSName))
+		_, err := tenantsIfc.Create(fake.Tenant(tenantID, clientNSName))
 		assert.NilError(t, err)
 
 		waitForNextSync(t, controller, syncCount)

@@ -37,6 +37,11 @@ cd integrationtest
 go test -count=1 -tags=e2e -v --kubeconfig $KUBECONFIG .
 ```
 
+```bash
+cd schemaValidationTests
+go test -count=1 -tags=e2e -v --kubeconfig $KUBECONFIG .
+```
+
 ### Load tests
 
 ```bash

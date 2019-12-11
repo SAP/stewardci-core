@@ -28,14 +28,17 @@ type PipelineRunList struct {
 
 // PipelineSpec is the spec of a PipelineRun
 type PipelineSpec struct {
-	JenkinsFile JenkinsFile       `json:"jenkinsFile"`
-	Args        map[string]string `json:"args"`
+	JenkinsFile JenkinsFile `json:"jenkinsFile"`
+	// +optional
+	Args map[string]string `json:"args"`
 	// +optional
 	Secrets []string `json:"secrets"`
 	// +optional
 	ImagePullSecrets []string `json:"imagePullSecrets"`
-	Intent           Intent   `json:"intent"`
-	Logging          *Logging `json:"logging"`
+	// +optional - defaults to run. TODO: Controller should set intent=run explicitely if not set
+	Intent Intent `json:"intent"`
+	// +optional
+	Logging *Logging `json:"logging"`
 	// +optional
 	RunDetails *PipelineRunDetails `json:"runDetails"`
 }

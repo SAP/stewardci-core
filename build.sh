@@ -54,11 +54,11 @@ go test -coverprofile coverage.txt ./... || die
 go tool cover -html=coverage.txt -o coverage.html || die
 
 banner1 "golint"
-"$GOLINT_EXE" -set_exit_status ./... || die
+"$GOLINT_EXE" -set_exit_status ./pkg/... ./cmd/... ./test/... || die
 
 banner1 "gofmt"
-gofmt -l ./ || die
-gofmt -d ./ > fmt_diff.txt || die
+gofmt -l ./pkg/ ./cmd/ ./test/ || die
+gofmt -d ./pkg/ ./cmd/ ./test/ > fmt_diff.txt || die
 [[ -s fmt_diff.txt ]] && die "gofmt failed, see fmt_diff.txt"
 
 echo $'\n'"SUCCESS"
