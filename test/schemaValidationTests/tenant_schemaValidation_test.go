@@ -61,5 +61,4 @@ var tenantTests = []SchemaValidationTest{
 			assert.NilError(t, err)
 		},
 	},
-
 }
