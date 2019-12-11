@@ -47,7 +47,7 @@ var pipelineRunTests = []SchemaValidationTest{
 				revision: revision1
 				relativePath: relativePath1
 			args: {}
-			intent: intent1
+			intent: run
 			logging:
 				elasticsearch:
 					runID: {}
@@ -92,7 +92,7 @@ var pipelineRunTests = []SchemaValidationTest{
 		spec:
 			jenkinsFile: {}			#empty
 			args: {}
-			intent: intent1
+			intent: run
 			logging:
 				elasticsearch:
 					runID: {}
@@ -108,7 +108,7 @@ var pipelineRunTests = []SchemaValidationTest{
 
 	// ###################################################################
 	SchemaValidationTest{
-		name:       "spec entry keys empty strings",
+		name:       "spec entry values empty strings",
 		dataFormat: yaml,
 		data: fixIndent(2, `%v
 		spec:
@@ -127,7 +127,7 @@ var pipelineRunTests = []SchemaValidationTest{
 			assert.ErrorContains(t, err, "spec.jenkinsFile.revision in body should match '^[^\\s]{1,}.*$'")
 			assert.ErrorContains(t, err, "spec.jenkinsFile.relativePath in body should match '^[^\\s]{1,}.*$'")
 			assert.ErrorContains(t, err, "spec.args in body must be of type object: \"string\"")
-			assert.ErrorContains(t, err, "spec.intent in body should match '^[^\\s]{1,}.*$'")
+			assert.ErrorContains(t, err, "spec.intent in body should match '^run|abort$'")
 			assert.ErrorContains(t, err, "spec.logging.elasticsearch.runID in body must be of type object: \"string\"")
 			count := strings.Count(err.Error(), "spec.")
 			assert.Assert(t, count == 6, "Unexpected number of validation failures: %v : %v ", count, err.Error())
@@ -159,6 +159,27 @@ var pipelineRunTests = []SchemaValidationTest{
 			assert.ErrorContains(t, err, "spec.logging.elasticsearch.runID in body must be of type object: \"null\"")
 			count := strings.Count(err.Error(), "spec.")
 			assert.Assert(t, count == 6, "Unexpected number of validation failures: %v : %v ", count, err.Error())
+		},
+	},
+
+	// ###################################################################
+	SchemaValidationTest{
+		name:       "spec entry values invalid",
+		dataFormat: yaml,
+		data: fixIndent(2, `%v
+		spec:
+			jenkinsFile:
+				repoUrl: repoUrl1
+				revision: revision1
+				relativePath: relativePath1
+			args: {}
+			intent: invalid
+			logging:
+				elasticsearch:
+					runID: {}
+		`, pipelineRunHeaderYAML),
+		check: func(t *testing.T, err error) {
+			assert.ErrorContains(t, err, "spec.intent in body should match '^run|abort$'")
 		},
 	},
 }

@@ -85,7 +85,7 @@ spec:
                 pattern: '^[^\s]{1,}.*$'
             intent: ###
               type: string
-              pattern: '^[^\s]{1,}.*$' #TODO: Check consts
+              pattern: '^run|abort$'
             logging: ###
               type: object
               required:
