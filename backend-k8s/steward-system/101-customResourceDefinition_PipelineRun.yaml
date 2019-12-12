@@ -85,8 +85,6 @@ spec:
               pattern: '^run|abort$'
             logging: ###
               type: object
-              required:
-                - elasticsearch
               properties:
                 elasticsearch: ###
                   type: object
@@ -94,13 +92,9 @@ spec:
                     - runID
                   properties:
                     runID: ###
-                      type: object
+                      type: object # should be any JSON value as soon as Elasticsearch Log Plug-in can handle it
             runDetails: ###
               type: object
-              required:
-                - jobName
-                - sequenceNumber
-                - cause
               properties:
                 jobName: ###
                   type: string
@@ -108,7 +102,7 @@ spec:
                 sequenceNumber: ###
                   type: integer
                   minimum: 1
+                  maximum: 2147483647 # int32
                 cause: ###
                   type: string
                   pattern: '^[^\s]{1,}.*$'
-        
