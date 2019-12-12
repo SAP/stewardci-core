@@ -42,8 +42,14 @@ type pipelineRun struct {
 	copied bool
 }
 
-// NewPipelineRun creates a managed pipeline run object
-// the provided PipelineRun object is never modified and copied as late as possible
+// NewPipelineRun creates a managed pipeline run object.
+// If a factory is provided a new version of the pipelinerun is fetched.
+// All changes are done on the fetched object.
+// If no pipeline run can be found matching the apiObj, nil,nil is returned.
+// An error is only returned if a Get for the pipelinerun returns an error other than a NotFound error.
+// If you call with factory nil you can only use the Get* functions
+// If you use functions changing the pipeline run without factroy set you will get an error.
+// The provided PipelineRun object is never modified and copied as late as possible.
 func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun, error) {
 	if factory == nil {
 		return &pipelineRun{
