@@ -182,7 +182,7 @@ func Test_Controller_syncHandler(t *testing.T) {
 		{name: "waiting_fail",
 			pipelineSpec: api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{
-				State: api.StateWaiting
+				State: api.StateWaiting,
 			},
 			runManagerError: fmt.Errorf("expected"),
 			expectedResult:  api.ResultErrorInfra,
@@ -191,7 +191,7 @@ func Test_Controller_syncHandler(t *testing.T) {
 		{name: "skip_new",
 			pipelineSpec: api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{
-				State: api.StateNew
+				State: api.StateNew,
 			},
 			runManagerError: nil,
 			expectedResult:  "",
@@ -200,7 +200,7 @@ func Test_Controller_syncHandler(t *testing.T) {
 		{name: "skip_finished",
 			pipelineSpec: api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{
-				State: api.StateFinished
+				State: api.StateFinished,
 			},
 			runManagerError: nil,
 			expectedResult:  "",
