@@ -371,7 +371,10 @@ func getPipelineRun(name string, namespace string, cf *fake.ClientFactory) (k8s.
 	key := fake.ObjectKey(name, namespace)
 	fetcher := k8s.NewClientBasedPipelineRunFetcher(cf.StewardV1alpha1())
 	pipelineRun, err := fetcher.ByKey(key)
-	return k8s.NewPipelineRun(pipelineRun, cf), err
+	if err != nil {
+		return nil, err
+	}
+	return k8s.NewPipelineRun(pipelineRun, cf)
 }
 
 func createRun(run *api.PipelineRun, cf *fake.ClientFactory) error {

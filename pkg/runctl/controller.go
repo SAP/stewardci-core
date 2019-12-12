@@ -176,7 +176,17 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
-	pipelineRun := k8s.NewPipelineRun(pipelineRunAPIObj, c.factory)
+	pipelineRun, err := k8s.NewPipelineRun(pipelineRunAPIObj, c.factory)
+
+	// If pipelineRun is not found there is nothing to sync
+	if pipelineRun == nil {
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
 	// Check if object has deletion timestamp
 	// If not, try to add finalizer if missing
 	if pipelineRun.HasDeletionTimestamp() {
