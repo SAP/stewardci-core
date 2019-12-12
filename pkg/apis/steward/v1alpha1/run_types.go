@@ -215,5 +215,5 @@ type PipelineRunDetails struct {
 	// set as cause of the Jenkins job. If empty, no cause information
 	// will be available.
 	// +optional
-	Cause string `json:"cause,omitempty"
+	Cause string `json:"cause,omitempty"`
 }
