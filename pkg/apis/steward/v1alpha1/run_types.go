@@ -147,7 +147,7 @@ type PipelineRunDetails struct {
 	// JobName is the name of the job which is instantiated by the run.
 	JobName string `json:"jobName"`
 	// SequenceNumber is a sequential number of the run
-	SequenceNumber int `json:"sequenceNumber"`
+	SequenceNumber int32 `json:"sequenceNumber"`
 	// Cause is the cause which triggered the run, e.g. a SCM change, an user action or a timer.
 	Cause string `json:"cause"`
 }

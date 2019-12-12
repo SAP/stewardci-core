@@ -252,12 +252,16 @@ func (c *runManager) addTektonTaskRunParamsForRunDetails(
 	spec := pipelineRun.GetSpec()
 	details := spec.RunDetails
 	if details != nil {
-		params := []tekton.Param{
-			tektonStringParam("JOB_NAME", details.JobName),
-			tektonStringParam("RUN_NUMBER", fmt.Sprintf("%d", details.SequenceNumber)),
-			tektonStringParam("RUN_CAUSE", details.Cause),
+		params := []tekton.Param{}
+		if details.JobName != "" {
+			params = append(params, tektonStringParam("JOB_NAME", details.JobName))
 		}
-
+		if details.SequenceNumber > 0 {
+			params = append(params, tektonStringParam("RUN_NUMBER", fmt.Sprintf("%d", details.SequenceNumber)))
+		}
+		if details.Cause != "" {
+			params = append(params, tektonStringParam("RUN_CAUSE", details.Cause))
+		}
 		tektonTaskRun.Spec.Inputs.Params = append(tektonTaskRun.Spec.Inputs.Params, params...)
 	}
 }
