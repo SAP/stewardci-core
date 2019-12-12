@@ -195,7 +195,7 @@ const (
 	IntentAbort Intent = "abort"
 )
 
-// PipelineRunDetails provides details of a pipeline run which are passed to
+// PipelineRunDetails provides metadata for a pipeline run which is evaluated by
 // the Jenkinsfile Runner.
 type PipelineRunDetails struct {
 
