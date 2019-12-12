@@ -26,7 +26,9 @@ func (p *SecretProviderImpl) GetSecret(name string) (*v1.Secret, error) {
 			if !secret.ObjectMeta.DeletionTimestamp.IsZero() {
 				return nil, nil
 			}
-			return providers.StripMetadata(secret), nil
+			secretCopy := secret.DeepCopy()
+			providers.StripMetadata(secretCopy)
+			return secretCopy, nil
 		}
 	}
 	return nil, nil

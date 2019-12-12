@@ -38,7 +38,8 @@ func Test_StripMetadata(t *testing.T) {
 	}
 
 	// EXERCISE
-	resultSecret := StripMetadata(origSecret.DeepCopy())
+	resultSecret := origSecret.DeepCopy()
+	StripMetadata(resultSecret)
 
 	// VERIFY
 	assert.Assert(t, resultSecret != nil)
