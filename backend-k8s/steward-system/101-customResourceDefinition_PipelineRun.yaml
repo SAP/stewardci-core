@@ -92,7 +92,7 @@ spec:
                     - runID
                   properties:
                     runID: ###
-                      type: object # should be any JSON value
+                      type: object # should be any JSON value as soon as Elasticsearch Log Plug-in can handle it
             runDetails: ###
               type: object
               properties:
