@@ -57,7 +57,7 @@ func (m *MockSecretHelper) EXPECT() *MockSecretHelperMockRecorder {
 }
 
 // CopySecrets mocks base method
-func (m *MockSecretHelper) CopySecrets(arg0 []string, arg1 func(*v1.Secret) bool, arg2 ...func(*v1.Secret) *v1.Secret) ([]string, error) {
+func (m *MockSecretHelper) CopySecrets(arg0 []string, arg1 func(*v1.Secret) bool, arg2 ...func(*v1.Secret)) ([]string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {

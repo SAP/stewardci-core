@@ -10,6 +10,7 @@ import (
 	utils "github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 )
@@ -41,17 +42,34 @@ type pipelineRun struct {
 	copied bool
 }
 
-// NewPipelineRun creates a managed pipeline run object
-// the provided PipelineRun object is never modified and copied as late as possible
-func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) PipelineRun {
-	result := &pipelineRun{
-		apiObj: apiObj,
-		copied: false,
+// NewPipelineRun creates a managed pipeline run object.
+// If a factory is provided a new version of the pipelinerun is fetched.
+// All changes are done on the fetched object.
+// If no pipeline run can be found matching the apiObj, nil,nil is returned.
+// An error is only returned if a Get for the pipelinerun returns an error other than a NotFound error.
+// If you call with factory nil you can only use the Get* functions
+// If you use functions changing the pipeline run without factroy set you will get an error.
+// The provided PipelineRun object is never modified and copied as late as possible.
+func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun, error) {
+	if factory == nil {
+		return &pipelineRun{
+			apiObj: apiObj,
+			copied: false,
+		}, nil
 	}
-	if factory != nil {
-		result.client = factory.StewardV1alpha1().PipelineRuns(apiObj.GetNamespace())
+	client := factory.StewardV1alpha1().PipelineRuns(apiObj.GetNamespace())
+	obj, err := client.Get(apiObj.GetName(), metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
 	}
-	return result
+	return &pipelineRun{
+		apiObj: obj,
+		copied: true,
+		client: client,
+	}, nil
 }
 
 // GetRunNamespace returns the namespace in which the build takes place
@@ -211,6 +229,9 @@ func (r *pipelineRun) DeleteFinalizerIfExists() error {
 }
 
 func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
+	if r.client == nil {
+		return fmt.Errorf("No factory provided to store updates")
+	}
 	r.ensureCopy()
 	r.apiObj.ObjectMeta.Finalizers = finalizerList
 	result, err := r.client.Update(r.apiObj)
@@ -223,6 +244,9 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 }
 
 func (r *pipelineRun) updateStatus() error {
+	if r.client == nil {
+		return fmt.Errorf("No factory provided to store updates")
+	}
 	result, err := r.client.UpdateStatus(r.apiObj)
 	if err != nil {
 		return errors.Wrap(err,

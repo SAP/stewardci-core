@@ -290,8 +290,8 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			k8sfake.Namespace("namespace1"),
 			pipelineRun,
 		)
-		k8sPipelineRun = k8s.NewPipelineRun(pipelineRun, cf)
-
+		k8sPipelineRun, err := k8s.NewPipelineRun(pipelineRun, cf)
+		assert.NilError(t, err)
 		examinee = NewRunManager(
 			cf,
 			k8s.NewTenantNamespace(cf, pipelineRun.GetNamespace()).GetSecretProvider(),

@@ -209,11 +209,11 @@ type PipelineRunDetails struct {
 	// SequenceNumber is the sequence number of the pipeline run, which
 	// translates into the build number of the Jenkins job.
 	// +optional
-	SequenceNumber int `json:"sequenceNumber,omitempty"`
+	SequenceNumber int32 `json:"sequenceNumber,omitempty"`
 
 	// Cause is a textual description of the cause of this pipeline run. Will be
 	// set as cause of the Jenkins job. If empty, no cause information
 	// will be available.
 	// +optional
-	Cause string `json:"cause,omitempty"`
+	Cause string `json:"cause,omitempty"
 }

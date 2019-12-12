@@ -55,7 +55,7 @@ func (h *secretHelper) CopySecrets(secretNames []string, filter SecretFilter, tr
 			continue
 		}
 		for _, transformer := range transformers {
-			secret = transformer(secret)
+			transformer(secret)
 		}
 		storedSecret, err := h.CreateSecret(secret)
 		if err != nil {
