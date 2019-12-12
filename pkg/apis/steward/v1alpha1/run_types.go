@@ -202,6 +202,7 @@ type PipelineRunDetails struct {
 	// JobName is the name of the job this pipeline run belongs to. It is used
 	// as the name of the Jenkins job and therefore must be a valid Jenkins job
 	// name. If empty, a default name will be used for the Jenkins job.
+	// TODO: Regex in CRD to validate "valid Jenkins job names"
 	// +optional
 	JobName string `json:"jobName,omitempty"`
 
