@@ -211,7 +211,7 @@ type PipelineRunDetails struct {
 	// +optional
 	SequenceNumber int `json:"sequenceNumber,omitempty"`
 
-	// Cause a textual description of the cause of this pipeline run. Will be
+	// Cause is a textual description of the cause of this pipeline run. Will be
 	// set as cause of the Jenkins job. If empty, no cause information
 	// will be available.
 	// +optional
