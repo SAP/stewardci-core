@@ -5,19 +5,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// PipelineRun is a K8s custom resource representing a singe pipeline run
+// PipelineRun is a Kubernetes custom resource type representing the execution
+// of a pipeline.
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type PipelineRun struct {
 	metav1.TypeMeta `json:",inline"`
+
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec PipelineSpec `json:"spec"`
+
 	// +optional
 	Status PipelineStatus `json:"status"`
-	Spec   PipelineSpec   `json:"spec"`
 }
 
-// PipelineRunList is a list of PipelineRun objects
+// PipelineRunList is a list of PipelineRun objects.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type PipelineRunList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -28,37 +32,83 @@ type PipelineRunList struct {
 
 // PipelineSpec is the spec of a PipelineRun
 type PipelineSpec struct {
+
+	// JenkinsFile contains the configuration of the Jenkins pipeline definition
+	// to be executed.
 	JenkinsFile JenkinsFile `json:"jenkinsFile"`
+
+	// Args contains the key-value parameters to pass to the pipeline.
 	// +optional
 	Args map[string]string `json:"args"`
+
+	// Secrets is the list of secrets to be made available to the pipeline
+	// execution. Each entry in the list is the name of a Kubernetes `v1/Secret`
+	// resource object in the same namespace as the PipelineRun object itself.
 	// +optional
 	Secrets []string `json:"secrets"`
+
+	// ImagePullSecrets is the list of image pull secrets required by the
+	// pipeline run to pull images of custom containers from private registries.
+	// Each entry in the list is the name of a Kubernetes `v1/Secret` resource
+	// object of type `kubernetes.io/dockerconfigjson` in the same namespace as
+	// the PipelineRun object itself.
 	// +optional
 	ImagePullSecrets []string `json:"imagePullSecrets"`
-	// +optional - defaults to run. TODO: Controller should set intent=run explicitely if not set
+
+	// Intent is the intention of the client regarding the way this pipeline run
+	// should be processed. The value `run` indicates that the pipeline should
+	// run to completion, while the value `abort` indicates that the pipeline
+	// processing should be stopped as soon as possible. An empty string value
+	// is equivalent to value `run`.
+	// TODO: Controller should set intent=run explicitely if not set
+	// +optional
 	Intent Intent `json:"intent"`
+
+	// Logging contains the logging configuration.
 	// +optional
 	Logging *Logging `json:"logging"`
+
+	// RunDetails provides details of a pipeline run which are passed to the
+	// Jenkinsfile Runner.
 	// +optional
 	RunDetails *PipelineRunDetails `json:"runDetails"`
 }
 
 // JenkinsFile represents the location from where to get the pipeline
 type JenkinsFile struct {
-	URL      string `json:"repoUrl"`
+
+	// URL is the URL of the Git repository containing the pipeline definition
+	// (aka `Jenkinsfile`).
+	URL string `json:"repoUrl"`
+
+	// Revision is the revision of the pipeline Git repository to used, e.g.
+	// `master`.
 	Revision string `json:"revision"`
-	Path     string `json:"relativePath"`
+
+	// Path is the relative pathname of the pipeline definition file in the
+	// repository check-out, typically `Jenkinsfile`.
+	Path string `json:"relativePath"`
+
+	// RepoAuthSecret is the name of the Kubernetes `v1/Secret` resource object
+	// of type `kubernetes.io/basic-auth` that contains the username and
+	// password for authentication when cloning from `spec.jenkinsFile.repoUrl`.
 	// +optional
 	RepoAuthSecret string `json:"repoAuthSecret"`
 }
 
 // Logging contains all logging-specific configuration.
 type Logging struct {
+
+	// Elasticsearch is the configuration for pipeline logging to Elasticsearch.
+	// If not specified, logging to Elasticsearch is disabled and the default
+	// Jenkins log implementation is used (stdout of Jenkinsfile Runner
+	// container).
+	// +optional
 	Elasticsearch *Elasticsearch `json:"elasticsearch"`
 }
 
 // Elasticsearch contains logging configuration for the
-// Elasticsearch log implementation
+// Elasticsearch log implementation.
 type Elasticsearch struct {
 	// The identifier of this pipeline run, attached as
 	// field `runid` to each log entry.
@@ -69,12 +119,15 @@ type Elasticsearch struct {
 
 // PipelineStatus represents the status of the pipeline
 type PipelineStatus struct {
+
 	// StartedAt is the time the pipeline run has been started.
 	// +optional
 	StartedAt *metav1.Time `json:"startedAt,omitempty"`
+
 	// FinishedAt is the time the pipeline run has been finished.
 	// +optional
-	FinishedAt   *metav1.Time          `json:"finishedAt,omitempty"`
+	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
+
 	State        State                 `json:"state"`
 	StateDetails StateItem             `json:"stateDetails"`
 	StateHistory []StateItem           `json:"stateHistory"`
@@ -90,7 +143,7 @@ type PipelineStatus struct {
 type StateItem struct {
 	State      State       `json:"state"`
 	StartedAt  metav1.Time `json:"startedAt"`
-	FinishedAt metav1.Time `json:"finishedAt"`
+	FinishedAt metav1.Time `json:"finishedAt,omitempty"`
 }
 
 // State represents the state
@@ -142,12 +195,24 @@ const (
 	IntentAbort Intent = "abort"
 )
 
-// PipelineRunDetails provies details of a pipeline run which are passed to the jenkinsfile-runner.
+// PipelineRunDetails provides details of a pipeline run which are passed to
+// the Jenkinsfile Runner.
 type PipelineRunDetails struct {
-	// JobName is the name of the job which is instantiated by the run.
-	JobName string `json:"jobName"`
-	// SequenceNumber is a sequential number of the run
-	SequenceNumber int `json:"sequenceNumber"`
-	// Cause is the cause which triggered the run, e.g. a SCM change, an user action or a timer.
-	Cause string `json:"cause"`
+
+	// JobName is the name of the job this pipeline run belongs to. It is used
+	// as the name of the Jenkins job and therefore must be a valid Jenkins job
+	// name. If empty, a default name will be used for the Jenkins job.
+	// +optional
+	JobName string `json:"jobName,omitempty"`
+
+	// SequenceNumber is the sequence number of the pipeline run, which
+	// translates into the build number of the Jenkins job.
+	// +optional
+	SequenceNumber int `json:"sequenceNumber,omitempty"`
+
+	// Cause a textual description of the cause of this pipeline run. Will be
+	// set as cause of the Jenkins job. If empty, no cause information
+	// will be available.
+	// +optional
+	Cause string `json:"cause,omitempty"`
 }
