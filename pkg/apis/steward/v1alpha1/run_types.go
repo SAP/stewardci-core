@@ -68,7 +68,7 @@ type PipelineSpec struct {
 	// +optional
 	Logging *Logging `json:"logging"`
 
-	// RunDetails provides details of a pipeline run which are passed to the
+	// RunDetails provides metadata for a pipeline run which is evaluated by the
 	// Jenkinsfile Runner.
 	// +optional
 	RunDetails *PipelineRunDetails `json:"runDetails"`
