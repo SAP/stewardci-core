@@ -116,7 +116,7 @@ func ImagePullSecret(name string) PipelineRunSpecOp {
 }
 
 // RunDetails creates a PipelineRunSpecOp which adds RunDetails
-func RunDetails(jobName, cause string, sequenceNumber int) PipelineRunSpecOp {
+func RunDetails(jobName, cause string, sequenceNumber int32) PipelineRunSpecOp {
 	return func(spec api.PipelineSpec) api.PipelineSpec {
 		spec.RunDetails = &api.PipelineRunDetails{
 			JobName:        jobName,
