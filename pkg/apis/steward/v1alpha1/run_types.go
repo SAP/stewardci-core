@@ -81,7 +81,7 @@ type JenkinsFile struct {
 	// (aka `Jenkinsfile`).
 	URL string `json:"repoUrl"`
 
-	// Revision is the revision of the pipeline Git repository to used, e.g.
+	// Revision is the revision of the pipeline Git repository to be used, e.g.
 	// `master`.
 	Revision string `json:"revision"`
 
