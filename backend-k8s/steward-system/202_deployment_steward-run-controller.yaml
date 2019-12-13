@@ -19,4 +19,4 @@ spec:
       containers:
       - name: steward-run-controller
         imagePullPolicy: IfNotPresent
-        image: stewardci/stewardci-run-controller:191210_6094acb
+        image: stewardci/stewardci-run-controller:191213_d10de05
