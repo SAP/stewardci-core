@@ -38,11 +38,10 @@ func Test_StripMetadata(t *testing.T) {
 	}
 
 	// EXERCISE
-	resultSecret := StripMetadata(origSecret.DeepCopy())
+	resultSecret := origSecret.DeepCopy()
+	StripMetadata(resultSecret)
 
 	// VERIFY
-	assert.Assert(t, resultSecret != nil)
-
 	expectedSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        origSecret.GetName(),

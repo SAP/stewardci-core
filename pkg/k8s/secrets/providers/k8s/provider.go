@@ -36,5 +36,6 @@ func (p *provider) GetSecret(name string) (*v1.Secret, error) {
 	if !secret.ObjectMeta.DeletionTimestamp.IsZero() {
 		return nil, nil
 	}
-	return providers.StripMetadata(secret), nil
+	providers.StripMetadata(secret)
+	return secret, nil
 }
