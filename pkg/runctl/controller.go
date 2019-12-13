@@ -277,13 +277,19 @@ func (c *Controller) syncHandler(key string) error {
 // skipFinished checks if pipeline run is finished or should be aborted.
 // If the user requested abortion and the pipeline run is not finished
 // already, it updates message, result and state.
+// returns also false if pipeline is aborted but cleanup is required
 func (c *Controller) skipFinished(pipelineRun k8s.PipelineRun) bool {
 	intent := pipelineRun.GetSpec().Intent
 	if intent == api.IntentAbort {
 		if pipelineRun.GetStatus().Result == api.ResultUndefined {
 			pipelineRun.UpdateMessage("Aborted")
 			pipelineRun.UpdateResult(api.ResultAborted)
+			if pipelineRun.GetStatus().State == api.StateUndefined {
+				c.changeState(pipelineRun, api.StateFinished)
+				return true
+			}
 			c.changeState(pipelineRun, api.StateCleaning)
+			return false
 		}
 		return true
 	}

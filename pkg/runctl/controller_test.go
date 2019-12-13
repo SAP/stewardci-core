@@ -206,6 +206,28 @@ func Test_Controller_syncHandler(t *testing.T) {
 			expectedResult:  "",
 			expectedState:   api.StateFinished,
 		},
+		{name: "cleanup_abborted_new",
+			pipelineSpec: api.PipelineSpec{
+				Intent: api.IntentAbort,
+			},
+			currentStatus: api.PipelineStatus{
+				State: api.StateUndefined,
+			},
+			runManagerError: nil,
+			expectedResult:  api.ResultAborted,
+			expectedState:   api.StateFinished,
+		},
+		{name: "cleanup_abborted_running",
+			pipelineSpec: api.PipelineSpec{
+				Intent: api.IntentAbort,
+			},
+			currentStatus: api.PipelineStatus{
+				State: api.StateRunning,
+			},
+			runManagerError: nil,
+			expectedResult:  api.ResultAborted,
+			expectedState:   api.StateFinished,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			test := test
