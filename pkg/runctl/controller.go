@@ -199,10 +199,6 @@ func (c *Controller) syncHandler(key string) error {
 	}
 	pipelineRun.AddFinalizer()
 
-	if pipelineRun.GetStatus().Result != api.ResultUndefined {
-		return nil
-	}
-
 	// Check if pipeline run is aborted
 	c.handleAborted(pipelineRun)
 
@@ -281,7 +277,7 @@ func (c *Controller) syncHandler(key string) error {
 // to trigger a cleanup.
 func (c *Controller) handleAborted(pipelineRun k8s.PipelineRun) {
 	intent := pipelineRun.GetSpec().Intent
-	if intent == api.IntentAbort {
+	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {
 		pipelineRun.UpdateMessage("Aborted")
 		pipelineRun.UpdateResult(api.ResultAborted)
 		c.changeState(pipelineRun, api.StateCleaning)
