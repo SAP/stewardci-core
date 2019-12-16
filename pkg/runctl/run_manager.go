@@ -336,6 +336,7 @@ func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (Run, error) {
 func (c *runManager) Cleanup(pipelineRun k8s.PipelineRun) error {
 	namespace := pipelineRun.GetRunNamespace()
 	if namespace == "" {
+		//TODO: Don't store on resource as message. Add it as event.
 		pipelineRun.StoreErrorAsMessage(fmt.Errorf("Nothing to clean up as namespace not set"), "")
 	} else {
 		err := c.namespaceManager.Delete(namespace)

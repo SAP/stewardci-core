@@ -199,9 +199,17 @@ func (c *Controller) syncHandler(key string) error {
 	}
 	pipelineRun.AddFinalizer()
 
-	// Check if pipeline run is aborted or completed
-	if c.skipFinished(pipelineRun) {
+	// Finished and no deletion timestamp, no need to process anything further
+	if pipelineRun.GetStatus().State == api.StateFinished {
 		return nil
+	}
+
+	// Check if pipeline run is aborted
+	c.handleAborted(pipelineRun)
+
+	// As soon as we have a result we can cleanup
+	if pipelineRun.GetStatus().Result != api.ResultUndefined {
+		c.changeState(pipelineRun, api.StateCleaning)
 	}
 
 	runManager := c.createRunManager(pipelineRun)
@@ -274,20 +282,16 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-// skipFinished checks if pipeline run is finished or should be aborted.
-// If the user requested abortion and the pipeline run is not finished
-// already, it updates message, result and state.
-func (c *Controller) skipFinished(pipelineRun k8s.PipelineRun) bool {
+// handleAborted checks if pipeline run should be aborted.
+// If the user requested abortion it updates message, result and state
+// to trigger a cleanup.
+func (c *Controller) handleAborted(pipelineRun k8s.PipelineRun) {
 	intent := pipelineRun.GetSpec().Intent
-	if intent == api.IntentAbort {
-		if pipelineRun.GetStatus().Result == api.ResultUndefined {
-			pipelineRun.UpdateMessage("Aborted")
-			pipelineRun.UpdateResult(api.ResultAborted)
-			c.changeState(pipelineRun, api.StateCleaning)
-		}
-		return true
+	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {
+		pipelineRun.UpdateMessage("Aborted")
+		pipelineRun.UpdateResult(api.ResultAborted)
+		c.changeState(pipelineRun, api.StateCleaning)
 	}
-	return false
 }
 
 func (c *Controller) addPipelineRun(obj interface{}) {
