@@ -210,7 +210,7 @@ func (c *Controller) syncHandler(key string) error {
 	c.handleAborted(pipelineRun)
 
 	// As soon as we have a result we can cleanup
-	if pipelineRun.GetStatus().Result != api.ResultUndefined {
+	if pipelineRun.GetStatus().Result != api.ResultUndefined && pipelineRun.GetStatus().State != api.StateCleaning {
 		c.changeState(pipelineRun, api.StateCleaning)
 	}
 

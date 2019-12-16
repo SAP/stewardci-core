@@ -31,7 +31,7 @@ func PipelineRunAbort(Namespace string) f.PipelineRunTest {
 				builder.Abort(),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultAborted),
-		Timeout: 10 * time.Second,
+		Timeout: 15 * time.Second,
 	}
 
 }
