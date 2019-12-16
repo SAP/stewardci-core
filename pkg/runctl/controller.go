@@ -199,8 +199,18 @@ func (c *Controller) syncHandler(key string) error {
 	}
 	pipelineRun.AddFinalizer()
 
+	// Finished and no deletion timestamp, no need to process anything further
+	if pipelineRun.GetStatus().State == api.StateFinished {
+		return nil
+	}
+
 	// Check if pipeline run is aborted
 	c.handleAborted(pipelineRun)
+
+	// As soon as we have a result we can cleanup
+	if pipelineRun.GetStatus().Result != api.ResultUndefined {
+		c.changeState(pipelineRun, api.StateCleaning)
+	}
 
 	runManager := c.createRunManager(pipelineRun)
 	// Process pipeline run based on current state
