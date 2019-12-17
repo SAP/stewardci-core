@@ -210,7 +210,7 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	assert.Assert(t, factory.CheckTimeOrder(start, end))
 }
 
-func Test_pipelineRun_FinishState_HistoryIfUpdateStateCalledBefore(t *testing.T) {
+func Test_pipelineRun_UpdateStateToFinished_HistoryIfUpdateStateCalledBefore(t *testing.T) {
 	t.Parallel()
 	// SETUP
 	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
@@ -221,7 +221,7 @@ func Test_pipelineRun_FinishState_HistoryIfUpdateStateCalledBefore(t *testing.T)
 	factory.Sleep("let time elapse to check timestamps afterwards")
 
 	// EXERCISE
-	examinee.FinishState()
+	examinee.UpdateState(api.StateFinished)
 
 	// VERIFY
 	status := examinee.GetStatus()
@@ -233,10 +233,7 @@ func Test_pipelineRun_FinishState_HistoryIfUpdateStateCalledBefore(t *testing.T)
 	assert.Assert(t, factory.CheckTimeOrder(start, end))
 
 	assert.Equal(t, api.StateFinished, status.State)
-	start = status.StateDetails.StartedAt
-	end = status.StateDetails.FinishedAt
-	assert.Assert(t, factory.CheckTimeOrder(start, end))
-
+	assert.Equal(t, status.StateDetails.StartedAt, status.StateDetails.FinishedAt)
 }
 
 func Test_pipelineRun_UpdateResult(t *testing.T) {

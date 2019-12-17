@@ -250,21 +250,6 @@ func (mr *MockPipelineRunMockRecorder) DeleteFinalizerIfExists() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFinalizerIfExists", reflect.TypeOf((*MockPipelineRun)(nil).DeleteFinalizerIfExists))
 }
 
-// FinishState mocks base method
-func (m *MockPipelineRun) FinishState() (*v1alpha1.StateItem, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FinishState")
-	ret0, _ := ret[0].(*v1alpha1.StateItem)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// FinishState indicates an expected call of FinishState
-func (mr *MockPipelineRunMockRecorder) FinishState() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinishState", reflect.TypeOf((*MockPipelineRun)(nil).FinishState))
-}
-
 // GetKey mocks base method
 func (m *MockPipelineRun) GetKey() string {
 	m.ctrl.T.Helper()

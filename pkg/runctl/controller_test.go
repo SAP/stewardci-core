@@ -355,7 +355,7 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 
 	assert.Assert(t, status != nil)
 	assert.Equal(t, api.StateFinished, status.State)
-	assert.Equal(t, api.StateCleaning, status.StateDetails.State)
+	assert.Equal(t, status.State, status.StateDetails.State)
 	assert.Equal(t, api.ResultTimeout, status.Result)
 	assert.Equal(t, "message from Succeeded condition", status.Message)
 }

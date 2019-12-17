@@ -28,7 +28,6 @@ type PipelineRun interface {
 	AddFinalizer() error
 	DeleteFinalizerIfExists() error
 	UpdateState(api.State) (*api.StateItem, error)
-	FinishState() (*api.StateItem, error)
 	UpdateResult(api.Result) error
 	UpdateContainer(*corev1.ContainerState) error
 	StoreErrorAsMessage(error, string) error
@@ -128,6 +127,9 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	now := metav1.Now()
 	oldstate := r.finishCurrentState()
 	newState := api.StateItem{State: state, StartedAt: now}
+	if state == api.StateFinished {
+		newState.FinishedAt = now
+	}
 	r.apiObj.Status.StateDetails = newState
 	r.apiObj.Status.State = state
 	return oldstate, r.updateStatus()
@@ -148,16 +150,6 @@ func (r *pipelineRun) finishCurrentState() *api.StateItem {
 	r.apiObj.Status.StateHistory = his
 	r.apiObj.Status.StateDetails = state
 	return &state
-}
-
-// FinishState set end time stamp of the current (defined) state and add it to the history
-// If no current state is defined a new state (A) with creation time of the PipelineRun as start time is created.
-// State is set to api.StateFinished
-// Returns the state details
-func (r *pipelineRun) FinishState() (*api.StateItem, error) {
-	oldstate := r.finishCurrentState()
-	r.apiObj.Status.State = api.StateFinished
-	return oldstate, r.updateStatus()
 }
 
 // UpdateResult of the pipeline run
