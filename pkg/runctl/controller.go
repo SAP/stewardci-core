@@ -143,13 +143,26 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) e
 		log.Printf("Failed to UpdateState: %q", err.Error())
 		return err
 	}
-	if oldState != nil {
-		err = c.metrics.ObserveDurationByState(oldState)
+	c.recordStateDuration(oldState)
+	return nil
+}
+
+func (c *Controller) finishState(pipelineRun k8s.PipelineRun) error {
+	oldState, err := pipelineRun.FinishState()
+	if err != nil {
+		return err
+	}
+	c.recordStateDuration(oldState)
+	return nil
+}
+
+func (c *Controller) recordStateDuration(state *api.StateItem) {
+	if state != nil {
+		err := c.metrics.ObserveDurationByState(state)
 		if err != nil {
-			log.Printf("Failed to measure state '%+v': '%s'", oldState, err)
+			log.Printf("Faild to measure state '%+v': '%s'", state, err)
 		}
 	}
-	return nil
 }
 
 func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) RunManager {
@@ -289,9 +302,7 @@ func (c *Controller) syncHandler(key string) error {
 	case api.StateCleaning:
 		err = runManager.Cleanup(pipelineRun)
 		if err == nil {
-			if err = c.changeState(pipelineRun, api.StateFinished); err != nil {
-				return err
-			}
+			c.finishState(pipelineRun)
 		}
 		return err
 	default:

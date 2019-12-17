@@ -126,20 +126,14 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	r.ensureCopy()
 	log.Printf("New State: %s", state)
 	now := metav1.Now()
-	oldstate, err := r.FinishState()
-	if err != nil {
-		return nil, err
-	}
+	oldstate := r.finishCurrentState()
 	newState := api.StateItem{State: state, StartedAt: now}
 	r.apiObj.Status.StateDetails = newState
 	r.apiObj.Status.State = state
 	return oldstate, r.updateStatus()
 }
 
-// FinishState set end time stamp of the current (defined) state and add it to the history
-// If no current state is defined a new state (A) with creation time of the PipelineRun as start time is created.
-// Returns the state details
-func (r *pipelineRun) FinishState() (*api.StateItem, error) {
+func (r *pipelineRun) finishCurrentState() *api.StateItem {
 	r.ensureCopy()
 	state := r.apiObj.Status.StateDetails
 	now := metav1.Now()
@@ -152,7 +146,18 @@ func (r *pipelineRun) FinishState() (*api.StateItem, error) {
 	his := r.apiObj.Status.StateHistory
 	his = append(his, state)
 	r.apiObj.Status.StateHistory = his
-	return &state, r.updateStatus()
+	r.apiObj.Status.StateDetails = state
+	return &state
+}
+
+// FinishState set end time stamp of the current (defined) state and add it to the history
+// If no current state is defined a new state (A) with creation time of the PipelineRun as start time is created.
+// State is set to api.StateFinished
+// Returns the state details
+func (r *pipelineRun) FinishState() (*api.StateItem, error) {
+	oldstate := r.finishCurrentState()
+	r.apiObj.Status.State = api.StateFinished
+	return oldstate, r.updateStatus()
 }
 
 // UpdateResult of the pipeline run

@@ -231,6 +231,12 @@ func Test_pipelineRun_FinishState_HistoryIfUpdateStateCalledBefore(t *testing.T)
 	start := status.StateHistory[1].StartedAt
 	end := status.StateHistory[1].FinishedAt
 	assert.Assert(t, factory.CheckTimeOrder(start, end))
+
+	assert.Equal(t, api.StateFinished, status.State)
+	start = status.StateDetails.StartedAt
+	end = status.StateDetails.FinishedAt
+	assert.Assert(t, factory.CheckTimeOrder(start, end))
+
 }
 
 func Test_pipelineRun_UpdateResult(t *testing.T) {
