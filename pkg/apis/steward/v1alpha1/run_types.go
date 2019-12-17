@@ -39,13 +39,13 @@ type PipelineSpec struct {
 
 	// Args contains the key-value parameters to pass to the pipeline.
 	// +optional
-	Args map[string]string `json:"args"`
+	Args map[string]string `json:"args,omitempty"`
 
 	// Secrets is the list of secrets to be made available to the pipeline
 	// execution. Each entry in the list is the name of a Kubernetes `v1/Secret`
 	// resource object in the same namespace as the PipelineRun object itself.
 	// +optional
-	Secrets []string `json:"secrets"`
+	Secrets []string `json:"secrets,omitempty"`
 
 	// ImagePullSecrets is the list of image pull secrets required by the
 	// pipeline run to pull images of custom containers from private registries.
@@ -53,7 +53,7 @@ type PipelineSpec struct {
 	// object of type `kubernetes.io/dockerconfigjson` in the same namespace as
 	// the PipelineRun object itself.
 	// +optional
-	ImagePullSecrets []string `json:"imagePullSecrets"`
+	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
 
 	// Intent is the intention of the client regarding the way this pipeline run
 	// should be processed. The value `run` indicates that the pipeline should
@@ -62,16 +62,16 @@ type PipelineSpec struct {
 	// is equivalent to value `run`.
 	// TODO: Controller should set intent=run explicitely if not set
 	// +optional
-	Intent Intent `json:"intent"`
+	Intent Intent `json:"intent,omitempty"`
 
 	// Logging contains the logging configuration.
 	// +optional
-	Logging *Logging `json:"logging"`
+	Logging *Logging `json:"logging,omitempty"`
 
 	// RunDetails provides metadata for a pipeline run which is evaluated by the
 	// Jenkinsfile Runner.
 	// +optional
-	RunDetails *PipelineRunDetails `json:"runDetails"`
+	RunDetails *PipelineRunDetails `json:"runDetails,omitempty"`
 }
 
 // JenkinsFile represents the location from where to get the pipeline
@@ -93,7 +93,7 @@ type JenkinsFile struct {
 	// of type `kubernetes.io/basic-auth` that contains the username and
 	// password for authentication when cloning from `spec.jenkinsFile.repoUrl`.
 	// +optional
-	RepoAuthSecret string `json:"repoAuthSecret"`
+	RepoAuthSecret string `json:"repoAuthSecret,omitempty"`
 }
 
 // Logging contains all logging-specific configuration.

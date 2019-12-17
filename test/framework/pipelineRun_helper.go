@@ -88,17 +88,17 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 		waitWG.Done()
 	}()
 	if run.result != nil {
-		assert.NilError(t, checkResult(run))
+		assert.NilError(t, checkResult(run), "Test: %q", run.name)
 		return
 	}
 	ctx := run.ctx
-	assert.NilError(t, ctx.Err(), fmt.Sprintf("Test: %q", run.name))
+	assert.NilError(t, ctx.Err(), "Test: %q", run.name)
 	pr := GetPipelineRun(ctx)
 	PipelineRunCheck := CreatePipelineRunCondition(pr, run.check)
 	duration, err := WaitFor(ctx, PipelineRunCheck)
 	log.Printf("Test: %q waited for %.2f s", run.name, duration.Seconds())
 	run.result = err
-	assert.NilError(t, checkResult(run), fmt.Sprintf("Test: %q", run.name))
+	assert.NilError(t, checkResult(run), "Test: %q", run.name)
 }
 
 func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
