@@ -29,6 +29,8 @@ func PipelineRunAbort(Namespace string) f.PipelineRunTest {
 		PipelineRun: builder.PipelineRun("sleep-", Namespace,
 			builder.PipelineRunSpec(
 				builder.Abort(),
+				builder.JenkinsFileSpec(pipelineRepoURL,
+					"sleep/Jenkinsfile"),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultAborted),
 		Timeout: 10 * time.Second,
