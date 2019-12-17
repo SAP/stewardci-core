@@ -30,7 +30,7 @@ func Test_Loadtest_delay(t *testing.T) {
 	f.ExecutePipelineRunTests(t, tests...)
 }
 
-func Test_Loadtest(t *testing.T) {
+func Test_Loadtest_ok(t *testing.T) {
 	f.ExecutePipelineRunTests(t,
 		f.TestPlan{
 			TestBuilder: test.PipelineRunOK,

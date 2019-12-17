@@ -33,7 +33,7 @@ func PipelineRunAbort(Namespace string) f.PipelineRunTest {
 					"sleep/Jenkinsfile"),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultAborted),
-		Timeout: 10 * time.Second,
+		Timeout: 15 * time.Second,
 	}
 
 }

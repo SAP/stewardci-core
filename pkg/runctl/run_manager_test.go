@@ -158,7 +158,6 @@ func Test_RunManager_Start_FailsWithContentErrorWhenPipelineCloneSecretNotFound(
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
 	mockPipelineRun.EXPECT().UpdateMessage(secrets.NewNotFoundError(secretName).Error())
 	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorContent)
-	mockPipelineRun.EXPECT().FinishState()
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.Assert(t, err != nil)
@@ -181,7 +180,6 @@ func Test_RunManager_Start_FailsWithContentErrorWhenSecretNotFound(t *testing.T)
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
 	mockPipelineRun.EXPECT().UpdateMessage(secrets.NewNotFoundError(secretName).Error())
 	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorContent)
-	mockPipelineRun.EXPECT().FinishState()
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.Assert(t, err != nil)
@@ -205,7 +203,6 @@ func Test_RunManager_Start_FailsWithContentErrorWhenImagePullSecretNotFound(t *t
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
 	mockPipelineRun.EXPECT().UpdateMessage(secrets.NewNotFoundError(secretName).Error())
 	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorContent)
-	mockPipelineRun.EXPECT().FinishState()
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.Assert(t, err != nil)
@@ -231,7 +228,6 @@ func Test_RunManager_Start_FailsWithInfraErrorWhenForbidden(t *testing.T) {
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, fmt.Errorf("Forbidden"))
 	mockPipelineRun.EXPECT().UpdateMessage("Forbidden")
 	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorInfra)
-	mockPipelineRun.EXPECT().FinishState()
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.Assert(t, err != nil)
@@ -245,7 +241,6 @@ func Test_RunManager_Cleanup_RemovesNamespace(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider, mockNamespaceManager := prepareMocks(mockCtrl)
 	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
-	mockPipelineRun.EXPECT().FinishState()
 
 	examinee := NewRunManager(mockFactory, mockSecretProvider, mockNamespaceManager).(*runManager)
 	err := examinee.prepareRunNamespace(mockPipelineRun)
@@ -445,9 +440,6 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 }
 
 func preparePredefinedClusterRole(t *testing.T, factory *mocks.MockClientFactory, pipelineRun *mocks.MockPipelineRun) {
-	// Uncomment this if unexpected call to FinishState() swallows the error you want to see
-	// pipelineRun.EXPECT().FinishState().AnyTimes()
-
 	// Create expected cluster role
 	_, err := factory.RbacV1beta1().ClusterRoles().Create(k8sfake.ClusterRole(string(runClusterRoleName)))
 	assert.NilError(t, err)

@@ -140,10 +140,11 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) error {
 	oldState, err := pipelineRun.UpdateState(state)
 	if err != nil {
+		log.Printf("Failed to UpdateState: %q", err.Error())
 		return err
 	}
 	if oldState != nil {
-		err = c.metrics.ObserveDurationByState(oldState)
+		err := c.metrics.ObserveDurationByState(oldState)
 		if err != nil {
 			log.Printf("Faild to measure state '%+v': '%s'", oldState, err)
 		}
@@ -162,6 +163,7 @@ func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) RunManager {
 // converge the two. It then updates the Status block of the Foo resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
+	// Initial checks on cached pipelineRun
 	pipelineRunAPIObj, err := c.pipelineRunFetcher.ByKey(key)
 	if err != nil {
 		return err
@@ -170,12 +172,12 @@ func (c *Controller) syncHandler(key string) error {
 	if pipelineRunAPIObj == nil {
 		return nil
 	}
-
 	// fast exit
 	if pipelineRunAPIObj.Status.State == api.StateFinished && pipelineRunAPIObj.GetDeletionTimestamp().IsZero() {
 		return nil
 	}
 
+	// Get real pipelineRun bypassing cache
 	pipelineRun, err := k8s.NewPipelineRun(pipelineRunAPIObj, c.factory)
 
 	if err != nil {
@@ -208,7 +210,7 @@ func (c *Controller) syncHandler(key string) error {
 	c.handleAborted(pipelineRun)
 
 	// As soon as we have a result we can cleanup
-	if pipelineRun.GetStatus().Result != api.ResultUndefined {
+	if pipelineRun.GetStatus().Result != api.ResultUndefined && pipelineRun.GetStatus().State != api.StateCleaning {
 		c.changeState(pipelineRun, api.StateCleaning)
 	}
 
@@ -220,36 +222,48 @@ func (c *Controller) syncHandler(key string) error {
 	// Those must be recovered.
 	case api.StateUndefined:
 		c.metrics.CountStart()
-		c.changeState(pipelineRun, api.StatePreparing)
+		if err = c.changeState(pipelineRun, api.StatePreparing); err != nil {
+			return err
+		}
 		err = runManager.Start(pipelineRun)
 		if err != nil {
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
 			if pipelineRun.GetStatus().Result == api.ResultUndefined {
 				pipelineRun.UpdateResult(api.ResultErrorInfra)
 			}
-			c.changeState(pipelineRun, api.StateCleaning)
+			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
+				return err
+			}
 			c.metrics.CountResult(pipelineRun.GetStatus().Result)
 			return nil
 		}
-		c.changeState(pipelineRun, api.StateWaiting)
+		if err = c.changeState(pipelineRun, api.StateWaiting); err != nil {
+			return err
+		}
 	case api.StateWaiting:
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
-			c.changeState(pipelineRun, api.StateCleaning)
+			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
+				return err
+			}
 			pipelineRun.UpdateResult(api.ResultErrorInfra)
 			c.metrics.CountResult(api.ResultErrorInfra)
 			return nil
 		}
 		started := run.GetStartTime()
 		if started != nil {
-			c.changeState(pipelineRun, api.StateRunning)
+			if err = c.changeState(pipelineRun, api.StateRunning); err != nil {
+				return err
+			}
 		}
 	case api.StateRunning:
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
-			c.changeState(pipelineRun, api.StateCleaning)
+			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
+				return err
+			}
 			return nil
 		}
 		containerInfo := run.GetContainerInfo()
@@ -267,13 +281,15 @@ func (c *Controller) syncHandler(key string) error {
 			}
 			pipelineRun.UpdateMessage(msg)
 			pipelineRun.UpdateResult(result)
-			c.changeState(pipelineRun, api.StateCleaning)
+			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
+				return err
+			}
 			c.metrics.CountResult(result)
 		}
 	case api.StateCleaning:
 		err = runManager.Cleanup(pipelineRun)
 		if err == nil {
-			c.changeState(pipelineRun, api.StateFinished)
+			err = c.changeState(pipelineRun, api.StateFinished)
 		}
 		return err
 	default:

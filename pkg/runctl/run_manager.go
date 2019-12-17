@@ -345,7 +345,6 @@ func (c *runManager) Cleanup(pipelineRun k8s.PipelineRun) error {
 			return err
 		}
 	}
-	pipelineRun.FinishState()
 	return nil
 }
 
