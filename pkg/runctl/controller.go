@@ -302,7 +302,7 @@ func (c *Controller) syncHandler(key string) error {
 	case api.StateCleaning:
 		err = runManager.Cleanup(pipelineRun)
 		if err == nil {
-			c.finishState(pipelineRun)
+			err = c.finishState(pipelineRun)
 		}
 		return err
 	default:
