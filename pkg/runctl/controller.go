@@ -12,6 +12,7 @@ import (
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/metrics"
+	runi "github.com/SAP/stewardci-core/pkg/run"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -29,6 +30,11 @@ type Controller struct {
 	tektonTaskRunsSynced cache.InformerSynced
 	workqueue            workqueue.RateLimitingInterface
 	metrics              metrics.Metrics
+	testing              *controllerTesting
+}
+
+type controllerTesting struct {
+	runManagerStub runi.Manager
 }
 
 // NewController creates new Controller
@@ -152,7 +158,10 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) e
 	return nil
 }
 
-func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) RunManager {
+func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) runi.Manager {
+	if c.testing != nil && c.testing.runManagerStub != nil {
+		return c.testing.runManagerStub
+	}
 	tenant := k8s.NewTenantNamespace(c.factory, pipelineRun.GetNamespace())
 	workFactory := tenant.TargetClientFactory()
 	namespaceManager := k8s.NewNamespaceManager(c.factory, runNamespacePrefix, runNamespaceRandomLength)

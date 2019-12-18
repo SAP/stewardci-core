@@ -2,6 +2,7 @@ package runctl
 
 import (
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	runi "github.com/SAP/stewardci-core/pkg/run"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonStatus "github.com/tektoncd/pipeline/pkg/status"
 	corev1 "k8s.io/api/core/v1"
@@ -9,20 +10,12 @@ import (
 	knativeapis "knative.dev/pkg/apis"
 )
 
-// Run represents a pipeline run
-type Run interface {
-	GetStartTime() *metav1.Time
-	IsFinished() (bool, steward.Result)
-	GetSucceededCondition() *knativeapis.Condition
-	GetContainerInfo() *corev1.ContainerState
-}
-
 type run struct {
 	tektonTaskRun *tekton.TaskRun
 }
 
 // NewRun returns new Run
-func NewRun(tektonTaskRun *tekton.TaskRun) Run {
+func NewRun(tektonTaskRun *tekton.TaskRun) runi.Run {
 	return &run{tektonTaskRun: tektonTaskRun}
 }
 
