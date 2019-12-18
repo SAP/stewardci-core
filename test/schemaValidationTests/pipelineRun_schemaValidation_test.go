@@ -46,11 +46,6 @@ var pipelineRunTests = []SchemaValidationTest{
 				repoUrl: repoUrl1
 				revision: revision1
 				relativePath: relativePath1
-			args: {}
-			intent: run
-			logging:
-				elasticsearch:
-					runID: {}
 		`, pipelineRunHeaderYAML),
 		check: func(t *testing.T, err error) {
 			assert.NilError(t, err)
@@ -176,6 +171,53 @@ var pipelineRunTests = []SchemaValidationTest{
 		`, pipelineRunHeaderYAML),
 		check: func(t *testing.T, err error) {
 			assert.ErrorContains(t, err, "spec.intent in body should match '^(|run|abort)$'")
+			count := strings.Count(err.Error(), "spec.")
+			assert.Assert(t, count == 1, "Unexpected number of validation failures: %v : %v ", count, err.Error())
+		},
+	},
+
+	// ###################################################################
+	SchemaValidationTest{
+		name:       "arrays and maps with blank values",
+		dataFormat: yaml,
+		data: fixIndent(2, `%v
+		spec:
+			jenkinsFile:
+				repoUrl: repoUrl1
+				revision: revision1
+				relativePath: relativePath1
+			secrets: [""]
+			imagePullSecrets: [""]
+		`, pipelineRunHeaderYAML),
+		check: func(t *testing.T, err error) {
+			assert.ErrorContains(t, err, "spec.secrets in body should match '^[^\\s]{1,}.*$'")
+			assert.ErrorContains(t, err, "spec.imagePullSecrets in body should match '^[^\\s]{1,}.*$'")
+			count := strings.Count(err.Error(), "spec.")
+			assert.Assert(t, count == 2, "Unexpected number of validation failures: %v : %v ", count, err.Error())
+		},
+	},
+
+	// ###################################################################
+	SchemaValidationTest{
+		name:       "allowed blank values",
+		dataFormat: yaml,
+		data: fixIndent(2, `%v
+		spec:
+			jenkinsFile:
+				repoUrl: repoUrl1
+				revision: revision1
+				relativePath: relativePath1
+				repoAuthSecret: ""
+			args:
+				"": ""
+			runDetails:
+				jobName: ""
+				sequenceNumber: 0
+				cause: ""
+			
+		`, pipelineRunHeaderYAML),
+		check: func(t *testing.T, err error) {
+			assert.NilError(t, err)
 		},
 	},
 }

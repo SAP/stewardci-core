@@ -72,10 +72,12 @@ spec:
               type: array
               items:
                 type: string
+                pattern: '^[^\s]{1,}.*$'
             imagePullSecrets: ###
               type: array
               items:
                 type: string
+                pattern: '^[^\s]{1,}.*$'
             intent: ###
               type: string
               pattern: '^(|run|abort)$'
