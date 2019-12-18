@@ -124,10 +124,9 @@ var pipelineRunTests = []SchemaValidationTest{
 			assert.ErrorContains(t, err, "spec.jenkinsFile.revision in body should match '^[^\\s]{1,}.*$'")
 			assert.ErrorContains(t, err, "spec.jenkinsFile.relativePath in body should match '^[^\\s]{1,}.*$'")
 			assert.ErrorContains(t, err, "spec.args in body must be of type object: \"string\"")
-			assert.ErrorContains(t, err, "spec.intent in body should match '^run|abort$'")
 			assert.ErrorContains(t, err, "spec.logging.elasticsearch.runID in body must be of type object: \"string\"")
 			count := strings.Count(err.Error(), "spec.")
-			assert.Assert(t, count == 6, "Unexpected number of validation failures: %v : %v ", count, err.Error())
+			assert.Assert(t, count == 5, "Unexpected number of validation failures: %v : %v ", count, err.Error())
 		},
 	},
 
@@ -176,7 +175,7 @@ var pipelineRunTests = []SchemaValidationTest{
 					runID: {}
 		`, pipelineRunHeaderYAML),
 		check: func(t *testing.T, err error) {
-			assert.ErrorContains(t, err, "spec.intent in body should match '^run|abort$'")
+			assert.ErrorContains(t, err, "spec.intent in body should match '^(|run|abort)$'")
 		},
 	},
 }
