@@ -204,19 +204,19 @@ if is_verify_mode; then
 fi
 
 echo
-echo "## ${ACTION} mocks for package 'runctl' ###############"
+echo "## ${ACTION} mocks for package 'run' ###############"
 set -x
 "$GOPATH_1/bin/mockgen" \
     -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
-    -destination="${MOCK_ROOT}/pkg/runctl/mocks.go" \
-    -package=runctl \
-    github.com/SAP/stewardci-core/pkg/runctl \
-    "RunManager" \
+    -destination="${MOCK_ROOT}/pkg/run/mocks/mocks.go" \
+    -package=mocks \
+    github.com/SAP/stewardci-core/pkg/run \
+    "Run,Manager" \
     || die "'runctl' mock generation failed"
 { set +x; } 2>/dev/null
 if is_verify_mode; then
     set -x
-    diff -Naupr ${GEN_DIR}/pkg/runctl/mocks/mocks.go ${PROJECT_ROOT}/pkg/runctl/mocks/mocks.go || die "Regeneration required for k8s/secrets mocks"
+    diff -Naupr ${GEN_DIR}/pkg/run/mocks/mocks.go ${PROJECT_ROOT}/pkg/run/mocks/mocks.go || die "Regeneration required for k8s/secrets mocks"
     { set +x; } 2>/dev/null
 fi
 
