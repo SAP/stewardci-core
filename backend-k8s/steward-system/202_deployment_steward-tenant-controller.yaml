@@ -18,5 +18,15 @@ spec:
       serviceAccountName: steward-system
       containers:
       - name: steward-tenant-controller
-        imagePullPolicy: IfNotPresent
         image: stewardci/stewardci-tenant-controller:200122_02decab
+        imagePullPolicy: IfNotPresent
+        ports:
+          - name: http-metrics
+            containerPort: 9090
+            protocol: TCP
+        resources:
+          limits:
+            cpu: 1
+            memory: 32Mi
+          requests:
+            cpu: 10m

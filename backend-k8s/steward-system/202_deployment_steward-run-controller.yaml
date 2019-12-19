@@ -18,5 +18,15 @@ spec:
       serviceAccountName: steward-system
       containers:
       - name: steward-run-controller
-        imagePullPolicy: IfNotPresent
         image: stewardci/stewardci-run-controller:200122_02decab
+        imagePullPolicy: IfNotPresent
+        ports:
+          - name: http-metrics
+            containerPort: 9090
+            protocol: TCP
+        resources:
+          limits:
+            cpu: 1
+            memory: 64Mi
+          requests:
+            cpu: 50m

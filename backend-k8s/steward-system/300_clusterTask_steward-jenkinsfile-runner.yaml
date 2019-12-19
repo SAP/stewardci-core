@@ -71,7 +71,7 @@ spec:
   steps:
   - name: jenkinsfile-runner
     image: stewardci/stewardci-jenkinsfile-runner:200117_9442211
-    imagePullPolicy: Always
+    imagePullPolicy: IfNotPresent
     args: []
     env:
     - name: XDG_CONFIG_HOME
@@ -101,7 +101,7 @@ spec:
     - name: RUN_NUMBER
       value: '$(inputs.params.RUN_NUMBER)'
     - name: RUN_CAUSE
-      value: '$(inputs.params.RUN_CAUSE)' 
+      value: '$(inputs.params.RUN_CAUSE)'
     resources:
       limits:
         cpu: 3
