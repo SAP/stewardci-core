@@ -2,7 +2,7 @@ package runctl
 
 import (
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	runi "github.com/SAP/stewardci-core/pkg/run"
+	run "github.com/SAP/stewardci-core/pkg/run"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	tektonStatus "github.com/tektoncd/pipeline/pkg/status"
 	corev1 "k8s.io/api/core/v1"
@@ -10,23 +10,23 @@ import (
 	knativeapis "knative.dev/pkg/apis"
 )
 
-type run struct {
+type tektonRun struct {
 	tektonTaskRun *tekton.TaskRun
 }
 
 // NewRun returns new Run
-func NewRun(tektonTaskRun *tekton.TaskRun) runi.Run {
-	return &run{tektonTaskRun: tektonTaskRun}
+func NewRun(tektonTaskRun *tekton.TaskRun) run.Run {
+	return &tektonRun{tektonTaskRun: tektonTaskRun}
 }
 
 // GetStartTime returns start time of run if already started
-func (r *run) GetStartTime() *metav1.Time {
+func (r *tektonRun) GetStartTime() *metav1.Time {
 	return r.tektonTaskRun.Status.StartTime
 }
 
 // GetContainerInfo returns the state of the Jenkinsfile Runner container
 // as reported in the Tekton TaskRun status.
-func (r *run) GetContainerInfo() *corev1.ContainerState {
+func (r *tektonRun) GetContainerInfo() *corev1.ContainerState {
 	stepState := r.getJenkinsfileRunnerStepState()
 	if stepState == nil {
 		return nil
@@ -34,12 +34,12 @@ func (r *run) GetContainerInfo() *corev1.ContainerState {
 	return &stepState.ContainerState
 }
 
-func (r *run) GetSucceededCondition() *knativeapis.Condition {
+func (r *tektonRun) GetSucceededCondition() *knativeapis.Condition {
 	return r.tektonTaskRun.Status.GetCondition(knativeapis.ConditionSucceeded)
 }
 
 // IsFinished returns true if run is finished
-func (r *run) IsFinished() (bool, steward.Result) {
+func (r *tektonRun) IsFinished() (bool, steward.Result) {
 	condition := r.GetSucceededCondition()
 	if condition.IsUnknown() {
 		return false, steward.ResultUndefined
@@ -62,7 +62,7 @@ func (r *run) IsFinished() (bool, steward.Result) {
 	return true, steward.ResultErrorInfra
 }
 
-func (r *run) getJenkinsfileRunnerStepState() *tekton.StepState {
+func (r *tektonRun) getJenkinsfileRunnerStepState() *tekton.StepState {
 	steps := r.tektonTaskRun.Status.Steps
 	if steps != nil {
 		for _, stepState := range steps {
