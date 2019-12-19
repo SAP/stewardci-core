@@ -11,7 +11,7 @@ import (
 	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	metrics "github.com/SAP/stewardci-core/pkg/metrics"
-	runmocks "github.com/SAP/stewardci-core/pkg/run/mock"
+	runmocks "github.com/SAP/stewardci-core/pkg/run/mocks"
 	gomock "github.com/golang/mock/gomock"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	assert "gotest.tools/assert"
@@ -150,7 +150,7 @@ func Test_Controller_syncHandler(t *testing.T) {
 		name            string
 		pipelineSpec    api.PipelineSpec
 		currentStatus   api.PipelineStatus
-		runManager      func(*runmocks.MockRunManager)
+		runManager      func(*runmocks.MockManager)
 		expectedResult  api.Result
 		expectedState   api.State
 		expectedMessage string
@@ -158,7 +158,7 @@ func Test_Controller_syncHandler(t *testing.T) {
 		{name: "new_ok",
 			pipelineSpec:  api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{},
-			runManager: func(rm *runmocks.MockRunManager) {
+			runManager: func(rm *runmocks.MockManager) {
 				rm.EXPECT().Start(gomock.Any()).Return(nil)
 			},
 			expectedResult: api.ResultUndefined,
@@ -167,7 +167,7 @@ func Test_Controller_syncHandler(t *testing.T) {
 		{name: "new_fail",
 			pipelineSpec:  api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{},
-			runManager: func(rm *runmocks.MockRunManager) {
+			runManager: func(rm *runmocks.MockManager) {
 				rm.EXPECT().Start(gomock.Any()).Return(fmt.Errorf("expected"))
 			},
 			expectedResult:  api.ResultErrorInfra,
@@ -179,7 +179,7 @@ func Test_Controller_syncHandler(t *testing.T) {
 				Secrets: []string{"secret1"},
 			},
 			currentStatus: api.PipelineStatus{},
-			runManager: func(rm *runmocks.MockRunManager) {
+			runManager: func(rm *runmocks.MockManager) {
 
 				rm.EXPECT().Start(gomock.Any()).Do(func(run k8s.PipelineRun) {
 					run.UpdateResult(api.ResultErrorContent)
@@ -194,7 +194,7 @@ func Test_Controller_syncHandler(t *testing.T) {
 			currentStatus: api.PipelineStatus{
 				State: api.StateWaiting,
 			},
-			runManager: func(rm *runmocks.MockRunManager) {
+			runManager: func(rm *runmocks.MockManager) {
 				rm.EXPECT().GetRun(gomock.Any()).Return(nil, fmt.Errorf("expected"))
 			},
 			expectedResult: api.ResultErrorInfra,
@@ -205,7 +205,7 @@ func Test_Controller_syncHandler(t *testing.T) {
 			currentStatus: api.PipelineStatus{
 				State: api.StateNew,
 			},
-			runManager: func(rm *runmocks.MockRunManager) {
+			runManager: func(rm *runmocks.MockManager) {
 			},
 			expectedResult: "",
 			expectedState:  api.StateNew,
@@ -215,7 +215,7 @@ func Test_Controller_syncHandler(t *testing.T) {
 			currentStatus: api.PipelineStatus{
 				State: api.StateFinished,
 			},
-			runManager: func(rm *runmocks.MockRunManager) {
+			runManager: func(rm *runmocks.MockManager) {
 			},
 			expectedResult: "",
 			expectedState:  api.StateFinished,
@@ -227,7 +227,7 @@ func Test_Controller_syncHandler(t *testing.T) {
 			currentStatus: api.PipelineStatus{
 				State: api.StateUndefined,
 			},
-			runManager: func(rm *runmocks.MockRunManager) {
+			runManager: func(rm *runmocks.MockManager) {
 				rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
 			},
 			expectedResult: api.ResultAborted,
@@ -240,7 +240,7 @@ func Test_Controller_syncHandler(t *testing.T) {
 			currentStatus: api.PipelineStatus{
 				State: api.StateRunning,
 			},
-			runManager: func(rm *runmocks.MockRunManager) {
+			runManager: func(rm *runmocks.MockManager) {
 				rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
 			},
 			expectedResult: api.ResultAborted,
@@ -256,7 +256,7 @@ func Test_Controller_syncHandler(t *testing.T) {
 			controller, cf := newController(run)
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
-			runManager := runmocks.NewMockRunManager(mockCtrl)
+			runManager := runmocks.NewMockManager(mockCtrl)
 			test.runManager(runManager)
 			controller.testing = &controllerTesting{runManagerStub: runManager}
 			// EXERCISE
