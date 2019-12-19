@@ -5,7 +5,8 @@ metadata:
   name: steward-run-metrics
   namespace: steward-system
   labels:
-    app: steward-run-controller
+    {{- include "steward.labels" . | nindent 4 }}
+    {{- include "steward.run-controller.componentLabel" . | nindent 4 }}
 spec:
   clusterIP: None
   ports:
@@ -14,6 +15,7 @@ spec:
     protocol: TCP
     targetPort: http-metrics
   selector:
-    app: steward-run-controller
+    {{- include "steward.selectorLabels" . | nindent 4 }}
+    {{- include "steward.run-controller.componentLabel" . | nindent 4 }}
   sessionAffinity: None
   type: ClusterIP

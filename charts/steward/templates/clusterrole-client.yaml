@@ -2,6 +2,8 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: steward-client
+  labels:
+    {{- include "steward.labels" . | nindent 4 }}
 rules:
 - apiGroups: ["steward.sap.com"]
   resources: ["tenants"]

@@ -5,7 +5,8 @@ metadata:
   name: steward-tenant-metrics
   namespace: steward-system
   labels:
-    app: steward-tenant-controller
+    {{- include "steward.labels" . | nindent 4 }}
+    {{- include "steward.tenant-controller.componentLabel" . | nindent 4 }}
 spec:
   clusterIP: None
   ports:
@@ -14,6 +15,7 @@ spec:
     protocol: TCP
     targetPort: http-metrics
   selector:
-    app: steward-tenant-controller
+    {{- include "steward.selectorLabels" . | nindent 4 }}
+    {{- include "steward.tenant-controller.componentLabel" . | nindent 4 }}
   sessionAffinity: None
   type: ClusterIP
