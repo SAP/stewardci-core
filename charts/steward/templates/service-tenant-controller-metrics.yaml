@@ -1,0 +1,21 @@
+# Services used for metric collection
+apiVersion: v1
+kind: Service
+metadata:
+  name: steward-tenant-metrics
+  namespace: {{ .Values.targetNamespace.name | quote }}
+  labels:
+    {{- include "steward.labels" . | nindent 4 }}
+    {{- include "steward.tenantController.componentLabel" . | nindent 4 }}
+spec:
+  clusterIP: None # headless service
+  ports:
+  - name: http-metrics
+    port: 9090
+    protocol: TCP
+    targetPort: http-metrics
+  selector:
+    {{- include "steward.selectorLabels" . | nindent 4 }}
+    {{- include "steward.tenantController.componentLabel" . | nindent 4 }}
+  sessionAffinity: None
+  type: ClusterIP
