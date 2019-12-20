@@ -122,7 +122,7 @@ func Test_StoreErrorAsMessage(t *testing.T) {
 	client := factory.StewardV1alpha1().PipelineRuns(ns1)
 	run, err = client.Get("foo", metav1.GetOptions{})
 	assert.NilError(t, err)
-	assert.Equal(t, "ERROR: message1 (namespace1/foo - state:running): error1", run.Status.Message)
+	assert.Equal(t, "ERROR: message1 [PipelineRun{name: foo, namespace: namespace1, state: running}]: error1", run.Status.Message)
 }
 
 func Test_HasDeletionTimestamp_false(t *testing.T) {
@@ -262,7 +262,7 @@ func Test_pipelineRun_UpdateResult_noFactory(t *testing.T) {
 	// EXERCISE
 	err = examinee.UpdateResult(api.ResultSuccess)
 	// VERIFY
-	assert.Equal(t, "No factory provided to store updates [namespace1/pipelinerun1]", err.Error())
+	assert.Equal(t, "No factory provided to store updates [PipelineRun{name: pipelinerun1, namespace: namespace1, state: }]", err.Error())
 }
 
 func Test_pipelineRun_GetPipelineRepoServerURL_CorrectURLs(t *testing.T) {
@@ -297,8 +297,8 @@ func Test_pipelineRun_GetPipelineRepoServerURL_WrongURLs(t *testing.T) {
 		url                  string
 		expectedErrorPattern string
 	}{
-		{url: "&:", expectedErrorPattern: `value "&:" of field spec.jenkinsFile.url is invalid \[namespace1/pipelinerun1\]: .*`},
-		{url: "ftp://foo/bar", expectedErrorPattern: `value "ftp://foo/bar" of field spec.jenkinsFile.url is invalid: scheme not supported: .*`},
+		{url: "&:", expectedErrorPattern: `value "&:" of field spec.jenkinsFile.url is invalid \[.*\]: .*`},
+		{url: "ftp://foo/bar", expectedErrorPattern: `value "ftp://foo/bar" of field spec.jenkinsFile.url is invalid \[.*\]: scheme not supported: .*`},
 	} {
 		t.Run(test.url, func(t *testing.T) {
 			// SETUP

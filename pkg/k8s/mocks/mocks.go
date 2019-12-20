@@ -250,20 +250,6 @@ func (mr *MockPipelineRunMockRecorder) DeleteFinalizerIfExists() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFinalizerIfExists", reflect.TypeOf((*MockPipelineRun)(nil).DeleteFinalizerIfExists))
 }
 
-// GetFullName mocks base method
-func (m *MockPipelineRun) GetFullName() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetFullName")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// GetFullName indicates an expected call of GetFullName
-func (mr *MockPipelineRunMockRecorder) GetFullName() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFullName", reflect.TypeOf((*MockPipelineRun)(nil).GetFullName))
-}
-
 // GetKey mocks base method
 func (m *MockPipelineRun) GetKey() string {
 	m.ctrl.T.Helper()
@@ -389,6 +375,20 @@ func (m *MockPipelineRun) StoreErrorAsMessage(arg0 error, arg1 string) error {
 func (mr *MockPipelineRunMockRecorder) StoreErrorAsMessage(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreErrorAsMessage", reflect.TypeOf((*MockPipelineRun)(nil).StoreErrorAsMessage), arg0, arg1)
+}
+
+// String mocks base method
+func (m *MockPipelineRun) String() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "String")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// String indicates an expected call of String
+func (mr *MockPipelineRunMockRecorder) String() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "String", reflect.TypeOf((*MockPipelineRun)(nil).String))
 }
 
 // UpdateContainer mocks base method

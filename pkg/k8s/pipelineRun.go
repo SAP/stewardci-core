@@ -17,13 +17,13 @@ import (
 
 // PipelineRun is a wrapper for the K8s PipelineRun resource
 type PipelineRun interface {
+	fmt.Stringer
 	GetStatus() *api.PipelineStatus
 	GetSpec() *api.PipelineSpec
 	GetName() string
 	GetKey() string
 	GetRunNamespace() string
 	GetNamespace() string
-	GetFullName() string
 	GetPipelineRepoServerURL() (string, error)
 	HasDeletionTimestamp() bool
 	AddFinalizer() error
@@ -93,10 +93,10 @@ func (r *pipelineRun) GetPipelineRepoServerURL() (string, error) {
 	urlString := r.GetSpec().JenkinsFile.URL
 	repoURL, err := url.Parse(urlString)
 	if err != nil {
-		return "", errors.Wrapf(err, "value %q of field spec.jenkinsFile.url is invalid [%s]", urlString, r.GetFullName())
+		return "", errors.Wrapf(err, "value %q of field spec.jenkinsFile.url is invalid [%s]", urlString, r.String())
 	}
 	if !(repoURL.Scheme == "http") && !(repoURL.Scheme == "https") {
-		return "", fmt.Errorf("value %q of field spec.jenkinsFile.url is invalid: scheme not supported: %q [%s]", urlString, repoURL.Scheme, r.GetFullName())
+		return "", fmt.Errorf("value %q of field spec.jenkinsFile.url is invalid [%s]: scheme not supported: %q", urlString, r.String(), repoURL.Scheme)
 	}
 	return fmt.Sprintf("%s://%s", repoURL.Scheme, repoURL.Host), nil
 }
@@ -124,7 +124,7 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 // Returns the state details of state A
 func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	r.ensureCopy()
-	log.Printf("New State %s [%s]", state, r.GetFullName())
+	log.Printf("Update State to %s [%s]", state, r.String())
 	now := metav1.Now()
 	oldstate := r.finishCurrentState()
 	newState := api.StateItem{State: state, StartedAt: now}
@@ -136,8 +136,9 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	return oldstate, r.updateStatus()
 }
 
-func (r *pipelineRun) GetFullName() string {
-	return r.apiObj.GetNamespace() + "/" + r.apiObj.GetName()
+// String returns the full qualified name of the pipeline run
+func (r *pipelineRun) String() string {
+	return fmt.Sprintf("PipelineRun{name: %s, namespace: %s, state: %s}", r.GetName(), r.GetNamespace(), string(r.GetStatus().State))
 }
 
 func (r *pipelineRun) finishCurrentState() *api.StateItem {
@@ -179,7 +180,7 @@ func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
 // StoreErrorAsMessage stores the error as message in the status
 func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 	if err != nil {
-		text := fmt.Sprintf("ERROR: %s (%s - state:%s): %s", utils.Trim(message), r.GetFullName(), string(r.GetStatus().State), err.Error())
+		text := fmt.Sprintf("ERROR: %s [%s]: %s", utils.Trim(message), r.String(), err.Error())
 		log.Printf(text)
 		return r.UpdateMessage(text)
 	}
@@ -232,14 +233,14 @@ func (r *pipelineRun) DeleteFinalizerIfExists() error {
 
 func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 	if r.client == nil {
-		return fmt.Errorf("No factory provided to store updates [%s]", r.GetFullName())
+		return fmt.Errorf("No factory provided to store updates [%s]", r.String())
 	}
 	r.ensureCopy()
 	r.apiObj.ObjectMeta.Finalizers = finalizerList
 	result, err := r.client.Update(r.apiObj)
 	if err != nil {
 		return errors.Wrap(err,
-			fmt.Sprintf("Failed to update finalizers of PipelineRun '%s'", r.GetFullName()))
+			fmt.Sprintf("Failed to update finalizers [%s]", r.String()))
 	}
 	r.apiObj = result
 	return nil
@@ -247,12 +248,12 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 
 func (r *pipelineRun) updateStatus() error {
 	if r.client == nil {
-		return fmt.Errorf("No factory provided to store updates [%s]", r.GetFullName())
+		return fmt.Errorf("No factory provided to store updates [%s]", r.String())
 	}
 	result, err := r.client.UpdateStatus(r.apiObj)
 	if err != nil {
 		return errors.Wrap(err,
-			fmt.Sprintf("Failed to update status of PipelineRun '%s'", r.GetFullName()))
+			fmt.Sprintf("Failed to update status [%s]", r.String()))
 	}
 	r.apiObj = result
 	return nil

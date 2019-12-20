@@ -146,7 +146,7 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) error {
 	oldState, err := pipelineRun.UpdateState(state)
 	if err != nil {
-		log.Printf("Failed to UpdateState of %q to %q: %q", pipelineRun.GetFullName(), state, err.Error())
+		log.Printf("Failed to UpdateState of %q to %q: %q", pipelineRun.String(), state, err.Error())
 		return err
 	}
 	if oldState != nil {
