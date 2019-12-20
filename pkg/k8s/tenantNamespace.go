@@ -25,8 +25,6 @@ func NewTenantNamespace(factory ClientFactory, namespace string) TenantNamespace
 	secretsClient := factory.CoreV1().Secrets(namespace)
 	pipelineRunClient := factory.StewardV1alpha1().PipelineRuns(namespace)
 	secretProvider := k8ssecretprovider.NewProvider(secretsClient, namespace)
-	log.Printf("Creating tenantNamespace: '%s'", namespace)
-
 	return &tenantNamespace{
 		secretProvider:    secretProvider,
 		pipelineRunClient: pipelineRunClient,
