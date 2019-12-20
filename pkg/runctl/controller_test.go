@@ -11,6 +11,7 @@ import (
 	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	metrics "github.com/SAP/stewardci-core/pkg/metrics"
+	runmocks "github.com/SAP/stewardci-core/pkg/run/mocks"
 	gomock "github.com/golang/mock/gomock"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	assert "gotest.tools/assert"
@@ -146,65 +147,78 @@ func getAPIPipelineRun(cf *fake.ClientFactory, name, namespace string) (*api.Pip
 
 func Test_Controller_syncHandler(t *testing.T) {
 	for _, test := range []struct {
-		name            string
-		pipelineSpec    api.PipelineSpec
-		currentStatus   api.PipelineStatus
-		runManagerError error
-		expectedResult  api.Result
-		expectedState   api.State
-		expectedMessage string
+		name                  string
+		pipelineSpec          api.PipelineSpec
+		currentStatus         api.PipelineStatus
+		runManagerExpectation func(*runmocks.MockManager)
+		expectedResult        api.Result
+		expectedState         api.State
+		expectedMessage       string
 	}{
 		{name: "new_ok",
-			pipelineSpec:    api.PipelineSpec{},
-			currentStatus:   api.PipelineStatus{},
-			runManagerError: nil,
-			expectedResult:  api.ResultUndefined,
-			expectedState:   api.StateWaiting,
+			pipelineSpec:  api.PipelineSpec{},
+			currentStatus: api.PipelineStatus{},
+			runManagerExpectation: func(rm *runmocks.MockManager) {
+				rm.EXPECT().Start(gomock.Any()).Return(nil)
+			},
+			expectedResult: api.ResultUndefined,
+			expectedState:  api.StateWaiting,
 		},
 		{name: "new_fail",
-			pipelineSpec:    api.PipelineSpec{},
-			currentStatus:   api.PipelineStatus{},
-			runManagerError: fmt.Errorf("expected"),
+			pipelineSpec:  api.PipelineSpec{},
+			currentStatus: api.PipelineStatus{},
+			runManagerExpectation: func(rm *runmocks.MockManager) {
+				rm.EXPECT().Start(gomock.Any()).Return(fmt.Errorf("expected"))
+			},
 			expectedResult:  api.ResultErrorInfra,
 			expectedState:   api.StateCleaning,
-			expectedMessage: ".*Failed to create run namespace.*",
+			expectedMessage: "error syncing resource .*expected",
 		},
-		{name: "new_missing_secret",
+		{name: "new_fail_content_error",
 			pipelineSpec: api.PipelineSpec{
 				Secrets: []string{"secret1"},
 			},
-			currentStatus:   api.PipelineStatus{},
-			runManagerError: nil,
+			currentStatus: api.PipelineStatus{},
+			runManagerExpectation: func(rm *runmocks.MockManager) {
+
+				rm.EXPECT().Start(gomock.Any()).Do(func(run k8s.PipelineRun) {
+					run.UpdateResult(api.ResultErrorContent)
+				}).Return(fmt.Errorf("expected"))
+			},
 			expectedResult:  api.ResultErrorContent,
 			expectedState:   api.StateCleaning,
-			expectedMessage: "failed to copy secrets: .*",
+			expectedMessage: "error syncing resource .*expected",
 		},
 		{name: "waiting_fail",
 			pipelineSpec: api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{
 				State: api.StateWaiting,
 			},
-			runManagerError: fmt.Errorf("expected"),
-			expectedResult:  api.ResultErrorInfra,
-			expectedState:   api.StateCleaning,
+			runManagerExpectation: func(rm *runmocks.MockManager) {
+				rm.EXPECT().GetRun(gomock.Any()).Return(nil, fmt.Errorf("expected"))
+			},
+			expectedResult: api.ResultErrorInfra,
+			expectedState:  api.StateCleaning,
 		},
 		{name: "skip_new",
 			pipelineSpec: api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{
 				State: api.StateNew,
 			},
-			runManagerError: nil,
-			expectedResult:  "",
-			expectedState:   api.StateNew,
+			runManagerExpectation: func(rm *runmocks.MockManager) {
+			},
+			expectedResult: "",
+			expectedState:  api.StateNew,
 		},
 		{name: "skip_finished",
 			pipelineSpec: api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{
 				State: api.StateFinished,
 			},
-			runManagerError: nil,
-			expectedResult:  "",
-			expectedState:   api.StateFinished,
+			runManagerExpectation: func(rm *runmocks.MockManager) {
+			},
+			expectedResult: "",
+			expectedState:  api.StateFinished,
 		},
 		{name: "cleanup_abborted_new",
 			pipelineSpec: api.PipelineSpec{
@@ -213,9 +227,11 @@ func Test_Controller_syncHandler(t *testing.T) {
 			currentStatus: api.PipelineStatus{
 				State: api.StateUndefined,
 			},
-			runManagerError: nil,
-			expectedResult:  api.ResultAborted,
-			expectedState:   api.StateFinished,
+			runManagerExpectation: func(rm *runmocks.MockManager) {
+				rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
+			},
+			expectedResult: api.ResultAborted,
+			expectedState:  api.StateFinished,
 		},
 		{name: "cleanup_abborted_running",
 			pipelineSpec: api.PipelineSpec{
@@ -224,9 +240,11 @@ func Test_Controller_syncHandler(t *testing.T) {
 			currentStatus: api.PipelineStatus{
 				State: api.StateRunning,
 			},
-			runManagerError: nil,
-			expectedResult:  api.ResultAborted,
-			expectedState:   api.StateFinished,
+			runManagerExpectation: func(rm *runmocks.MockManager) {
+				rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
+			},
+			expectedResult: api.ResultAborted,
+			expectedState:  api.StateFinished,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -236,10 +254,11 @@ func Test_Controller_syncHandler(t *testing.T) {
 			run := fake.PipelineRun("foo", "ns1", test.pipelineSpec)
 			run.Status = test.currentStatus
 			controller, cf := newController(run)
-			if test.runManagerError != nil {
-				// TODO: Inject runManager mock instead of creating errors with reactor
-				cf.KubernetesClientset().PrependReactor("create", "*", fake.NewErrorReactor(test.runManagerError))
-			}
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			runManager := runmocks.NewMockManager(mockCtrl)
+			test.runManagerExpectation(runManager)
+			controller.testing = &controllerTesting{runManagerStub: runManager}
 			// EXERCISE
 			err := controller.syncHandler("ns1/foo")
 			// VERIFY
