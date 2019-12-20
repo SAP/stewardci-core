@@ -250,6 +250,20 @@ func (mr *MockPipelineRunMockRecorder) DeleteFinalizerIfExists() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFinalizerIfExists", reflect.TypeOf((*MockPipelineRun)(nil).DeleteFinalizerIfExists))
 }
 
+// GetFullName mocks base method
+func (m *MockPipelineRun) GetFullName() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFullName")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetFullName indicates an expected call of GetFullName
+func (mr *MockPipelineRunMockRecorder) GetFullName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFullName", reflect.TypeOf((*MockPipelineRun)(nil).GetFullName))
+}
+
 // GetKey mocks base method
 func (m *MockPipelineRun) GetKey() string {
 	m.ctrl.T.Helper()
