@@ -69,7 +69,6 @@ function generate_mocks() {
   fi
   echo "## ${ACTION} mocks for package '$pkg' ###############"
   
-  
   set -x
   "$GOPATH_1/bin/mockgen" \
     -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
@@ -81,7 +80,7 @@ function generate_mocks() {
   { set +x; } 2>/dev/null
   if is_verify_mode; then
     set -x
-    diff -Naupr ${GEN_DIR}/pkg/${pkg}/mocks/mocks.go ${PROJECT_ROOT}/pkg/${pkg}/mocks/mocks.go || die "Regeneration required for k8s/secrets mocks"
+    diff -Naupr ${GEN_DIR}/pkg/${pkg}/mocks/mocks.go ${PROJECT_ROOT}/pkg/${pkg}/mocks/mocks.go || die "Regeneration required for ${pkg} mocks"
     { set +x; } 2>/dev/null
   fi
   echo
