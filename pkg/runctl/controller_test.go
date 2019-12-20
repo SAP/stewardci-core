@@ -145,6 +145,86 @@ func getAPIPipelineRun(cf *fake.ClientFactory, name, namespace string) (*api.Pip
 	return cs.StewardV1alpha1().PipelineRuns(namespace).Get(name, metav1.GetOptions{})
 }
 
+func Test_Controller_syncHandler_delete(t *testing.T) {
+	for _, test := range []struct {
+		name                  string
+		runManagerExpectation func(*runmocks.MockManager)
+		hasFinalizer bool
+		expectedError         bool
+		expectedFinalizer    bool
+	}{
+
+		{name: "delete with finalizer ok",
+			runManagerExpectation: func(rm *runmocks.MockManager) {
+				rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
+			},
+			hasFinalizer: true,
+			expectedError:  false,
+			expectedFinalizer: false,
+		},
+		{name: "delete without finalizer ok",
+			runManagerExpectation: func(rm *runmocks.MockManager) {
+				rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
+			},
+			hasFinalizer: false,
+			expectedError:  false,
+			expectedFinalizer: false,
+		},
+		{name: "delete with finalizer fail",
+			runManagerExpectation: func(rm *runmocks.MockManager) {
+				rm.EXPECT().Cleanup(gomock.Any()).Return(fmt.Errorf("expected"))
+			},
+			hasFinalizer: true,
+			expectedError:  true,
+			expectedFinalizer: true,
+		},
+		{name: "delete without finalizer fail",
+			runManagerExpectation: func(rm *runmocks.MockManager) {
+				rm.EXPECT().Cleanup(gomock.Any()).Return(fmt.Errorf("expected"))
+			},
+			hasFinalizer: false,
+			expectedError:  true,
+			expectedFinalizer: false, // TODO: is this the correct expect here? 
+			
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			test := test
+			t.Parallel()
+			// SETUP
+			run := fake.PipelineRun("foo", "ns1", api.PipelineSpec{})
+			if test.hasFinalizer {
+			run.ObjectMeta.Finalizers = []string{k8s.FinalizerName}
+		}
+			now := metav1.Now()
+			run.SetDeletionTimestamp(&now)
+			controller, cf := newController(run)
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			runManager := runmocks.NewMockManager(mockCtrl)
+			test.runManagerExpectation(runManager)
+			controller.testing = &controllerTesting{runManagerStub: runManager}
+			// EXERCISE
+			err := controller.syncHandler("ns1/foo")
+			// VERIFY
+			if test.expectedError {
+				assert.Assert(t, err != nil)
+			} else {
+				assert.NilError(t, err)
+			}
+			result, err := getAPIPipelineRun(cf, "foo", "ns1")
+			assert.NilError(t, err)
+			log.Printf("%+v", result.Status)
+
+			if test.expectedFinalizer {
+				assert.Assert(t,len(result.GetFinalizers()) == 1)
+			} else {
+				assert.Assert(t,len(result.GetFinalizers()) == 0)
+			}
+		})
+	}
+}
+
 func Test_Controller_syncHandler(t *testing.T) {
 	for _, test := range []struct {
 		name                  string
