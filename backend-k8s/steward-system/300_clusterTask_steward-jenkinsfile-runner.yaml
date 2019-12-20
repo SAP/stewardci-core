@@ -70,7 +70,7 @@ spec:
       default: ""
   steps:
   - name: jenkinsfile-runner
-    image: stewardci/stewardci-jenkinsfile-runner:191216_6d6ef91
+    image: stewardci/stewardci-jenkinsfile-runner:191218_fd1b22f
     imagePullPolicy: Always
     args: []
     env:
