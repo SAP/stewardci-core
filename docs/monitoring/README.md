@@ -36,8 +36,7 @@ helm install --namespace monitoring --name monitoring stable/prometheus-operator
 ### Install Grafana Dashboards
 ```
 kubectl -n monitoring create configmap monitoring-prometheus-oper-steward --from-file grafana_dashboard.json \
-&& kubectl -n monitoring label configmap  monitoring-prometheus-oper-steward grafana_dashboard=1 \
-&& kubectl -n monitoring --selector=app=grafana delete pod \
+&& kubectl -n monitoring label configmap  monitoring-prometheus-oper-steward grafana_dashboard=1
 ```
 
 ### Establish Port Forwarding to Grafana
