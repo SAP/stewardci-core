@@ -25,7 +25,9 @@ runController:
   nodeSelector: {}
   affinity: {}
   tolerations: []
-
+  monitoring:
+    enabled: true
+    # enabled: false # to skip service monitor
 tenantController:
   image:
     repository: stewardci/stewardci-tenant-controller
@@ -49,6 +51,15 @@ tenantController:
   nodeSelector: {}
   affinity: {}
   tolerations: []
+  monitoring:
+    enabled: true
+    # enabled: false # to skip service monitor
+
+# metrics
+# requires Prometheus
+metrics:
+  serviceMonitors:
+    enabled: false
 
 # imagePullSecrets are used to pull controller images, but no other images.
 imagePullSecrets: []
