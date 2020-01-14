@@ -1,8 +1,6 @@
 package k8s
 
 import (
-	"log"
-
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	k8ssecretprovider "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/k8s"
