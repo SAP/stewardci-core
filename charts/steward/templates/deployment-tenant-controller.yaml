@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: steward-tenant-controller
-  namespace: steward-system
+  namespace: {{ .Values.targetNamespace.name | quote }}
   labels:
     {{- include "steward.labels" . | nindent 4 }}
     {{- include "steward.tenant-controller.componentLabel" . | nindent 4 }}
