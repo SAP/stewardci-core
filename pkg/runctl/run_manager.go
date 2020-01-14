@@ -227,7 +227,8 @@ func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun) error {
 					tektonStringParam("RUN_NAMESPACE", namespace),
 				},
 			},
-			Timeout: toDuration(defaultBuildTimeout),
+			// use default timeout from tekton
+			// Timeout: toDuration(defaultBuildTimeout),
 		},
 	}
 
