@@ -217,7 +217,7 @@ func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun) error {
 			},
 		},
 		Spec: tekton.TaskRunSpec{
-			ServiceAccount: serviceAccountName,
+			ServiceAccountName: serviceAccountName,
 			TaskRef: &tekton.TaskRef{
 				Kind: tekton.ClusterTaskKind,
 				Name: tektonClusterTaskName,

@@ -22,7 +22,7 @@ require (
 	github.com/openzipkin/zipkin-go v0.2.2 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.2.1
-	github.com/tektoncd/pipeline v0.7.0
+	github.com/tektoncd/pipeline v0.8.0
 	go.uber.org/zap v1.13.0 // indirect
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.0.0-20180904230853-4e7be11eab3f
@@ -33,7 +33,7 @@ require (
 )
 
 replace (
-	github.com/tektoncd/pipeline => github.com/tektoncd/pipeline v0.7.0
+	github.com/tektoncd/pipeline => github.com/tektoncd/pipeline v0.8.0
 	k8s.io/api => k8s.io/api v0.0.0-20191004102349-159aefb8556b // kubernetes-1.14.9
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689 // kubernetes-1.14.9
 	k8s.io/client-go => k8s.io/client-go v11.0.1-0.20191029005444-8e4128053008+incompatible // kubernetes-1.14.9

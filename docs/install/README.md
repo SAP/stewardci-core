@@ -2,14 +2,14 @@
 
 To run you own project "Steward" you need a Kubernetes cluster. Currently **Kubernetes 1.13** is recommended.
 
-## Install Tekton v0.7.0
+## Install Tekton v0.8.0
 
 Project "Steward" requires Tekton. Please read the [Tekton installation instructions][tekton-install].
 
 In short:
 
 ```bash
-kubectl apply -f https://github.com/tektoncd/pipeline/releases/download/v0.7.0/release.yaml
+kubectl apply -f https://github.com/tektoncd/pipeline/releases/download/v0.8.0/release.yaml
 ```
 
 ## Install the backend
