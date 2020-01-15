@@ -13,7 +13,7 @@ runController:
     pullPolicy: IfNotPresent
   resources:
     limits:
-      cpu: 100m
+      cpu: 1
       memory: 64Mi
     requests:
       cpu: 50m
@@ -37,7 +37,7 @@ tenantController:
     pullPolicy: IfNotPresent
   resources:
     limits:
-      cpu: 50m
+      cpu: 1
       memory: 32Mi
     requests:
       cpu: 10m
@@ -74,7 +74,6 @@ pipelineRuns:
     resources:
       limits:
         cpu: 3
-        memory: 4Gi
+        memory: 2Gi
       requests:
         cpu: 500m
-        memory: 1Gi
