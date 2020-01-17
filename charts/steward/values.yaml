@@ -9,7 +9,7 @@ targetNamespace:
 runController:
   image:
     repository: stewardci/stewardci-run-controller
-    tag: 191217_cc244c0
+    tag: 200114_1b68057
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -33,7 +33,7 @@ runController:
 tenantController:
   image:
     repository: stewardci/stewardci-tenant-controller
-    tag: 191217_cc244c0
+    tag: 200114_1b68057
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -69,7 +69,7 @@ pipelineRuns:
   jenkinsfileRunner:
     image:
       repository: stewardci/stewardci-jenkinsfile-runner
-      tag: 191216_6d6ef91
+      tag: 200108_c7477b7
       pullPolicy: IfNotPresent
     resources:
       limits:

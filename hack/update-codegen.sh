@@ -58,6 +58,33 @@ function is_verify_mode() {
 }
 
 
+function generate_mocks() {
+  local pkg="$1"
+  local interfaces="$2"
+  if [[ -z "$pkg" ]]; then
+    exit 1
+  fi
+  if [[ -z "$interfaces" ]];then
+    exit 1
+  fi
+  echo "## ${ACTION} mocks for package '$pkg' ###############"
+  
+  set -x
+  "$GOPATH_1/bin/mockgen" \
+    -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
+    -destination="${MOCK_ROOT}/pkg/${pkg}/mocks/mocks.go" \
+    -package=mocks \
+    github.com/SAP/stewardci-core/pkg/${pkg} \
+    "${interfaces}" \
+    || die "'$pkg' mock generation failed"
+  { set +x; } 2>/dev/null
+  if is_verify_mode; then
+    set -x
+    diff -Naupr ${GEN_DIR}/pkg/${pkg}/mocks/mocks.go ${PROJECT_ROOT}/pkg/${pkg}/mocks/mocks.go || die "Regeneration required for ${pkg} mocks"
+    { set +x; } 2>/dev/null
+  fi
+  echo
+}
 #
 # main
 #
@@ -130,6 +157,7 @@ fi
 echo
 echo "## Generate #######################################"
 set -x
+
 "${CODEGEN_PKG}/generate-groups.sh" \
     all \
     github.com/SAP/stewardci-core/pkg/client \
@@ -168,41 +196,10 @@ else
     { set +x; } 2>/dev/null
 fi
 
-
 echo
-echo "## ${ACTION} mocks for package 'k8s' ###############"
-set -x
-"$GOPATH_1/bin/mockgen" \
-    -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
-    -destination="${MOCK_ROOT}/pkg/k8s/mocks/mocks.go" \
-    -package=mocks \
-    github.com/SAP/stewardci-core/pkg/k8s \
-    "ClientFactory,NamespaceManager,PipelineRun,PipelineRunFetcher,TenantFetcher" \
-    || die "'k8s' mock generation failed"
-{ set +x; } 2>/dev/null
-if is_verify_mode; then
-    set -x
-    diff -Naupr ${GEN_DIR}/pkg/k8s/mocks/mocks.go ${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go || die "Regeneration required for k8s mocks"
-    { set +x; } 2>/dev/null
-fi
 
-echo
-echo "## ${ACTION} mocks for package 'k8s/secrets' ###############"
-set -x
-"$GOPATH_1/bin/mockgen" \
-    -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
-    -destination="${MOCK_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
-    -package=mocks \
-    github.com/SAP/stewardci-core/pkg/k8s/secrets \
-    "SecretHelper,SecretProvider" \
-    || die "'k8s/secrets' mock generation failed"
-{ set +x; } 2>/dev/null
-if is_verify_mode; then
-    set -x
-    diff -Naupr ${GEN_DIR}/pkg/k8s/secrets/mocks/mocks.go ${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go || die "Regeneration required for k8s/secrets mocks"
-    { set +x; } 2>/dev/null
-fi
+generate_mocks k8s "ClientFactory,NamespaceManager,PipelineRun,PipelineRunFetcher,TenantFetcher"
+generate_mocks "k8s/secrets"  "SecretHelper,SecretProvider"
+generate_mocks run  "Run,Manager"
 
-
-echo
 echo "${ACTION} successful"

@@ -158,6 +158,8 @@ func Test_RunManager_Start_FailsWithContentErrorWhenPipelineCloneSecretNotFound(
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
 	mockPipelineRun.EXPECT().UpdateMessage(secrets.NewNotFoundError(secretName).Error())
 	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorContent)
+	mockPipelineRun.EXPECT().String() //logging
+
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.Assert(t, err != nil)
@@ -180,6 +182,8 @@ func Test_RunManager_Start_FailsWithContentErrorWhenSecretNotFound(t *testing.T)
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
 	mockPipelineRun.EXPECT().UpdateMessage(secrets.NewNotFoundError(secretName).Error())
 	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorContent)
+	mockPipelineRun.EXPECT().String() //logging
+
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.Assert(t, err != nil)
@@ -203,6 +207,8 @@ func Test_RunManager_Start_FailsWithContentErrorWhenImagePullSecretNotFound(t *t
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
 	mockPipelineRun.EXPECT().UpdateMessage(secrets.NewNotFoundError(secretName).Error())
 	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorContent)
+	mockPipelineRun.EXPECT().String() //logging
+
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.Assert(t, err != nil)
@@ -228,6 +234,8 @@ func Test_RunManager_Start_FailsWithInfraErrorWhenForbidden(t *testing.T) {
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, fmt.Errorf("Forbidden"))
 	mockPipelineRun.EXPECT().UpdateMessage("Forbidden")
 	mockPipelineRun.EXPECT().UpdateResult(steward.ResultErrorInfra)
+	mockPipelineRun.EXPECT().String() //logging
+
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.Assert(t, err != nil)

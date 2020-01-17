@@ -377,6 +377,20 @@ func (mr *MockPipelineRunMockRecorder) StoreErrorAsMessage(arg0, arg1 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreErrorAsMessage", reflect.TypeOf((*MockPipelineRun)(nil).StoreErrorAsMessage), arg0, arg1)
 }
 
+// String mocks base method
+func (m *MockPipelineRun) String() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "String")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// String indicates an expected call of String
+func (mr *MockPipelineRunMockRecorder) String() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "String", reflect.TypeOf((*MockPipelineRun)(nil).String))
+}
+
 // UpdateContainer mocks base method
 func (m *MockPipelineRun) UpdateContainer(arg0 *v1.ContainerState) error {
 	m.ctrl.T.Helper()

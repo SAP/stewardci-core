@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 25,
+  "id": 22,
   "links": [],
   "panels": [
     {
@@ -318,16 +318,16 @@
       },
       "yaxes": [
         {
-          "format": "short",
-          "label": "seconds",
+          "format": "s",
+          "label": "duration",
           "logBase": 1,
           "max": null,
           "min": null,
           "show": true
         },
         {
-          "format": "short",
-          "label": "seconds",
+          "format": "s",
+          "label": "duration",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -458,5 +458,5 @@
   "timezone": "",
   "title": "Steward",
   "uid": "UWZdR3xWz",
-  "version": 7
+  "version": 2
 }
