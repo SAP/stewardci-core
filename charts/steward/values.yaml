@@ -65,7 +65,6 @@ pipelineRuns:
       # If null or empty, logging to Elasticsearch is disabled.
       # Example: http://elasticsearch-master.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc
       indexURL: ""
-  # resources applies to the Jenkinsfile Runner container.
   jenkinsfileRunner:
     image:
       repository: stewardci/stewardci-jenkinsfile-runner

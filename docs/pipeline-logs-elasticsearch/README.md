@@ -1,6 +1,6 @@
 # Sending Pipeline Logs to Elasticsearch
 
-## Design:
+## Design
 
 The [Jenkins Pipeline Elasticsearch Logs plug-in][jenkins-elasticsearch-logs] is used to stream logs, pipeline structure and progress to Elasticsearch.
 It connects to the Elasticsearch instance directly, which requires to pass Elasticsearch credentials to the Jenkinsfile Runner.
@@ -37,7 +37,10 @@ For now only `PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON` is set by the Pipeline Run
 In addition the Pipeline Run Controller sets `PIPELINE_LOG_ELASTICSEARCH_INDEX_URL` to the empty string if a PipelineRun resource does not specify `spec.logging.elasticsearch`.
 Logging to Elasticsearch is disabled then and logs are written to the container's stdout.
 
-For testing purposes the ClusterBuildTemplate can be modified to enable logging to Elasticsearch. See below for details.
+### Enable logging to Elasticsearch
+
+To enable a Steward instance to forward pipeline run logs to Elasticsearch, the index URL must be statically set in Steward's ClusterTask for the Jenkinsfile Runner.
+The preferred way to do this is to specify the index URL as a parameter of the [Steward Helm chart](../../charts/steward/README.md).
 
 ## Testing
 
@@ -48,8 +51,8 @@ For testing it might be sufficient to have Elasticsearch and Kibana running in t
 Prerequisites:
 
 -   Environment variable `$KUBECONFIG` set
--   Helm 2 (>= 2.14) installed locally
--   Helm initialized ([Tiller is installed][tiller-install] on the target cluster)
+-   Helm 2 or 3 (>= 2.14) installed locally
+-   Helm initialized (For Helm2 [Tiller is installed][tiller-install] on the target cluster)
 
 Add the Helm repo from Elastic:
 
@@ -99,23 +102,6 @@ You can then access Kibana using this URL:
     http://localhost:7800/
 
 You may choose another local port number according to your needs.
-
-### Enable logging to Elasticsearch
-
-Currently the Pipeline Run Controller does not set all the Tekton Task input parameters to enable logging to Elasticsearch.
-
-To enable logging to Elasticsearch for development or debugging already now, you can modify the parameter default values of the ClusterBuildTemplate:
-
-```bash
-$ kubectl edit clusterbuildtemplate jenkins-file-runner
-```
-
-```yaml
-  - name: PIPELINE_LOG_ELASTICSEARCH_INDEX_URL
-    default: "http://elasticsearch-master.elasticsearch.svc.cluster.local:9200/jenkins-logs/x"
-```
-
-Now each pipeline run should write log entries to Elasticsearch.
 
 
 [elastic-elasticsearch-helm-chart]: https://github.com/elastic/helm-charts/tree/master/elasticsearch
