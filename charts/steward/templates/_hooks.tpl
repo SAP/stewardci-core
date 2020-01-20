@@ -19,7 +19,7 @@ metadata:
   labels:
     {{- include "steward.labels" . | nindent 4 }}
   annotations:
-    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook": pre-install,pre-upgrade,pre-rollback
     "helm.sh/hook-weight": "-5"
     "helm.sh/hook-delete-policy": hook-succeeded,hook-failed,before-hook-creation
 ---
@@ -31,7 +31,7 @@ metadata:
   labels:
     {{- include "steward.labels" . | nindent 4 }}
   annotations:
-    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook": pre-install,pre-upgrade,pre-rollback
     "helm.sh/hook-weight": "-5"
     "helm.sh/hook-delete-policy": hook-succeeded,hook-failed,before-hook-creation
 roleRef:
@@ -52,7 +52,7 @@ metadata:
   labels:
     {{- include "steward.labels" . | nindent 4 }}
   annotations:
-    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook": pre-install,pre-upgrade,pre-rollback
     "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
 spec:
