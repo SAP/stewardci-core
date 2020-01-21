@@ -10,6 +10,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
+	runi "github.com/SAP/stewardci-core/pkg/run"
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -37,13 +38,6 @@ const (
 	tektonTaskRunName = "steward-jenkinsfile-runner"
 )
 
-// RunManager manages runs
-type RunManager interface {
-	Start(pipelineRun k8s.PipelineRun) error
-	GetRun(pipelineRun k8s.PipelineRun) (Run, error)
-	Cleanup(pipelineRun k8s.PipelineRun) error
-}
-
 type runManager struct {
 	secretProvider   secrets.SecretProvider
 	factory          k8s.ClientFactory
@@ -56,7 +50,7 @@ type runManagerTesting struct {
 }
 
 // NewRunManager creates a new RunManager.
-func NewRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) RunManager {
+func NewRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) runi.Manager {
 	return &runManager{
 		secretProvider:   secretProvider,
 		factory:          factory,
@@ -197,7 +191,7 @@ func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secret
 func (c *runManager) copySecrets(secretHelper secrets.SecretHelper, secretNames []string, pipelineRun k8s.PipelineRun, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
 	storedSecretNames, err := secretHelper.CopySecrets(secretNames, filter, transformers...)
 	if err != nil {
-		log.Printf("cannot copy secrets %s: %s", secretNames, err)
+		log.Printf("Cannot copy secrets %s for [%s]. Error: %s", secretNames, pipelineRun.String(), err)
 		pipelineRun.UpdateMessage(err.Error())
 		if secretHelper.IsNotFound(err) {
 			pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
@@ -233,7 +227,8 @@ func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun) error {
 					tektonStringParam("RUN_NAMESPACE", namespace),
 				},
 			},
-			Timeout: toDuration(defaultBuildTimeout),
+			// use default timeout from tekton
+			// Timeout: toDuration(defaultBuildTimeout),
 		},
 	}
 
@@ -326,7 +321,7 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 }
 
 // GetRun based on a pipelineRun
-func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (Run, error) {
+func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runi.Run, error) {
 	namespace := pipelineRun.GetRunNamespace()
 	run, err := c.factory.TektonV1alpha1().TaskRuns(namespace).Get(tektonTaskRunName, metav1.GetOptions{})
 	return NewRun(run), err

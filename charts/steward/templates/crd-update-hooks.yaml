@@ -1,0 +1,5 @@
+{{- range $path, $content := .Files.Glob "crds/*.yaml" -}}
+{{- $name := regexReplaceAll "\\.[^.]*$" ( $path | base ) "" -}}
+---
+{{ template "steward.hooks.crd-update" ( list $ $name ) }}
+{{ end -}}

@@ -64,12 +64,10 @@ spec:
                   pattern: '^[^\s]{1,}.*$'
                 repoAuthSecret: ###
                   type: string
-                  pattern: '^[^\s]{1,}.*$'
             args: ### map[string]string
               type: object
               additionalProperties: ###
                 type: string
-                pattern: '^[^\s]{1,}.*$'
             secrets: ###
               type: array
               items:
@@ -82,7 +80,7 @@ spec:
                 pattern: '^[^\s]{1,}.*$'
             intent: ###
               type: string
-              pattern: '^run|abort$'
+              pattern: '^(|run|abort)$'
             logging: ###
               type: object
               properties:
@@ -98,11 +96,10 @@ spec:
               properties:
                 jobName: ###
                   type: string
-                  pattern: '^[^\s]{1,}.*$'
+                  #pattern: #TODO: valid Jenkins job names + blank
                 sequenceNumber: ###
                   type: integer
-                  minimum: 1
+                  minimum: 0
                   maximum: 2147483647 # int32
                 cause: ###
                   type: string
-                  pattern: '^[^\s]{1,}.*$'
