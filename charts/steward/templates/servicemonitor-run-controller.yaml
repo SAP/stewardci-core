@@ -1,0 +1,18 @@
+{{- if .Values.metrics.serviceMonitors.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: steward-run-controller
+  namespace: {{ .Values.targetNamespace.name | quote }}
+  labels:
+    {{- include "steward.labels" . | nindent 4 }}
+    {{- include "steward.run-controller.componentLabel" . | nindent 4 }}
+    {{- include "steward.serviceMonitors.extraLabels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "steward.selectorLabels" . | nindent 6 }}
+      {{- include "steward.run-controller.componentLabel" . | nindent 6 }}
+  endpoints:
+  - port:  http-metrics
+{{- end -}}

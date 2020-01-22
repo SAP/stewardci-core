@@ -45,3 +45,12 @@ The component label for the tenant controller.
 {{- define "steward.tenant-controller.componentLabel" -}}
 app.kubernetes.io/component: tenant-controller
 {{- end -}}
+
+{{/*
+The additional labels for the service monitors.
+*/}}
+{{- define "steward.serviceMonitors.extraLabels" -}}
+{{- if .Values.metrics.serviceMonitors.extraLabels -}}
+{{- toYaml .Values.metrics.serviceMonitors.extraLabels -}}
+{{- end -}}
+{{- end -}}
