@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: steward-run-controller
+  namespace: {{ .Values.targetNamespace.name | quote }}
+  labels:
+    {{- include "steward.labels" . | nindent 4 }}
+    {{- include "steward.runController.componentLabel" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "steward.selectorLabels" . | nindent 6 }}
+      {{- include "steward.runController.componentLabel" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "steward.selectorLabels" . | nindent 8 }}
+        {{- include "steward.runController.componentLabel" . | nindent 8 }}
+    spec:
+      serviceAccountName: steward-system
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.runController.podSecurityContext | nindent 8 }}
+      containers:
+      - name: controller
+        securityContext:
+          {{- toYaml .Values.runController.securityContext | nindent 10 }}
+        {{- with .Values.runController.image }}
+        image: {{ printf "%s:%s" .repository .tag | quote }}
+        imagePullPolicy: {{ .pullPolicy | quote }}
+        {{- end }}
+        ports:
+          - name: http-metrics
+            containerPort: 9090
+            protocol: TCP
+        resources:
+          {{- toYaml .Values.runController.resources | nindent 10 }}
+      {{- with .Values.runController.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.runController.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.runController.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

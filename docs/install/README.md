@@ -1,6 +1,7 @@
 # Installation Guide
 
-To run you own project "Steward" you need a Kubernetes cluster. Currently **Kubernetes 1.13** is recommended.
+To run you own project "Steward" you need a Kubernetes cluster.
+Currently **Kubernetes 1.14** is recommended.
 
 ## Install Tekton v0.7.0
 
@@ -12,30 +13,30 @@ In short:
 kubectl apply -f https://github.com/tektoncd/pipeline/releases/download/v0.7.0/release.yaml
 ```
 
-## Install the backend
+## Install Steward
 
 ### Clone this repo
 
-Clone the repo and change into the root directory:
+Clone the repo and change into the root directory, e.g.:
 
 ```bash
-git clone $THIS_REPO stewardci-core
+git clone "$THIS_REPO" stewardci-core
 cd stewardci-core
 ```
 
-### Create and Start Steward-System
+### Install via Steward Helm Chart
 
-*Note: If you want to store logs in Elasticsearch apply the changes described in [Sending Pipeline Logs to Elasticsearch](../pipeline-logs-elasticsearch/README.md) first.*
+See the [Steward Helm Chart documentation](../../charts/steward/README.md).
 
-```bash
-kubectl apply -f ./backend-k8s/steward-system
-```
+### Prepare Namespaces for Clients
 
-### Prepare Namespace for Back-End Client
+Each Steward client gets its own client namespace to interact with Steward.
 
-Each front-end client gets an own back-end client namespace to operate with a project "Steward" instance. Typically a front-end client is a UI on top of our backend, and typically there is only one front-end client communicating with a project "Steward" instance.
+Typically a client is a (Web) application that uses Steward as pipeline execution engine.
+Typically one Steward instance has only one client, but there can be any number of clients, e.g. in a test environment.
 
 **Example only:**
+
 ```bash
 # edit yaml and apply
 kubectl apply -f ./backend-k8s/steward-client-example
@@ -43,9 +44,10 @@ kubectl apply -f ./backend-k8s/steward-client-example
 
 See the yaml files in this folder for more details about configuration options.
 
-
-[tekton-install]: https://github.com/tektoncd/pipeline/blob/master/docs/install.md
-
-### More
+## More
 
 As a next step you might want to [test your project "Steward"](../examples/README.md) by running example pipelines.
+
+
+
+[tekton-install]: https://github.com/tektoncd/pipeline/blob/master/docs/install.md

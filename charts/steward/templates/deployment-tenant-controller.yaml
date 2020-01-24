@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: steward-tenant-controller
+  namespace: {{ .Values.targetNamespace.name | quote }}
+  labels:
+    {{- include "steward.labels" . | nindent 4 }}
+    {{- include "steward.tenantController.componentLabel" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "steward.selectorLabels" . | nindent 6 }}
+      {{- include "steward.tenantController.componentLabel" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "steward.selectorLabels" . | nindent 8 }}
+        {{- include "steward.tenantController.componentLabel" . | nindent 8 }}
+    spec:
+      serviceAccountName: steward-system
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.tenantController.podSecurityContext | nindent 8 }}
+      containers:
+      - name: controller
+        securityContext:
+          {{- toYaml .Values.tenantController.securityContext | nindent 10 }}
+        image: {{ printf "%s:%s" .Values.tenantController.image.repository .Values.tenantController.image.tag | quote }}
+        imagePullPolicy: {{ .Values.tenantController.image.pullPolicy | quote }}
+        ports:
+          - name: http-metrics
+            containerPort: 9090
+            protocol: TCP
+        resources:
+          {{- toYaml .Values.tenantController.resources | nindent 10 }}
+      {{- with .Values.tenantController.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tenantController.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tenantController.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

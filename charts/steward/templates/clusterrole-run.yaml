@@ -2,6 +2,8 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: steward-run
+  labels:
+    {{- include "steward.labels" . | nindent 4 }}
 rules:
 - apiGroups: [""]
   resources: ["pods"]
@@ -15,6 +17,3 @@ rules:
 - apiGroups: [""]
   resources: ["secrets"]
   verbs: ["get","list","watch"]
-- apiGroups: [""]
-  resources: ["clusterbuildtemplate"]
-  verbs: ["get"]
