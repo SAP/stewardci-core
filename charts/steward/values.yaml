@@ -8,7 +8,7 @@ targetNamespace:
 runController:
   image:
     repository: stewardci/stewardci-run-controller
-    tag: "200122_02decab"
+    tag: "200124_c091d76"
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -32,7 +32,7 @@ runController:
 tenantController:
   image:
     repository: stewardci/stewardci-tenant-controller
-    tag: "200122_02decab"
+    tag: "200124_c091d76"
     pullPolicy: IfNotPresent
   resources:
     limits:
