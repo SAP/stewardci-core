@@ -173,11 +173,24 @@ func (a *ServiceAccountWrap) AddRoleBinding(clusterRole RoleName, targetNamespac
 
 	//Create role binding
 	roleBindingClient := a.factory.RbacV1beta1().RoleBindings(targetNamespace)
-	subjects := make([]v1beta1.Subject, 1)
-	subjects[0] = v1beta1.Subject{Kind: "ServiceAccount", Name: a.cache.GetName(), Namespace: a.cache.GetNamespace()}
-	roleBinding := &v1beta1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: string(clusterRole), Namespace: targetNamespace},
-		Subjects: subjects,
-		RoleRef:  v1beta1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: string(clusterRole)}}
+	roleBinding := &v1beta1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      string(clusterRole),
+			Namespace: targetNamespace,
+		},
+		Subjects: []v1beta1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      a.cache.GetName(),
+				Namespace: a.cache.GetNamespace(),
+			},
+		},
+		RoleRef: v1beta1.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     string(clusterRole),
+		},
+	}
 
 	return roleBindingClient.Create(roleBinding)
 }
