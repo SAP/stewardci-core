@@ -14,7 +14,7 @@ Expects dot to be a list with two entries:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: helm-{{ include "steward.hooks-helpers.adler32sumOfReleaseId" . }}
+  name: helm-{{ include "steward.hooks-helpers.adler32sumOfReleaseId" ( list . $crdName ) }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "steward.labels" . | nindent 4 }}
@@ -27,7 +27,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: helm-{{ include "steward.hooks-helpers.adler32sumOfReleaseId" . }}
+  name: helm-{{ include "steward.hooks-helpers.adler32sumOfReleaseId" ( list . $crdName ) }}
   labels:
     {{- include "steward.labels" . | nindent 4 }}
   annotations:
@@ -40,14 +40,14 @@ roleRef:
   name: cluster-admin
 subjects:
 - kind: ServiceAccount
-  name: helm-{{ include "steward.hooks-helpers.adler32sumOfReleaseId" . }}
+  name: helm-{{ include "steward.hooks-helpers.adler32sumOfReleaseId" ( list . $crdName ) }}
   namespace: {{ .Release.Namespace | quote }}
 ---
 
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: helm-hook-crd-update-{{ $crdName }}-{{ include "steward.hooks-helpers.adler32sumOfReleaseId" . }}
+  name: helm-hook-crd-update-{{ $crdName }}-{{ include "steward.hooks-helpers.adler32sumOfReleaseId" ( list . $crdName ) }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "steward.labels" . | nindent 4 }}
@@ -65,7 +65,7 @@ spec:
       labels:
         {{- include "steward.labels" . | nindent 8 }}
     spec:
-      serviceAccountName: helm-{{ include "steward.hooks-helpers.adler32sumOfReleaseId" . }}
+      serviceAccountName: helm-{{ include "steward.hooks-helpers.adler32sumOfReleaseId" ( list . $crdName ) }}
       restartPolicy: Never
       containers:
       - name: kubectl
@@ -87,5 +87,8 @@ spec:
 
 
 {{- define "steward.hooks-helpers.adler32sumOfReleaseId" }}
-{{- list .Chart.Name .Release.Name .Release.Namespace | join "\n" | adler32sum -}}
+{{- $crdName := first ( slice . 1 ) }}
+{{- with first . -}}
+{{- list .Chart.Name .Release.Name .Release.Namespace $crdName | join "\n" | adler32sum -}}
+{{- end -}}
 {{- end -}}
