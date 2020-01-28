@@ -1,0 +1,14 @@
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+metadata:
+  generateName: counttest-
+spec:
+  jenkinsFile:
+    relativePath: counter/Jenkinsfile
+    repoUrl: https://github.com/SAP-samples/stewardci-example-pipelines.git
+    revision: master
+  logging:
+    elasticsearch:
+      runID:
+        buildId: 1
+
