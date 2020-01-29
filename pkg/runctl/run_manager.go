@@ -127,6 +127,15 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	}
 
 	// configure service account in run namespace
+	err = c.setupServiceAccount(runNamespace, pipelineCloneSecretName, imagePullSecrets)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecretName string, imagePullSecrets []string) error {
 	accountManager := k8s.NewServiceAccountManager(c.factory, runNamespace)
 	serviceAccount, err := accountManager.CreateServiceAccount(serviceAccountName, pipelineCloneSecretName, imagePullSecrets)
 	if err != nil {
@@ -134,24 +143,40 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 			return errors.Wrapf(err, "failed to create service account %q", serviceAccountName)
 		}
 
-		serviceAccount, err = accountManager.GetServiceAccount(serviceAccountName)
-		if err != nil {
-			return errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
-		}
-		if pipelineCloneSecretName != "" {
-			serviceAccount.AttachSecrets(pipelineCloneSecretName)
-		}
-		serviceAccount.AttachImagePullSecrets(imagePullSecrets...)
-		err = serviceAccount.Update()
-		if err != nil {
-			return errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
+		// service account exists already, so we need to attach secrets to it
+		for { // retry loop
+			serviceAccount, err = accountManager.GetServiceAccount(serviceAccountName)
+			if err != nil {
+				return errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
+			}
+			if pipelineCloneSecretName != "" {
+				serviceAccount.AttachSecrets(pipelineCloneSecretName)
+			}
+			serviceAccount.AttachImagePullSecrets(imagePullSecrets...)
+			err = serviceAccount.Update()
+			if err == nil {
+				break // ...the retry loop
+			}
+			if k8serrors.IsConflict(err) {
+				// resource version conflict -> retry update with latest version
+				log.Printf(
+					"retrying update of service account %q in namespace %q"+
+						" after resource version conflict",
+					serviceAccountName, runNamespace,
+				)
+			} else {
+				return errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
+			}
 		}
 	}
 
-	//Add Role Binding to Service Account
+	// grant role to service account
 	_, err = serviceAccount.AddRoleBinding(runClusterRoleName, runNamespace)
 	if err != nil {
-		return errors.Wrap(err, "failed to create role binding")
+		return errors.Wrapf(err,
+			"failed to create role binding for service account %q in namespace %q",
+			serviceAccountName, runNamespace,
+		)
 	}
 
 	return nil
