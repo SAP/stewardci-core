@@ -72,6 +72,8 @@ func PipelineRunOK(Namespace string) f.PipelineRunTest {
 			builder.PipelineRunSpec(
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"success/Jenkinsfile"),
+
+				builder.RunDetails("myJobName1", "myCause1", 17),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultSuccess),
 		Timeout: 600 * time.Second,
