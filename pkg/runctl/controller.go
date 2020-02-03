@@ -204,7 +204,10 @@ func (c *Controller) syncHandler(key string) error {
 		runManager := c.createRunManager(pipelineRun)
 		err = runManager.Cleanup(pipelineRun)
 		if err == nil {
-			pipelineRun.DeleteFinalizerIfExists()
+			err = pipelineRun.DeleteFinalizerIfExists()
+			if err == nil {
+				c.metrics.CountResult(api.ResultDeleted)
+			}
 		}
 		return err
 	}

@@ -182,6 +182,8 @@ const (
 	ResultAborted Result = "aborted"
 	// ResultTimeout - the pipeline run timed out
 	ResultTimeout Result = "timeout"
+	// ResultDeleted - the pipeline run was deleted
+	ResultDeleted Result = "deleted"
 )
 
 // Intent denotes how the pipeline run should be handled
