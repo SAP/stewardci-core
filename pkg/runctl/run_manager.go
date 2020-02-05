@@ -76,17 +76,15 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 }
 
 // prepareRunNamespace creates a new namespace for the pipeline run
-// and populates it with needed resource.
+// and populates it with needed resources.
 func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	var err error
 
-	//Create Run Namespace
 	runNamespace, err := c.namespaceManager.Create("", nil)
 	if err != nil {
-		return errors.Wrap(err, "Failed to create run namespace.")
+		return errors.Wrap(err, "failed to create run namespace")
 	}
 
-	//Assign namespace to Run
 	pipelineRun.UpdateRunNamespace(runNamespace)
 
 	// If something goes wrong while creating objects inside the namespaces, we delete everything.
@@ -97,38 +95,12 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 	}
 	defer cleanupOnError()
 
-	//Copy secrets to Run Namespace
-	targetClient := c.factory.CoreV1().Secrets(runNamespace)
-	secretHelper := c.getSecretHelper(runNamespace, targetClient)
-
-	pipelineCloneSecretName, err := c.copyPipelineCloneSecret(pipelineRun, secretHelper)
+	pipelineCloneSecretName, imagePullSecretNames, err := c.copySecretsToRunNamespace(pipelineRun, runNamespace)
 	if err != nil {
-		return errors.Wrap(err, "failed to copy pipeline clone secret")
+		return err
 	}
 
-	secretNames := pipelineRun.GetSpec().Secrets
-	stripTektonAnnotationsTransformer := secrets.StripAnnotationsTransformer("tekton.dev/")
-	secretNames, err = c.copySecrets(secretHelper, secretNames, pipelineRun, nil, stripTektonAnnotationsTransformer)
-	if err != nil {
-		return errors.Wrap(err, "failed to copy secrets")
-	}
-
-	imagePullSecrets := pipelineRun.GetSpec().ImagePullSecrets
-	transformers := []secrets.SecretTransformer{
-		stripTektonAnnotationsTransformer,
-		secrets.StripAnnotationsTransformer("jenkins.io/"),
-		secrets.StripLabelsTransformer("jenkins.io/"),
-		secrets.UniqueNameTransformer(),
-	}
-
-	imagePullSecrets, err = c.copySecrets(secretHelper, imagePullSecrets, pipelineRun, secrets.DockerOnly, transformers...)
-	if err != nil {
-		return errors.Wrap(err, "failed to copy image pull secrets")
-	}
-
-	// configure service account in run namespace
-	err = c.setupServiceAccount(runNamespace, pipelineCloneSecretName, imagePullSecrets)
-	if err != nil {
+	if err = c.setupServiceAccount(runNamespace, pipelineCloneSecretName, imagePullSecretNames); err != nil {
 		return err
 	}
 
@@ -182,20 +154,47 @@ func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecre
 	return nil
 }
 
-func (c *runManager) getSecretHelper(runNamespace string, targetClient corev1.SecretInterface) secrets.SecretHelper {
-	if c.testing != nil && c.testing.getSecretHelperStub != nil {
-		return c.testing.getSecretHelperStub(runNamespace, targetClient)
+func (c *runManager) copySecretsToRunNamespace(pipelineRun k8s.PipelineRun, runNamespace string) (string, []string, error) {
+	targetClient := c.factory.CoreV1().Secrets(runNamespace)
+	secretHelper := c.getSecretHelper(runNamespace, targetClient)
+
+	imagePullSecretNames, err := c.copyImagePullSecretsToRunNamespace(pipelineRun, secretHelper)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "failed to copy image pull secrets")
 	}
-	return secrets.NewSecretHelper(c.secretProvider, runNamespace, targetClient)
+
+	pipelineCloneSecretName, err := c.copyPipelineCloneSecretToRunNamespace(pipelineRun, secretHelper)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "failed to copy pipeline clone secret")
+	}
+
+	_, err = c.copyPipelineSecretsToRunNamespace(pipelineRun, secretHelper)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "failed to copy pipeline secrets")
+	}
+
+	return pipelineCloneSecretName, imagePullSecretNames, nil
 }
 
-func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secretHelper secrets.SecretHelper) (string, error) {
-	pipelineCloneSecret := pipelineRun.GetSpec().JenkinsFile.RepoAuthSecret
-	if pipelineCloneSecret == "" {
+func (c *runManager) copyImagePullSecretsToRunNamespace(pipelineRun k8s.PipelineRun, secretHelper secrets.SecretHelper) ([]string, error) {
+	secretNames := pipelineRun.GetSpec().ImagePullSecrets
+	transformers := []secrets.SecretTransformer{
+		secrets.StripAnnotationsTransformer("tekton.dev/"),
+		secrets.StripAnnotationsTransformer("jenkins.io/"),
+		secrets.StripLabelsTransformer("jenkins.io/"),
+		secrets.UniqueNameTransformer(),
+	}
+	return c.copySecrets(secretHelper, secretNames, pipelineRun, secrets.DockerOnly, transformers...)
+}
+
+func (c *runManager) copyPipelineCloneSecretToRunNamespace(pipelineRun k8s.PipelineRun, secretHelper secrets.SecretHelper) (string, error) {
+	secretName := pipelineRun.GetSpec().JenkinsFile.RepoAuthSecret
+	if secretName == "" {
 		return "", nil
 	}
 	repoServerURL, err := pipelineRun.GetPipelineRepoServerURL()
 	if err != nil {
+		// TODO: this method should not modify the pipeline run -> must be handled elsewhere
 		pipelineRun.UpdateMessage(err.Error())
 		pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
 		return "", err
@@ -206,11 +205,24 @@ func (c *runManager) copyPipelineCloneSecret(pipelineRun k8s.PipelineRun, secret
 		secrets.UniqueNameTransformer(),
 		secrets.SetAnnotationTransformer("tekton.dev/git-0", repoServerURL),
 	}
-	names, err := c.copySecrets(secretHelper, []string{pipelineCloneSecret}, pipelineRun, nil, transformers...)
+	names, err := c.copySecrets(secretHelper, []string{secretName}, pipelineRun, nil, transformers...)
 	if err != nil {
 		return "", err
 	}
 	return names[0], nil
+}
+
+func (c *runManager) copyPipelineSecretsToRunNamespace(pipelineRun k8s.PipelineRun, secretHelper secrets.SecretHelper) ([]string, error) {
+	secretNames := pipelineRun.GetSpec().Secrets
+	stripTektonAnnotationsTransformer := secrets.StripAnnotationsTransformer("tekton.dev/")
+	return c.copySecrets(secretHelper, secretNames, pipelineRun, nil, stripTektonAnnotationsTransformer)
+}
+
+func (c *runManager) getSecretHelper(runNamespace string, targetClient corev1.SecretInterface) secrets.SecretHelper {
+	if c.testing != nil && c.testing.getSecretHelperStub != nil {
+		return c.testing.getSecretHelperStub(runNamespace, targetClient)
+	}
+	return secrets.NewSecretHelper(c.secretProvider, runNamespace, targetClient)
 }
 
 func (c *runManager) copySecrets(secretHelper secrets.SecretHelper, secretNames []string, pipelineRun k8s.PipelineRun, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {

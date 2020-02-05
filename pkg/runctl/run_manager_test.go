@@ -187,7 +187,7 @@ func Test_RunManager_Start_FailsWithContentErrorWhenSecretNotFound(t *testing.T)
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.Assert(t, err != nil)
-	assert.Assert(t, is.Regexp("failed to copy secrets: .*", err.Error()))
+	assert.Assert(t, is.Regexp("failed to copy pipeline secrets: .*", err.Error()))
 }
 
 func Test_RunManager_Start_FailsWithContentErrorWhenImagePullSecretNotFound(t *testing.T) {
