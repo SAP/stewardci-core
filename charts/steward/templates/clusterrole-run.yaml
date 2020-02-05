@@ -17,3 +17,7 @@ rules:
 - apiGroups: [""]
   resources: ["secrets"]
   verbs: ["get","list","watch"]
+- apiGroups: ['policy']
+  resources: ['podsecuritypolicies']
+  verbs:     ['use']
+  resourceNames: ['steward-run']
