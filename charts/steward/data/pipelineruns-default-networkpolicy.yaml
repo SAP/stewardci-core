@@ -1,0 +1,15 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+spec:
+  podSelector: {} # any pod in namespace
+  policyTypes:
+  - Ingress
+  - Egress
+  egress:
+  - # rule: allow access to all pods in the same namespace
+    to:
+    - podSelector: {}
+  ingress:
+  - # rule: allow access from all pods in the same namespace
+    from:
+    - podSelector: {}

@@ -144,6 +144,7 @@ Common parameters:
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>tag</code> | (string)<br/> The tag of the Jenkinsfile Runner image in the container registry. | A fixed image tag. |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>pullPolicy</code> | (string)<br/> The image pull policy for the Tenant Controller image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation.  | `IfNotPresent` |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>resources</code> | (object of [`RecourceRequirements`][k8s-resourcerequirements])<br/> The resource requirements of Jenkinsfile Runner containers. When overriding, override the complete value, not just subvalues, because the default value might change in future versions and a partial override might not make sense anymore. | Limits and requests set (see `values.yaml`) |
+| <code>pipelineRuns.<wbr/>networkPolicy</code> | (string)<br/> The network policy to be created in every pipeline run namespace. The value must be a string containing a complete `networkpolicy.networking.k8s.io` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of network policies][k8s-networkpolicies] for details about Kubernetes network policies.<br/><br/> Note that Steward ensures that all pods in pipeline run namespaces are _isolated_ in terms of network policies. The policy defined here adds further egress and/or ingress rules. | A rule that allows ingress traffic from all pods in the same namespace. |
 
 ## Custom Resource Definitions
 
@@ -171,4 +172,5 @@ By doing so, all resource objects of those types will be removed by Kubernetes, 
 [k8s-affinity]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#affinity-v1-core
 [k8s-tolerations]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#toleration-v1-core
 [k8s-localobjectreference]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.14/#localobjectreference-v1-core
+[k8s-networkpolicies]: https://kubernetes.io/docs/concepts/services-networking/network-policies/
 [prometheus-operator]: https://github.com/coreos/prometheus-operator
