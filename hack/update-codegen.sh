@@ -153,6 +153,7 @@ if ! is_verify_mode; then
         "${PROJECT_ROOT}/pkg/tektonclient" \
         "${PROJECT_ROOT}/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go" \
         "${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go" \
+        "${PROJECT_ROOT}/pkg/k8s/mocks/client-go/corev1/mocks.go" \
         "${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
         || die "Cleanup failed"
     { set +x; } 2>/dev/null
@@ -205,6 +206,10 @@ generate_mocks \
     "github.com/SAP/stewardci-core/pkg/k8s" \
     "ClientFactory,NamespaceManager,PipelineRun,PipelineRunFetcher,TenantFetcher" \
     "pkg/k8s/mocks/mocks.go"
+generate_mocks \
+    "k8s.io/client-go/kubernetes/typed/core/v1" \
+    "CoreV1Interface,ConfigMapInterface" \
+    "pkg/k8s/mocks/client-go/corev1/mocks.go"
 generate_mocks \
     "github.com/SAP/stewardci-core/pkg/k8s/secrets" \
     "SecretHelper,SecretProvider" \

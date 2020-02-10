@@ -13,8 +13,13 @@ import (
 	runi "github.com/SAP/stewardci-core/pkg/run"
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	networkingv1api "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	yamlserial "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
@@ -39,22 +44,31 @@ const (
 )
 
 type runManager struct {
-	secretProvider   secrets.SecretProvider
-	factory          k8s.ClientFactory
-	namespaceManager k8s.NamespaceManager
-	testing          *runManagerTesting
+	factory            k8s.ClientFactory
+	pipelineRunsConfig pipelineRunsConfigStruct
+	namespaceManager   k8s.NamespaceManager
+	secretProvider     secrets.SecretProvider
+
+	testing *runManagerTesting
 }
 
 type runManagerTesting struct {
-	getSecretHelperStub func(string, corev1.SecretInterface) secrets.SecretHelper
+	cleanupStub                               func(k8s.PipelineRun) error
+	copySecretsToRunNamespaceStub             func(k8s.PipelineRun, string) (string, []string, error)
+	getSecretHelperStub                       func(string, corev1.SecretInterface) secrets.SecretHelper
+	setupNetworkPolicyFromConfigStub          func(string) error
+	setupNetworkPolicyThatIsolatesAllPodsStub func(string) error
+	setupServiceAccountStub                   func(string, string, []string) error
+	setupStaticNetworkPoliciesStub            func(string) error
 }
 
 // NewRunManager creates a new RunManager.
-func NewRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) runi.Manager {
+func NewRunManager(factory k8s.ClientFactory, pipelineRunsConfig *pipelineRunsConfigStruct, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) runi.Manager {
 	return &runManager{
-		secretProvider:   secretProvider,
-		factory:          factory,
-		namespaceManager: namespaceManager,
+		factory:            factory,
+		pipelineRunsConfig: *pipelineRunsConfig,
+		namespaceManager:   namespaceManager,
+		secretProvider:     secretProvider,
 	}
 }
 
@@ -104,10 +118,18 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 		return err
 	}
 
+	if err = c.setupStaticNetworkPolicies(runNamespace); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecretName string, imagePullSecrets []string) error {
+	if c.testing != nil && c.testing.setupServiceAccountStub != nil {
+		return c.testing.setupServiceAccountStub(runNamespace, pipelineCloneSecretName, imagePullSecrets)
+	}
+
 	accountManager := k8s.NewServiceAccountManager(c.factory, runNamespace)
 	serviceAccount, err := accountManager.CreateServiceAccount(serviceAccountName, pipelineCloneSecretName, imagePullSecrets)
 	if err != nil {
@@ -155,6 +177,10 @@ func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecre
 }
 
 func (c *runManager) copySecretsToRunNamespace(pipelineRun k8s.PipelineRun, runNamespace string) (string, []string, error) {
+	if c.testing != nil && c.testing.copySecretsToRunNamespaceStub != nil {
+		return c.testing.copySecretsToRunNamespaceStub(pipelineRun, runNamespace)
+	}
+
 	targetClient := c.factory.CoreV1().Secrets(runNamespace)
 	secretHelper := c.getSecretHelper(runNamespace, targetClient)
 
@@ -238,6 +264,120 @@ func (c *runManager) copySecrets(secretHelper secrets.SecretHelper, secretNames 
 		return storedSecretNames, err
 	}
 	return storedSecretNames, nil
+}
+
+func (c *runManager) setupStaticNetworkPolicies(runNamespace string) error {
+	if c.testing != nil && c.testing.setupStaticNetworkPoliciesStub != nil {
+		return c.testing.setupStaticNetworkPoliciesStub(runNamespace)
+	}
+
+	if err := c.setupNetworkPolicyThatIsolatesAllPods(runNamespace); err != nil {
+		return errors.Wrapf(err,
+			"failed to set up the network policy isolating all pods in namespace %q",
+			runNamespace,
+		)
+	}
+	if err := c.setupNetworkPolicyFromConfig(runNamespace); err != nil {
+		return errors.Wrapf(err,
+			"failed to set up the configured network policy in namespace %q",
+			runNamespace,
+		)
+	}
+	return nil
+}
+
+func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(runNamespace string) error {
+	if c.testing != nil && c.testing.setupNetworkPolicyThatIsolatesAllPodsStub != nil {
+		return c.testing.setupNetworkPolicyThatIsolatesAllPodsStub(runNamespace)
+	}
+
+	policy := &networkingv1api.NetworkPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: steward.GroupName + "--isolate-all-",
+			Namespace:    runNamespace,
+			Labels: map[string]string{
+				v1alpha1.LabelSystemManaged: "",
+			},
+		},
+		Spec: networkingv1api.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{}, // select all pods from namespace
+			PolicyTypes: []networkingv1api.PolicyType{
+				networkingv1api.PolicyTypeEgress,
+				networkingv1api.PolicyTypeIngress,
+			},
+		},
+	}
+
+	policyIfce := c.factory.NetworkingV1().NetworkPolicies(runNamespace)
+	if _, err := policyIfce.Create(policy); err != nil {
+		return errors.Wrap(err, "error when creating network policy")
+	}
+
+	return nil
+}
+
+func (c *runManager) setupNetworkPolicyFromConfig(runNamespace string) error {
+	if c.testing != nil && c.testing.setupNetworkPolicyFromConfigStub != nil {
+		return c.testing.setupNetworkPolicyFromConfigStub(runNamespace)
+	}
+
+	expectedGroupKind := schema.GroupKind{
+		Group: networkingv1api.GroupName,
+		Kind:  "NetworkPolicy",
+	}
+
+	policyStr := c.pipelineRunsConfig.NetworkPolicy
+	if policyStr == "" {
+		return nil
+	}
+
+	var obj *unstructured.Unstructured
+
+	// decode
+	{
+		// We don't assume a specific resource version so that users can configure
+		// whatever the K8s apiserver understands.
+		yamlSerializer := yamlserial.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+		o, err := runtime.Decode(yamlSerializer, []byte(policyStr))
+		if err != nil {
+			return errors.Wrap(err, "failed to decode configured network policy")
+		}
+		gvk := o.GetObjectKind().GroupVersionKind()
+		if gvk.GroupKind() != expectedGroupKind {
+			return errors.Errorf(
+				"configured network policy does not denote a %q but a %q",
+				expectedGroupKind.String(), gvk.GroupKind().String(),
+			)
+		}
+		obj = o.(*unstructured.Unstructured)
+	}
+
+	// set metadata
+	{
+		// ignore any existing metadata to prevent side effects
+		delete(obj.Object, "metadata")
+
+		obj.SetGenerateName(steward.GroupName + "--configured-")
+		obj.SetNamespace(runNamespace)
+		obj.SetLabels(map[string]string{
+			v1alpha1.LabelSystemManaged: "",
+		})
+	}
+
+	// create resource object
+	{
+		gvr := schema.GroupVersionResource{
+			Group:    expectedGroupKind.Group,
+			Version:  obj.GetObjectKind().GroupVersionKind().Version,
+			Resource: "networkpolicies",
+		}
+		dynamicIfce := c.factory.Dynamic().Resource(gvr).Namespace(runNamespace)
+		if _, err := dynamicIfce.Create(obj, metav1.CreateOptions{}); err != nil {
+			return errors.Wrap(err, "failed to create configured network policy")
+		}
+	}
+
+	return nil
 }
 
 func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun) error {
@@ -366,6 +506,10 @@ func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runi.Run, error) {
 
 // Cleanup a run based on a pipelineRun
 func (c *runManager) Cleanup(pipelineRun k8s.PipelineRun) error {
+	if c.testing != nil && c.testing.cleanupStub != nil {
+		return c.testing.cleanupStub(pipelineRun)
+	}
+
 	namespace := pipelineRun.GetRunNamespace()
 	if namespace == "" {
 		//TODO: Don't store on resource as message. Add it as event.

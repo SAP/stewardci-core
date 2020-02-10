@@ -13,6 +13,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	run "github.com/SAP/stewardci-core/pkg/run"
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -158,14 +159,14 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) e
 	return nil
 }
 
-func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) run.Manager {
+func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun, pipelineRunsConfig *pipelineRunsConfigStruct) run.Manager {
 	if c.testing != nil && c.testing.runManagerStub != nil {
 		return c.testing.runManagerStub
 	}
 	tenant := k8s.NewTenantNamespace(c.factory, pipelineRun.GetNamespace())
 	workFactory := tenant.TargetClientFactory()
 	namespaceManager := k8s.NewNamespaceManager(c.factory, runNamespacePrefix, runNamespaceRandomLength)
-	return NewRunManager(workFactory, tenant.GetSecretProvider(), namespaceManager)
+	return NewRunManager(workFactory, pipelineRunsConfig, tenant.GetSecretProvider(), namespaceManager)
 }
 
 // syncHandler compares the actual state with the desired, and attempts to
@@ -188,7 +189,6 @@ func (c *Controller) syncHandler(key string) error {
 
 	// Get real pipelineRun bypassing cache
 	pipelineRun, err := k8s.NewPipelineRun(pipelineRunAPIObj, c.factory)
-
 	if err != nil {
 		return err
 	}
@@ -198,10 +198,17 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
+	// the configuration should be loaded once per sync to avoid inconsistencies
+	// in case of concurrent configuration changes
+	pipelineRunsConfig, err := loadPipelineRunsConfig(c.factory)
+	if err != nil {
+		return errors.Wrap(err, "failed to load configuration for pipeline runs")
+	}
+
 	// Check if object has deletion timestamp
 	// If not, try to add finalizer if missing
 	if pipelineRun.HasDeletionTimestamp() {
-		runManager := c.createRunManager(pipelineRun)
+		runManager := c.createRunManager(pipelineRun, pipelineRunsConfig)
 		err = runManager.Cleanup(pipelineRun)
 		if err == nil {
 			err = pipelineRun.DeleteFinalizerIfExists()
@@ -226,7 +233,7 @@ func (c *Controller) syncHandler(key string) error {
 		c.changeState(pipelineRun, api.StateCleaning)
 	}
 
-	runManager := c.createRunManager(pipelineRun)
+	runManager := c.createRunManager(pipelineRun, pipelineRunsConfig)
 	// Process pipeline run based on current state
 	switch state := pipelineRun.GetStatus().State; state {
 	// TODO fix #117
