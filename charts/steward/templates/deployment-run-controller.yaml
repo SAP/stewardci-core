@@ -33,6 +33,11 @@ spec:
         image: {{ printf "%s:%s" .repository .tag | quote }}
         imagePullPolicy: {{ .pullPolicy | quote }}
         {{- end }}
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: "metadata.namespace"
         ports:
           - name: http-metrics
             containerPort: 9090

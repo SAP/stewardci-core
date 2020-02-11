@@ -29,8 +29,15 @@ spec:
       - name: controller
         securityContext:
           {{- toYaml .Values.tenantController.securityContext | nindent 10 }}
-        image: {{ printf "%s:%s" .Values.tenantController.image.repository .Values.tenantController.image.tag | quote }}
-        imagePullPolicy: {{ .Values.tenantController.image.pullPolicy | quote }}
+        {{- with .Values.tenantController.image }}
+        image: {{ printf "%s:%s" .repository .tag | quote }}
+        imagePullPolicy: {{ .pullPolicy | quote }}
+        {{- end }}
+        env:
+        - name: SYSTEM_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: "metadata.namespace"
         ports:
           - name: http-metrics
             containerPort: 9090

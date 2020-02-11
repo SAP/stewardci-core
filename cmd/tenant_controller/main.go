@@ -11,6 +11,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"knative.dev/pkg/system"
 )
 
 var kubeconfig string
@@ -44,6 +45,9 @@ func main() {
 			panic(err.Error())
 		}
 	}
+
+	system.Namespace() // ensure that namespace is set in environment
+
 	log.Printf("Create Factory (resync period: %s)", resyncPeriod.String())
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
