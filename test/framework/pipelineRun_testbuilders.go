@@ -21,7 +21,8 @@ type PipelineRunTest struct {
 }
 
 // PipelineRunTestBuilder is a funciton creating a PipelineRunTest for a defined Namespace
-type PipelineRunTestBuilder = func(string) PipelineRunTest
+// and a buildID for the elasticsearch
+type PipelineRunTestBuilder = func(string, *api.CustomJSON) PipelineRunTest
 
 // TestPlan defines a test plan
 type TestPlan struct {

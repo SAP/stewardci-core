@@ -134,3 +134,15 @@ func Abort() PipelineRunSpecOp {
 		return spec
 	}
 }
+
+// Logging creates a PipelineRunSpecOp which adds Logging to the PipelineRun
+func Logging(runID *api.CustomJSON) PipelineRunSpecOp {
+	return func(spec api.PipelineSpec) api.PipelineSpec {
+		spec.Logging = &api.Logging{
+			Elasticsearch: &api.Elasticsearch{
+				RunID: runID,
+			},
+		}
+		return spec
+	}
+}
