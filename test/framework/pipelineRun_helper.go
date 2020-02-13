@@ -38,7 +38,9 @@ func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...Tes
 			name :=
 				fmt.Sprintf("%s_%d", getTestPlanName(testPlan), i)
 			ctx = SetTestName(ctx, name)
-			pipelineTest := testPlan.TestBuilder(tnn)
+			runID := &api.CustomJSON{map[string]string{"buildId": name}}
+
+			pipelineTest := testPlan.TestBuilder(tnn, runID)
 
 			ctx, cancel := context.WithTimeout(ctx, pipelineTest.Timeout)
 			defer cancel()

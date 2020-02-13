@@ -23,7 +23,7 @@ func setupTestContext() context.Context {
 	return SetClientFactory(ctx, factory)
 }
 
-func pipelineWithStatusSuccess(namespace string) PipelineRunTest {
+func pipelineWithStatusSuccess(namespace string, buildID *api.CustomJSON) PipelineRunTest {
 	randomName, _ := utils.RandomAlphaNumString(5)
 	pipelineRun := pipelineRun(randomName, namespace)
 	pipelineRun.Status = api.PipelineStatus{Result: api.ResultSuccess}

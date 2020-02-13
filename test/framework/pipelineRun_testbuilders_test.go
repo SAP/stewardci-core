@@ -5,13 +5,15 @@ import (
 	"time"
 
 	"gotest.tools/assert"
+
+	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 )
 
-func Bar(string) PipelineRunTest {
+func Bar(string, *api.CustomJSON) PipelineRunTest {
 	return PipelineRunTest{}
 }
 
-func Baz(string) PipelineRunTest {
+func Baz(string, *api.CustomJSON) PipelineRunTest {
 	return PipelineRunTest{}
 }
 
