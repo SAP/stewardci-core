@@ -81,6 +81,12 @@ pipelineRuns:
         memory: 2Gi
       requests:
         cpu: 500m
+    podSecurityContext:
+      # The values below must be supported by the Jenkinsfile Runner image,
+      # e.g. by having file ownerships set accordingly.
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
   networkPolicy: ""
 
 hooks:
