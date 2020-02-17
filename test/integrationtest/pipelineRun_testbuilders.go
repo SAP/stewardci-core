@@ -24,11 +24,11 @@ var AllTestBuilders = []f.PipelineRunTestBuilder{
 const pipelineRepoURL = "https://github.com/SAP-samples/stewardci-example-pipelines"
 
 // PipelineRunAbort is a PipelineRunTestBuilder to build a PipelineRunTest with aborted pipeline
-func PipelineRunAbort(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
+func PipelineRunAbort(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("sleep-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(name),
+				builder.Logging(runID),
 				builder.Abort(),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"sleep/Jenkinsfile"),
@@ -40,11 +40,11 @@ func PipelineRunAbort(Namespace string, name *api.CustomJSON) f.PipelineRunTest 
 }
 
 // PipelineRunSleep is a PipelineRunTestBuilder to build PipelineRunTest which sleeps for one second
-func PipelineRunSleep(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
+func PipelineRunSleep(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("sleep-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(name),
+				builder.Logging(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"sleep/Jenkinsfile"),
 				builder.ArgSpec("SLEEP_FOR_SECONDS", "1"),
@@ -55,11 +55,11 @@ func PipelineRunSleep(Namespace string, name *api.CustomJSON) f.PipelineRunTest 
 }
 
 // PipelineRunFail is a PipelineRunTestBuilder to build PipelineRunTest which fails
-func PipelineRunFail(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
+func PipelineRunFail(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("error-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(name),
+				builder.Logging(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"error/Jenkinsfile"),
 			)),
@@ -69,11 +69,11 @@ func PipelineRunFail(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
 }
 
 // PipelineRunOK is a PipelineRunTestBuilder to build PipelineRunTest which succeeds
-func PipelineRunOK(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
+func PipelineRunOK(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("ok-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(name),
+				builder.Logging(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"success/Jenkinsfile"),
 
@@ -85,11 +85,11 @@ func PipelineRunOK(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
 }
 
 // PipelineRunWithSecret is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets
-func PipelineRunWithSecret(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
+func PipelineRunWithSecret(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("with-secret-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(name),
+				builder.Logging(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"secret/Jenkinsfile"),
 				builder.ArgSpec("SECRETID", "with-secret-foo"),
@@ -104,11 +104,11 @@ func PipelineRunWithSecret(Namespace string, name *api.CustomJSON) f.PipelineRun
 }
 
 // PipelineRunMissingSecret is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets
-func PipelineRunMissingSecret(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
+func PipelineRunMissingSecret(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("missing-secret-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(name),
+				builder.Logging(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"secret/Jenkinsfile"),
 				builder.ArgSpec("SECRETID", "foo"),
@@ -122,11 +122,11 @@ func PipelineRunMissingSecret(Namespace string, name *api.CustomJSON) f.Pipeline
 }
 
 // PipelineRunWrongJenkinsfileRepo is a PipelineRunTestBuilder to build PipelineRunTest with wrong jenkinsfile repo url
-func PipelineRunWrongJenkinsfileRepo(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
+func PipelineRunWrongJenkinsfileRepo(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("wrong-jenkinsfile-repo-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(name),
+				builder.Logging(runID),
 				builder.JenkinsFileSpec("https://github.com/SAP/steward-foo",
 					"Jenkinsfile"),
 			)),
@@ -139,11 +139,11 @@ fatal: could not read Username for 'https://github.com': No such device or addre
 }
 
 // PipelineRunWrongJenkinsfileRepoWithUser is a PipelineRunTestBuilder to build PipelineRunTest with wrong jenkinsfile repo url
-func PipelineRunWrongJenkinsfileRepoWithUser(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
+func PipelineRunWrongJenkinsfileRepoWithUser(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("wrong-jenkinsfile-repo-user-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(name),
+				builder.Logging(runID),
 				builder.JenkinsFileSpec("https://github.com/SAP/steward-foo",
 					"Jenkinsfile",
 					builder.RepoAuthSecret("repo-auth"),
@@ -159,11 +159,11 @@ fatal: could not read Username for 'https://github.com': No such device or addre
 }
 
 // PipelineRunWrongJenkinsfilePath is a PipelineRunTestBuilder to build PipelineRunTest with wrong jenkinsfile path
-func PipelineRunWrongJenkinsfilePath(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
+func PipelineRunWrongJenkinsfilePath(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("wrong-jenkinsfile-path-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(name),
+				builder.Logging(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"not_existing_path/Jenkinsfile"),
 			)),

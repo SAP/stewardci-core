@@ -10,6 +10,7 @@ import (
 	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	"github.com/google/uuid"
 	"gotest.tools/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -38,7 +39,12 @@ func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...Tes
 			name :=
 				fmt.Sprintf("%s_%d", getTestPlanName(testPlan), i)
 			ctx = SetTestName(ctx, name)
-			runID := &api.CustomJSON{map[string]string{"buildId": name}}
+			runID := &api.CustomJSON{
+				map[string]string{
+					"jobId":    name,
+					"biuildId": uuid.New().String(),
+					"realmId":  GetRealmUUID(ctx),
+				}}
 
 			pipelineTest := testPlan.TestBuilder(tnn, runID)
 
