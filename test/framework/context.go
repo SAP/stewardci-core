@@ -5,6 +5,7 @@ import (
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
+	"github.com/google/uuid"
 )
 
 type contextKey string
@@ -15,6 +16,7 @@ const (
 	namespaceKey       contextKey = "Namespace"
 	tenantNamespaceKey contextKey = "TenantNamespace"
 	testNameKey        contextKey = "testName"
+	realmUUIDKey       contextKey = "realmUUID"
 )
 
 // GetClientFactory returns the client factory from the context
@@ -69,4 +71,18 @@ func GetTestName(ctx context.Context) string {
 // SetTestName sets the test Name to the context
 func SetTestName(ctx context.Context, Name string) context.Context {
 	return context.WithValue(ctx, testNameKey, Name)
+}
+
+// GetRealmUUID returns an UUID for the test execution
+func GetRealmUUID(ctx context.Context) string {
+	val := ctx.Value(realmUUIDKey)
+	if val == nil {
+		return ""
+	}
+	return val.(string)
+}
+
+// SetRealmUUID returns an UUID for the test execution
+func SetRealmUUID(ctx context.Context) context.Context {
+	return context.WithValue(ctx, realmUUIDKey, uuid.New().String())
 }
