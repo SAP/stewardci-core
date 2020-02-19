@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: steward-pipelineruns
+data:
+  networkPolicy: |
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: pipelinerun
+    spec:
+      podSelector: {} # any pod in namespace
+      policyTypes:
+      - Egress
+      - Ingress
+      egress:
+      - # rule: allow access to all pods in the same namespace
+        to:
+        - podSelector: {}
+      - # rule: allow internet access
+        to:
+        - ipBlock:
+            # As "the internet" is hard to define as a list of IP blocks, we define it as
+            # any address with exceptions.
+            cidr: 0.0.0.0/0 # any
+            except:
+            # exclude special address blocks used for non-public networks
+            # see https://en.wikipedia.org/wiki/Reserved_IP_addresses
+            - 10.0.0.0/8 # address block for private networks
+            - 100.64.0.0/10 # shared address space for carrier-grade NAT
+            - 169.254.0.0/16 # address block for local links; used for metadata.google.internal
+            - 172.16.0.0/12 # address block for private networks; used for K8s masters
+            - 192.168.0.0/16 # address block for private networks; used for nodes, pods, services
+            - 198.18.0.0/15 # address block for benchmark testing in private networks
+      - # rule: allow access to cluster DNS
+        to:
+        - namespaceSelector: {}
+            # The namespace is 'kube-system', but has no labels
+            # attached. Therefore we cannot select it here.
+            # If we can set labels on the namespace, make this selector more
+            # specific.
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+        ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+      - # rule: allow access to K8s apiserver (cluster-internal address)
+        to:
+        - ipBlock:
+            cidr: 172.16.0.0/28 # GKE master address range
+        ports:
+        - port: 443
+      - # rule: allow access to netcat server
+        to:
+        - namespaceSelector: 
+            matchLabels:
+              name: netcat
+      ingress:
+      - # rule: allow access from all pods in the same namespace
+        from:
+        - podSelector: {}
