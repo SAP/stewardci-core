@@ -42,7 +42,7 @@ func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...Tes
 			runID := &api.CustomJSON{
 				map[string]string{
 					"jobId":    name,
-					"biuildId": uuid.New().String(),
+					"buildId": uuid.New().String(),
 					"realmId":  GetRealmUUID(ctx),
 				}}
 
