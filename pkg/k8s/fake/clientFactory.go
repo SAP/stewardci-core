@@ -14,14 +14,18 @@ import (
 	tektonapi "github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	dynamic "k8s.io/client-go/dynamic"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kubernetes "k8s.io/client-go/kubernetes/fake"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	networkingv1 "k8s.io/client-go/kubernetes/typed/networking/v1"
 	rbacv1beta1 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
 )
 
 // ClientFactory is a factory for fake clients.
 type ClientFactory struct {
 	kubernetesClientset    *kubernetes.Clientset
+	dynamicClient          *dynamicfake.FakeDynamicClient
 	stewardClientset       *steward.Clientset
 	stewardInformerFactory stewardinformer.SharedInformerFactory
 	tektonClientset        *tektonclientfake.Clientset
@@ -39,6 +43,7 @@ func NewClientFactory(objects ...runtime.Object) *ClientFactory {
 	sleepDuration, _ := time.ParseDuration("300ms")
 	return &ClientFactory{
 		kubernetesClientset:    kubernetes.NewSimpleClientset(kubernetesObjects...),
+		dynamicClient:          dynamicfake.NewSimpleDynamicClient(runtime.NewScheme()),
 		stewardClientset:       stewardClientset,
 		stewardInformerFactory: stewardInformerFactory,
 		tektonClientset:        tektonClientset,
@@ -73,12 +78,12 @@ func (f *ClientFactory) StewardClientset() *steward.Clientset {
 	return f.stewardClientset
 }
 
-// StewardV1alpha1 returns Steward clients.
+// StewardV1alpha1 implements interface "github.com/SAP/stewardci-core/pkg/k8s".ClientFactory
 func (f *ClientFactory) StewardV1alpha1() stewardv1alpha1.StewardV1alpha1Interface {
 	return f.stewardClientset.StewardV1alpha1()
 }
 
-// StewardInformerFactory returns the informer factory for Steward
+// StewardInformerFactory implements interface "github.com/SAP/stewardci-core/pkg/k8s".ClientFactory
 func (f *ClientFactory) StewardInformerFactory() stewardinformer.SharedInformerFactory {
 	return f.stewardInformerFactory
 }
@@ -88,17 +93,32 @@ func (f *ClientFactory) KubernetesClientset() *kubernetes.Clientset {
 	return f.kubernetesClientset
 }
 
-// CoreV1 returns fake CoreV1 clients
+// CoreV1 implements interface "github.com/SAP/stewardci-core/pkg/k8s".ClientFactory
 func (f *ClientFactory) CoreV1() corev1.CoreV1Interface {
 	return f.kubernetesClientset.CoreV1()
 }
 
-// RbacV1beta1 returns fake RbacV1beta1 clients
+// Dynamic implements interface "github.com/SAP/stewardci-core/pkg/k8s".ClientFactory
+func (f *ClientFactory) Dynamic() dynamic.Interface {
+	return f.dynamicClient
+}
+
+// DynamicFake returns the dynamic Kubernetes fake client.
+func (f *ClientFactory) DynamicFake() *dynamicfake.FakeDynamicClient {
+	return f.dynamicClient
+}
+
+// NetworkingV1 implements interface "github.com/SAP/stewardci-core/pkg/k8s".ClientFactory
+func (f *ClientFactory) NetworkingV1() networkingv1.NetworkingV1Interface {
+	return f.kubernetesClientset.NetworkingV1()
+}
+
+// RbacV1beta1 implements interface "github.com/SAP/stewardci-core/pkg/k8s".ClientFactory
 func (f *ClientFactory) RbacV1beta1() rbacv1beta1.RbacV1beta1Interface {
 	return f.kubernetesClientset.RbacV1beta1()
 }
 
-// TektonInformerFactory returns the Tekton informer factory
+// TektonInformerFactory implements interface "github.com/SAP/stewardci-core/pkg/k8s".ClientFactory
 func (f *ClientFactory) TektonInformerFactory() tektoninformers.SharedInformerFactory {
 	return f.tektonInformerFactory
 }
@@ -108,7 +128,7 @@ func (f *ClientFactory) TektonClientset() *tektonclientfake.Clientset {
 	return f.tektonClientset
 }
 
-// TektonV1alpha1 returns the Tekton v1alpha1 client
+// TektonV1alpha1 implements interface "github.com/SAP/stewardci-core/pkg/k8s".ClientFactory
 func (f *ClientFactory) TektonV1alpha1() tektonclientv1alpha1.TektonV1alpha1Interface {
 	return f.tektonClientset.TektonV1alpha1()
 }

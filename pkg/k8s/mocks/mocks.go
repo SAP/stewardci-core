@@ -35,7 +35,9 @@ import (
 	externalversions0 "github.com/SAP/stewardci-core/pkg/tektonclient/informers/externalversions"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
+	dynamic "k8s.io/client-go/dynamic"
 	v10 "k8s.io/client-go/kubernetes/typed/core/v1"
+	v11 "k8s.io/client-go/kubernetes/typed/networking/v1"
 	v1beta1 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
 	reflect "reflect"
 )
@@ -75,6 +77,34 @@ func (m *MockClientFactory) CoreV1() v10.CoreV1Interface {
 func (mr *MockClientFactoryMockRecorder) CoreV1() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CoreV1", reflect.TypeOf((*MockClientFactory)(nil).CoreV1))
+}
+
+// Dynamic mocks base method
+func (m *MockClientFactory) Dynamic() dynamic.Interface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Dynamic")
+	ret0, _ := ret[0].(dynamic.Interface)
+	return ret0
+}
+
+// Dynamic indicates an expected call of Dynamic
+func (mr *MockClientFactoryMockRecorder) Dynamic() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dynamic", reflect.TypeOf((*MockClientFactory)(nil).Dynamic))
+}
+
+// NetworkingV1 mocks base method
+func (m *MockClientFactory) NetworkingV1() v11.NetworkingV1Interface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NetworkingV1")
+	ret0, _ := ret[0].(v11.NetworkingV1Interface)
+	return ret0
+}
+
+// NetworkingV1 indicates an expected call of NetworkingV1
+func (mr *MockClientFactoryMockRecorder) NetworkingV1() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkingV1", reflect.TypeOf((*MockClientFactory)(nil).NetworkingV1))
 }
 
 // RbacV1beta1 mocks base method

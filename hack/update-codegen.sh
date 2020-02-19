@@ -57,34 +57,38 @@ function is_verify_mode() {
     [[ -n ${VERIFY:-} ]]
 }
 
-
 function generate_mocks() {
-  local pkg="$1"
-  local interfaces="$2"
-  if [[ -z "$pkg" ]]; then
-    exit 1
-  fi
-  if [[ -z "$interfaces" ]];then
-    exit 1
-  fi
-  echo "## ${ACTION} mocks for package '$pkg' ###############"
-  
-  set -x
-  "$GOPATH_1/bin/mockgen" \
-    -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
-    -destination="${MOCK_ROOT}/pkg/${pkg}/mocks/mocks.go" \
-    -package=mocks \
-    github.com/SAP/stewardci-core/pkg/${pkg} \
-    "${interfaces}" \
-    || die "'$pkg' mock generation failed"
-  { set +x; } 2>/dev/null
-  if is_verify_mode; then
+    local pkg="$1" interfaces="$2" dest="$3"
+    local destPkgName
+    if [[ -z $pkg ]]; then
+        die "generate_mocks: package must be specified"
+    fi
+    if [[ -z $interfaces ]]; then
+        die "generate_mocks: interface list must be specified"
+    fi
+    if [[ -z $dest ]]; then
+        die "generate_mocks: destination must be specified"
+    fi
+    echo "## ${ACTION} mocks for package '$pkg' ###############"
+
+    destPkgName=$(basename "$(dirname "$dest")") || die
     set -x
-    diff -Naupr ${GEN_DIR}/pkg/${pkg}/mocks/mocks.go ${PROJECT_ROOT}/pkg/${pkg}/mocks/mocks.go || die "Regeneration required for ${pkg} mocks"
+    "$GOPATH_1/bin/mockgen" \
+        -copyright_file="${PROJECT_ROOT}/hack/boilerplate.go.txt" \
+        -destination="${MOCK_ROOT}/${dest}" \
+        -package="$destPkgName" \
+        "$pkg" \
+        "$interfaces" \
+        || die "mock generation for '$pkg' failed"
     { set +x; } 2>/dev/null
-  fi
-  echo
+    if is_verify_mode; then
+        set -x
+        diff -Naupr "${GEN_DIR}/${dest}" "${PROJECT_ROOT}/${dest}" || die "Regeneration required for mocks of '$pkg'"
+        { set +x; } 2>/dev/null
+    fi
+    echo
 }
+
 #
 # main
 #
@@ -149,6 +153,7 @@ if ! is_verify_mode; then
         "${PROJECT_ROOT}/pkg/tektonclient" \
         "${PROJECT_ROOT}/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go" \
         "${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go" \
+        "${PROJECT_ROOT}/pkg/k8s/mocks/client-go/corev1/mocks.go" \
         "${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
         || die "Cleanup failed"
     { set +x; } 2>/dev/null
@@ -197,9 +202,21 @@ else
 fi
 
 echo
-
-generate_mocks k8s "ClientFactory,NamespaceManager,PipelineRun,PipelineRunFetcher,TenantFetcher"
-generate_mocks "k8s/secrets"  "SecretHelper,SecretProvider"
-generate_mocks run  "Run,Manager"
+generate_mocks \
+    "github.com/SAP/stewardci-core/pkg/k8s" \
+    "ClientFactory,NamespaceManager,PipelineRun,PipelineRunFetcher,TenantFetcher" \
+    "pkg/k8s/mocks/mocks.go"
+generate_mocks \
+    "k8s.io/client-go/kubernetes/typed/core/v1" \
+    "CoreV1Interface,ConfigMapInterface" \
+    "pkg/k8s/mocks/client-go/corev1/mocks.go"
+generate_mocks \
+    "github.com/SAP/stewardci-core/pkg/k8s/secrets" \
+    "SecretHelper,SecretProvider" \
+    "pkg/k8s/secrets/mocks/mocks.go"
+generate_mocks \
+    "github.com/SAP/stewardci-core/pkg/run" \
+    "Run,Manager" \
+    "pkg/run/mocks/mocks.go"
 
 echo "${ACTION} successful"
