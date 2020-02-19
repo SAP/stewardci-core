@@ -13,7 +13,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20191027212112-611e8accdfc9 // indirect
 	github.com/golang/mock v1.3.1
 	github.com/google/go-containerregistry v0.0.0-20191115225042-f8574ec722f4 // indirect
-	github.com/google/uuid v1.1.1 // indirect
+	github.com/google/uuid v1.1.1
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/imdario/mergo v0.3.8 // indirect

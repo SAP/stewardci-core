@@ -38,5 +38,7 @@ func Setup(t *testing.T) context.Context {
 	ctx = SetNamespace(ctx, testClient)
 	ctx = SetTenantNamespace(ctx, tenantNamespace)
 	ctx = SetClientFactory(ctx, factory)
+	ctx = SetRealmUUID(ctx)
+	log.Printf("RealmUUID: %q", GetRealmUUID(ctx))
 	return ctx
 }

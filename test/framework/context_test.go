@@ -45,3 +45,11 @@ func Test_Set_GetPipelineRun(t *testing.T) {
 	ctx = SetPipelineRun(ctx, run)
 	assert.DeepEqual(t, run, GetPipelineRun(ctx))
 }
+
+func Test_Set_GetRealmUUID(t *testing.T) {
+	ctx := context.Background()
+	assert.Equal(t, "", GetRealmUUID(ctx))
+
+	ctx = SetRealmUUID(ctx)
+	assert.Assert(t, GetRealmUUID(ctx) != "")
+}

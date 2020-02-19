@@ -49,7 +49,7 @@ The log can be found in the `step-jenkinsfile-runner` container of the runner po
 *Note: A better way is to [persist logs in Elasticsearch](../pipeline-logs-elasticsearch/README.md)*
 
 *Note: You may use the pipelinerun_sleep.yaml in the create command above if you want to see the logs as described below.
-The pipeline runs for 2 minutes before the run namespace with the pod is deleted.
+The pipeline runs for 2 minutes before the run namespace with the pod is deleted.*
  
 ```sh
 $ export RUN_NAMESPACE=$(kubectl -n $TENANT_NAMESPACE get $RUN_NAME -o=jsonpath={.status.namespace})
