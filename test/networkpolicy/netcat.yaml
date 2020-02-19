@@ -43,8 +43,8 @@ spec:
        defaultMode: 0555
        name: start
        items:
-         - key: start.sh
-           path: start.sh
+       - key: start.sh
+         path: start.sh
   dnsPolicy: ClusterFirst
 ---
 apiVersion: v1

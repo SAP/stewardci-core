@@ -10,8 +10,8 @@ import (
 )
 
 func Test_PipelineRunOpenNetworkPolicy(t *testing.T) {
-    npTest := f.TestPlan{TestBuilder: PipelineRunNetworkOpenPolicy,
-                Count:         1,
-        }
-        f.ExecutePipelineRunTests(t, npTest)
+	npTest := f.TestPlan{TestBuilder: PipelineRunNetworkOpenPolicy,
+		Count: 1,
+	}
+	f.ExecutePipelineRunTests(t, npTest)
 }

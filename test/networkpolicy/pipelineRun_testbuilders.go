@@ -26,15 +26,14 @@ func PipelineRunNetworkClosedPolicy(Namespace string, name *api.CustomJSON) f.Pi
 
 // PipelineRunNetworkOpenPolicy is a PipelineRunTestBuilder to build a PipelineRunTest to check network policy
 func PipelineRunNetworkOpenPolicy(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
-        return f.PipelineRunTest{
-                PipelineRun: builder.PipelineRun("net-", Namespace,
-                        builder.PipelineRunSpec(
-                                builder.Logging(name),
-                                builder.JenkinsFileSpec(pipelineRepoURL,
-                                        "netcat/Jenkinsfile"),
-                        )),
-                Check:   f.PipelineRunHasStateResult(api.ResultSuccess),
-                Timeout: 600 * time.Second,
-        }
+	return f.PipelineRunTest{
+		PipelineRun: builder.PipelineRun("net-", Namespace,
+			builder.PipelineRunSpec(
+				builder.Logging(name),
+				builder.JenkinsFileSpec(pipelineRepoURL,
+					"netcat/Jenkinsfile"),
+			)),
+		Check:   f.PipelineRunHasStateResult(api.ResultSuccess),
+		Timeout: 600 * time.Second,
+	}
 }
-

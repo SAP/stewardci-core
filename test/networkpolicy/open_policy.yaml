@@ -53,25 +53,11 @@ data:
             cidr: 172.16.0.0/28 # GKE master address range
         ports:
         - port: 443
-      - # rule: allow access to Elasticsearch reverse proxy
-        to:
-        - namespaceSelector: {}
-            # The namespace is 'steward-elasticsearch-proxy', but has no labels
-            # attached. Therefore we cannot select it here.
-            # If we can set labels on the namespace, make this selector more
-            # specific.
-          podSelector:
-            matchLabels:
-              app.kubernetes.io/name: steward-elasticsearch-proxy
       - # rule: allow access to netcat server
         to:
         - namespaceSelector: 
             matchLabels:
               name: netcat
-      - # rule: allow access to SAP-internal network
-        to:
-        - ipBlock:
-            cidr: 10.0.0.0/8
       ingress:
       - # rule: allow access from all pods in the same namespace
         from:
