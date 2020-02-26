@@ -13,6 +13,7 @@ import (
 	runi "github.com/SAP/stewardci-core/pkg/run"
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	corev1api "k8s.io/api/core/v1"
 	networkingv1api "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -383,6 +384,14 @@ func (c *runManager) setupNetworkPolicyFromConfig(runNamespace string) error {
 func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun) error {
 	var err error
 
+	copyInt64Ptr := func(ptr *int64) *int64 {
+		if ptr != nil {
+			v := *ptr
+			return &v
+		}
+		return nil
+	}
+
 	namespace := pipelineRun.GetRunNamespace()
 
 	tektonTaskRun := tekton.TaskRun{
@@ -406,6 +415,18 @@ func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun) error {
 			},
 			// use default timeout from tekton
 			// Timeout: toDuration(defaultBuildTimeout),
+
+			// Always set a non-empty pod template even if we don't have
+			// values to set. Otherwise the Tekton default pod template
+			// would be used only in such cases but not if we have values
+			// to set.
+			PodTemplate: tekton.PodTemplate{
+				SecurityContext: &corev1api.PodSecurityContext{
+					RunAsUser:  copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsUser),
+					RunAsGroup: copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
+					FSGroup:    copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup),
+				},
+			},
 		},
 	}
 

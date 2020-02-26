@@ -1,6 +1,7 @@
 package runctl
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
@@ -47,8 +48,32 @@ func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
 
+func Test_loadPipelineRunsConfig_EmptyEntries(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	cf := fake.NewClientFactory(
+		newPipelineRunsConfigMap(map[string]string{
+			pipelineRunsConfigKeyNetworkPolicy: "",
+			pipelineRunsConfigKeyPSCFSGroup:    "",
+			pipelineRunsConfigKeyPSCRunAsGroup: "",
+			pipelineRunsConfigKeyPSCRunAsUser:  "",
+		}),
+	)
+
+	// EXERCISE
+	resultConfig, err := loadPipelineRunsConfig(cf)
+
+	// VERIFY
+	assert.NilError(t, err)
+	expectedConfig := &pipelineRunsConfigStruct{}
+	assert.DeepEqual(t, expectedConfig, resultConfig)
+}
+
 func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	t.Parallel()
+
+	int64Ptr := func(val int64) *int64 { return &val }
 
 	// SETUP
 	cf := fake.NewClientFactory(
@@ -56,6 +81,9 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 			map[string]string{
 				"_example":                         "exampleString",
 				pipelineRunsConfigKeyNetworkPolicy: "networkPolicy1",
+				pipelineRunsConfigKeyPSCRunAsUser:  "1111",
+				pipelineRunsConfigKeyPSCRunAsGroup: "2222",
+				pipelineRunsConfigKeyPSCFSGroup:    "3333",
 				"someKeyThatShouldBeIgnored":       "34957349",
 			},
 		),
@@ -68,8 +96,46 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	assert.NilError(t, err)
 	expectedConfig := &pipelineRunsConfigStruct{
 		NetworkPolicy: "networkPolicy1",
+		JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(1111),
+		JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
+		JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(3333),
 	}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
+}
+
+func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
+	for i, p := range []struct {
+		key, val string
+	}{
+		{pipelineRunsConfigKeyPSCRunAsUser, "a"},
+		{pipelineRunsConfigKeyPSCRunAsUser, "1a"},
+
+		{pipelineRunsConfigKeyPSCRunAsGroup, "a"},
+		{pipelineRunsConfigKeyPSCRunAsGroup, "1a"},
+
+		{pipelineRunsConfigKeyPSCFSGroup, "a"},
+		{pipelineRunsConfigKeyPSCFSGroup, "1a"},
+	} {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			p := p // capture current value before going parallel
+
+			t.Parallel()
+
+			// SETUP
+			cf := fake.NewClientFactory(
+				newPipelineRunsConfigMap(
+					map[string]string{p.key: p.val},
+				),
+			)
+
+			// EXERCISE
+			resultConfig, err := loadPipelineRunsConfig(cf)
+
+			// VERIFY
+			assert.Assert(t, err != nil)
+			assert.Assert(t, resultConfig == nil)
+		})
+	}
 }
 
 func Test_loadPipelineRunsConfig_ErrorOnGetConfigMap(t *testing.T) {
