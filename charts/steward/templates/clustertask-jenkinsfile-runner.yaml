@@ -109,3 +109,6 @@ spec:
       value: '$(inputs.params.RUN_CAUSE)'
     resources:
       {{- toYaml .Values.pipelineRuns.jenkinsfileRunner.resources | nindent 6 }}
+    {{- if .Values.pipelineRuns.jenkinsfileRunner.terminationMessagePath }}
+    terminationMessagePath: {{ .Values.pipelineRuns.jenkinsfileRunner.terminationMessagePath | quote }}
+    {{- end }}
