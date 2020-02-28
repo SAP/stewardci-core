@@ -87,6 +87,7 @@ pipelineRuns:
       runAsUser: 1000
       runAsGroup: 1000
       fsGroup: 1000
+    terminationMessagePath: "/run/termination-log"
   networkPolicy: ""
 
 hooks:
