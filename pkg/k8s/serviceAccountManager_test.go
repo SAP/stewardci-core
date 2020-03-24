@@ -90,3 +90,20 @@ func Test_CreateRoleOtherNamespace_works(t *testing.T) {
 	_, err := acc.AddRoleBinding(roleName, ns1)
 	assert.NilError(t, err)
 }
+
+func Test_SetDoAutomountServiceAccountToke_works(t *testing.T) {
+	//SETUP
+	fakeServiceAccount := fakeServiceAccount()
+	setupAccountManager(fakeServiceAccount)
+	acc, err := accountManager.GetServiceAccount(accountName)
+	assert.NilError(t, err)
+
+	//EXERCISE
+	acc.SetDoAutomountServiceAccountToken(false)
+	assert.NilError(t, acc.Update())
+
+	//VERIFY
+	actual, err := accountManager.GetServiceAccount(accountName)
+	assert.NilError(t, err)
+	assert.Check(t, *actual.cache.AutomountServiceAccountToken == false)
+}
