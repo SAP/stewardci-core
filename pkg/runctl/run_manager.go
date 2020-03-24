@@ -29,6 +29,12 @@ const (
 	runNamespaceRandomLength = 16
 	serviceAccountName       = "default"
 
+	// in general, the token of the above service account should not be automatically mounted into pods
+	automountServiceAccountToken = false
+
+	// Jenkinsfile Runner needs a service account token to schedule other pods
+	automountServiceAccountTokenIntoJFRPod = true
+
 	annotationPipelineRunKey = steward.GroupName + "/pipeline-run-key"
 
 	// tektonClusterTaskName is the name of the Tekton ClusterTask
@@ -148,6 +154,7 @@ func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecre
 				serviceAccount.AttachSecrets(pipelineCloneSecretName)
 			}
 			serviceAccount.AttachImagePullSecrets(imagePullSecrets...)
+			serviceAccount.SetDoAutomountServiceAccountToken(false)
 			err = serviceAccount.Update()
 			if err == nil {
 				break // ...the retry loop
@@ -426,6 +433,9 @@ func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun) error {
 					RunAsGroup: copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
 					FSGroup:    copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup),
 				},
+				AutomountServiceAccountToken: func(b bool) *bool { //copy and get address (for we cannot get an address of a constant)
+					return &b
+				}(automountServiceAccountTokenIntoJFRPod),
 			},
 		},
 	}
