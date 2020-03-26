@@ -30,8 +30,6 @@ type ConditionExpansion interface{}
 
 type PipelineExpansion interface{}
 
-type PipelineResourceExpansion interface{}
-
 type PipelineRunExpansion interface{}
 
 type TaskExpansion interface{}
