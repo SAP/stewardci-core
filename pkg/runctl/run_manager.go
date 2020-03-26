@@ -420,7 +420,7 @@ func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun) error {
 			// values to set. Otherwise the Tekton default pod template
 			// would be used only in such cases but not if we have values
 			// to set.
-			PodTemplate: tekton.PodTemplate{
+			PodTemplate: &tekton.PodTemplate{
 				SecurityContext: &corev1api.PodSecurityContext{
 					RunAsUser:  copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsUser),
 					RunAsGroup: copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
