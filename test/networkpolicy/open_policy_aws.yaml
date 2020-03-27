@@ -47,14 +47,10 @@ data:
           port: 53
         - protocol: TCP
           port: 53
-        - port: 8053
-          protocol: UDP
-        - port: 8053
-          protocol: TCP
       - # rule: allow access to K8s apiserver (cluster-internal address)
         to:
         - ipBlock:
-            cidr: 100.64.0.1/32
+            cidr: 172.16.0.0/28 # GKE master address range
         ports:
         - port: 443
       - # rule: allow access to netcat server
