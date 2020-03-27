@@ -20,6 +20,8 @@ import (
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
+	corev1api "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -589,6 +591,86 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedKind(t *testing.T) {
 			" \"UnexpectedKind.networking.k8s.io\"")
 }
 
+func Test_RunManager_createTektonTaskRun_PodTemplate_IsNotEmptyIfNoValuesToSet(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	_, mockPipelineRun, _, _ := prepareMocks(mockCtrl)
+	mockPipelineRun.UpdateRunNamespace(runNamespaceName)
+	cf := fake.NewClientFactory()
+
+	examinee := runManager{
+		factory: cf,
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+
+	// EXERCISE
+	resultError := examinee.createTektonTaskRun(mockPipelineRun)
+
+	// VERIFY
+	assert.NilError(t, resultError)
+
+	taskRun, err := cf.TektonV1alpha1().TaskRuns(runNamespaceName).Get(tektonClusterTaskName, metav1.GetOptions{})
+	assert.NilError(t, err)
+	if equality.Semantic.DeepEqual(taskRun.Spec.PodTemplate, tekton.PodTemplate{}) {
+		t.Fatal("podTemplate of TaskRun is empty")
+	}
+}
+
+func Test_RunManager_createTektonTaskRun_PodTemplate_AllValuesSet(t *testing.T) {
+	t.Parallel()
+
+	int64Ptr := func(val int64) *int64 { return &val }
+
+	// SETUP
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	_, mockPipelineRun, _, _ := prepareMocks(mockCtrl)
+	mockPipelineRun.UpdateRunNamespace(runNamespaceName)
+	cf := fake.NewClientFactory()
+
+	examinee := runManager{
+		factory: cf,
+		pipelineRunsConfig: pipelineRunsConfigStruct{
+			JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(1111),
+			JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
+			JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(3333),
+		},
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+
+	// EXERCISE
+	resultError := examinee.createTektonTaskRun(mockPipelineRun)
+
+	// VERIFY
+	assert.NilError(t, resultError)
+
+	taskRun, err := cf.TektonV1alpha1().TaskRuns(runNamespaceName).Get(tektonClusterTaskName, metav1.GetOptions{})
+	assert.NilError(t, err)
+	expectedPodTemplate := tekton.PodTemplate{
+		SecurityContext: &corev1api.PodSecurityContext{
+			FSGroup:    int64Ptr(1111),
+			RunAsGroup: int64Ptr(2222),
+			RunAsUser:  int64Ptr(3333),
+		},
+	}
+	podTemplate := taskRun.Spec.PodTemplate
+	assert.DeepEqual(t, expectedPodTemplate, podTemplate)
+	assert.Assert(t, podTemplate.SecurityContext.FSGroup != examinee.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup)
+	assert.Assert(t, podTemplate.SecurityContext.RunAsGroup != examinee.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup)
+	assert.Assert(t, podTemplate.SecurityContext.RunAsUser != examinee.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsUser)
+}
+
 func Test_RunManager_Start_CreatesTektonTaskRun(t *testing.T) {
 	t.Parallel()
 
@@ -1044,7 +1126,7 @@ func prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv1alpha1.Pipelin
 
 	mockPipelineRun.EXPECT().UpdateRunNamespace(gomock.Any()).Do(func(arg string) {
 		runNamespace = arg
-	})
+	}).MaxTimes(1)
 
 	mockSecretProvider := secretMocks.NewMockSecretProvider(ctrl)
 

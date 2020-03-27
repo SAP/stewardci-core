@@ -45,4 +45,36 @@ data:
           from:
           - podSelector: {}
 
+    # jenkinsfileRunner.podSecurityContext.* allow configuring selected fields
+    # of the pod security context of the Jenkinsfile Runner pod.
+    #
+    # See https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+    # for details about Kubernetes pod security contexts.
+    #
+    # runAsUser, runAsGroup, fsGroup:
+    #   The value must be parseable as an integer in the range [1,65535].
+    #   An empty string value is treated as if the field is not present.
+    #
+    jenkinsfileRunner.podSecurityContext.runAsUser: "1000"
+    jenkinsfileRunner.podSecurityContext.runAsGroup: "1000"
+    jenkinsfileRunner.podSecurityContext.fsGroup: "1000"
+
   networkPolicy: {{ default ( .Files.Get "data/pipelineruns-default-networkpolicy.yaml" ) .Values.pipelineRuns.networkPolicy | quote }}
+
+{{- with .Values.pipelineRuns.jenkinsfileRunner.podSecurityContext }}
+{{- if and ( ge ( .runAsUser | int64 ) 1 ) ( le ( .runAsUser | int64 ) 65535 ) }}
+  jenkinsfileRunner.podSecurityContext.runAsUser: {{ .runAsUser | int64 | quote }}
+{{- else }}
+{{ fail "value 'pipelineRuns.jenkinsfileRunner.podSecurityContext.runAsUser' must be an integer in the range of [1,65535]" }}
+{{- end -}}
+{{- if and ( ge ( .runAsGroup | int64 ) 1 ) ( le ( .runAsGroup | int64 ) 65535 ) }}
+  jenkinsfileRunner.podSecurityContext.runAsGroup: {{ .runAsGroup | int64 | quote }}
+{{- else }}
+{{ fail "value 'pipelineRuns.jenkinsfileRunner.podSecurityContext.runAsGroup' must be an integer in the range of [1,65535]" }}
+{{- end -}}
+{{- if and ( ge ( .fsGroup | int64 ) 1 ) ( le ( .fsGroup | int64 ) 65535 ) }}
+  jenkinsfileRunner.podSecurityContext.fsGroup: {{ .fsGroup | int64 | quote }}
+{{- else }}
+{{ fail "value 'pipelineRuns.jenkinsfileRunner.podSecurityContext.fsGroup' must be an integer in the range of [1,65535]" }}
+{{- end -}}
+{{- end -}}

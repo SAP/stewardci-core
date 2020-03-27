@@ -8,7 +8,7 @@ targetNamespace:
 runController:
   image:
     repository: stewardci/stewardci-run-controller
-    tag: "200217_4d9ed2d"
+    tag: "200226_f716cdd"
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -32,7 +32,7 @@ runController:
 tenantController:
   image:
     repository: stewardci/stewardci-tenant-controller
-    tag: "200217_4d9ed2d"
+    tag: "200226_f716cdd"
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -73,7 +73,7 @@ pipelineRuns:
   jenkinsfileRunner:
     image:
       repository: stewardci/stewardci-jenkinsfile-runner
-      tag: "200124_1beb909"
+      tag: "200226_a268d89"
       pullPolicy: IfNotPresent
     resources:
       limits:
@@ -81,6 +81,13 @@ pipelineRuns:
         memory: 2Gi
       requests:
         cpu: 500m
+    podSecurityContext:
+      # The values below must be supported by the Jenkinsfile Runner image,
+      # e.g. by having file ownerships set accordingly.
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+    terminationMessagePath: "/run/termination-log"
   networkPolicy: ""
 
 hooks:
