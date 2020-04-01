@@ -108,32 +108,30 @@ func Test_SetDoAutomountServiceAccountToke_works(t *testing.T) {
 	assert.Check(t, *actual.cache.AutomountServiceAccountToken == false)
 }
 
-
 func Test_GetDefaultSecretName_works(t *testing.T) {
-        //SETUP
-        setupAccountManager()
-        acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
-        assert.NilError(t, err)
-       
-        acc.AttachSecrets("a-secret","default-token-foo","z-secret")        
-        
-        // EXERCISE
-        name := acc.GetDefaultSecretName()
-        // VERIFY
-        assert.Equal(t, "default-token-foo", name)
+	//SETUP
+	setupAccountManager()
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+	assert.NilError(t, err)
+
+	acc.AttachSecrets("a-secret", "default-token-foo", "z-secret")
+
+	// EXERCISE
+	name := acc.GetDefaultSecretName()
+	// VERIFY
+	assert.Equal(t, "default-token-foo", name)
 }
 
 func Test_GetDefaultSecretName_missing(t *testing.T) {
-        //SETUP
-        setupAccountManager()
-        acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
-        assert.NilError(t, err)
+	//SETUP
+	setupAccountManager()
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+	assert.NilError(t, err)
 
-        acc.AttachSecrets("a-secret","z-secret")
+	acc.AttachSecrets("a-secret", "z-secret")
 
-        // EXERCISE
-        name := acc.GetDefaultSecretName()
-        // VERIFY
-        assert.Equal(t, "", name)
+	// EXERCISE
+	name := acc.GetDefaultSecretName()
+	// VERIFY
+	assert.Equal(t, "", name)
 }
-

@@ -32,9 +32,6 @@ const (
 	// in general, the token of the above service account should not be automatically mounted into pods
 	automountServiceAccountToken = false
 
-	// Jenkinsfile Runner needs a service account token to schedule other pods
-	automountServiceAccountTokenIntoJFRPod = true
-
 	annotationPipelineRunKey = steward.GroupName + "/pipeline-run-key"
 
 	// tektonClusterTaskName is the name of the Tekton ClusterTask
@@ -84,11 +81,11 @@ func NewRunManager(factory k8s.ClientFactory, pipelineRunsConfig *pipelineRunsCo
 func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 	var err error
 
-	err = c.prepareRunNamespace(pipelineRun)
+	defaultSecretName, err := c.prepareRunNamespace(pipelineRun)
 	if err != nil {
 		return err
 	}
-	err = c.createTektonTaskRun(pipelineRun)
+	err = c.createTektonTaskRun(pipelineRun, defaultSecretName)
 	if err != nil {
 		return err
 	}
@@ -98,12 +95,12 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 
 // prepareRunNamespace creates a new namespace for the pipeline run
 // and populates it with needed resources.
-func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
+func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) (string, error) {
 	var err error
 
 	runNamespace, err := c.namespaceManager.Create("", nil)
 	if err != nil {
-		return errors.Wrap(err, "failed to create run namespace")
+		return "", errors.Wrap(err, "failed to create run namespace")
 	}
 
 	pipelineRun.UpdateRunNamespace(runNamespace)
@@ -118,43 +115,44 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) error {
 
 	pipelineCloneSecretName, imagePullSecretNames, err := c.copySecretsToRunNamespace(pipelineRun, runNamespace)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	if err = c.setupServiceAccount(runNamespace, pipelineCloneSecretName, imagePullSecretNames); err != nil {
-		return err
+	saSecretName, err := c.setupServiceAccount(runNamespace, pipelineCloneSecretName, imagePullSecretNames)
+	if err != nil {
+		return "", err
 	}
 
 	if err = c.setupStaticNetworkPolicies(runNamespace); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return saSecretName, nil
 }
 
-func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecretName string, imagePullSecrets []string) error {
+func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecretName string, imagePullSecrets []string) (string, error) {
 	if c.testing != nil && c.testing.setupServiceAccountStub != nil {
-		return c.testing.setupServiceAccountStub(runNamespace, pipelineCloneSecretName, imagePullSecrets)
+		return "", c.testing.setupServiceAccountStub(runNamespace, pipelineCloneSecretName, imagePullSecrets)
 	}
 
 	accountManager := k8s.NewServiceAccountManager(c.factory, runNamespace)
 	serviceAccount, err := accountManager.CreateServiceAccount(serviceAccountName, pipelineCloneSecretName, imagePullSecrets)
 	if err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
-			return errors.Wrapf(err, "failed to create service account %q", serviceAccountName)
+			return "", errors.Wrapf(err, "failed to create service account %q", serviceAccountName)
 		}
 
 		// service account exists already, so we need to attach secrets to it
 		for { // retry loop
 			serviceAccount, err = accountManager.GetServiceAccount(serviceAccountName)
 			if err != nil {
-				return errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
+				return "", errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
 			}
 			if pipelineCloneSecretName != "" {
 				serviceAccount.AttachSecrets(pipelineCloneSecretName)
 			}
 			serviceAccount.AttachImagePullSecrets(imagePullSecrets...)
-			serviceAccount.SetDoAutomountServiceAccountToken(false)
+			serviceAccount.SetDoAutomountServiceAccountToken(automountServiceAccountToken)
 			err = serviceAccount.Update()
 			if err == nil {
 				break // ...the retry loop
@@ -167,7 +165,7 @@ func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecre
 					serviceAccountName, runNamespace,
 				)
 			} else {
-				return errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
+				return "", errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
 			}
 		}
 	}
@@ -175,13 +173,13 @@ func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecre
 	// grant role to service account
 	_, err = serviceAccount.AddRoleBinding(runClusterRoleName, runNamespace)
 	if err != nil {
-		return errors.Wrapf(err,
+		return "", errors.Wrapf(err,
 			"failed to create role binding for service account %q in namespace %q",
 			serviceAccountName, runNamespace,
 		)
 	}
 
-	return nil
+	return serviceAccount.GetDefaultSecretName(), nil
 }
 
 func (c *runManager) copySecretsToRunNamespace(pipelineRun k8s.PipelineRun, runNamespace string) (string, []string, error) {
@@ -388,7 +386,20 @@ func (c *runManager) setupNetworkPolicyFromConfig(runNamespace string) error {
 	return nil
 }
 
-func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun) error {
+func (c *runManager) volumesWithSaSecret(saSecretName string) []corev1api.Volume {
+	var mode int32 = 420
+	return []corev1api.Volume{
+		corev1api.Volume{Name: "service-account-token",
+			VolumeSource: corev1api.VolumeSource{
+				Secret: &corev1api.SecretVolumeSource{
+					SecretName:  saSecretName,
+					DefaultMode: &mode,
+				},
+			},
+		}}
+}
+
+func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun, saSecretName string) error {
 	var err error
 
 	copyInt64Ptr := func(ptr *int64) *int64 {
@@ -433,9 +444,7 @@ func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun) error {
 					RunAsGroup: copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
 					FSGroup:    copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup),
 				},
-				AutomountServiceAccountToken: func(b bool) *bool { //copy and get address (for we cannot get an address of a constant)
-					return &b
-				}(automountServiceAccountTokenIntoJFRPod),
+				Volumes: c.volumesWithSaSecret(saSecretName),
 			},
 		},
 	}

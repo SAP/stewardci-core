@@ -54,7 +54,7 @@ func Test_RunManager_PrepareRunNamespace_Succeeds(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
 	// EXERCISE
-	err := examinee.prepareRunNamespace(mockPipelineRun)
+	_, err := examinee.prepareRunNamespace(mockPipelineRun)
 
 	// VERIFY
 	assert.NilError(t, err)
@@ -73,7 +73,7 @@ func Test_RunManager_PrepareRunNamespace_CreatesNamespace(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
 	// EXERCISE
-	err := examinee.prepareRunNamespace(mockPipelineRun)
+	_, err := examinee.prepareRunNamespace(mockPipelineRun)
 	assert.NilError(t, err)
 
 	// VERIFY
@@ -110,7 +110,7 @@ func Test_TunManager_PrepareRunNamespace_Calls_copySecretsToRunNamespace_AndProp
 	}
 
 	// EXERCISE
-	resultError := examinee.prepareRunNamespace(mockPipelineRun)
+	_, resultError := examinee.prepareRunNamespace(mockPipelineRun)
 
 	// VERIFY
 	assert.Equal(t, expectedError, resultError)
@@ -154,7 +154,7 @@ func Test_TunManager_PrepareRunNamespace_Calls_setupServiceAccount_AndPropagates
 	}
 
 	// EXERCISE
-	resultError := examinee.prepareRunNamespace(mockPipelineRun)
+	_, resultError := examinee.prepareRunNamespace(mockPipelineRun)
 
 	// VERIFY
 	assert.Equal(t, expectedError, resultError)
@@ -191,7 +191,7 @@ func Test_TunManager_PrepareRunNamespace_Calls_setupStaticNetworkPolicies_AndPro
 	}
 
 	// EXERCISE
-	resultError := examinee.prepareRunNamespace(mockPipelineRun)
+	_, resultError := examinee.prepareRunNamespace(mockPipelineRun)
 
 	// VERIFY
 	assert.Equal(t, expectedError, resultError)
@@ -611,7 +611,7 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_IsNotEmptyIfNoValuesToSet(t
 	}
 
 	// EXERCISE
-	resultError := examinee.createTektonTaskRun(mockPipelineRun)
+	resultError := examinee.createTektonTaskRun(mockPipelineRun, "foo")
 
 	// VERIFY
 	assert.NilError(t, resultError)
@@ -650,18 +650,30 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_AllValuesSet(t *testing.T) 
 	}
 
 	// EXERCISE
-	resultError := examinee.createTektonTaskRun(mockPipelineRun)
+	resultError := examinee.createTektonTaskRun(mockPipelineRun, "default-token-foo")
 
 	// VERIFY
 	assert.NilError(t, resultError)
 
 	taskRun, err := cf.TektonV1alpha1().TaskRuns(runNamespaceName).Get(tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
+	var mode int32 = 420
 	expectedPodTemplate := tekton.PodTemplate{
 		SecurityContext: &corev1api.PodSecurityContext{
 			FSGroup:    int64Ptr(1111),
 			RunAsGroup: int64Ptr(2222),
 			RunAsUser:  int64Ptr(3333),
+		},
+		Volumes: []corev1api.Volume{
+			{
+				Name: "service-account-token",
+				VolumeSource: corev1api.VolumeSource{
+					Secret: &corev1api.SecretVolumeSource{
+						SecretName:  "default-token-foo",
+						DefaultMode: &mode,
+					},
+				},
+			},
 		},
 	}
 	podTemplate := taskRun.Spec.PodTemplate
@@ -887,7 +899,7 @@ func Test_RunManager_Cleanup_RemovesNamespace(t *testing.T) {
 
 	config := &pipelineRunsConfigStruct{}
 	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager).(*runManager)
-	err := examinee.prepareRunNamespace(mockPipelineRun)
+	_, err := examinee.prepareRunNamespace(mockPipelineRun)
 	assert.NilError(t, err)
 	//TODO: mockNamespaceManager.EXPECT().Create()...
 
@@ -1012,7 +1024,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			examinee, k8sPipelineRun, cf := setupExaminee(t, pipelineRunJSON)
 
 			// exercise
-			err = examinee.createTektonTaskRun(k8sPipelineRun)
+			err = examinee.createTektonTaskRun(k8sPipelineRun, "foo")
 			assert.NilError(t, err)
 
 			// verify
@@ -1068,7 +1080,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			examinee, k8sPipelineRun, cf := setupExaminee(t, pipelineRunJSON)
 
 			// exercise
-			err = examinee.createTektonTaskRun(k8sPipelineRun)
+			err = examinee.createTektonTaskRun(k8sPipelineRun, "foo")
 			assert.NilError(t, err)
 
 			// verify
