@@ -206,6 +206,7 @@ func (a *ServiceAccountWrap) AddRoleBinding(clusterRole RoleName, targetNamespac
 	return roleBindingClient.Create(roleBinding)
 }
 
+// GetDefaultSecretName returns the name of the default-token of the service account
 func (a *ServiceAccountWrap) GetDefaultSecretName() string {
 	for _, secret := range a.cache.Secrets {
 		if strings.HasPrefix(secret.Name, "default-token-") {
