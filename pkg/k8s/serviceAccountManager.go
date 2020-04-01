@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"fmt"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/rbac/v1beta1"
@@ -203,6 +204,15 @@ func (a *ServiceAccountWrap) AddRoleBinding(clusterRole RoleName, targetNamespac
 	}
 
 	return roleBindingClient.Create(roleBinding)
+}
+
+func (a *ServiceAccountWrap) GetDefaultSecretName() string {
+	for _, secret := range a.cache.Secrets {
+		if strings.HasPrefix(secret.Name, "default-token-") {
+			return secret.Name
+		}
+	}
+	return ""
 }
 
 // GetServiceAccount returns *v1.ServiceAccount
