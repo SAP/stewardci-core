@@ -81,11 +81,11 @@ func NewRunManager(factory k8s.ClientFactory, pipelineRunsConfig *pipelineRunsCo
 func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 	var err error
 
-	defaultSecretName, err := c.prepareRunNamespace(pipelineRun)
+	serviceAccount, err := c.prepareRunNamespace(pipelineRun)
 	if err != nil {
 		return err
 	}
-	err = c.createTektonTaskRun(pipelineRun, defaultSecretName)
+	err = c.createTektonTaskRun(pipelineRun, serviceAccount.GetDefaultSecretName())
 	if err != nil {
 		return err
 	}
@@ -95,12 +95,12 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 
 // prepareRunNamespace creates a new namespace for the pipeline run
 // and populates it with needed resources.
-func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) (string, error) {
+func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) (*k8s.ServiceAccountWrap, error) {
 	var err error
 
 	runNamespace, err := c.namespaceManager.Create("", nil)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to create run namespace")
+		return nil, errors.Wrap(err, "failed to create run namespace")
 	}
 
 	pipelineRun.UpdateRunNamespace(runNamespace)
@@ -115,38 +115,38 @@ func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) (string, e
 
 	pipelineCloneSecretName, imagePullSecretNames, err := c.copySecretsToRunNamespace(pipelineRun, runNamespace)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	saSecretName, err := c.setupServiceAccount(runNamespace, pipelineCloneSecretName, imagePullSecretNames)
+	serviceAccount, err := c.setupServiceAccount(runNamespace, pipelineCloneSecretName, imagePullSecretNames)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if err = c.setupStaticNetworkPolicies(runNamespace); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return saSecretName, nil
+	return serviceAccount, nil
 }
 
-func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecretName string, imagePullSecrets []string) (string, error) {
+func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecretName string, imagePullSecrets []string) (*k8s.ServiceAccountWrap, error) {
 	if c.testing != nil && c.testing.setupServiceAccountStub != nil {
-		return "", c.testing.setupServiceAccountStub(runNamespace, pipelineCloneSecretName, imagePullSecrets)
+		return nil, c.testing.setupServiceAccountStub(runNamespace, pipelineCloneSecretName, imagePullSecrets)
 	}
 
 	accountManager := k8s.NewServiceAccountManager(c.factory, runNamespace)
 	serviceAccount, err := accountManager.CreateServiceAccount(serviceAccountName, pipelineCloneSecretName, imagePullSecrets)
 	if err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
-			return "", errors.Wrapf(err, "failed to create service account %q", serviceAccountName)
+			return nil, errors.Wrapf(err, "failed to create service account %q", serviceAccountName)
 		}
 
 		// service account exists already, so we need to attach secrets to it
 		for { // retry loop
 			serviceAccount, err = accountManager.GetServiceAccount(serviceAccountName)
 			if err != nil {
-				return "", errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
+				return nil, errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
 			}
 			if pipelineCloneSecretName != "" {
 				serviceAccount.AttachSecrets(pipelineCloneSecretName)
@@ -165,7 +165,7 @@ func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecre
 					serviceAccountName, runNamespace,
 				)
 			} else {
-				return "", errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
+				return nil, errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
 			}
 		}
 	}
@@ -173,13 +173,13 @@ func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecre
 	// grant role to service account
 	_, err = serviceAccount.AddRoleBinding(runClusterRoleName, runNamespace)
 	if err != nil {
-		return "", errors.Wrapf(err,
+		return nil, errors.Wrapf(err,
 			"failed to create role binding for service account %q in namespace %q",
 			serviceAccountName, runNamespace,
 		)
 	}
 
-	return serviceAccount.GetDefaultSecretName(), nil
+	return serviceAccount, nil
 }
 
 func (c *runManager) copySecretsToRunNamespace(pipelineRun k8s.PipelineRun, runNamespace string) (string, []string, error) {
