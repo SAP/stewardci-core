@@ -12,9 +12,22 @@ export STEWARD_TEST_CLIENT=${STEWARD_TEST_CLIENT#*/}
 
 ## Run tests
 
+Depending on the hyperscaler you need to use diffent policies to allow the connection.
+
+### Test on AWS
+
 ```bash
+cp open_policy{_aws,}.yaml
 ./run_test.sh
 ```
+
+### Test on GCP
+
+```bash
+cp open_policy{_gcp,}.yaml
+./run_test.sh
+```
+
 
 ## Cleanup
 
