@@ -1,7 +1,9 @@
 package k8s
 
 import (
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
@@ -108,21 +110,115 @@ func Test_SetDoAutomountServiceAccountToke_works(t *testing.T) {
 	assert.Check(t, *actual.cache.AutomountServiceAccountToken == false)
 }
 
-func Test_GetDefaultSecretName_works(t *testing.T) {
+func Test_GetServiceAccountSecretName_works(t *testing.T) {
+	t.Parallel()
 	//SETUP
+	secretName := "ns1-token-foo"
+	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      secretName,
+		Namespace: ns1,
+	},
+		Type: v1.SecretTypeServiceAccountToken}
+	setupAccountManager(secret)
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+	assert.NilError(t, err)
+
+	acc.AttachSecrets("a-secret", secretName, "z-secret")
+
+	// EXERCISE
+	name := acc.GetServiceAccountSecretName()
+	// VERIFY
+	assert.Equal(t, secretName, name)
+}
+
+func Test_GetServiceAccountSecretNameRepeat_works(t *testing.T) {
+	t.Parallel()
+	//SETUP
+	secretName := "ns1-token-foo"
+	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      secretName,
+		Namespace: ns1,
+	},
+		Type: v1.SecretTypeServiceAccountToken}
+	setupAccountManager(secret)
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+	assert.NilError(t, err)
+
+	var waitWG sync.WaitGroup
+	waitWG.Add(1)
+	go func(t *testing.T, acc *ServiceAccountWrap) {
+		defer waitWG.Done()
+		// EXERCISE
+		name := acc.GetServiceAccountSecretNameRepeat()
+		// VERIFY
+		assert.Equal(t, "ns1-token-foo", name)
+	}(t, acc)
+	duration, _ := time.ParseDuration("500ms")
+	time.Sleep(duration)
+	acc.AttachSecrets("a-secret", secretName, "z-secret")
+	waitWG.Wait()
+}
+
+func Test_GetServiceAccountSecretName_wrongType(t *testing.T) {
+	t.Parallel()
+	//SETUP
+	secretName := "ns1-token-foo"
+	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      secretName,
+		Namespace: ns1,
+	},
+		Type: v1.SecretTypeOpaque}
+	setupAccountManager(secret)
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+	assert.NilError(t, err)
+
+	acc.AttachSecrets("a-secret", secretName, "z-secret")
+
+	// EXERCISE
+	name := acc.GetServiceAccountSecretName()
+	// VERIFY
+	assert.Equal(t, "", name)
+}
+
+func Test_GetServiceAccountSecretName_ref_missing(t *testing.T) {
+	t.Parallel()
+	//SETUP
+	secretName := "ns1-token-foo"
+	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      secretName,
+		Namespace: ns1,
+	},
+		Type: v1.SecretTypeServiceAccountToken}
+	setupAccountManager(secret)
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+	assert.NilError(t, err)
+
+	acc.AttachSecrets("a-secret", "z-secret")
+
+	// EXERCISE
+	name := acc.GetServiceAccountSecretName()
+	// VERIFY
+	assert.Equal(t, "", name)
+}
+
+func Test_GetServiceAccountSecretName_secret_missing(t *testing.T) {
+	t.Parallel()
+	//SETUP
+	secretName := "ns1-token-foo"
 	setupAccountManager()
 	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
 	assert.NilError(t, err)
 
-	acc.AttachSecrets("a-secret", "default-token-foo", "z-secret")
+	acc.AttachSecrets("a-secret", secretName, "z-secret")
 
 	// EXERCISE
-	name := acc.GetDefaultSecretName()
+	name := acc.GetServiceAccountSecretName()
 	// VERIFY
-	assert.Equal(t, "default-token-foo", name)
+	assert.Equal(t, "", name)
 }
 
-func Test_GetDefaultSecretName_missing(t *testing.T) {
+func Test_GetServiceAccountSecretName_secret_and_ref_missing(t *testing.T) {
+	t.Parallel()
 	//SETUP
 	setupAccountManager()
 	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
@@ -131,7 +227,7 @@ func Test_GetDefaultSecretName_missing(t *testing.T) {
 	acc.AttachSecrets("a-secret", "z-secret")
 
 	// EXERCISE
-	name := acc.GetDefaultSecretName()
+	name := acc.GetServiceAccountSecretName()
 	// VERIFY
 	assert.Equal(t, "", name)
 }

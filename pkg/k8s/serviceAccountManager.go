@@ -2,12 +2,11 @@ package k8s
 
 import (
 	"fmt"
-	"strings"
-
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"time"
 )
 
 const (
@@ -206,12 +205,29 @@ func (a *ServiceAccountWrap) AddRoleBinding(clusterRole RoleName, targetNamespac
 	return roleBindingClient.Create(roleBinding)
 }
 
-// GetDefaultSecretName returns the name of the default-token of the service account
-func (a *ServiceAccountWrap) GetDefaultSecretName() string {
-	for _, secret := range a.cache.Secrets {
-		if strings.HasPrefix(secret.Name, "default-token-") {
+// GetServiceAccountSecretNameRepeat returns the name of the default-token of the service account
+func (a *ServiceAccountWrap) GetServiceAccountSecretNameRepeat() string {
+	duration, _ := time.ParseDuration("100ms")
+	for {
+		result := a.GetServiceAccountSecretName()
+		if result != "" {
+			return result
+		}
+		time.Sleep(duration)
+	}
+}
+
+// GetServiceAccountSecretName returns the name of the default-token of the service account
+func (a *ServiceAccountWrap) GetServiceAccountSecretName() string {
+	for _, secretRef := range a.cache.Secrets {
+		client := a.factory.CoreV1().Secrets(secretRef.Namespace)
+		secret, err := client.Get(secretRef.Name, metav1.GetOptions{})
+		if err == nil &&
+			secret != nil &&
+			secret.Type == v1.SecretTypeServiceAccountToken {
 			return secret.Name
 		}
+
 	}
 	return ""
 }
