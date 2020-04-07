@@ -30,14 +30,6 @@ type ServiceAccountWrap struct {
 	cache   *v1.ServiceAccount
 }
 
-// NewServiceAccountWrap creates new Service Account Wrap
-func NewServiceAccountWrap(factory ClientFactory, serviceAccount *v1.ServiceAccount) *ServiceAccountWrap {
-	return &ServiceAccountWrap{
-		factory: factory,
-		cache:   serviceAccount,
-	}
-}
-
 // RoleName to be attached
 type RoleName string
 

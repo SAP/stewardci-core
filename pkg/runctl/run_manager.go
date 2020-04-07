@@ -45,6 +45,11 @@ const (
 	// tektonTaskRun is the name of the Tekton TaskRun in each
 	// run namespace.
 	tektonTaskRunName = "steward-jenkinsfile-runner"
+
+	// repeatGetServiceAccountSecretName can be set to false to debug hanging tests
+	// if set to false getServiceAccountSecretName will panic if no stub is defined and no service account secret can be found 
+        // for productive usage set to true, this will allow a retry to get the service account secret as soon as it is available
+	repeatGetServiceAccountSecretName = true
 )
 
 type runManager struct {
@@ -128,7 +133,7 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 		return err
 	}
 
-	ctx.serviceAccount, err = c.setupServiceAccount(ctx, pipelineCloneSecretName, imagePullSecretNames)
+	err = c.setupServiceAccount(ctx, pipelineCloneSecretName, imagePullSecretNames)
 	if err != nil {
 		return err
 	}
@@ -140,23 +145,23 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 	return nil
 }
 
-func (c *runManager) setupServiceAccount(ctx *runContext, pipelineCloneSecretName string, imagePullSecrets []string) (*k8s.ServiceAccountWrap, error) {
+func (c *runManager) setupServiceAccount(ctx *runContext, pipelineCloneSecretName string, imagePullSecrets []string) error {
 	if c.testing != nil && c.testing.setupServiceAccountStub != nil {
-		return nil, c.testing.setupServiceAccountStub(ctx, pipelineCloneSecretName, imagePullSecrets)
+		return c.testing.setupServiceAccountStub(ctx, pipelineCloneSecretName, imagePullSecrets)
 	}
 
 	accountManager := k8s.NewServiceAccountManager(c.factory, ctx.runNamespace)
 	serviceAccount, err := accountManager.CreateServiceAccount(serviceAccountName, pipelineCloneSecretName, imagePullSecrets)
 	if err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
-			return nil, errors.Wrapf(err, "failed to create service account %q", serviceAccountName)
+			return errors.Wrapf(err, "failed to create service account %q", serviceAccountName)
 		}
 
 		// service account exists already, so we need to attach secrets to it
 		for { // retry loop
 			serviceAccount, err = accountManager.GetServiceAccount(serviceAccountName)
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
+				return errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
 			}
 			if pipelineCloneSecretName != "" {
 				serviceAccount.AttachSecrets(pipelineCloneSecretName)
@@ -175,7 +180,7 @@ func (c *runManager) setupServiceAccount(ctx *runContext, pipelineCloneSecretNam
 					serviceAccountName, ctx.runNamespace,
 				)
 			} else {
-				return nil, errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
+				return errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
 			}
 		}
 	}
@@ -183,13 +188,13 @@ func (c *runManager) setupServiceAccount(ctx *runContext, pipelineCloneSecretNam
 	// grant role to service account
 	_, err = serviceAccount.AddRoleBinding(runClusterRoleName, ctx.runNamespace)
 	if err != nil {
-		return nil, errors.Wrapf(err,
+		return errors.Wrapf(err,
 			"failed to create role binding for service account %q in namespace %q",
 			serviceAccountName, ctx.runNamespace,
 		)
 	}
-
-	return serviceAccount, nil
+	ctx.serviceAccount = serviceAccount
+	return nil
 }
 
 func (c *runManager) copySecretsToRunNamespace(ctx *runContext) (string, []string, error) {
@@ -410,12 +415,21 @@ func (c *runManager) volumesWithSaSecret(ctx *runContext) []corev1api.Volume {
 }
 
 func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
-	if c.testing != nil && c.testing.getServiceAccountSecretNameStub != nil {
-		return c.testing.getServiceAccountSecretNameStub(ctx)
+	if c.testing != nil {
+		if c.testing.getServiceAccountSecretNameStub != nil {
+			return c.testing.getServiceAccountSecretNameStub(ctx)
+		} else {
+                     return ""
+                } 
 	}
-	//	return ctx.serviceAccount.GetServiceAccountSecretNameRepeat()
-	return ctx.serviceAccount.GetServiceAccountSecretName()
-
+	if repeatGetServiceAccountSecretName {
+		return ctx.serviceAccount.GetServiceAccountSecretNameRepeat()
+	}
+	result := ctx.serviceAccount.GetServiceAccountSecretName()
+	if result == "" {
+		panic("service account secret not found")
+	}
+        return result
 }
 
 func (c *runManager) createTektonTaskRun(ctx *runContext) error {

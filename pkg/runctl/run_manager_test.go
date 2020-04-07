@@ -699,7 +699,8 @@ func Test_RunManager_Start_CreatesTektonTaskRun(t *testing.T) {
 	config := &pipelineRunsConfigStruct{}
 
 	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager)
-
+	ex := examinee.(*runManager)
+	ex.testing = &runManagerTesting{getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" }}
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.NilError(t, err)
@@ -722,7 +723,8 @@ func Test_RunManager_Start_DoesNotSetPipelineRunStatus(t *testing.T) {
 	config := &pipelineRunsConfigStruct{}
 
 	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager)
-
+	ex := examinee.(*runManager)
+	ex.testing = &runManagerTesting{getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" }}
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.NilError(t, err)
