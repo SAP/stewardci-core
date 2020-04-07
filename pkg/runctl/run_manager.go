@@ -418,9 +418,8 @@ func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
 	if c.testing != nil {
 		if c.testing.getServiceAccountSecretNameStub != nil {
 			return c.testing.getServiceAccountSecretNameStub(ctx)
-		} else {
-			return ""
 		}
+		return ""
 	}
 	if repeatGetServiceAccountSecretName {
 		return ctx.serviceAccount.GetServiceAccountSecretNameRepeat()
