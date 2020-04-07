@@ -47,8 +47,8 @@ const (
 	tektonTaskRunName = "steward-jenkinsfile-runner"
 
 	// repeatGetServiceAccountSecretName can be set to false to debug hanging tests
-	// if set to false getServiceAccountSecretName will panic if no stub is defined and no service account secret can be found 
-        // for productive usage set to true, this will allow a retry to get the service account secret as soon as it is available
+	// if set to false getServiceAccountSecretName will panic if no stub is defined and no service account secret can be found
+	// for productive usage set to true, this will allow a retry to get the service account secret as soon as it is available
 	repeatGetServiceAccountSecretName = true
 )
 
@@ -123,7 +123,7 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 	// If something goes wrong while creating objects inside the namespaces, we delete everything.
 	cleanupOnError := func() {
 		if err != nil {
-			c.Cleanup(ctx.pipelineRun)
+			c.cleanup(ctx)
 		}
 	}
 	defer cleanupOnError()
@@ -419,8 +419,8 @@ func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
 		if c.testing.getServiceAccountSecretNameStub != nil {
 			return c.testing.getServiceAccountSecretNameStub(ctx)
 		} else {
-                     return ""
-                } 
+			return ""
+		}
 	}
 	if repeatGetServiceAccountSecretName {
 		return ctx.serviceAccount.GetServiceAccountSecretNameRepeat()
@@ -429,7 +429,7 @@ func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
 	if result == "" {
 		panic("service account secret not found")
 	}
-        return result
+	return result
 }
 
 func (c *runManager) createTektonTaskRun(ctx *runContext) error {
@@ -583,6 +583,10 @@ func (c *runManager) Cleanup(pipelineRun k8s.PipelineRun) error {
 		pipelineRun:  pipelineRun,
 		runNamespace: pipelineRun.GetRunNamespace(),
 	}
+	return c.cleanup(ctx)
+}
+
+func (c *runManager) cleanup(ctx *runContext) error {
 	if c.testing != nil && c.testing.cleanupStub != nil {
 		return c.testing.cleanupStub(ctx)
 	}
