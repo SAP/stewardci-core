@@ -482,8 +482,8 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 		},
 	}
 
-	c.addTektonTaskRunParamsForPipeline(ctx.pipelineRun, &tektonTaskRun)
-	c.addTektonTaskRunParamsForLoggingElasticsearch(ctx.pipelineRun, &tektonTaskRun)
+	c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
+	c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForRunDetails(ctx, &tektonTaskRun)
 	tektonClient := c.factory.TektonV1alpha1()
 	_, err = tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(&tektonTaskRun)
@@ -512,12 +512,12 @@ func (c *runManager) addTektonTaskRunParamsForRunDetails(
 }
 
 func (c *runManager) addTektonTaskRunParamsForPipeline(
-	pipelineRun k8s.PipelineRun,
+	ctx *runContext,
 	tektonTaskRun *tekton.TaskRun,
 ) error {
 	var err error
 
-	spec := pipelineRun.GetSpec()
+	spec := ctx.pipelineRun.GetSpec()
 	pipeline := spec.JenkinsFile
 	pipelineArgs := spec.Args
 	pipelineArgsJSON := "{}"
@@ -539,10 +539,10 @@ func (c *runManager) addTektonTaskRunParamsForPipeline(
 }
 
 func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
-	pipelineRun k8s.PipelineRun,
+	ctx *runContext,
 	tektonTaskRun *tekton.TaskRun,
 ) error {
-	spec := pipelineRun.GetSpec()
+	spec := ctx.pipelineRun.GetSpec()
 	var params []tekton.Param
 
 	if spec.Logging == nil || spec.Logging.Elasticsearch == nil {
