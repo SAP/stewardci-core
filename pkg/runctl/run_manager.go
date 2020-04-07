@@ -57,13 +57,20 @@ type runManager struct {
 }
 
 type runManagerTesting struct {
-	cleanupStub                               func(k8s.PipelineRun) error
-	copySecretsToRunNamespaceStub             func(k8s.PipelineRun, string) (string, []string, error)
+	cleanupStub                               func(*runContext) error
+	copySecretsToRunNamespaceStub             func(*runContext) (string, []string, error)
 	getSecretHelperStub                       func(string, corev1.SecretInterface) secrets.SecretHelper
-	setupNetworkPolicyFromConfigStub          func(string) error
-	setupNetworkPolicyThatIsolatesAllPodsStub func(string) error
-	setupServiceAccountStub                   func(string, string, []string) error
-	setupStaticNetworkPoliciesStub            func(string) error
+	setupNetworkPolicyFromConfigStub          func(*runContext) error
+	setupNetworkPolicyThatIsolatesAllPodsStub func(*runContext) error
+	setupServiceAccountStub                   func(*runContext, string, []string) error
+	setupStaticNetworkPoliciesStub            func(*runContext) error
+	getServiceAccountSecretNameStub           func(*runContext) string
+}
+
+type runContext struct {
+	pipelineRun    k8s.PipelineRun
+	runNamespace   string
+	serviceAccount *k8s.ServiceAccountWrap
 }
 
 // NewRunManager creates a new RunManager.
@@ -80,12 +87,15 @@ func NewRunManager(factory k8s.ClientFactory, pipelineRunsConfig *pipelineRunsCo
 // the run in this environment.
 func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 	var err error
+	ctx := &runContext{
+		pipelineRun: pipelineRun,
+	}
 
-	serviceAccount, err := c.prepareRunNamespace(pipelineRun)
+	err = c.prepareRunNamespace(ctx)
 	if err != nil {
 		return err
 	}
-	err = c.createTektonTaskRun(pipelineRun, serviceAccount.GetDefaultSecretName())
+	err = c.createTektonTaskRun(ctx)
 	if err != nil {
 		return err
 	}
@@ -95,47 +105,47 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 
 // prepareRunNamespace creates a new namespace for the pipeline run
 // and populates it with needed resources.
-func (c *runManager) prepareRunNamespace(pipelineRun k8s.PipelineRun) (*k8s.ServiceAccountWrap, error) {
+func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 	var err error
 
-	runNamespace, err := c.namespaceManager.Create("", nil)
+	ctx.runNamespace, err = c.namespaceManager.Create("", nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create run namespace")
+		return errors.Wrap(err, "failed to create run namespace")
 	}
 
-	pipelineRun.UpdateRunNamespace(runNamespace)
+	ctx.pipelineRun.UpdateRunNamespace(ctx.runNamespace)
 
 	// If something goes wrong while creating objects inside the namespaces, we delete everything.
 	cleanupOnError := func() {
 		if err != nil {
-			c.Cleanup(pipelineRun)
+			c.Cleanup(ctx.pipelineRun)
 		}
 	}
 	defer cleanupOnError()
 
-	pipelineCloneSecretName, imagePullSecretNames, err := c.copySecretsToRunNamespace(pipelineRun, runNamespace)
+	pipelineCloneSecretName, imagePullSecretNames, err := c.copySecretsToRunNamespace(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	serviceAccount, err := c.setupServiceAccount(runNamespace, pipelineCloneSecretName, imagePullSecretNames)
+	ctx.serviceAccount, err = c.setupServiceAccount(ctx, pipelineCloneSecretName, imagePullSecretNames)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if err = c.setupStaticNetworkPolicies(runNamespace); err != nil {
-		return nil, err
+	if err = c.setupStaticNetworkPolicies(ctx); err != nil {
+		return err
 	}
 
-	return serviceAccount, nil
+	return nil
 }
 
-func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecretName string, imagePullSecrets []string) (*k8s.ServiceAccountWrap, error) {
+func (c *runManager) setupServiceAccount(ctx *runContext, pipelineCloneSecretName string, imagePullSecrets []string) (*k8s.ServiceAccountWrap, error) {
 	if c.testing != nil && c.testing.setupServiceAccountStub != nil {
-		return nil, c.testing.setupServiceAccountStub(runNamespace, pipelineCloneSecretName, imagePullSecrets)
+		return nil, c.testing.setupServiceAccountStub(ctx, pipelineCloneSecretName, imagePullSecrets)
 	}
 
-	accountManager := k8s.NewServiceAccountManager(c.factory, runNamespace)
+	accountManager := k8s.NewServiceAccountManager(c.factory, ctx.runNamespace)
 	serviceAccount, err := accountManager.CreateServiceAccount(serviceAccountName, pipelineCloneSecretName, imagePullSecrets)
 	if err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
@@ -162,7 +172,7 @@ func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecre
 				log.Printf(
 					"retrying update of service account %q in namespace %q"+
 						" after resource version conflict",
-					serviceAccountName, runNamespace,
+					serviceAccountName, ctx.runNamespace,
 				)
 			} else {
 				return nil, errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
@@ -171,36 +181,36 @@ func (c *runManager) setupServiceAccount(runNamespace string, pipelineCloneSecre
 	}
 
 	// grant role to service account
-	_, err = serviceAccount.AddRoleBinding(runClusterRoleName, runNamespace)
+	_, err = serviceAccount.AddRoleBinding(runClusterRoleName, ctx.runNamespace)
 	if err != nil {
 		return nil, errors.Wrapf(err,
 			"failed to create role binding for service account %q in namespace %q",
-			serviceAccountName, runNamespace,
+			serviceAccountName, ctx.runNamespace,
 		)
 	}
 
 	return serviceAccount, nil
 }
 
-func (c *runManager) copySecretsToRunNamespace(pipelineRun k8s.PipelineRun, runNamespace string) (string, []string, error) {
+func (c *runManager) copySecretsToRunNamespace(ctx *runContext) (string, []string, error) {
 	if c.testing != nil && c.testing.copySecretsToRunNamespaceStub != nil {
-		return c.testing.copySecretsToRunNamespaceStub(pipelineRun, runNamespace)
+		return c.testing.copySecretsToRunNamespaceStub(ctx)
 	}
 
-	targetClient := c.factory.CoreV1().Secrets(runNamespace)
-	secretHelper := c.getSecretHelper(runNamespace, targetClient)
+	targetClient := c.factory.CoreV1().Secrets(ctx.runNamespace)
+	secretHelper := c.getSecretHelper(ctx, targetClient)
 
-	imagePullSecretNames, err := c.copyImagePullSecretsToRunNamespace(pipelineRun, secretHelper)
+	imagePullSecretNames, err := c.copyImagePullSecretsToRunNamespace(ctx, secretHelper)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to copy image pull secrets")
 	}
 
-	pipelineCloneSecretName, err := c.copyPipelineCloneSecretToRunNamespace(pipelineRun, secretHelper)
+	pipelineCloneSecretName, err := c.copyPipelineCloneSecretToRunNamespace(ctx, secretHelper)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to copy pipeline clone secret")
 	}
 
-	_, err = c.copyPipelineSecretsToRunNamespace(pipelineRun, secretHelper)
+	_, err = c.copyPipelineSecretsToRunNamespace(ctx, secretHelper)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to copy pipeline secrets")
 	}
@@ -208,27 +218,27 @@ func (c *runManager) copySecretsToRunNamespace(pipelineRun k8s.PipelineRun, runN
 	return pipelineCloneSecretName, imagePullSecretNames, nil
 }
 
-func (c *runManager) copyImagePullSecretsToRunNamespace(pipelineRun k8s.PipelineRun, secretHelper secrets.SecretHelper) ([]string, error) {
-	secretNames := pipelineRun.GetSpec().ImagePullSecrets
+func (c *runManager) copyImagePullSecretsToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) ([]string, error) {
+	secretNames := ctx.pipelineRun.GetSpec().ImagePullSecrets
 	transformers := []secrets.SecretTransformer{
 		secrets.StripAnnotationsTransformer("tekton.dev/"),
 		secrets.StripAnnotationsTransformer("jenkins.io/"),
 		secrets.StripLabelsTransformer("jenkins.io/"),
 		secrets.UniqueNameTransformer(),
 	}
-	return c.copySecrets(secretHelper, secretNames, pipelineRun, secrets.DockerOnly, transformers...)
+	return c.copySecrets(ctx, secretHelper, secretNames, secrets.DockerOnly, transformers...)
 }
 
-func (c *runManager) copyPipelineCloneSecretToRunNamespace(pipelineRun k8s.PipelineRun, secretHelper secrets.SecretHelper) (string, error) {
-	secretName := pipelineRun.GetSpec().JenkinsFile.RepoAuthSecret
+func (c *runManager) copyPipelineCloneSecretToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) (string, error) {
+	secretName := ctx.pipelineRun.GetSpec().JenkinsFile.RepoAuthSecret
 	if secretName == "" {
 		return "", nil
 	}
-	repoServerURL, err := pipelineRun.GetPipelineRepoServerURL()
+	repoServerURL, err := ctx.pipelineRun.GetPipelineRepoServerURL()
 	if err != nil {
 		// TODO: this method should not modify the pipeline run -> must be handled elsewhere
-		pipelineRun.UpdateMessage(err.Error())
-		pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
+		ctx.pipelineRun.UpdateMessage(err.Error())
+		ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
 		return "", err
 	}
 	transformers := []secrets.SecretTransformer{
@@ -237,70 +247,70 @@ func (c *runManager) copyPipelineCloneSecretToRunNamespace(pipelineRun k8s.Pipel
 		secrets.UniqueNameTransformer(),
 		secrets.SetAnnotationTransformer("tekton.dev/git-0", repoServerURL),
 	}
-	names, err := c.copySecrets(secretHelper, []string{secretName}, pipelineRun, nil, transformers...)
+	names, err := c.copySecrets(ctx, secretHelper, []string{secretName}, nil, transformers...)
 	if err != nil {
 		return "", err
 	}
 	return names[0], nil
 }
 
-func (c *runManager) copyPipelineSecretsToRunNamespace(pipelineRun k8s.PipelineRun, secretHelper secrets.SecretHelper) ([]string, error) {
-	secretNames := pipelineRun.GetSpec().Secrets
+func (c *runManager) copyPipelineSecretsToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) ([]string, error) {
+	secretNames := ctx.pipelineRun.GetSpec().Secrets
 	stripTektonAnnotationsTransformer := secrets.StripAnnotationsTransformer("tekton.dev/")
-	return c.copySecrets(secretHelper, secretNames, pipelineRun, nil, stripTektonAnnotationsTransformer)
+	return c.copySecrets(ctx, secretHelper, secretNames, nil, stripTektonAnnotationsTransformer)
 }
 
-func (c *runManager) getSecretHelper(runNamespace string, targetClient corev1.SecretInterface) secrets.SecretHelper {
+func (c *runManager) getSecretHelper(ctx *runContext, targetClient corev1.SecretInterface) secrets.SecretHelper {
 	if c.testing != nil && c.testing.getSecretHelperStub != nil {
-		return c.testing.getSecretHelperStub(runNamespace, targetClient)
+		return c.testing.getSecretHelperStub(ctx.runNamespace, targetClient)
 	}
-	return secrets.NewSecretHelper(c.secretProvider, runNamespace, targetClient)
+	return secrets.NewSecretHelper(c.secretProvider, ctx.runNamespace, targetClient)
 }
 
-func (c *runManager) copySecrets(secretHelper secrets.SecretHelper, secretNames []string, pipelineRun k8s.PipelineRun, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
+func (c *runManager) copySecrets(ctx *runContext, secretHelper secrets.SecretHelper, secretNames []string, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
 	storedSecretNames, err := secretHelper.CopySecrets(secretNames, filter, transformers...)
 	if err != nil {
-		log.Printf("Cannot copy secrets %s for [%s]. Error: %s", secretNames, pipelineRun.String(), err)
-		pipelineRun.UpdateMessage(err.Error())
+		log.Printf("Cannot copy secrets %s for [%s]. Error: %s", secretNames, ctx.pipelineRun.String(), err)
+		ctx.pipelineRun.UpdateMessage(err.Error())
 		if secretHelper.IsNotFound(err) {
-			pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
+			ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
 		} else {
-			pipelineRun.UpdateResult(v1alpha1.ResultErrorInfra)
+			ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorInfra)
 		}
 		return storedSecretNames, err
 	}
 	return storedSecretNames, nil
 }
 
-func (c *runManager) setupStaticNetworkPolicies(runNamespace string) error {
+func (c *runManager) setupStaticNetworkPolicies(ctx *runContext) error {
 	if c.testing != nil && c.testing.setupStaticNetworkPoliciesStub != nil {
-		return c.testing.setupStaticNetworkPoliciesStub(runNamespace)
+		return c.testing.setupStaticNetworkPoliciesStub(ctx)
 	}
 
-	if err := c.setupNetworkPolicyThatIsolatesAllPods(runNamespace); err != nil {
+	if err := c.setupNetworkPolicyThatIsolatesAllPods(ctx); err != nil {
 		return errors.Wrapf(err,
 			"failed to set up the network policy isolating all pods in namespace %q",
-			runNamespace,
+			ctx.runNamespace,
 		)
 	}
-	if err := c.setupNetworkPolicyFromConfig(runNamespace); err != nil {
+	if err := c.setupNetworkPolicyFromConfig(ctx); err != nil {
 		return errors.Wrapf(err,
 			"failed to set up the configured network policy in namespace %q",
-			runNamespace,
+			ctx.runNamespace,
 		)
 	}
 	return nil
 }
 
-func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(runNamespace string) error {
+func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(ctx *runContext) error {
 	if c.testing != nil && c.testing.setupNetworkPolicyThatIsolatesAllPodsStub != nil {
-		return c.testing.setupNetworkPolicyThatIsolatesAllPodsStub(runNamespace)
+		return c.testing.setupNetworkPolicyThatIsolatesAllPodsStub(ctx)
 	}
 
 	policy := &networkingv1api.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: steward.GroupName + "--isolate-all-",
-			Namespace:    runNamespace,
+			Namespace:    ctx.runNamespace,
 			Labels: map[string]string{
 				v1alpha1.LabelSystemManaged: "",
 			},
@@ -314,7 +324,7 @@ func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(runNamespace string) 
 		},
 	}
 
-	policyIfce := c.factory.NetworkingV1().NetworkPolicies(runNamespace)
+	policyIfce := c.factory.NetworkingV1().NetworkPolicies(ctx.runNamespace)
 	if _, err := policyIfce.Create(policy); err != nil {
 		return errors.Wrap(err, "error when creating network policy")
 	}
@@ -322,9 +332,9 @@ func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(runNamespace string) 
 	return nil
 }
 
-func (c *runManager) setupNetworkPolicyFromConfig(runNamespace string) error {
+func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 	if c.testing != nil && c.testing.setupNetworkPolicyFromConfigStub != nil {
-		return c.testing.setupNetworkPolicyFromConfigStub(runNamespace)
+		return c.testing.setupNetworkPolicyFromConfigStub(ctx)
 	}
 
 	expectedGroupKind := schema.GroupKind{
@@ -364,7 +374,7 @@ func (c *runManager) setupNetworkPolicyFromConfig(runNamespace string) error {
 		delete(obj.Object, "metadata")
 
 		obj.SetGenerateName(steward.GroupName + "--configured-")
-		obj.SetNamespace(runNamespace)
+		obj.SetNamespace(ctx.runNamespace)
 		obj.SetLabels(map[string]string{
 			v1alpha1.LabelSystemManaged: "",
 		})
@@ -377,7 +387,7 @@ func (c *runManager) setupNetworkPolicyFromConfig(runNamespace string) error {
 			Version:  obj.GetObjectKind().GroupVersionKind().Version,
 			Resource: "networkpolicies",
 		}
-		dynamicIfce := c.factory.Dynamic().Resource(gvr).Namespace(runNamespace)
+		dynamicIfce := c.factory.Dynamic().Resource(gvr).Namespace(ctx.runNamespace)
 		if _, err := dynamicIfce.Create(obj, metav1.CreateOptions{}); err != nil {
 			return errors.Wrap(err, "failed to create configured network policy")
 		}
@@ -386,20 +396,29 @@ func (c *runManager) setupNetworkPolicyFromConfig(runNamespace string) error {
 	return nil
 }
 
-func (c *runManager) volumesWithSaSecret(saSecretName string) []corev1api.Volume {
+func (c *runManager) volumesWithSaSecret(ctx *runContext) []corev1api.Volume {
 	var mode int32 = 420
 	return []corev1api.Volume{
 		corev1api.Volume{Name: "service-account-token",
 			VolumeSource: corev1api.VolumeSource{
 				Secret: &corev1api.SecretVolumeSource{
-					SecretName:  saSecretName,
+					SecretName:  c.getServiceAccountSecretName(ctx),
 					DefaultMode: &mode,
 				},
 			},
 		}}
 }
 
-func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun, saSecretName string) error {
+func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
+	if c.testing != nil && c.testing.getServiceAccountSecretNameStub != nil {
+		return c.testing.getServiceAccountSecretNameStub(ctx)
+	}
+	//	return ctx.serviceAccount.GetServiceAccountSecretNameRepeat()
+	return ctx.serviceAccount.GetServiceAccountSecretName()
+
+}
+
+func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 	var err error
 
 	copyInt64Ptr := func(ptr *int64) *int64 {
@@ -410,14 +429,14 @@ func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun, saSecretNa
 		return nil
 	}
 
-	namespace := pipelineRun.GetRunNamespace()
+	namespace := ctx.runNamespace
 
 	tektonTaskRun := tekton.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tektonTaskRunName,
 			Namespace: namespace,
 			Annotations: map[string]string{
-				annotationPipelineRunKey: pipelineRun.GetKey(),
+				annotationPipelineRunKey: ctx.pipelineRun.GetKey(),
 			},
 		},
 		Spec: tekton.TaskRunSpec{
@@ -444,24 +463,24 @@ func (c *runManager) createTektonTaskRun(pipelineRun k8s.PipelineRun, saSecretNa
 					RunAsGroup: copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
 					FSGroup:    copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup),
 				},
-				Volumes: c.volumesWithSaSecret(saSecretName),
+				Volumes: c.volumesWithSaSecret(ctx),
 			},
 		},
 	}
 
-	c.addTektonTaskRunParamsForPipeline(pipelineRun, &tektonTaskRun)
-	c.addTektonTaskRunParamsForLoggingElasticsearch(pipelineRun, &tektonTaskRun)
-	c.addTektonTaskRunParamsForRunDetails(pipelineRun, &tektonTaskRun)
+	c.addTektonTaskRunParamsForPipeline(ctx.pipelineRun, &tektonTaskRun)
+	c.addTektonTaskRunParamsForLoggingElasticsearch(ctx.pipelineRun, &tektonTaskRun)
+	c.addTektonTaskRunParamsForRunDetails(ctx, &tektonTaskRun)
 	tektonClient := c.factory.TektonV1alpha1()
 	_, err = tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(&tektonTaskRun)
 	return err
 }
 
 func (c *runManager) addTektonTaskRunParamsForRunDetails(
-	pipelineRun k8s.PipelineRun,
+	ctx *runContext,
 	tektonTaskRun *tekton.TaskRun,
 ) {
-	spec := pipelineRun.GetSpec()
+	spec := ctx.pipelineRun.GetSpec()
 	details := spec.RunDetails
 	if details != nil {
 		params := []tekton.Param{}
@@ -546,18 +565,22 @@ func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runi.Run, error) {
 
 // Cleanup a run based on a pipelineRun
 func (c *runManager) Cleanup(pipelineRun k8s.PipelineRun) error {
+	ctx := &runContext{
+		pipelineRun:  pipelineRun,
+		runNamespace: pipelineRun.GetRunNamespace(),
+	}
 	if c.testing != nil && c.testing.cleanupStub != nil {
-		return c.testing.cleanupStub(pipelineRun)
+		return c.testing.cleanupStub(ctx)
 	}
 
-	namespace := pipelineRun.GetRunNamespace()
+	namespace := ctx.runNamespace
 	if namespace == "" {
 		//TODO: Don't store on resource as message. Add it as event.
-		pipelineRun.StoreErrorAsMessage(fmt.Errorf("Nothing to clean up as namespace not set"), "")
+		ctx.pipelineRun.StoreErrorAsMessage(fmt.Errorf("Nothing to clean up as namespace not set"), "")
 	} else {
 		err := c.namespaceManager.Delete(namespace)
 		if err != nil {
-			pipelineRun.StoreErrorAsMessage(err, "error deleting namespace")
+			ctx.pipelineRun.StoreErrorAsMessage(err, "error deleting namespace")
 			return err
 		}
 	}
