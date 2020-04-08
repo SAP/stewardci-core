@@ -89,6 +89,16 @@ function generate_mocks() {
     echo
 }
 
+function checkGoVersion() {
+    local expectedVersion=`cat $HERE/../GOLANG_VERSION`
+    [[ ! -z $expectedVersion ]] || die
+    go version | grep "${expectedVersion}"
+    local result=$?
+    if [[ $result != 0 ]]; then
+        die "error: Expected Go version ${expectedVersion} but was: $(go version)"
+    fi
+}
+
 #
 # main
 #
@@ -103,6 +113,8 @@ if [[ -z $GOPATH ]]; then
     die "GOPATH not set"
 fi
 GOPATH_1=${GOPATH%%:*}  # the first entry of the GOPATH
+
+checkGoVersion
 
 # prepare code generator
 "$HERE/bootstrap-codegen.sh" || die "failed to bootstrap code generator"
@@ -137,6 +149,8 @@ echo "MOCK_ROOT:    $MOCK_ROOT"
 echo "CODEGEN_PKG:  $CODEGEN_PKG"
 echo "GOPATH:       $GOPATH_1"
 echo "VERIFY:       $(if is_verify_mode; then echo "true"; else echo "false"; fi)"
+echo "GO version:   $(go version)"
+
 
 echo
 echo "## Cleanup old generated stuff ####################"
