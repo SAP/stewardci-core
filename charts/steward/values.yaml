@@ -73,7 +73,7 @@ pipelineRuns:
   jenkinsfileRunner:
     image:
       repository: stewardci/stewardci-jenkinsfile-runner
-      tag: "200226_a268d89"
+      tag: "200408_e5e99d9"
       pullPolicy: IfNotPresent
     resources:
       limits:
@@ -94,5 +94,5 @@ hooks:
   images:
     kubectl:
       repository: docker.io/bitnami/kubectl
-      tag: "1.14.3"
+      tag: "1.17"
       pullPolicy: IfNotPresent
