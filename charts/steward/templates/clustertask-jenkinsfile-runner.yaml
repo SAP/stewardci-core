@@ -112,3 +112,6 @@ spec:
     {{- if .Values.pipelineRuns.jenkinsfileRunner.terminationMessagePath }}
     terminationMessagePath: {{ .Values.pipelineRuns.jenkinsfileRunner.terminationMessagePath | quote }}
     {{- end }}
+  results:
+    - name: termination-log
+      description: The termination log message from the Jenkinsfile Runner 
