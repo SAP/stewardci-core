@@ -94,6 +94,16 @@ function diffIgnoreComments() {
     diff -Naupr <(cat "$1" | grep -v "^\/\/.*$") <(cat "$2" | grep -v "^\/\/.*$")
 }
 
+function checkGoVersion() {
+    local expectedVersion=`cat $HERE/../GOLANG_VERSION`
+    [[ ! -z $expectedVersion ]] || die
+    go version | grep "${expectedVersion}"
+    local result=$?
+    if [[ $result != 0 ]]; then
+        die "error: Expected Go version ${expectedVersion} but was: $(go version)"
+    fi
+}
+
 #
 # main
 #
@@ -109,6 +119,8 @@ if [[ -z $GOPATH ]]; then
 fi
 GOPATH_1=${GOPATH%%:*}  # the first entry of the GOPATH
 
+checkGoVersion
+
 # prepare code generator
 "$HERE/bootstrap-codegen.sh" || die "failed to bootstrap code generator"
 [[ -f $CODEGEN_PKG/generate-groups.sh ]] \
@@ -120,7 +132,7 @@ GOPATH_1=${GOPATH%%:*}  # the first entry of the GOPATH
 MOCKGEN_EXE="$GOPATH_1/bin/mockgen"
 if [[ ! -x $MOCKGEN_EXE ]]; then
     echo "Installing mockgen"
-    ( cd "$GOPATH_1" && go get github.com/golang/mock/mockgen ) || die "Installation of mockgen failed"
+    ( cd "$GOPATH_1" && go get github.com/golang/mock/mockgen@v1.3.1 ) || die "Installation of mockgen failed"
 fi
 [[ -f $MOCKGEN_EXE ]] || die "'$MOCKGEN_EXE' does not exist"
 [[ -x $MOCKGEN_EXE ]] || die "'$MOCKGEN_EXE' is not executable"
@@ -142,6 +154,8 @@ echo "MOCK_ROOT:    $MOCK_ROOT"
 echo "CODEGEN_PKG:  $CODEGEN_PKG"
 echo "GOPATH:       $GOPATH_1"
 echo "VERIFY:       $(if is_verify_mode; then echo "true"; else echo "false"; fi)"
+echo "GO version:   $(go version)"
+
 
 echo
 echo "## Cleanup old generated stuff ####################"
