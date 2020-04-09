@@ -401,17 +401,19 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 	return nil
 }
 
-func (c *runManager) volumesWithSaSecret(ctx *runContext) []corev1api.Volume {
+func (c *runManager) volumesWithServiceAccountSecret(ctx *runContext) []corev1api.Volume {
 	var mode int32 = 420
 	return []corev1api.Volume{
-		corev1api.Volume{Name: "service-account-token",
+		corev1api.Volume{
+			Name: "service-account-token",
 			VolumeSource: corev1api.VolumeSource{
 				Secret: &corev1api.SecretVolumeSource{
 					SecretName:  c.getServiceAccountSecretName(ctx),
 					DefaultMode: &mode,
 				},
 			},
-		}}
+		},
+	}
 }
 
 func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
@@ -476,7 +478,7 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 					RunAsGroup: copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
 					FSGroup:    copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup),
 				},
-				Volumes: c.volumesWithSaSecret(ctx),
+				Volumes: c.volumesWithServiceAccountSecret(ctx),
 			},
 		},
 	}

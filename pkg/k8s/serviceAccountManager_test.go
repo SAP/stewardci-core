@@ -111,7 +111,6 @@ func Test_SetDoAutomountServiceAccountToken_works(t *testing.T) {
 }
 
 func Test_GetServiceAccountSecretName_works(t *testing.T) {
-	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{
@@ -128,13 +127,12 @@ func Test_GetServiceAccountSecretName_works(t *testing.T) {
 	acc.AttachSecrets("a-secret", secretName, "z-secret")
 
 	// EXERCISE
-	name := acc.GetServiceAccountSecretName()
+	resultName := acc.GetServiceAccountSecretName()
 	// VERIFY
-	assert.Equal(t, secretName, name)
+	assert.Equal(t, secretName, resultName)
 }
 
 func Test_GetServiceAccountSecretNameRepeat_works(t *testing.T) {
-	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
@@ -151,9 +149,9 @@ func Test_GetServiceAccountSecretNameRepeat_works(t *testing.T) {
 	go func(t *testing.T, acc *ServiceAccountWrap) {
 		defer waitWG.Done()
 		// EXERCISE
-		name := acc.GetServiceAccountSecretNameRepeat()
+		resultName := acc.GetServiceAccountSecretNameRepeat()
 		// VERIFY
-		assert.Equal(t, "ns1-token-foo", name)
+		assert.Equal(t, "ns1-token-foo", resultName)
 	}(t, acc)
 	duration, _ := time.ParseDuration("500ms")
 	time.Sleep(duration)
@@ -162,7 +160,6 @@ func Test_GetServiceAccountSecretNameRepeat_works(t *testing.T) {
 }
 
 func Test_GetServiceAccountSecretName_wrongType(t *testing.T) {
-	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
@@ -177,13 +174,12 @@ func Test_GetServiceAccountSecretName_wrongType(t *testing.T) {
 	acc.AttachSecrets("a-secret", secretName, "z-secret")
 
 	// EXERCISE
-	name := acc.GetServiceAccountSecretName()
+	resultName := acc.GetServiceAccountSecretName()
 	// VERIFY
-	assert.Equal(t, "", name)
+	assert.Equal(t, "", resultName)
 }
 
 func Test_GetServiceAccountSecretName_ref_missing(t *testing.T) {
-	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
@@ -198,13 +194,12 @@ func Test_GetServiceAccountSecretName_ref_missing(t *testing.T) {
 	acc.AttachSecrets("a-secret", "z-secret")
 
 	// EXERCISE
-	name := acc.GetServiceAccountSecretName()
+	resultName := acc.GetServiceAccountSecretName()
 	// VERIFY
-	assert.Equal(t, "", name)
+	assert.Equal(t, "", resultName)
 }
 
 func Test_GetServiceAccountSecretName_secret_missing(t *testing.T) {
-	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	setupAccountManager()
@@ -214,22 +209,7 @@ func Test_GetServiceAccountSecretName_secret_missing(t *testing.T) {
 	acc.AttachSecrets("a-secret", secretName, "z-secret")
 
 	// EXERCISE
-	name := acc.GetServiceAccountSecretName()
+	resultName := acc.GetServiceAccountSecretName()
 	// VERIFY
-	assert.Equal(t, "", name)
-}
-
-func Test_GetServiceAccountSecretName_secret_and_ref_missing(t *testing.T) {
-	t.Parallel()
-	//SETUP
-	setupAccountManager()
-	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
-	assert.NilError(t, err)
-
-	acc.AttachSecrets("a-secret", "z-secret")
-
-	// EXERCISE
-	name := acc.GetServiceAccountSecretName()
-	// VERIFY
-	assert.Equal(t, "", name)
+	assert.Equal(t, "", resultName)
 }
