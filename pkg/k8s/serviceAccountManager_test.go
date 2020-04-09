@@ -93,7 +93,7 @@ func Test_CreateRoleOtherNamespace_works(t *testing.T) {
 	assert.NilError(t, err)
 }
 
-func Test_SetDoAutomountServiceAccountToke_works(t *testing.T) {
+func Test_SetDoAutomountServiceAccountToken_works(t *testing.T) {
 	//SETUP
 	fakeServiceAccount := fakeServiceAccount()
 	setupAccountManager(fakeServiceAccount)
@@ -114,11 +114,13 @@ func Test_GetServiceAccountSecretName_works(t *testing.T) {
 	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
-	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
-		Name:      secretName,
-		Namespace: ns1,
-	},
-		Type: v1.SecretTypeServiceAccountToken}
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: ns1,
+		},
+		Type: v1.SecretTypeServiceAccountToken,
+	}
 	setupAccountManager(secret)
 	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
 	assert.NilError(t, err)
