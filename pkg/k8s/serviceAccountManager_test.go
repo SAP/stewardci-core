@@ -1,7 +1,9 @@
 package k8s
 
 import (
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
@@ -89,4 +91,125 @@ func Test_CreateRoleOtherNamespace_works(t *testing.T) {
 	acc, _ := accountManager.GetServiceAccount(accountName)
 	_, err := acc.AddRoleBinding(roleName, ns1)
 	assert.NilError(t, err)
+}
+
+func Test_SetDoAutomountServiceAccountToken_works(t *testing.T) {
+	//SETUP
+	fakeServiceAccount := fakeServiceAccount()
+	setupAccountManager(fakeServiceAccount)
+	acc, err := accountManager.GetServiceAccount(accountName)
+	assert.NilError(t, err)
+
+	//EXERCISE
+	acc.SetDoAutomountServiceAccountToken(false)
+	assert.NilError(t, acc.Update())
+
+	//VERIFY
+	actual, err := accountManager.GetServiceAccount(accountName)
+	assert.NilError(t, err)
+	assert.Check(t, *actual.cache.AutomountServiceAccountToken == false)
+}
+
+func Test_GetServiceAccountSecretName_works(t *testing.T) {
+	//SETUP
+	secretName := "ns1-token-foo"
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: ns1,
+		},
+		Type: v1.SecretTypeServiceAccountToken,
+	}
+	setupAccountManager(secret)
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+	assert.NilError(t, err)
+
+	acc.AttachSecrets("a-secret", secretName, "z-secret")
+
+	// EXERCISE
+	resultName := acc.GetServiceAccountSecretName()
+	// VERIFY
+	assert.Equal(t, secretName, resultName)
+}
+
+func Test_GetServiceAccountSecretNameRepeat_works(t *testing.T) {
+	//SETUP
+	secretName := "ns1-token-foo"
+	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      secretName,
+		Namespace: ns1,
+	},
+		Type: v1.SecretTypeServiceAccountToken}
+	setupAccountManager(secret)
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+	assert.NilError(t, err)
+
+	var waitWG sync.WaitGroup
+	waitWG.Add(1)
+	go func(t *testing.T, acc *ServiceAccountWrap) {
+		defer waitWG.Done()
+		// EXERCISE
+		resultName := acc.GetServiceAccountSecretNameRepeat()
+		// VERIFY
+		assert.Equal(t, "ns1-token-foo", resultName)
+	}(t, acc)
+	duration, _ := time.ParseDuration("500ms")
+	time.Sleep(duration)
+	acc.AttachSecrets("a-secret", secretName, "z-secret")
+	waitWG.Wait()
+}
+
+func Test_GetServiceAccountSecretName_wrongType(t *testing.T) {
+	//SETUP
+	secretName := "ns1-token-foo"
+	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      secretName,
+		Namespace: ns1,
+	},
+		Type: v1.SecretTypeOpaque}
+	setupAccountManager(secret)
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+	assert.NilError(t, err)
+
+	acc.AttachSecrets("a-secret", secretName, "z-secret")
+
+	// EXERCISE
+	resultName := acc.GetServiceAccountSecretName()
+	// VERIFY
+	assert.Equal(t, "", resultName)
+}
+
+func Test_GetServiceAccountSecretName_ref_missing(t *testing.T) {
+	//SETUP
+	secretName := "ns1-token-foo"
+	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      secretName,
+		Namespace: ns1,
+	},
+		Type: v1.SecretTypeServiceAccountToken}
+	setupAccountManager(secret)
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+	assert.NilError(t, err)
+
+	acc.AttachSecrets("a-secret", "z-secret")
+
+	// EXERCISE
+	resultName := acc.GetServiceAccountSecretName()
+	// VERIFY
+	assert.Equal(t, "", resultName)
+}
+
+func Test_GetServiceAccountSecretName_secret_missing(t *testing.T) {
+	//SETUP
+	secretName := "ns1-token-foo"
+	setupAccountManager()
+	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+	assert.NilError(t, err)
+
+	acc.AttachSecrets("a-secret", secretName, "z-secret")
+
+	// EXERCISE
+	resultName := acc.GetServiceAccountSecretName()
+	// VERIFY
+	assert.Equal(t, "", resultName)
 }

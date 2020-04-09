@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"fmt"
+        "time"
 
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/rbac/v1beta1"
@@ -145,6 +146,16 @@ func (a *ServiceAccountWrap) AttachImagePullSecrets(secretNames ...string) {
 	}
 }
 
+// SetDoAutomountServiceAccountToken sets the `automountServiceAccountToken` flag in the
+// service account spec.
+// It does NOT create or update the resource via the underlying client.
+func (a ServiceAccountWrap) SetDoAutomountServiceAccountToken(doAutomount bool) {
+	var doAutomountPtrFromResource *bool = a.cache.AutomountServiceAccountToken
+	if doAutomountPtrFromResource == nil || *doAutomountPtrFromResource != doAutomount {
+		a.cache.AutomountServiceAccountToken = &doAutomount
+	}
+}
+
 // Update performs an update of the service account resource object
 // via the underlying client.
 func (a *ServiceAccountWrap) Update() error {
@@ -193,6 +204,33 @@ func (a *ServiceAccountWrap) AddRoleBinding(clusterRole RoleName, targetNamespac
 	}
 
 	return roleBindingClient.Create(roleBinding)
+}
+
+// GetServiceAccountSecretNameRepeat returns the name of the default-token of the service account
+func (a *ServiceAccountWrap) GetServiceAccountSecretNameRepeat() string {
+	duration, _ := time.ParseDuration("100ms")
+	for {
+		result := a.GetServiceAccountSecretName()
+		if result != "" {
+			return result
+		}
+		time.Sleep(duration)
+	}
+}
+
+// GetServiceAccountSecretName returns the name of the default-token of the service account
+func (a *ServiceAccountWrap) GetServiceAccountSecretName() string {
+	for _, secretRef := range a.cache.Secrets {
+		client := a.factory.CoreV1().Secrets(secretRef.Namespace)
+		secret, err := client.Get(secretRef.Name, metav1.GetOptions{})
+		if err == nil &&
+			secret != nil &&
+			secret.Type == v1.SecretTypeServiceAccountToken {
+			return secret.Name
+		}
+
+	}
+	return ""
 }
 
 // GetServiceAccount returns *v1.ServiceAccount

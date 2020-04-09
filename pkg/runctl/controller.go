@@ -35,7 +35,8 @@ type Controller struct {
 }
 
 type controllerTesting struct {
-	runManagerStub run.Manager
+	runManagerStub                     run.Manager
+	runManagerServiceAccountSecretName string
 }
 
 // NewController creates new Controller
@@ -166,7 +167,15 @@ func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun, pipelineRunsC
 	tenant := k8s.NewTenantNamespace(c.factory, pipelineRun.GetNamespace())
 	workFactory := tenant.TargetClientFactory()
 	namespaceManager := k8s.NewNamespaceManager(c.factory, runNamespacePrefix, runNamespaceRandomLength)
-	return NewRunManager(workFactory, pipelineRunsConfig, tenant.GetSecretProvider(), namespaceManager)
+	runManagerInstance := NewRunManager(workFactory, pipelineRunsConfig, tenant.GetSecretProvider(), namespaceManager)
+
+	if c.testing != nil && c.testing.runManagerServiceAccountSecretName != "" {
+		rm, ok := runManagerInstance.(*runManager)
+		if ok {
+			rm.testing = &runManagerTesting{getServiceAccountSecretNameStub: func(ctx *runContext) string { return c.testing.runManagerServiceAccountSecretName }}
+		}
+	}
+	return runManagerInstance
 }
 
 // syncHandler compares the actual state with the desired, and attempts to

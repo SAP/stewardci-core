@@ -112,3 +112,7 @@ spec:
     {{- if .Values.pipelineRuns.jenkinsfileRunner.terminationMessagePath }}
     terminationMessagePath: {{ .Values.pipelineRuns.jenkinsfileRunner.terminationMessagePath | quote }}
     {{- end }}
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: service-account-token
+      readOnly: true
