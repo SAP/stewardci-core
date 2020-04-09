@@ -402,7 +402,7 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 }
 
 func (c *runManager) volumesWithServiceAccountSecret(ctx *runContext) []corev1api.Volume {
-	var mode int32 = 420
+	var mode int32 = 0644
 	return []corev1api.Volume{
 		corev1api.Volume{
 			Name: "service-account-token",

@@ -662,7 +662,7 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_AllValuesSet(t *testing.T) 
 
 	taskRun, err := cf.TektonV1alpha1().TaskRuns(runNamespaceName).Get(tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
-	var mode int32 = 420
+	var mode int32 = 0644
 	expectedPodTemplate := tekton.PodTemplate{
 		SecurityContext: &corev1api.PodSecurityContext{
 			FSGroup:    int64Ptr(1111),
