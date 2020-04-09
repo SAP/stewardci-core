@@ -45,11 +45,6 @@ const (
 	// tektonTaskRun is the name of the Tekton TaskRun in each
 	// run namespace.
 	tektonTaskRunName = "steward-jenkinsfile-runner"
-
-	// repeatGetServiceAccountSecretName can be set to false to debug hanging tests
-	// if set to false getServiceAccountSecretName will panic if no stub is defined and no service account secret can be found
-	// for productive usage set to true, this will allow a retry to get the service account secret as soon as it is available
-	repeatGetServiceAccountSecretName = true
 )
 
 type runManager struct {
@@ -417,20 +412,12 @@ func (c *runManager) volumesWithServiceAccountSecret(ctx *runContext) []corev1ap
 }
 
 func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
-	if c.testing != nil {
-		if c.testing.getServiceAccountSecretNameStub != nil {
-			return c.testing.getServiceAccountSecretNameStub(ctx)
-		}
-		return ""
+	if c.testing != nil && c.testing.getServiceAccountSecretNameStub != nil {
+		return c.testing.getServiceAccountSecretNameStub(ctx)
 	}
-	if repeatGetServiceAccountSecretName {
-		return ctx.serviceAccount.GetServiceAccountSecretNameRepeat()
-	}
-	result := ctx.serviceAccount.GetServiceAccountSecretName()
-	if result == "" {
-		panic("service account secret not found")
-	}
-	return result
+	return ctx.serviceAccount.GetServiceAccountSecretNameRepeat()
+
+	//return ctx.serviceAccount.GetServiceAccountSecretName()
 }
 
 func (c *runManager) createTektonTaskRun(ctx *runContext) error {

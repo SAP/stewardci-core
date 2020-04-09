@@ -698,9 +698,8 @@ func Test_RunManager_Start_CreatesTektonTaskRun(t *testing.T) {
 	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
 	config := &pipelineRunsConfigStruct{}
 
-	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager)
-	ex := examinee.(*runManager)
-	ex.testing = &runManagerTesting{getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" }}
+	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager).(*runManager)
+	examinee.testing = &runManagerTesting{getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" }}
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.NilError(t, err)
@@ -722,9 +721,8 @@ func Test_RunManager_Start_DoesNotSetPipelineRunStatus(t *testing.T) {
 	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
 	config := &pipelineRunsConfigStruct{}
 
-	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager)
-	ex := examinee.(*runManager)
-	ex.testing = &runManagerTesting{getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" }}
+	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager).(*runManager)
+	examinee.testing = &runManagerTesting{getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" }}
 	// EXERCISE
 	err := examinee.Start(mockPipelineRun)
 	assert.NilError(t, err)
@@ -768,6 +766,7 @@ func Test_RunManager_Start_DoesCopySecret(t *testing.T) {
 
 	// inject secret helper mock
 	examinee.testing = &runManagerTesting{
+		getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" },
 		getSecretHelperStub: func(string, corev1.SecretInterface) secrets.SecretHelper {
 			return mockSecretHelper
 		},
@@ -803,7 +802,10 @@ func Test_RunManager_Start_FailsWithContentErrorWhenPipelineCloneSecretNotFound(
 
 	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
 	config := &pipelineRunsConfigStruct{}
-	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager)
+	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager).(*runManager)
+	examinee.testing = &runManagerTesting{
+		getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" },
+	}
 
 	// EXPECT
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
@@ -828,7 +830,10 @@ func Test_RunManager_Start_FailsWithContentErrorWhenSecretNotFound(t *testing.T)
 
 	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
 	config := &pipelineRunsConfigStruct{}
-	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager)
+	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager).(*runManager)
+	examinee.testing = &runManagerTesting{
+		getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" },
+	}
 
 	// EXPECT
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
@@ -854,7 +859,10 @@ func Test_RunManager_Start_FailsWithContentErrorWhenImagePullSecretNotFound(t *t
 
 	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
 	config := &pipelineRunsConfigStruct{}
-	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager)
+	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager).(*runManager)
+	examinee.testing = &runManagerTesting{
+		getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" },
+	}
 
 	// EXPECT
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
@@ -882,7 +890,10 @@ func Test_RunManager_Start_FailsWithInfraErrorWhenForbidden(t *testing.T) {
 
 	preparePredefinedClusterRole(t, mockFactory, mockPipelineRun)
 	config := &pipelineRunsConfigStruct{}
-	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager)
+	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager).(*runManager)
+	examinee.testing = &runManagerTesting{
+		getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" },
+	}
 
 	// EXPECT
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, fmt.Errorf("Forbidden"))
@@ -906,6 +917,9 @@ func Test_RunManager_Cleanup_RemovesNamespace(t *testing.T) {
 
 	config := &pipelineRunsConfigStruct{}
 	examinee := NewRunManager(mockFactory, config, mockSecretProvider, mockNamespaceManager).(*runManager)
+	examinee.testing = &runManagerTesting{
+		getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" },
+	}
 	err := examinee.prepareRunNamespace(&runContext{pipelineRun: mockPipelineRun})
 	assert.NilError(t, err)
 	//TODO: mockNamespaceManager.EXPECT().Create()...
