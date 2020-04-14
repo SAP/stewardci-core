@@ -2,7 +2,7 @@ package k8s
 
 import (
 	"fmt"
-        "time"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/rbac/v1beta1"
@@ -168,6 +168,18 @@ func (a *ServiceAccountWrap) Update() error {
 	return nil
 }
 
+// Reload performs an update of the cached service account resource object
+// via the underlying client.
+func (a *ServiceAccountWrap) Reload() error {
+	client := a.factory.CoreV1().ServiceAccounts(a.cache.GetNamespace())
+	storedObj, err := client.Get(a.cache.GetName(), metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	a.cache = storedObj
+	return nil
+}
+
 // AddRoleBinding creates a role binding in the targetNamespace connecting the service account with the specified cluster role
 func (a *ServiceAccountWrap) AddRoleBinding(clusterRole RoleName, targetNamespace string) (*v1beta1.RoleBinding, error) {
 
@@ -215,6 +227,7 @@ func (a *ServiceAccountWrap) GetServiceAccountSecretNameRepeat() string {
 			return result
 		}
 		time.Sleep(duration)
+		a.Reload()
 	}
 }
 
@@ -228,7 +241,6 @@ func (a *ServiceAccountWrap) GetServiceAccountSecretName() string {
 			secret.Type == v1.SecretTypeServiceAccountToken {
 			return secret.Name
 		}
-
 	}
 	return ""
 }
