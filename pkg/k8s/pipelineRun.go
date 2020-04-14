@@ -292,19 +292,6 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 	return nil
 }
 
-func (r *pipelineRun) updateStatus() error {
-	if r.client == nil {
-		return fmt.Errorf("No factory provided to store updates [%s]", r.String())
-	}
-	result, err := r.client.UpdateStatus(r.apiObj)
-	if err != nil {
-		return errors.Wrap(err,
-			fmt.Sprintf("Failed to update status [%s]", r.String()))
-	}
-	r.apiObj = result
-	return nil
-}
-
 func (r *pipelineRun) ensureCopy() {
 	if !r.copied {
 		r.apiObj = r.apiObj.DeepCopy()
