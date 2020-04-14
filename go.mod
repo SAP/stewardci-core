@@ -35,9 +35,9 @@ require (
 
 replace (
 	github.com/tektoncd/pipeline => github.com/tektoncd/pipeline v0.8.0
+	gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api => k8s.io/api v0.0.0-20191004102349-159aefb8556b // kubernetes-1.14.9
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20191004074956-c5d2f014d689 // kubernetes-1.14.9
 	k8s.io/client-go => k8s.io/client-go v11.0.1-0.20191029005444-8e4128053008+incompatible // kubernetes-1.14.9
 	knative.dev/pkg => knative.dev/pkg v0.0.0-20191107185656-884d50f09454 // release-0.10
-	gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.2.8
 )
