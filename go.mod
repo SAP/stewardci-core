@@ -30,7 +30,7 @@ require (
 	k8s.io/apimachinery v0.0.0-20180904193909-def12e63c512
 	k8s.io/client-go v0.0.0-20180910083459-2cefa64ff137
 	k8s.io/utils v0.0.0-20191114200735-6ca3b61696b6 // indirect
-	knative.dev/pkg v0.0.0-00010101000000-000000000000
+	knative.dev/pkg v0.0.0-20191107185656-884d50f09454
 )
 
 replace (
