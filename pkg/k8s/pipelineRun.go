@@ -131,9 +131,10 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	if state == api.StateFinished {
 		newState.FinishedAt = now
 	}
-	r.apiObj.Status.StateDetails = newState
-	r.apiObj.Status.State = state
-	return oldstate, r.updateStatus()
+	return oldstate, r.changeStatusAndUpdateSafely(func() {
+		r.apiObj.Status.StateDetails = newState
+		r.apiObj.Status.State = state
+	})
 }
 
 // String returns the full qualified name of the pipeline run
@@ -161,10 +162,11 @@ func (r *pipelineRun) finishCurrentState() *api.StateItem {
 // UpdateResult of the pipeline run
 func (r *pipelineRun) UpdateResult(result api.Result) error {
 	r.ensureCopy()
-	r.apiObj.Status.Result = result
-	now := metav1.Now()
-	r.apiObj.Status.FinishedAt = &now
-	return r.updateStatus()
+	return r.changeStatusAndUpdateSafely(func() {
+		r.apiObj.Status.Result = result
+		now := metav1.Now()
+		r.apiObj.Status.FinishedAt = &now
+	})
 }
 
 // UpdateContainer ...
@@ -173,8 +175,9 @@ func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
 		return nil
 	}
 	r.ensureCopy()
-	r.apiObj.Status.Container = *c
-	return r.updateStatus()
+	return r.changeStatusAndUpdateSafely(func() {
+		r.apiObj.Status.Container = *c
+	})
 }
 
 // StoreErrorAsMessage stores the error as message in the status
@@ -190,22 +193,25 @@ func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 // UpdateMessage stores string as message in the status
 func (r *pipelineRun) UpdateMessage(message string) error {
 	r.ensureCopy()
-	old := r.apiObj.Status.Message
-	if old != "" {
-		his := r.apiObj.Status.History
-		his = append(his, old)
-		r.apiObj.Status.History = his
-	}
-	r.apiObj.Status.Message = utils.Trim(message)
-	r.apiObj.Status.MessageShort = utils.ShortenMessage(message, 100)
-	return r.updateStatus()
+
+	return r.changeStatusAndUpdateSafely(func() {
+		old := r.apiObj.Status.Message
+		if old != "" {
+			his := r.apiObj.Status.History
+			his = append(his, old)
+			r.apiObj.Status.History = his
+		}
+		r.apiObj.Status.Message = utils.Trim(message)
+		r.apiObj.Status.MessageShort = utils.ShortenMessage(message, 100)
+	})
 }
 
 // UpdateRunNamespace overrides the namespace in which the builds happens
 func (r *pipelineRun) UpdateRunNamespace(ns string) error {
 	r.ensureCopy()
-	r.apiObj.Status.Namespace = ns
-	return r.updateStatus()
+	return r.changeStatusAndUpdateSafely(func() {
+		r.apiObj.Status.Namespace = ns
+	})
 }
 
 //HasDeletionTimestamp returns true if deletion timestamp is set
@@ -241,6 +247,46 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 	if err != nil {
 		return errors.Wrap(err,
 			fmt.Sprintf("Failed to update finalizers [%s]", r.String()))
+	}
+	r.apiObj = result
+	return nil
+}
+
+// changeStatusAndUpdateSafely executes the change encapsuled in the function parameter "change"
+// and updates the Kubernetes object afterwards.
+// If the updated fails with "conflict", the object is fechted again, the change is redone and another update try is made.
+func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
+	if r.client == nil {
+		return fmt.Errorf("No factory provided to store updates [%s]", r.String())
+	}
+	var result *api.PipelineRun
+	for { // retry loop
+		var err error
+
+		change()
+		result, err = r.client.UpdateStatus(r.apiObj)
+		if err != nil {
+			break // success
+		} else {
+			if k8serrors.IsConflict(err) {
+				log.Printf(
+					"retrying update of pipeline run %q in namespace %q"+
+						" after resource version conflict",
+					r.apiObj.Name, r.apiObj.Namespace,
+				)
+
+				new, err := r.client.Get(r.apiObj.GetName(), metav1.GetOptions{})
+				if err != nil {
+					return errors.Wrap(err,
+						"failed to refetch pipeline run for update")
+				}
+				r.apiObj = new
+				r.copied = true
+			} else {
+				return errors.Wrap(err,
+					fmt.Sprintf("Failed to update status [%s]", r.String()))
+			}
+		}
 	}
 	r.apiObj = result
 	return nil
