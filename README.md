@@ -4,7 +4,7 @@ This repo contains the sources of _project "Steward"_ &ndash; a "pipeline as a s
 
 Here you find the [**project "Steward" Documentation**](docs/README.md).
 
-
+  
 ## Requirements
 
 To run your own project "Steward" instance you need a Kubernetes cluster.
