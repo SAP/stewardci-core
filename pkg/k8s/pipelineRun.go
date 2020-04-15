@@ -254,7 +254,7 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 
 // changeStatusAndUpdateSafely executes the change encapsuled in the function parameter "change"
 // and updates the Kubernetes object afterwards.
-// If the updated fails with "conflict", the object is fechted again, the change is redone and another update try is made.
+// If the updated fails with "conflict", the object is fetched again, the change is redone and another update try is made.
 func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 	if r.client == nil {
 		return fmt.Errorf("No factory provided to store updates [%s]", r.String())
