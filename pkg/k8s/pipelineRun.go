@@ -265,7 +265,7 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 
 		change()
 		result, err = r.client.UpdateStatus(r.apiObj)
-		if err != nil {
+		if err == nil {
 			break // success
 		} else {
 			if k8serrors.IsConflict(err) {
