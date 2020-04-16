@@ -20,4 +20,4 @@ rules:
 - apiGroups: ['policy']
   resources: ['podsecuritypolicies']
   verbs:     ['use']
-  resourceNames: ['steward-run']
+  resourceNames: ['00-steward-run']
