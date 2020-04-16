@@ -8,7 +8,10 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 const message string = "MyMessage"
@@ -312,6 +315,50 @@ func Test_pipelineRun_GetPipelineRepoServerURL_WrongURLs(t *testing.T) {
 			assert.Equal(t, "", url)
 		})
 	}
+}
+
+func Test_UpdatePropagates_Error(t *testing.T) {
+	t.Parallel()
+	//SETUP
+
+	run := newPipelineRunWithEmptySpec(ns1, "foo")
+	factory := fake.NewClientFactory(run)
+	expectedError := fmt.Errorf("expected")
+	factory.StewardClientset().PrependReactor("update", "*", fake.NewErrorReactor(expectedError))
+
+	examinee, err := NewPipelineRun(run, factory)
+	// EXCERCISE
+	_, err = examinee.UpdateState(api.StateWaiting)
+
+	// VERIFY
+	assert.Assert(t, err != nil)
+}
+
+func Test_UpdateStatus_does_Retrying(t *testing.T) {
+	t.Parallel()
+	//SETUP
+
+	run := newPipelineRunWithEmptySpec(ns1, "foo")
+	factory := fake.NewClientFactory(run)
+
+	count := 0
+	reaction := func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+		if count < 3 {
+			count++
+			return true, nil, k8serrors.NewConflict(api.Resource("pipelinerun"), "", nil)
+		}
+		return true, nil, nil
+	}
+
+	factory.StewardClientset().PrependReactor("update", "*", reaction)
+
+	examinee, err := NewPipelineRun(run, factory)
+	// EXCERCISE
+	_, err = examinee.UpdateState(api.StateWaiting)
+
+	// VERIFY
+	assert.NilError(t, err)
+	assert.Assert(t, count == 3)
 }
 
 func newPipelineRunWithSecret(ns string, name string, secretName string) *api.PipelineRun {
