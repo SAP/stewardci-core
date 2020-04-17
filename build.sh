@@ -12,6 +12,16 @@ function banner1() {
     echo $'\n'"===" "$@" $'\n'
 }
 
+function checkGoVersion() {
+    local expectedVersion=`cat GOLANG_VERSION`
+    [[ ! -z $expectedVersion ]] || die
+    go version | grep "${expectedVersion}"
+    local result=$?
+    if [[ $result != 0 ]]; then
+        die "error: Expected Go version ${expectedVersion} but was: $(go version)"
+    fi
+}
+
 if ! which go &>/dev/null; then
     die "error: go not found"$'\n\n'"Install Go and add its bin directory to your PATH!"
 fi
@@ -23,6 +33,8 @@ GOPATH_1=${GOPATH%%:*}  # the first entry of the GOPATH
 if [[ -z $GOPATH_1 ]]; then
     die "error: GOPATH not set"
 fi
+
+checkGoVersion
 
 GOLINT_EXE=$(which golint); rc=$?
 [[ $rc > 1 ]] && die
