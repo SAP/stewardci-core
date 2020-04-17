@@ -132,7 +132,7 @@ checkGoVersion
 MOCKGEN_EXE="$GOPATH_1/bin/mockgen"
 if [[ ! -x $MOCKGEN_EXE ]]; then
     echo "Installing mockgen"
-    ( cd "$GOPATH_1" && go get github.com/golang/mock/mockgen@v1.3.1 ) || die "Installation of mockgen failed"
+    ( cd "$GOPATH_1" && go get github.com/golang/mock/mockgen ) || die "Installation of mockgen failed"
 fi
 [[ -f $MOCKGEN_EXE ]] || die "'$MOCKGEN_EXE' does not exist"
 [[ -x $MOCKGEN_EXE ]] || die "'$MOCKGEN_EXE' is not executable"
