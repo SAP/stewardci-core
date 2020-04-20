@@ -83,15 +83,10 @@ function generate_mocks() {
     { set +x; } 2>/dev/null
     if is_verify_mode; then
         set -x
-        diffIgnoreComments "${GEN_DIR}/${dest}" "${PROJECT_ROOT}/${dest}" || die "Regeneration required for mocks of '$pkg'"
+        diff -Naupr "${GEN_DIR}/${dest}" "${PROJECT_ROOT}/${dest}" || die "Regeneration required for mocks of '$pkg'"
         { set +x; } 2>/dev/null
     fi
     echo
-}
-
-function diffIgnoreComments() {
-    # Ignore go comments due to mockgen issue with generated '.' in comments
-    diff -Naupr <(cat "$1" | grep -v "^\/\/.*$") <(cat "$2" | grep -v "^\/\/.*$")
 }
 
 function checkGoVersion() {
