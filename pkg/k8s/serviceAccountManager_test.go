@@ -135,20 +135,22 @@ func Test_GetServiceAccountSecretName_works(t *testing.T) {
 func Test_GetServiceAccountSecretNameRepeat_delayedRef_works(t *testing.T) {
 	//SETUP
 	secretName := "ns1-token-foo"
-	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
-		Name:      secretName,
-		Namespace: ns1,
-	},
-		Type: v1.SecretTypeServiceAccountToken}
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: ns1,
+		},
+		Type: v1.SecretTypeServiceAccountToken,
+	}
 	setupAccountManager(secret)
 	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
 	assert.NilError(t, err)
 	err = acc.Update()
 	assert.NilError(t, err)
-	var waitWG sync.WaitGroup
-	waitWG.Add(1)
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(1)
 	go func(t *testing.T, acc *ServiceAccountWrap) {
-		defer waitWG.Done()
+		defer waitGroup.Done()
 		// EXERCISE
 		resultName := acc.GetServiceAccountSecretNameRepeat()
 		// VERIFY
@@ -162,27 +164,29 @@ func Test_GetServiceAccountSecretNameRepeat_delayedRef_works(t *testing.T) {
 	localAccount.AttachSecrets("a-secret", secretName, "z-secret")
 	err = localAccount.Update()
 	assert.NilError(t, err)
-	waitWG.Wait()
+	waitGroup.Wait()
 }
 
 func Test_GetServiceAccountSecretNameRepeat_delayedSecret_works(t *testing.T) {
 	//SETUP
 	secretName := "ns1-token-foo"
-	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
-		Name:      secretName,
-		Namespace: ns1,
-	},
-		Type: v1.SecretTypeServiceAccountToken}
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: ns1,
+		},
+		Type: v1.SecretTypeServiceAccountToken,
+	}
 	setupAccountManager()
 	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
 	acc.AttachSecrets("a-secret", secretName, "z-secret")
 	assert.NilError(t, err)
 	err = acc.Update()
 	assert.NilError(t, err)
-	var waitWG sync.WaitGroup
-	waitWG.Add(1)
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(1)
 	go func(t *testing.T, acc *ServiceAccountWrap) {
-		defer waitWG.Done()
+		defer waitGroup.Done()
 		// EXERCISE
 		resultName := acc.GetServiceAccountSecretNameRepeat()
 		// VERIFY
@@ -193,17 +197,19 @@ func Test_GetServiceAccountSecretNameRepeat_delayedSecret_works(t *testing.T) {
 	secretsInterface := factory.CoreV1().Secrets(ns1)
 	_, err = secretsInterface.Create(secret)
 	assert.NilError(t, err)
-	waitWG.Wait()
+	waitGroup.Wait()
 }
 
 func Test_GetServiceAccountSecretName_wrongType(t *testing.T) {
 	//SETUP
 	secretName := "ns1-token-foo"
-	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
-		Name:      secretName,
-		Namespace: ns1,
-	},
-		Type: v1.SecretTypeOpaque}
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: ns1,
+		},
+		Type: v1.SecretTypeOpaque,
+	}
 	setupAccountManager(secret)
 	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
 	assert.NilError(t, err)
@@ -219,11 +225,13 @@ func Test_GetServiceAccountSecretName_wrongType(t *testing.T) {
 func Test_GetServiceAccountSecretName_ref_missing(t *testing.T) {
 	//SETUP
 	secretName := "ns1-token-foo"
-	secret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{
-		Name:      secretName,
-		Namespace: ns1,
-	},
-		Type: v1.SecretTypeServiceAccountToken}
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: ns1,
+		},
+		Type: v1.SecretTypeServiceAccountToken,
+	}
 	setupAccountManager(secret)
 	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
 	assert.NilError(t, err)
