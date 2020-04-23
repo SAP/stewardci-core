@@ -2,7 +2,6 @@ package k8s
 
 import (
 	"fmt"
-	"time"
 
 	v1 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/api/rbac/v1beta1"
@@ -168,18 +167,6 @@ func (a *ServiceAccountWrap) Update() error {
 	return nil
 }
 
-// Reload performs an update of the cached service account resource object
-// via the underlying client.
-func (a *ServiceAccountWrap) Reload() error {
-	client := a.factory.CoreV1().ServiceAccounts(a.cache.GetNamespace())
-	storedObj, err := client.Get(a.cache.GetName(), metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	a.cache = storedObj
-	return nil
-}
-
 // AddRoleBinding creates a role binding in the targetNamespace connecting the service account with the specified cluster role
 func (a *ServiceAccountWrap) AddRoleBinding(clusterRole RoleName, targetNamespace string) (*v1beta1.RoleBinding, error) {
 
@@ -218,34 +205,11 @@ func (a *ServiceAccountWrap) AddRoleBinding(clusterRole RoleName, targetNamespac
 	return roleBindingClient.Create(roleBinding)
 }
 
-// GetServiceAccountSecretNameRepeat returns the name of the default-token of the service account
-func (a *ServiceAccountWrap) GetServiceAccountSecretNameRepeat() string {
-	duration, _ := time.ParseDuration("100ms")
-	for {
-		result := a.GetServiceAccountSecretName()
-		if result != "" {
-			return result
-		}
-		time.Sleep(duration)
-		a.Reload()
-	}
-}
-
-// GetServiceAccountSecretName returns the name of the default-token of the service account
-func (a *ServiceAccountWrap) GetServiceAccountSecretName() string {
-	for _, secretRef := range a.cache.Secrets {
-		client := a.factory.CoreV1().Secrets(secretRef.Namespace)
-		secret, err := client.Get(secretRef.Name, metav1.GetOptions{})
-		if err == nil &&
-			secret != nil &&
-			secret.Type == v1.SecretTypeServiceAccountToken {
-			return secret.Name
-		}
-	}
-	return ""
-}
-
 // GetServiceAccount returns *v1.ServiceAccount
 func (a *ServiceAccountWrap) GetServiceAccount() *v1.ServiceAccount {
 	return a.cache
+}
+
+func (a *ServiceAccountWrap) GetHelper() *serviceAccountHelper {
+	return NewServiceAccountHelper(a.factory, a.cache.DeepCopy())
 }
