@@ -1,7 +1,8 @@
 package runctl
 
 import (
-	"encoding/json"
+	"context"
+"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -415,8 +416,15 @@ func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
 	if c.testing != nil && c.testing.getServiceAccountSecretNameStub != nil {
 		return c.testing.getServiceAccountSecretNameStub(ctx)
 	}
-
-	return ctx.serviceAccount.GetHelper().GetServiceAccountSecretNameRepeat()
+        myctx := k8s.EnsureServiceAccountTokenSecretRetrieverFromContext(context.TODO())
+        myctx = k8s.WithClientFactory(myctx, c.factory) 
+        ret := k8s.GetServiceAccountTokenSecretRetrieverFromContext(myctx)
+        secret,err := ret.ForObj(myctx,ctx.serviceAccount.GetServiceAccount())
+        if err != nil { 	
+        return secret.GetName()
+} else {
+return ""
+}
 }
 
 func (c *runManager) createTektonTaskRun(ctx *runContext) error {

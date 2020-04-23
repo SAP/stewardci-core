@@ -27,7 +27,7 @@ func Test_GetServiceAccountSecretName_works(t *testing.T) {
 	acc.AttachSecrets("a-secret", secretName, "z-secret")
 	examinee := acc.GetHelper()
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName()
+	resultName := examinee.GetServiceAccountSecretName(acc.GetServiceAccount())
 	// VERIFY
 	assert.Equal(t, secretName, resultName)
 }
@@ -53,7 +53,7 @@ func Test_GetServiceAccountSecretNameRepeat_delayedRef_works(t *testing.T) {
 		defer waitGroup.Done()
 		examinee := acc.GetHelper()
 		// EXERCISE
-		resultName := examinee.GetServiceAccountSecretNameRepeat()
+		resultName := examinee.GetServiceAccountSecretNameRepeat(acc.GetServiceAccount())
 		// VERIFY
 		assert.Equal(t, "ns1-token-foo", resultName)
 	}(t, acc)
@@ -90,7 +90,7 @@ func Test_GetServiceAccountSecretNameRepeat_delayedSecret_works(t *testing.T) {
 		defer waitGroup.Done()
 		examinee := acc.GetHelper()
 		// EXERCISE
-		resultName := examinee.GetServiceAccountSecretNameRepeat()
+		resultName := examinee.GetServiceAccountSecretNameRepeat(acc.GetServiceAccount())
 		// VERIFY
 		assert.Equal(t, "ns1-token-foo", resultName)
 	}(t, acc)
@@ -119,7 +119,7 @@ func Test_GetServiceAccountSecretName_wrongType(t *testing.T) {
 	acc.AttachSecrets("a-secret", secretName, "z-secret")
 	examinee := acc.GetHelper()
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName()
+	resultName := examinee.GetServiceAccountSecretName(acc.GetServiceAccount())
 	// VERIFY
 	assert.Equal(t, "", resultName)
 }
@@ -142,7 +142,7 @@ func Test_GetServiceAccountSecretName_ref_missing(t *testing.T) {
 	examinee := acc.GetHelper()
 
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName()
+	resultName := examinee.GetServiceAccountSecretName(acc.GetServiceAccount())
 	// VERIFY
 	assert.Equal(t, "", resultName)
 }
@@ -158,7 +158,7 @@ func Test_GetServiceAccountSecretName_secret_missing(t *testing.T) {
 	examinee := acc.GetHelper()
 
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName()
+	resultName := examinee.GetServiceAccountSecretName(acc.GetServiceAccount())
 	// VERIFY
 	assert.Equal(t, "", resultName)
 }

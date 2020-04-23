@@ -209,7 +209,3 @@ func (a *ServiceAccountWrap) AddRoleBinding(clusterRole RoleName, targetNamespac
 func (a *ServiceAccountWrap) GetServiceAccount() *v1.ServiceAccount {
 	return a.cache
 }
-
-func (a *ServiceAccountWrap) GetHelper() *serviceAccountHelper {
-	return NewServiceAccountHelper(a.factory, a.cache.DeepCopy())
-}
