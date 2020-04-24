@@ -426,7 +426,7 @@ func (c *runManager) getServiceAccountSecretName(ctx *runInstance) string {
 	if c.testing != nil && c.testing.getServiceAccountSecretNameStub != nil {
 		return c.testing.getServiceAccountSecretNameStub(ctx)
 	}
-        myctx := k8s.EnsureServiceAccountTokenSecretRetrieverFromContext(context.TODO())
+        myctx := k8s.EnsureServiceAccountTokenSecretRetriever(context.TODO())
         myctx = k8s.WithClientFactory(myctx, c.factory) 
         ret := k8s.GetServiceAccountTokenSecretRetrieverFromContext(myctx)
         secret,err := ret.ForObj(myctx,ctx.serviceAccount.GetServiceAccount())

@@ -25,7 +25,7 @@ type ServiceAccountTokenSecretRetriever interface {
 // if not present.
 // The returned context either is or extends the given context and
 // has a `ServiceAccountTokenSecretRetriever` instance stored.
-func EnsureServiceAccountTokenSecretRetrieverFromContext(ctx context.Context) context.Context {
+func EnsureServiceAccountTokenSecretRetriever(ctx context.Context) context.Context {
 	instance := GetServiceAccountTokenSecretRetrieverFromContext(ctx)
 	if instance == nil {
 		instance = &serviceAccountTokenSecretRetrieverImpl{}
@@ -47,7 +47,7 @@ func (r *serviceAccountTokenSecretRetrieverImpl) ForName(ctx context.Context, se
 	client := factory.CoreV1().ServiceAccounts(namespace)
 	serviceAccount, err := client.Get(serviceAccountName, metav1.GetOptions{})
 	if err != nil {
-	return	r.forNameRetry(ctx, serviceAccountName, namespace)
+		return r.forNameRetry(ctx, serviceAccountName, namespace)
 	}
 
 	result := r.GetServiceAccountSecret(ctx, serviceAccount)
