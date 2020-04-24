@@ -5,6 +5,7 @@ based on sample-controller from https://github.com/kubernetes/sample-controller/
 package runctl
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -13,7 +14,6 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/metrics"
-	run "github.com/SAP/stewardci-core/pkg/run"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -33,11 +33,11 @@ type Controller struct {
 	workqueue            workqueue.RateLimitingInterface
 	metrics              metrics.Metrics
 	testing              *controllerTesting
+	ctx                  context.Context
 }
 
 type controllerTesting struct {
-	runManagerStub    run.Manager
-	newRunManagerStub func(k8s.ClientFactory, *pipelineRunsConfigStruct, secrets.SecretProvider, k8s.NamespaceManager) run.Manager
+	contextForPipelineRunStub func(ctx context.Context, pipelineRun k8s.PipelineRun) context.Context
 }
 
 // NewController creates new Controller
@@ -45,6 +45,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1alpha1().TaskRuns()
+	ctx := k8s.WithClientFactory(context.TODO(), factory)
 	controller := &Controller{
 		factory:            factory,
 		pipelineRunFetcher: pipelineRunFetcher,
@@ -53,6 +54,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 		tektonTaskRunsSynced: tektonTaskRunInformer.Informer().HasSynced,
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
 		metrics:              metrics,
+		ctx:                  ctx,
 	}
 	pipelineRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.addPipelineRun,
@@ -161,22 +163,20 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) e
 	return nil
 }
 
-func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun, pipelineRunsConfig *pipelineRunsConfigStruct) run.Manager {
-	if c.testing != nil && c.testing.runManagerStub != nil {
-		return c.testing.runManagerStub
+func (c *Controller) contextForPipelineRun(ctx context.Context, pipelineRun k8s.PipelineRun) context.Context {
+	if c.testing != nil && c.testing.contextForPipelineRunStub != nil {
+		return c.testing.contextForPipelineRunStub(ctx, pipelineRun)
 	}
-	tenant := k8s.NewTenantNamespace(c.factory, pipelineRun.GetNamespace())
+
+	factory := k8s.GetClientFactory(ctx)
+	tenant := k8s.NewTenantNamespace(factory, pipelineRun.GetNamespace())
 	workFactory := tenant.TargetClientFactory()
-	namespaceManager := k8s.NewNamespaceManager(c.factory, runNamespacePrefix, runNamespaceRandomLength)
-	return c.newRunManager(workFactory, pipelineRunsConfig, tenant.GetSecretProvider(), namespaceManager)
-}
+	ctx = k8s.WithClientFactory(ctx, workFactory)
 
-func (c *Controller) newRunManager(workFactory k8s.ClientFactory, pipelineRunsConfig *pipelineRunsConfigStruct, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) run.Manager {
-	if c.testing != nil && c.testing.newRunManagerStub != nil {
-		return c.testing.newRunManagerStub(workFactory, pipelineRunsConfig, secretProvider, namespaceManager)
-
-	}
-	return NewRunManager(workFactory, pipelineRunsConfig, secretProvider, namespaceManager)
+	namespaceManager := k8s.NewNamespaceManager(factory, runNamespacePrefix, runNamespaceRandomLength)
+	ctx = k8s.WithNamespaceManager(ctx, namespaceManager)
+	ctx = secrets.WithSecretProvider(ctx, tenant.GetSecretProvider())
+	return ctx
 }
 
 // syncHandler compares the actual state with the desired, and attempts to
@@ -218,8 +218,8 @@ func (c *Controller) syncHandler(key string) error {
 	// Check if object has deletion timestamp
 	// If not, try to add finalizer if missing
 	if pipelineRun.HasDeletionTimestamp() {
-		runManager := c.createRunManager(pipelineRun, pipelineRunsConfig)
-		err = runManager.Cleanup(pipelineRun)
+		ctx := c.contextForPipelineRun(c.ctx, pipelineRun)
+		err = CleanupPipelineRun(ctx, pipelineRun)
 		if err == nil {
 			err = pipelineRun.DeleteFinalizerIfExists()
 			if err == nil {
@@ -242,8 +242,7 @@ func (c *Controller) syncHandler(key string) error {
 	if pipelineRun.GetStatus().Result != api.ResultUndefined && pipelineRun.GetStatus().State != api.StateCleaning {
 		c.changeState(pipelineRun, api.StateCleaning)
 	}
-
-	runManager := c.createRunManager(pipelineRun, pipelineRunsConfig)
+	ctx := c.contextForPipelineRun(c.ctx, pipelineRun)
 	// Process pipeline run based on current state
 	switch state := pipelineRun.GetStatus().State; state {
 	// TODO fix #117
@@ -254,7 +253,7 @@ func (c *Controller) syncHandler(key string) error {
 		if err = c.changeState(pipelineRun, api.StatePreparing); err != nil {
 			return err
 		}
-		err = runManager.Start(pipelineRun)
+		err = StartPipelineRun(ctx, pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
 			if pipelineRun.GetStatus().Result == api.ResultUndefined {
@@ -270,7 +269,7 @@ func (c *Controller) syncHandler(key string) error {
 			return err
 		}
 	case api.StateWaiting:
-		run, err := runManager.GetRun(pipelineRun)
+		run, err := GetPipelineRun(ctx, pipelineRun)
 		if err != nil {
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
 			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
@@ -287,7 +286,7 @@ func (c *Controller) syncHandler(key string) error {
 			}
 		}
 	case api.StateRunning:
-		run, err := runManager.GetRun(pipelineRun)
+		run, err := GetPipelineRun(ctx, pipelineRun)
 		if err != nil {
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
 			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
@@ -316,7 +315,7 @@ func (c *Controller) syncHandler(key string) error {
 			c.metrics.CountResult(result)
 		}
 	case api.StateCleaning:
-		err = runManager.Cleanup(pipelineRun)
+		err = CleanupPipelineRun(ctx, pipelineRun)
 		if err == nil {
 			err = c.changeState(pipelineRun, api.StateFinished)
 		}

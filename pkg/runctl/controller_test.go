@@ -1,3 +1,5 @@
+// +build todo
+
 package runctl
 
 import (
@@ -550,8 +552,8 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 
 func newTestRunManager(workFactory k8s.ClientFactory, pipelineRunsConfig *pipelineRunsConfigStruct, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) run.Manager {
 	runManager := NewRunManager(workFactory, pipelineRunsConfig, secretProvider, namespaceManager).(*runManager)
-	runManager.testing = &runManagerTesting{
-		getServiceAccountSecretNameStub: func(ctx *runInstance) string { return "foo" },
+	runManager.testing = &runInstanceTesting{
+		getServiceAccountSecretNameStub: func(ctx context.Context) string { return "foo" },
 	}
 	return runManager
 }
