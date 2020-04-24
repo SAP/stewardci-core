@@ -58,17 +58,17 @@ type runManager struct {
 }
 
 type runManagerTesting struct {
-	cleanupStub                               func(*runContext) error
-	copySecretsToRunNamespaceStub             func(*runContext) (string, []string, error)
+	cleanupStub                               func(*runInstance) error
+	copySecretsToRunNamespaceStub             func(*runInstance) (string, []string, error)
 	getSecretHelperStub                       func(string, corev1.SecretInterface) secrets.SecretHelper
-	setupNetworkPolicyFromConfigStub          func(*runContext) error
-	setupNetworkPolicyThatIsolatesAllPodsStub func(*runContext) error
-	setupServiceAccountStub                   func(*runContext, string, []string) error
-	setupStaticNetworkPoliciesStub            func(*runContext) error
-	getServiceAccountSecretNameStub           func(*runContext) string
+	setupNetworkPolicyFromConfigStub          func(*runInstance) error
+	setupNetworkPolicyThatIsolatesAllPodsStub func(*runInstance) error
+	setupServiceAccountStub                   func(*runInstance, string, []string) error
+	setupStaticNetworkPoliciesStub            func(*runInstance) error
+	getServiceAccountSecretNameStub           func(*runInstance) string
 }
 
-type runContext struct {
+type runInstance struct {
 	pipelineRun    k8s.PipelineRun
 	runNamespace   string
 	serviceAccount *k8s.ServiceAccountWrap
@@ -88,7 +88,7 @@ func NewRunManager(factory k8s.ClientFactory, pipelineRunsConfig *pipelineRunsCo
 // the run in this environment.
 func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 	var err error
-	ctx := &runContext{
+	ctx := &runInstance{
 		pipelineRun: pipelineRun,
 	}
 
@@ -104,9 +104,19 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 	return nil
 }
 
+// Cleanup a run based on a pipelineRun
+func (c *runManager) Cleanup(pipelineRun k8s.PipelineRun) error {
+        ctx := &runInstance{
+                pipelineRun:  pipelineRun,
+                runNamespace: pipelineRun.GetRunNamespace(),
+        }
+        return c.cleanup(ctx)
+}
+
+
 // prepareRunNamespace creates a new namespace for the pipeline run
 // and populates it with needed resources.
-func (c *runManager) prepareRunNamespace(ctx *runContext) error {
+func (c *runManager) prepareRunNamespace(ctx *runInstance) error {
 	var err error
 
 	ctx.runNamespace, err = c.namespaceManager.Create("", nil)
@@ -141,7 +151,7 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 	return nil
 }
 
-func (c *runManager) setupServiceAccount(ctx *runContext, pipelineCloneSecretName string, imagePullSecrets []string) error {
+func (c *runManager) setupServiceAccount(ctx *runInstance, pipelineCloneSecretName string, imagePullSecrets []string) error {
 	if c.testing != nil && c.testing.setupServiceAccountStub != nil {
 		return c.testing.setupServiceAccountStub(ctx, pipelineCloneSecretName, imagePullSecrets)
 	}
@@ -193,7 +203,7 @@ func (c *runManager) setupServiceAccount(ctx *runContext, pipelineCloneSecretNam
 	return nil
 }
 
-func (c *runManager) copySecretsToRunNamespace(ctx *runContext) (string, []string, error) {
+func (c *runManager) copySecretsToRunNamespace(ctx *runInstance) (string, []string, error) {
 	if c.testing != nil && c.testing.copySecretsToRunNamespaceStub != nil {
 		return c.testing.copySecretsToRunNamespaceStub(ctx)
 	}
@@ -219,7 +229,7 @@ func (c *runManager) copySecretsToRunNamespace(ctx *runContext) (string, []strin
 	return pipelineCloneSecretName, imagePullSecretNames, nil
 }
 
-func (c *runManager) copyImagePullSecretsToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) ([]string, error) {
+func (c *runManager) copyImagePullSecretsToRunNamespace(ctx *runInstance, secretHelper secrets.SecretHelper) ([]string, error) {
 	secretNames := ctx.pipelineRun.GetSpec().ImagePullSecrets
 	transformers := []secrets.SecretTransformer{
 		secrets.StripAnnotationsTransformer("tekton.dev/"),
@@ -230,7 +240,7 @@ func (c *runManager) copyImagePullSecretsToRunNamespace(ctx *runContext, secretH
 	return c.copySecrets(ctx, secretHelper, secretNames, secrets.DockerOnly, transformers...)
 }
 
-func (c *runManager) copyPipelineCloneSecretToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) (string, error) {
+func (c *runManager) copyPipelineCloneSecretToRunNamespace(ctx *runInstance, secretHelper secrets.SecretHelper) (string, error) {
 	secretName := ctx.pipelineRun.GetSpec().JenkinsFile.RepoAuthSecret
 	if secretName == "" {
 		return "", nil
@@ -255,20 +265,20 @@ func (c *runManager) copyPipelineCloneSecretToRunNamespace(ctx *runContext, secr
 	return names[0], nil
 }
 
-func (c *runManager) copyPipelineSecretsToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) ([]string, error) {
+func (c *runManager) copyPipelineSecretsToRunNamespace(ctx *runInstance, secretHelper secrets.SecretHelper) ([]string, error) {
 	secretNames := ctx.pipelineRun.GetSpec().Secrets
 	stripTektonAnnotationsTransformer := secrets.StripAnnotationsTransformer("tekton.dev/")
 	return c.copySecrets(ctx, secretHelper, secretNames, nil, stripTektonAnnotationsTransformer)
 }
 
-func (c *runManager) getSecretHelper(ctx *runContext, targetClient corev1.SecretInterface) secrets.SecretHelper {
+func (c *runManager) getSecretHelper(ctx *runInstance, targetClient corev1.SecretInterface) secrets.SecretHelper {
 	if c.testing != nil && c.testing.getSecretHelperStub != nil {
 		return c.testing.getSecretHelperStub(ctx.runNamespace, targetClient)
 	}
 	return secrets.NewSecretHelper(c.secretProvider, ctx.runNamespace, targetClient)
 }
 
-func (c *runManager) copySecrets(ctx *runContext, secretHelper secrets.SecretHelper, secretNames []string, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
+func (c *runManager) copySecrets(ctx *runInstance, secretHelper secrets.SecretHelper, secretNames []string, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
 	storedSecretNames, err := secretHelper.CopySecrets(secretNames, filter, transformers...)
 	if err != nil {
 		log.Printf("Cannot copy secrets %s for [%s]. Error: %s", secretNames, ctx.pipelineRun.String(), err)
@@ -283,7 +293,7 @@ func (c *runManager) copySecrets(ctx *runContext, secretHelper secrets.SecretHel
 	return storedSecretNames, nil
 }
 
-func (c *runManager) setupStaticNetworkPolicies(ctx *runContext) error {
+func (c *runManager) setupStaticNetworkPolicies(ctx *runInstance) error {
 	if c.testing != nil && c.testing.setupStaticNetworkPoliciesStub != nil {
 		return c.testing.setupStaticNetworkPoliciesStub(ctx)
 	}
@@ -303,7 +313,7 @@ func (c *runManager) setupStaticNetworkPolicies(ctx *runContext) error {
 	return nil
 }
 
-func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(ctx *runContext) error {
+func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(ctx *runInstance) error {
 	if c.testing != nil && c.testing.setupNetworkPolicyThatIsolatesAllPodsStub != nil {
 		return c.testing.setupNetworkPolicyThatIsolatesAllPodsStub(ctx)
 	}
@@ -333,7 +343,7 @@ func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(ctx *runContext) erro
 	return nil
 }
 
-func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
+func (c *runManager) setupNetworkPolicyFromConfig(ctx *runInstance) error {
 	if c.testing != nil && c.testing.setupNetworkPolicyFromConfigStub != nil {
 		return c.testing.setupNetworkPolicyFromConfigStub(ctx)
 	}
@@ -397,7 +407,7 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 	return nil
 }
 
-func (c *runManager) volumesWithServiceAccountSecret(ctx *runContext) []corev1api.Volume {
+func (c *runManager) volumesWithServiceAccountSecret(ctx *runInstance) []corev1api.Volume {
 	var mode int32 = 0644
 	return []corev1api.Volume{
 		corev1api.Volume{
@@ -412,7 +422,7 @@ func (c *runManager) volumesWithServiceAccountSecret(ctx *runContext) []corev1ap
 	}
 }
 
-func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
+func (c *runManager) getServiceAccountSecretName(ctx *runInstance) string {
 	if c.testing != nil && c.testing.getServiceAccountSecretNameStub != nil {
 		return c.testing.getServiceAccountSecretNameStub(ctx)
 	}
@@ -427,7 +437,7 @@ return ""
 }
 }
 
-func (c *runManager) createTektonTaskRun(ctx *runContext) error {
+func (c *runManager) createTektonTaskRun(ctx *runInstance) error {
 	var err error
 
 	copyInt64Ptr := func(ptr *int64) *int64 {
@@ -486,7 +496,7 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 }
 
 func (c *runManager) addTektonTaskRunParamsForRunDetails(
-	ctx *runContext,
+	ctx *runInstance,
 	tektonTaskRun *tekton.TaskRun,
 ) {
 	spec := ctx.pipelineRun.GetSpec()
@@ -507,7 +517,7 @@ func (c *runManager) addTektonTaskRunParamsForRunDetails(
 }
 
 func (c *runManager) addTektonTaskRunParamsForPipeline(
-	ctx *runContext,
+	ctx *runInstance,
 	tektonTaskRun *tekton.TaskRun,
 ) error {
 	var err error
@@ -534,7 +544,7 @@ func (c *runManager) addTektonTaskRunParamsForPipeline(
 }
 
 func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
-	ctx *runContext,
+	ctx *runInstance,
 	tektonTaskRun *tekton.TaskRun,
 ) error {
 	spec := ctx.pipelineRun.GetSpec()
@@ -572,16 +582,7 @@ func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runi.Run, error) {
 	return NewRun(run), err
 }
 
-// Cleanup a run based on a pipelineRun
-func (c *runManager) Cleanup(pipelineRun k8s.PipelineRun) error {
-	ctx := &runContext{
-		pipelineRun:  pipelineRun,
-		runNamespace: pipelineRun.GetRunNamespace(),
-	}
-	return c.cleanup(ctx)
-}
-
-func (c *runManager) cleanup(ctx *runContext) error {
+func (c *runManager) cleanup(ctx *runInstance) error {
 	if c.testing != nil && c.testing.cleanupStub != nil {
 		return c.testing.cleanupStub(ctx)
 	}
