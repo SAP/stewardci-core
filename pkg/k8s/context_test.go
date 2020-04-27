@@ -1,9 +1,9 @@
 package k8s
 
 import (
-"testing"
 	"context"
-"gotest.tools/assert"
+	"gotest.tools/assert"
+	"testing"
 
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 )

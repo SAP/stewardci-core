@@ -1,9 +1,7 @@
-// +build todo
-
-
 package k8s
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -14,6 +12,7 @@ import (
 )
 
 func Test_GetServiceAccountSecretName_works(t *testing.T) {
+	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{
@@ -28,14 +27,22 @@ func Test_GetServiceAccountSecretName_works(t *testing.T) {
 	assert.NilError(t, err)
 
 	acc.AttachSecrets("a-secret", secretName, "z-secret")
-	examinee := acc.GetHelper()
+	err = acc.Update()
+	assert.NilError(t, err)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	ctx = WithClientFactory(ctx, factory)
+	ctx = EnsureServiceAccountTokenSecretRetriever(ctx)
+	examinee := GetServiceAccountTokenSecretRetriever(ctx)
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName(acc.GetServiceAccount())
+	result, err := examinee.ForName(ctx, accountName, ns1)
 	// VERIFY
-	assert.Equal(t, secretName, resultName)
+	assert.NilError(t, err)
+	assert.DeepEqual(t, secret, result)
 }
 
 func Test_GetServiceAccountSecretNameRepeat_delayedRef_works(t *testing.T) {
+	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{
@@ -54,11 +61,15 @@ func Test_GetServiceAccountSecretNameRepeat_delayedRef_works(t *testing.T) {
 	waitGroup.Add(1)
 	go func(t *testing.T, acc *ServiceAccountWrap) {
 		defer waitGroup.Done()
-		examinee := acc.GetHelper()
+		ctx := WithClientFactory(context.TODO(), factory)
+		ctx = EnsureServiceAccountTokenSecretRetriever(ctx)
+		examinee := GetServiceAccountTokenSecretRetriever(ctx)
 		// EXERCISE
-		resultName := examinee.GetServiceAccountSecretNameRepeat(acc.GetServiceAccount())
+		result, err := examinee.ForName(ctx, accountName, ns1)
+
 		// VERIFY
-		assert.Equal(t, "ns1-token-foo", resultName)
+		assert.NilError(t, err)
+		assert.Equal(t, "ns1-token-foo", result.GetName())
 	}(t, acc)
 	duration, _ := time.ParseDuration("500ms")
 	time.Sleep(duration)
@@ -72,6 +83,7 @@ func Test_GetServiceAccountSecretNameRepeat_delayedRef_works(t *testing.T) {
 }
 
 func Test_GetServiceAccountSecretNameRepeat_delayedSecret_works(t *testing.T) {
+	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{
@@ -91,11 +103,15 @@ func Test_GetServiceAccountSecretNameRepeat_delayedSecret_works(t *testing.T) {
 	waitGroup.Add(1)
 	go func(t *testing.T, acc *ServiceAccountWrap) {
 		defer waitGroup.Done()
-		examinee := acc.GetHelper()
+		ctx := WithClientFactory(context.TODO(), factory)
+		ctx = EnsureServiceAccountTokenSecretRetriever(ctx)
+		examinee := GetServiceAccountTokenSecretRetriever(ctx)
 		// EXERCISE
-		resultName := examinee.GetServiceAccountSecretNameRepeat(acc.GetServiceAccount())
+		result, err := examinee.ForName(ctx, accountName, ns1)
+
 		// VERIFY
-		assert.Equal(t, "ns1-token-foo", resultName)
+		assert.NilError(t, err)
+		assert.Equal(t, "ns1-token-foo", result.GetName())
 	}(t, acc)
 	duration, _ := time.ParseDuration("500ms")
 	time.Sleep(duration)
@@ -106,6 +122,7 @@ func Test_GetServiceAccountSecretNameRepeat_delayedSecret_works(t *testing.T) {
 }
 
 func Test_GetServiceAccountSecretName_wrongType(t *testing.T) {
+	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{
@@ -120,14 +137,23 @@ func Test_GetServiceAccountSecretName_wrongType(t *testing.T) {
 	assert.NilError(t, err)
 
 	acc.AttachSecrets("a-secret", secretName, "z-secret")
-	examinee := acc.GetHelper()
+	err = acc.Update()
+	assert.NilError(t, err)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	ctx = WithClientFactory(ctx, factory)
+	ctx = EnsureServiceAccountTokenSecretRetriever(ctx)
+	examinee := GetServiceAccountTokenSecretRetriever(ctx)
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName(acc.GetServiceAccount())
+	result, err := examinee.ForName(ctx, accountName, ns1)
+
 	// VERIFY
-	assert.Equal(t, "", resultName)
+	assert.Equal(t, err.Error(), "context deadline exceeded")
+	assert.Assert(t, nil == result)
 }
 
 func Test_GetServiceAccountSecretName_ref_missing(t *testing.T) {
+	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{
@@ -142,15 +168,23 @@ func Test_GetServiceAccountSecretName_ref_missing(t *testing.T) {
 	assert.NilError(t, err)
 
 	acc.AttachSecrets("a-secret", "z-secret")
-	examinee := acc.GetHelper()
-
+	err = acc.Update()
+	assert.NilError(t, err)
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	ctx = WithClientFactory(ctx, factory)
+	ctx = EnsureServiceAccountTokenSecretRetriever(ctx)
+	examinee := GetServiceAccountTokenSecretRetriever(ctx)
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName(acc.GetServiceAccount())
+	result, err := examinee.ForName(ctx, accountName, ns1)
+
 	// VERIFY
-	assert.Equal(t, "", resultName)
+	assert.Equal(t, err.Error(), "context deadline exceeded")
+	assert.Assert(t, nil == result)
 }
 
 func Test_GetServiceAccountSecretName_secret_missing(t *testing.T) {
+	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	setupAccountManager()
@@ -158,10 +192,18 @@ func Test_GetServiceAccountSecretName_secret_missing(t *testing.T) {
 	assert.NilError(t, err)
 
 	acc.AttachSecrets("a-secret", secretName, "z-secret")
-	examinee := acc.GetHelper()
+	err = acc.Update()
+	assert.NilError(t, err)
 
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	ctx = WithClientFactory(ctx, factory)
+	ctx = EnsureServiceAccountTokenSecretRetriever(ctx)
+	examinee := GetServiceAccountTokenSecretRetriever(ctx)
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName(acc.GetServiceAccount())
+	result, err := examinee.ForName(ctx, accountName, ns1)
+
 	// VERIFY
-	assert.Equal(t, "", resultName)
+	assert.Equal(t, err.Error(), "context deadline exceeded")
+	assert.Assert(t, nil == result)
 }

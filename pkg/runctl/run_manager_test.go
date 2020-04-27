@@ -906,7 +906,6 @@ func Test_RunManager_Cleanup_RemovesNamespace(t *testing.T) {
 	//TODO: mockNamespaceManager.EXPECT().Delete()...
 }
 
-
 func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	t.Parallel()
 
