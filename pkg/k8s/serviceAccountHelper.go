@@ -2,8 +2,7 @@ package k8s
 
 import (
 	"context"
-	"fmt"
-	//	"time"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +26,7 @@ type ServiceAccountTokenSecretRetriever interface {
 // The returned context either is or extends the given context and
 // has a `ServiceAccountTokenSecretRetriever` instance stored.
 func EnsureServiceAccountTokenSecretRetriever(ctx context.Context) context.Context {
-	instance := GetServiceAccountTokenSecretRetrieverFromContext(ctx)
+	instance := GetServiceAccountTokenSecretRetriever(ctx)
 	if instance == nil {
 		instance = &serviceAccountTokenSecretRetrieverImpl{}
 		return WithServiceAccountTokenSecretRetriever(ctx, instance)
@@ -59,10 +58,9 @@ func (r *serviceAccountTokenSecretRetrieverImpl) ForName(ctx context.Context, se
 }
 
 func (r *serviceAccountTokenSecretRetrieverImpl) forNameRetry(ctx context.Context, serviceAccountName, namespace string) (*v1.Secret, error) {
-	return nil, fmt.Errorf("No RETRY")
-	//#	duration, _ := time.ParseDuration("100ms")
-	//#	time.Sleep(duration)
-	//#	return r.ForName(ctx, serviceAccountName, namespace)
+	duration, _ := time.ParseDuration("100ms")
+	time.Sleep(duration)
+	return r.ForName(ctx, serviceAccountName, namespace)
 }
 
 // GetServiceAccountSecret returns the default-token of the service account

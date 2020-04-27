@@ -43,7 +43,7 @@ func WithClientFactory(ctx context.Context, factory ClientFactory) context.Conte
 // GetServiceAccountTokenSecretRetrieverFromContext provides the
 // `ServiceAccountTokenSecretRetriever` instance from the given context,
 // or nil if it doesn't contain one.
-func GetServiceAccountTokenSecretRetrieverFromContext(ctx context.Context) ServiceAccountTokenSecretRetriever {
+func GetServiceAccountTokenSecretRetriever(ctx context.Context) ServiceAccountTokenSecretRetriever {
 	return ctx.Value(serviceAccountTokenSecretRetrieverKey).(ServiceAccountTokenSecretRetriever)
 }
 

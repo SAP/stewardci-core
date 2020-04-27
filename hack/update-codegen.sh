@@ -209,7 +209,7 @@ fi
 echo
 generate_mocks \
     "github.com/SAP/stewardci-core/pkg/k8s" \
-    "ClientFactory,NamespaceManager,PipelineRun,PipelineRunFetcher,TenantFetcher" \
+    "ClientFactory,NamespaceManager,PipelineRun,PipelineRunFetcher,TenantFetcher,ServiceAccountTokenSecretRetriever" \
     "pkg/k8s/mocks/mocks.go"
 generate_mocks \
     "k8s.io/client-go/kubernetes/typed/core/v1" \

@@ -439,7 +439,7 @@ func (c *runInstance) getServiceAccountSecretName(ctx context.Context) string {
 		return GetRunInstanceTesting(ctx).getServiceAccountSecretNameStub(ctx)
 	}
 	k8s.EnsureServiceAccountTokenSecretRetriever(ctx)
-	ret := k8s.GetServiceAccountTokenSecretRetrieverFromContext(ctx)
+	ret := k8s.GetServiceAccountTokenSecretRetriever(ctx)
 	secret, err := ret.ForObj(ctx, c.serviceAccount.GetServiceAccount())
 	if err != nil {
 		return secret.GetName()
@@ -450,7 +450,6 @@ func (c *runInstance) getServiceAccountSecretName(ctx context.Context) string {
 
 func (c *runInstance) createTektonTaskRun(ctx context.Context) error {
 	var err error
-
 	copyInt64Ptr := func(ptr *int64) *int64 {
 		if ptr != nil {
 			v := *ptr

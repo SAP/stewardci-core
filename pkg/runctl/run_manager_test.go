@@ -35,17 +35,17 @@ func newRunManagerTestingWithAllNoopStubs() *runInstanceTesting {
 	return &runInstanceTesting{
 		cleanupStub:                               func(context.Context) error { return nil },
 		copySecretsToRunNamespaceStub:             func(context.Context) (string, []string, error) { return "", []string{}, nil },
-		getServiceAccountSecretNameStub:           func(context.Context) string { return "" },
 		setupNetworkPolicyFromConfigStub:          func(context.Context) error { return nil },
 		setupNetworkPolicyThatIsolatesAllPodsStub: func(context.Context) error { return nil },
 		setupServiceAccountStub:                   func(context.Context, string, []string) error { return nil },
 		setupStaticNetworkPoliciesStub:            func(context.Context) error { return nil },
+		getServiceAccountSecretNameStub:           func(context.Context) string { return "" },
 	}
 }
 
 func newRunManagerTestingWithRequiredStubs() *runInstanceTesting {
 	return &runInstanceTesting{
-		getServiceAccountSecretNameStub: func(context.Context) string { return "" },
+		getServiceAccountSecretNameStub: func(context.Context) string { return "foo" },
 	}
 }
 
@@ -590,7 +590,7 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_IsNotEmptyIfNoValuesToSet(t
 	examinee.pipelineRun.UpdateRunNamespace(runNamespaceName)
 	cf := fake.NewClientFactory()
 	ctx := k8s.WithClientFactory(context.TODO(), cf)
-
+	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithAllNoopStubs())
 	// EXERCISE
 	resultError := examinee.createTektonTaskRun(ctx)
 
@@ -628,12 +628,7 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_AllValuesSet(t *testing.T) 
 	}
 	cf := fake.NewClientFactory()
 	ctx := k8s.WithClientFactory(context.TODO(), cf)
-	testing := newRunManagerTestingWithAllNoopStubs()
-	testing.getServiceAccountSecretNameStub = func(ctx context.Context) string {
-		return serviceAccountSecretName
-	}
-	ctx = WithRunInstanceTesting(ctx, testing)
-
+	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
 	// EXERCISE
 	resultError := examinee.createTektonTaskRun(ctx)
 
@@ -676,7 +671,7 @@ func Test_RunManager_StartPipelineRun_CreatesTektonTaskRun(t *testing.T) {
 	ctx := mockContext(mockCtrl)
 	examinee := prepareMocks(mockCtrl)
 	preparePredefinedClusterRole(t, ctx)
-	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
+	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithAllNoopStubs())
 	config := &pipelineRunsConfigStruct{}
 
 	// EXERCISE
@@ -743,8 +738,7 @@ func Test_RunManager_StartPipelineRun_DoesCopySecret(t *testing.T) {
 
 	// inject secret helper mock
 	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
-	testing := newRunManagerTestingWithAllNoopStubs()
+	testing := newRunManagerTestingWithRequiredStubs()
 	testing.getSecretHelperStub = func(string, corev1.SecretInterface) secrets.SecretHelper {
 		return mockSecretHelper
 	}
@@ -811,7 +805,7 @@ func Test_RunManager_Start_FailsWithContentErrorWhenSecretNotFound(t *testing.T)
 	}
 	mockPipelineRun := prepareMocksWithSpec(mockCtrl, spec)
 	config := &pipelineRunsConfigStruct{}
-	ctx := WithRunInstanceTesting(context.TODO(), newRunManagerTestingWithRequiredStubs())
+	ctx := WithRunInstanceTesting(mockContext(mockCtrl), newRunManagerTestingWithRequiredStubs())
 	preparePredefinedClusterRole(t, ctx)
 
 	// EXPECT
@@ -842,7 +836,7 @@ func Test_RunManager_Start_FailsWithContentErrorWhenImagePullSecretNotFound(t *t
 	mockPipelineRun := prepareMocksWithSpec(mockCtrl, spec)
 
 	config := &pipelineRunsConfigStruct{}
-	ctx := WithRunInstanceTesting(context.TODO(), newRunManagerTestingWithRequiredStubs())
+	ctx := WithRunInstanceTesting(mockContext(mockCtrl), newRunManagerTestingWithRequiredStubs())
 	preparePredefinedClusterRole(t, ctx)
 
 	// EXPECT
@@ -874,7 +868,8 @@ func Test_RunManager_Start_FailsWithInfraErrorWhenForbidden(t *testing.T) {
 	mockPipelineRun := prepareMocksWithSpec(mockCtrl, spec)
 
 	config := &pipelineRunsConfigStruct{}
-	ctx := WithRunInstanceTesting(context.TODO(), newRunManagerTestingWithRequiredStubs())
+	ctx := mockContext(mockCtrl)
+	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
 	preparePredefinedClusterRole(t, ctx)
 
 	// EXPECT
@@ -899,7 +894,6 @@ func Test_RunManager_Cleanup_RemovesNamespace(t *testing.T) {
 	examinee := prepareMocks(mockCtrl)
 
 	ctx := mockContext(mockCtrl)
-	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
 	err := examinee.prepareRunNamespace(ctx)
 	assert.NilError(t, err)
 
@@ -911,6 +905,7 @@ func Test_RunManager_Cleanup_RemovesNamespace(t *testing.T) {
 	CleanupPipelineRun(ctx, examinee.pipelineRun)
 	//TODO: mockNamespaceManager.EXPECT().Delete()...
 }
+
 
 func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	t.Parallel()
@@ -934,9 +929,9 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	}
 
 	setupExaminee := func(
-		t *testing.T, pipelineRunJSON string,
+		ctx context.Context, t *testing.T, pipelineRunJSON string,
 	) (
-		ctx context.Context, runInstanceObj *runInstance, cf *k8sfake.ClientFactory,
+		ctxOut context.Context, runInstanceObj *runInstance, cf *k8sfake.ClientFactory,
 	) {
 		pipelineRun := StewardObjectFromJSON(t, pipelineRunJSON).(*stewardv1alpha1.PipelineRun)
 		t.Log("decoded:\n", spew.Sdump(pipelineRun))
@@ -945,12 +940,12 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			k8sfake.Namespace("namespace1"),
 			pipelineRun,
 		)
-		ctx = k8s.WithClientFactory(context.TODO(), cf)
+		ctx = k8s.WithClientFactory(ctx, cf)
 		k8sPipelineRun, err := k8s.NewPipelineRun(pipelineRun, cf)
 		assert.NilError(t, err)
 		ctx = secrets.WithSecretProvider(ctx, k8s.NewTenantNamespace(cf, pipelineRun.GetNamespace()).GetSecretProvider())
-		ctx = k8s.WithNamespaceManager(ctx, k8s.NewNamespaceManager(cf, "prefix1", 0))
 		ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
+		ctxOut = k8s.WithNamespaceManager(ctx, k8s.NewNamespaceManager(cf, "prefix1", 0))
 		runInstanceObj = &runInstance{
 			pipelineRun: k8sPipelineRun,
 		}
@@ -1025,7 +1020,11 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 				tc.runIDJSON,
 			)
 			t.Log("input:", pipelineRunJSON)
-			ctx, runInstance, cf := setupExaminee(t, pipelineRunJSON)
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			ctx := mockServiceAccountTokenSecretRetriever(context.TODO(), mockCtrl)
+			ctx, runInstance, cf := setupExaminee(ctx, t, pipelineRunJSON)
+			ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
 
 			// exercise
 			err = runInstance.createTektonTaskRun(ctx)
@@ -1081,7 +1080,10 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 				tc.loggingFragment,
 			)
 			t.Log("input:", pipelineRunJSON)
-			ctx, runInstance, cf := setupExaminee(t, pipelineRunJSON)
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			ctx := mockServiceAccountTokenSecretRetriever(context.TODO(), mockCtrl)
+			ctx, runInstance, cf := setupExaminee(ctx, t, pipelineRunJSON)
 
 			// exercise
 			err = runInstance.createTektonTaskRun(ctx)
@@ -1146,6 +1148,12 @@ func mockContext(ctrl *gomock.Controller) context.Context {
 	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithAllNoopStubs())
 
 	return ctx
+}
+
+func mockServiceAccountTokenSecretRetriever(ctx context.Context, ctrl *gomock.Controller) context.Context {
+	mock := mocks.NewMockServiceAccountTokenSecretRetriever(ctrl)
+	mock.EXPECT().ForObj(gomock.Any(), gomock.Any()).Return(&corev1api.Secret{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}, nil).AnyTimes()
+	return k8s.WithServiceAccountTokenSecretRetriever(ctx, mock)
 }
 
 func prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv1alpha1.PipelineSpec) *mocks.MockPipelineRun {
