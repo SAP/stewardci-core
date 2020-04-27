@@ -785,10 +785,9 @@ func Test_RunManager_Start_FailsWithContentErrorWhenPipelineCloneSecretNotFound(
 	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
 
 	// EXPECT
-         mockSecretProvider := secretMocks.NewMockSecretProvider(mockCtrl)
-         mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
-        ctx = secrets.WithSecretProvider(ctx, mockSecretProvider)
-
+	mockSecretProvider := secretMocks.NewMockSecretProvider(mockCtrl)
+	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
+	ctx = secrets.WithSecretProvider(ctx, mockSecretProvider)
 
 	mockPipelineRun.EXPECT().UpdateMessage(secrets.NewNotFoundError(secretName).Error())
 	mockPipelineRun.EXPECT().UpdateResult(stewardv1alpha1.ResultErrorContent)
@@ -813,12 +812,12 @@ func Test_RunManager_Start_FailsWithContentErrorWhenSecretNotFound(t *testing.T)
 	mockPipelineRun := prepareMocksWithSpec(mockCtrl, spec)
 	config := &pipelineRunsConfigStruct{}
 	ctx := WithRunInstanceTesting(context.TODO(), newRunManagerTestingWithRequiredStubs())
- preparePredefinedClusterRole(t, ctx)
+	preparePredefinedClusterRole(t, ctx)
 
 	// EXPECT
-	 mockSecretProvider := secretMocks.NewMockSecretProvider(mockCtrl)
-         mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
-        ctx = secrets.WithSecretProvider(ctx, mockSecretProvider)
+	mockSecretProvider := secretMocks.NewMockSecretProvider(mockCtrl)
+	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
+	ctx = secrets.WithSecretProvider(ctx, mockSecretProvider)
 
 	mockPipelineRun.EXPECT().UpdateMessage(secrets.NewNotFoundError(secretName).Error())
 	mockPipelineRun.EXPECT().UpdateResult(stewardv1alpha1.ResultErrorContent)
@@ -844,12 +843,12 @@ func Test_RunManager_Start_FailsWithContentErrorWhenImagePullSecretNotFound(t *t
 
 	config := &pipelineRunsConfigStruct{}
 	ctx := WithRunInstanceTesting(context.TODO(), newRunManagerTestingWithRequiredStubs())
-preparePredefinedClusterRole(t, ctx)
+	preparePredefinedClusterRole(t, ctx)
 
 	// EXPECT
-	 mockSecretProvider := secretMocks.NewMockSecretProvider(mockCtrl)
-         mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
-        ctx = secrets.WithSecretProvider(ctx, mockSecretProvider)
+	mockSecretProvider := secretMocks.NewMockSecretProvider(mockCtrl)
+	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
+	ctx = secrets.WithSecretProvider(ctx, mockSecretProvider)
 	mockPipelineRun.EXPECT().UpdateMessage(secrets.NewNotFoundError(secretName).Error())
 	mockPipelineRun.EXPECT().UpdateResult(stewardv1alpha1.ResultErrorContent)
 	mockPipelineRun.EXPECT().String() //logging
@@ -876,12 +875,12 @@ func Test_RunManager_Start_FailsWithInfraErrorWhenForbidden(t *testing.T) {
 
 	config := &pipelineRunsConfigStruct{}
 	ctx := WithRunInstanceTesting(context.TODO(), newRunManagerTestingWithRequiredStubs())
-preparePredefinedClusterRole(t, ctx)
+	preparePredefinedClusterRole(t, ctx)
 
 	// EXPECT
-         mockSecretProvider := secretMocks.NewMockSecretProvider(mockCtrl)
-         mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil,  fmt.Errorf("Forbidden"))
-        ctx = secrets.WithSecretProvider(ctx, mockSecretProvider)
+	mockSecretProvider := secretMocks.NewMockSecretProvider(mockCtrl)
+	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, fmt.Errorf("Forbidden"))
+	ctx = secrets.WithSecretProvider(ctx, mockSecretProvider)
 	mockPipelineRun.EXPECT().UpdateMessage("Forbidden")
 	mockPipelineRun.EXPECT().UpdateResult(stewardv1alpha1.ResultErrorInfra)
 	mockPipelineRun.EXPECT().String() //logging
@@ -899,17 +898,17 @@ func Test_RunManager_Cleanup_RemovesNamespace(t *testing.T) {
 	defer mockCtrl.Finish()
 	examinee := prepareMocks(mockCtrl)
 
-        ctx := mockContext(mockCtrl)
+	ctx := mockContext(mockCtrl)
 	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
 	err := examinee.prepareRunNamespace(ctx)
 	assert.NilError(t, err)
-	
-        preparePredefinedClusterRole(t, ctx)
 
-        //TODO: mockNamespaceManager.EXPECT().Create()...
+	preparePredefinedClusterRole(t, ctx)
+
+	//TODO: mockNamespaceManager.EXPECT().Create()...
 
 	// EXERCISE
-	CleanupPipelineRun(ctx,examinee.pipelineRun)
+	CleanupPipelineRun(ctx, examinee.pipelineRun)
 	//TODO: mockNamespaceManager.EXPECT().Delete()...
 }
 
@@ -946,11 +945,11 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			k8sfake.Namespace("namespace1"),
 			pipelineRun,
 		)
-	        ctx = k8s.WithClientFactory(context.TODO(),cf)	
-                k8sPipelineRun, err := k8s.NewPipelineRun(pipelineRun, cf)
+		ctx = k8s.WithClientFactory(context.TODO(), cf)
+		k8sPipelineRun, err := k8s.NewPipelineRun(pipelineRun, cf)
 		assert.NilError(t, err)
-                ctx = secrets.WithSecretProvider(ctx,k8s.NewTenantNamespace(cf, pipelineRun.GetNamespace()).GetSecretProvider())
-                ctx = k8s.WithNamespaceManager(ctx, k8s.NewNamespaceManager(cf, "prefix1", 0))
+		ctx = secrets.WithSecretProvider(ctx, k8s.NewTenantNamespace(cf, pipelineRun.GetNamespace()).GetSecretProvider())
+		ctx = k8s.WithNamespaceManager(ctx, k8s.NewNamespaceManager(cf, "prefix1", 0))
 		ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
 		runInstanceObj = &runInstance{
 			pipelineRun: k8sPipelineRun,

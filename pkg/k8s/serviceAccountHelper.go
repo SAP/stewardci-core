@@ -2,7 +2,8 @@ package k8s
 
 import (
 	"context"
-	"time"
+	"fmt"
+	//	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,11 +14,11 @@ import (
 type ServiceAccountTokenSecretRetriever interface {
 	// ForServiceAccount retrieves ... for the given service account object
 	// using the K8s client in `ctx`.
-	ForObj(ctx context.Context, serviceAccount *v1.ServiceAccount) (v1.Secret, error)
+	ForObj(ctx context.Context, serviceAccount *v1.ServiceAccount) (*v1.Secret, error)
 
 	// ForName retries ... for the named service account
 	// using the K8s client in `ctx`.
-	ForName(ctx context.Context, serviceAccountName, namespace string) (v1.Secret, error)
+	ForName(ctx context.Context, serviceAccountName, namespace string) (*v1.Secret, error)
 }
 
 // EnsureServiceAccountTokenSecretRetriever sets the
@@ -38,11 +39,11 @@ func EnsureServiceAccountTokenSecretRetriever(ctx context.Context) context.Conte
 
 type serviceAccountTokenSecretRetrieverImpl struct{}
 
-func (r *serviceAccountTokenSecretRetrieverImpl) ForObj(ctx context.Context, serviceAccount *v1.ServiceAccount) (v1.Secret, error) {
+func (r *serviceAccountTokenSecretRetrieverImpl) ForObj(ctx context.Context, serviceAccount *v1.ServiceAccount) (*v1.Secret, error) {
 	return r.ForName(ctx, serviceAccount.GetName(), serviceAccount.GetNamespace())
 }
 
-func (r *serviceAccountTokenSecretRetrieverImpl) ForName(ctx context.Context, serviceAccountName, namespace string) (v1.Secret, error) {
+func (r *serviceAccountTokenSecretRetrieverImpl) ForName(ctx context.Context, serviceAccountName, namespace string) (*v1.Secret, error) {
 	factory := GetClientFactory(ctx)
 	client := factory.CoreV1().ServiceAccounts(namespace)
 	serviceAccount, err := client.Get(serviceAccountName, metav1.GetOptions{})
@@ -52,15 +53,16 @@ func (r *serviceAccountTokenSecretRetrieverImpl) ForName(ctx context.Context, se
 
 	result := r.GetServiceAccountSecret(ctx, serviceAccount)
 	if result != nil {
-		return *result, nil
+		return result, nil
 	}
 	return r.forNameRetry(ctx, serviceAccountName, namespace)
 }
 
-func (r *serviceAccountTokenSecretRetrieverImpl) forNameRetry(ctx context.Context, serviceAccountName, namespace string) (v1.Secret, error) {
-	duration, _ := time.ParseDuration("100ms")
-	time.Sleep(duration)
-	return r.ForName(ctx, serviceAccountName, namespace)
+func (r *serviceAccountTokenSecretRetrieverImpl) forNameRetry(ctx context.Context, serviceAccountName, namespace string) (*v1.Secret, error) {
+	return nil, fmt.Errorf("No RETRY")
+	//#	duration, _ := time.ParseDuration("100ms")
+	//#	time.Sleep(duration)
+	//#	return r.ForName(ctx, serviceAccountName, namespace)
 }
 
 // GetServiceAccountSecret returns the default-token of the service account
