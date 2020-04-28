@@ -111,6 +111,50 @@ func Test_StartRunManager(t *testing.T) {
 	}
 }
 
+func Test_CleanupRunManager(t *testing.T) {
+	t.Parallel()
+	// SETUP
+	rm, ctx := createRunManagerAndContext()
+	cleanupError := fmt.Errorf("cleanup")
+
+	for _, test := range []struct {
+		name          string
+		cleanupError  error
+		expectedError error
+	}{
+		{"ok", nil, nil},
+		{"error", cleanupError, cleanupError},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			test := test
+			t.Parallel()
+			// SETUP
+
+			executed := false
+			testing := &runInstanceTesting{
+				cleanupStub: func(ctx context.Context) error {
+					executed = true
+					return test.cleanupError
+				},
+			}
+			ctx = WithRunInstanceTesting(ctx, testing)
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			pipelineRun := mockPipelineRunWithNamespace(mockCtrl)
+			// EXERCISE
+			err := rm.Cleanup(ctx, pipelineRun)
+			// VERIFY
+			if test.expectedError == nil {
+				assert.NilError(t, err)
+			} else {
+				assert.Assert(t, test.expectedError == err)
+				assert.Assert(t, executed)
+			}
+		})
+	}
+
+}
+
 func createRunManagerAndContext() (runi.Manager, context.Context) {
 	ctx := context.TODO()
 	config := &pipelineRunsConfigStruct{}
