@@ -33,12 +33,7 @@ type Controller struct {
 	tektonTaskRunsSynced cache.InformerSynced
 	workqueue            workqueue.RateLimitingInterface
 	metrics              metrics.Metrics
-	testing              *controllerTesting
 	ctx                  context.Context
-}
-
-type controllerTesting struct {
-	contextForPipelineRunStub func(ctx context.Context, pipelineRun k8s.PipelineRun) context.Context
 }
 
 // NewController creates new Controller
@@ -165,10 +160,6 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) e
 }
 
 func (c *Controller) contextForPipelineRun(ctx context.Context, pipelineRun k8s.PipelineRun) context.Context {
-	if c.testing != nil && c.testing.contextForPipelineRunStub != nil {
-		return c.testing.contextForPipelineRunStub(ctx, pipelineRun)
-	}
-
 	factory := k8s.GetClientFactory(ctx)
 	tenant := k8s.NewTenantNamespace(factory, pipelineRun.GetNamespace())
 	workFactory := tenant.TargetClientFactory()
