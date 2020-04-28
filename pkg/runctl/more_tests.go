@@ -1,6 +1,7 @@
-// +build todo
-
 package runctl
+
+// This tests cross the border between runManager and runInstance
+// More refactroing required
 
 import (
 	"context"
@@ -12,8 +13,10 @@ import (
 	k8sfake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	secretMocks "github.com/SAP/stewardci-core/pkg/k8s/secrets/mocks"
+	runi "github.com/SAP/stewardci-core/pkg/run"
 	"github.com/davecgh/go-spew/spew"
 	gomock "github.com/golang/mock/gomock"
+	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,9 +33,10 @@ func Test_RunManager_StartPipelineRun_DoesNotSetPipelineRunStatus(t *testing.T) 
 	mockPipelineRun := prepareMocksWithSpec(mockCtrl, nil)
 	preparePredefinedClusterRole(t, ctx)
 	config := &pipelineRunsConfigStruct{}
-
+	ctx = EnsureRunManager(ctx, config)
+	examinee := runi.GetRunManager(ctx)
 	// EXERCISE
-	err := StartPipelineRun(ctx, mockPipelineRun, config)
+	err := examinee.Start(ctx, mockPipelineRun)
 	assert.NilError(t, err)
 
 	// VERIFY
@@ -78,7 +82,8 @@ func Test_RunManager_StartPipelineRun_DoesCopySecret(t *testing.T) {
 		return mockSecretHelper
 	}
 	ctx = WithRunInstanceTesting(ctx, testing)
-
+	ctx = EnsureRunManager(ctx, config)
+	examinee := runi.GetRunManager(ctx)
 	// EXPECT
 	mockSecretHelper.EXPECT().
 		CopySecrets([]string{"scm_secret1"}, nil, gomock.Any()).
@@ -91,7 +96,7 @@ func Test_RunManager_StartPipelineRun_DoesCopySecret(t *testing.T) {
 		Return([]string{"imagePullSecret1", "imagePullSecret2"}, nil)
 
 	// EXERCISE
-	err := StartPipelineRun(ctx, mockPipelineRun, config)
+	err := examinee.Start(ctx, mockPipelineRun)
 	assert.NilError(t, err)
 }
 
@@ -112,7 +117,8 @@ func Test_RunManager_Start_FailsWithContentErrorWhenPipelineCloneSecretNotFound(
 	preparePredefinedClusterRole(t, ctx)
 	config := &pipelineRunsConfigStruct{}
 	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
-
+	ctx = EnsureRunManager(ctx, config)
+	examinee := runi.GetRunManager(ctx)
 	// EXPECT
 	mockSecretProvider := secretMocks.NewMockSecretProvider(mockCtrl)
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
@@ -123,7 +129,7 @@ func Test_RunManager_Start_FailsWithContentErrorWhenPipelineCloneSecretNotFound(
 	mockPipelineRun.EXPECT().String() //logging
 
 	// EXERCISE
-	err := StartPipelineRun(ctx, mockPipelineRun, config)
+	err := examinee.Start(ctx, mockPipelineRun)
 	assert.Assert(t, err != nil)
 	assert.Assert(t, is.Regexp("failed to copy pipeline clone secret: .*", err.Error()))
 }
@@ -142,7 +148,8 @@ func Test_RunManager_Start_FailsWithContentErrorWhenSecretNotFound(t *testing.T)
 	config := &pipelineRunsConfigStruct{}
 	ctx := WithRunInstanceTesting(mockContext(mockCtrl), newRunManagerTestingWithRequiredStubs())
 	preparePredefinedClusterRole(t, ctx)
-
+	ctx = EnsureRunManager(ctx, config)
+	examinee := runi.GetRunManager(ctx)
 	// EXPECT
 	mockSecretProvider := secretMocks.NewMockSecretProvider(mockCtrl)
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
@@ -153,7 +160,7 @@ func Test_RunManager_Start_FailsWithContentErrorWhenSecretNotFound(t *testing.T)
 	mockPipelineRun.EXPECT().String() //logging
 
 	// EXERCISE
-	err := StartPipelineRun(ctx, mockPipelineRun, config)
+	err := examinee.Start(ctx, mockPipelineRun)
 	assert.Assert(t, err != nil)
 	assert.Assert(t, is.Regexp("failed to copy pipeline secrets: .*", err.Error()))
 }
@@ -173,7 +180,8 @@ func Test_RunManager_Start_FailsWithContentErrorWhenImagePullSecretNotFound(t *t
 	config := &pipelineRunsConfigStruct{}
 	ctx := WithRunInstanceTesting(mockContext(mockCtrl), newRunManagerTestingWithRequiredStubs())
 	preparePredefinedClusterRole(t, ctx)
-
+	ctx = EnsureRunManager(ctx, config)
+	examinee := runi.GetRunManager(ctx)
 	// EXPECT
 	mockSecretProvider := secretMocks.NewMockSecretProvider(mockCtrl)
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, nil)
@@ -183,7 +191,7 @@ func Test_RunManager_Start_FailsWithContentErrorWhenImagePullSecretNotFound(t *t
 	mockPipelineRun.EXPECT().String() //logging
 
 	// EXERCISE
-	err := StartPipelineRun(ctx, mockPipelineRun, config)
+	err := examinee.Start(ctx, mockPipelineRun)
 	assert.Assert(t, err != nil)
 	assert.Assert(t, is.Regexp("failed to copy image pull secrets: .*", err.Error()))
 }
@@ -206,7 +214,8 @@ func Test_RunManager_Start_FailsWithInfraErrorWhenForbidden(t *testing.T) {
 	ctx := mockContext(mockCtrl)
 	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
 	preparePredefinedClusterRole(t, ctx)
-
+	ctx = EnsureRunManager(ctx, config)
+	examinee := runi.GetRunManager(ctx)
 	// EXPECT
 	mockSecretProvider := secretMocks.NewMockSecretProvider(mockCtrl)
 	mockSecretProvider.EXPECT().GetSecret(secretName).Return(nil, fmt.Errorf("Forbidden"))
@@ -216,29 +225,8 @@ func Test_RunManager_Start_FailsWithInfraErrorWhenForbidden(t *testing.T) {
 	mockPipelineRun.EXPECT().String() //logging
 
 	// EXERCISE
-	err := StartPipelineRun(ctx, mockPipelineRun, config)
+	err := examinee.Start(ctx, mockPipelineRun)
 	assert.Assert(t, err != nil)
-}
-
-func Test_RunManager_Cleanup_RemovesNamespace(t *testing.T) {
-	t.Parallel()
-
-	// SETUP
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-	examinee := prepareMocks(mockCtrl)
-
-	ctx := mockContext(mockCtrl)
-	err := examinee.prepareRunNamespace(ctx)
-	assert.NilError(t, err)
-
-	preparePredefinedClusterRole(t, ctx)
-
-	//TODO: mockNamespaceManager.EXPECT().Create()...
-
-	// EXERCISE
-	CleanupPipelineRun(ctx, examinee.pipelineRun)
-	//TODO: mockNamespaceManager.EXPECT().Delete()...
 }
 
 func Test_RunManager_Log_Elasticsearch(t *testing.T) {
