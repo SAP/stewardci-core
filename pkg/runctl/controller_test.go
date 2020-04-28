@@ -267,7 +267,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			currentStatus: api.PipelineStatus{},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 
-				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Do(func(run k8s.PipelineRun) {
+				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Do(func(ctx context.Context,run k8s.PipelineRun) {
 					run.UpdateResult(api.ResultErrorContent)
 				}).Return(fmt.Errorf("expected"))
 			},

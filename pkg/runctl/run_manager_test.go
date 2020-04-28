@@ -23,10 +23,8 @@ func Test_EnsureRunManager_CreateIfMissing(t *testing.T) {
 	ctx = EnsureRunManager(ctx, config)
 
 	// VERIFY
-	assert.DeepEqual(t, &runManager{
-		pipelineRunsConfig: config,
-	},
-		runi.GetRunManager(ctx))
+	assert.DeepEqual(t, config,
+		runi.GetRunManager(ctx).(*runManager).pipelineRunsConfig)
 }
 
 func Test_EnsureRunManager_DontModifyIfExists(t *testing.T) {
