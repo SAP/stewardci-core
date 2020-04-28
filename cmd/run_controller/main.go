@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"time"
+"context" 
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/metrics"
@@ -54,13 +55,14 @@ func main() {
 
 	log.Printf("Create Factory (resync period: %s)", resyncPeriod.String())
 	factory := k8s.NewClientFactory(config, resyncPeriod)
+        ctx := k8s.WithClientFactory(context.Background(), factory)
 
 	log.Printf("Provide metrics")
 	metrics := metrics.NewMetrics()
 	metrics.StartServer()
 
 	log.Printf("Create Controller")
-	controller := runctl.NewController(factory, metrics)
+        controller := runctl.NewController(ctx, metrics)
 
 	log.Printf("Create Signal Handler")
 	stopCh := signals.SetupSignalHandler()

@@ -28,6 +28,7 @@
 package mocks
 
 import (
+	context "context"
 	v1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
 	run "github.com/SAP/stewardci-core/pkg/run"
@@ -142,44 +143,44 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 }
 
 // Cleanup mocks base method
-func (m *MockManager) Cleanup(arg0 k8s.PipelineRun) error {
+func (m *MockManager) Cleanup(arg0 context.Context, arg1 k8s.PipelineRun) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Cleanup", arg0)
+	ret := m.ctrl.Call(m, "Cleanup", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Cleanup indicates an expected call of Cleanup
-func (mr *MockManagerMockRecorder) Cleanup(arg0 interface{}) *gomock.Call {
+func (mr *MockManagerMockRecorder) Cleanup(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cleanup", reflect.TypeOf((*MockManager)(nil).Cleanup), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cleanup", reflect.TypeOf((*MockManager)(nil).Cleanup), arg0, arg1)
 }
 
 // GetRun mocks base method
-func (m *MockManager) GetRun(arg0 k8s.PipelineRun) (run.Run, error) {
+func (m *MockManager) GetRun(arg0 context.Context, arg1 k8s.PipelineRun) (run.Run, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRun", arg0)
+	ret := m.ctrl.Call(m, "GetRun", arg0, arg1)
 	ret0, _ := ret[0].(run.Run)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetRun indicates an expected call of GetRun
-func (mr *MockManagerMockRecorder) GetRun(arg0 interface{}) *gomock.Call {
+func (mr *MockManagerMockRecorder) GetRun(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRun", reflect.TypeOf((*MockManager)(nil).GetRun), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRun", reflect.TypeOf((*MockManager)(nil).GetRun), arg0, arg1)
 }
 
 // Start mocks base method
-func (m *MockManager) Start(arg0 k8s.PipelineRun) error {
+func (m *MockManager) Start(arg0 context.Context, arg1 k8s.PipelineRun) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", arg0)
+	ret := m.ctrl.Call(m, "Start", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Start indicates an expected call of Start
-func (mr *MockManagerMockRecorder) Start(arg0 interface{}) *gomock.Call {
+func (mr *MockManagerMockRecorder) Start(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockManager)(nil).Start), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockManager)(nil).Start), arg0, arg1)
 }
