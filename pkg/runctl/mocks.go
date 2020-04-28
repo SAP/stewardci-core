@@ -43,7 +43,5 @@ func mockFactories(ctx context.Context, ctrl *gomock.Controller) context.Context
 	mockSecretProvider := secretMocks.NewMockSecretProvider(ctrl)
 	ctx = secrets.WithSecretProvider(ctx, mockSecretProvider)
 
-	//ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithAllNoopStubs())
-
 	return ctx
 }

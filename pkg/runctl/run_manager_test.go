@@ -136,7 +136,7 @@ func Test_GetRun_found(t *testing.T) {
 	rm, ctx := createRunManagerAndContext()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-pipelineRun := mockPipelineRunWithNamespace(mockCtrl)
+	pipelineRun := mockPipelineRunWithNamespace(mockCtrl)
 	tektonTaskRun := tekton.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tektonTaskRunName,
@@ -144,9 +144,9 @@ pipelineRun := mockPipelineRunWithNamespace(mockCtrl)
 		},
 	}
 	cf := fake.NewClientFactory()
-        _,err := cf.TektonV1alpha1().TaskRuns(runNamespaceName).Create(&tektonTaskRun)
-        assert.NilError(t,err)	
-        ctx = k8s.WithClientFactory(ctx, cf)
+	_, err := cf.TektonV1alpha1().TaskRuns(runNamespaceName).Create(&tektonTaskRun)
+	assert.NilError(t, err)
+	ctx = k8s.WithClientFactory(ctx, cf)
 	// EXERCISE
 	run, err := rm.GetRun(ctx, pipelineRun)
 	assert.NilError(t, err)
