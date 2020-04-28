@@ -43,7 +43,7 @@ type controllerTesting struct {
 
 // NewController creates new Controller
 func NewController(ctx context.Context, metrics metrics.Metrics) *Controller {
-factory := k8s.GetClientFactory(ctx)
+	factory := k8s.GetClientFactory(ctx)
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1alpha1().TaskRuns()
@@ -215,9 +215,9 @@ func (c *Controller) syncHandler(key string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to load configuration for pipeline runs")
 	}
-        ctx := EnsureRunManager(c.ctx,pipelineRunsConfig)
-        runManager := runi.GetRunManager(ctx)	
-        // Check if object has deletion timestamp
+	ctx := EnsureRunManager(c.ctx, pipelineRunsConfig)
+	runManager := runi.GetRunManager(ctx)
+	// Check if object has deletion timestamp
 	// If not, try to add finalizer if missing
 	if pipelineRun.HasDeletionTimestamp() {
 		ctx = c.contextForPipelineRun(ctx, pipelineRun)

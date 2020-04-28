@@ -2,6 +2,7 @@ package runctl
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
@@ -45,29 +46,69 @@ func Test_StartRunManager(t *testing.T) {
 	t.Parallel()
 	// SETUP
 	rm, ctx := createRunManagerAndContext()
+	tektonError := fmt.Errorf("tekton")
+	namespaceError := fmt.Errorf("namespace")
 
-	createTektonExecuted := false
-	createRunNamespaceExecuted := false
-	testing := &runInstanceTesting{
-		createTektonTaskRunStub: func(ctx context.Context) error {
-			createTektonExecuted = true
-			return nil
+	for _, test := range []struct {
+		name                         string
+		createRunNamespaceError      error
+		createTektonTaskError        error
+		expectedRunNamespaceExecuted bool
+		expectedTektonTaskExecuted   bool
+		expectedError                error
+	}{
+		{"ok",
+			nil, nil,
+			true, true,
+			nil,
 		},
-		prepareRunNamespaceStub: func(ctx context.Context) error {
-			createRunNamespaceExecuted = true
-			return nil
+		{"tekton error",
+			nil, tektonError,
+			true, true,
+			tektonError,
 		},
+		{"namespace error",
+			namespaceError, nil,
+			true, false,
+			namespaceError,
+		},
+		{"both error",
+			namespaceError, tektonError,
+			true, false, namespaceError},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			test := test
+			t.Parallel()
+			// SETUP
+
+			createTektonExecuted := false
+			createRunNamespaceExecuted := false
+			testing := &runInstanceTesting{
+				createTektonTaskRunStub: func(ctx context.Context) error {
+					createTektonExecuted = true
+					return test.createTektonTaskError
+				},
+				prepareRunNamespaceStub: func(ctx context.Context) error {
+					createRunNamespaceExecuted = true
+					return test.createRunNamespaceError
+				},
+			}
+			ctx = WithRunInstanceTesting(ctx, testing)
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			pipelineRun := mockPipelineRunWithNamespace(mockCtrl)
+			// EXERCISE
+			err := rm.Start(ctx, pipelineRun)
+			// VERIFY
+			if test.expectedError == nil {
+				assert.NilError(t, err)
+			} else {
+				assert.Assert(t, test.expectedError == err)
+				assert.Assert(t, createTektonExecuted == test.expectedTektonTaskExecuted)
+				assert.Assert(t, createRunNamespaceExecuted == test.expectedRunNamespaceExecuted)
+			}
+		})
 	}
-	ctx = WithRunInstanceTesting(ctx, testing)
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-	pipelineRun := mockPipelineRunWithNamespace(mockCtrl)
-	// EXERCISE
-	rm.Start(ctx, pipelineRun)
-
-	// VERIFY
-	assert.Assert(t, createTektonExecuted == true)
-	assert.Assert(t, createRunNamespaceExecuted == true)
 }
 
 func createRunManagerAndContext() (runi.Manager, context.Context) {
