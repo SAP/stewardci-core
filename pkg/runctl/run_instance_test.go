@@ -1119,6 +1119,11 @@ func prepareMocks(ctrl *gomock.Controller) *runInstance {
 }
 
 func mockContext(ctrl *gomock.Controller) context.Context {
+	ctx := context.TODO()
+	return mockFactories(ctx, ctrl)
+}
+
+func mockFactories(ctx context.Context, ctrl *gomock.Controller) context.Context {
 	mockFactory := mocks.NewMockClientFactory(ctrl)
 
 	kubeClientSet := kubefake.NewSimpleClientset()
@@ -1137,7 +1142,6 @@ func mockContext(ctrl *gomock.Controller) context.Context {
 	tektonClientset := tektonclientfake.NewSimpleClientset()
 	mockFactory.EXPECT().TektonV1alpha1().Return(tektonClientset.TektonV1alpha1()).AnyTimes()
 
-	ctx := context.TODO()
 	ctx = k8s.WithClientFactory(ctx, mockFactory)
 
 	namespaceManager := k8s.NewNamespaceManager(mockFactory, runNamespacePrefix, runNamespaceRandomLength)
@@ -1146,7 +1150,7 @@ func mockContext(ctrl *gomock.Controller) context.Context {
 	mockSecretProvider := secretMocks.NewMockSecretProvider(ctrl)
 	ctx = secrets.WithSecretProvider(ctx, mockSecretProvider)
 
-	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithAllNoopStubs())
+	//ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithAllNoopStubs())
 
 	return ctx
 }

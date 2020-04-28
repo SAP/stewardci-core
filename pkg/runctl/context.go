@@ -13,7 +13,12 @@ const (
 // GetRunInstanceTesting returns runInstanceTesting from the context
 // or nil if it doesn't contain one.
 func GetRunInstanceTesting(ctx context.Context) *runInstanceTesting {
-	return ctx.Value(testingKey).(*runInstanceTesting)
+	v := ctx.Value(testingKey)
+	if v == nil {
+		return nil
+	} else {
+		return v.(*runInstanceTesting)
+	}
 }
 
 // WithRunInstanceTesting returns Context with RunInstanceTesting

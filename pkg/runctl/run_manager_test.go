@@ -5,11 +5,17 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/SAP/stewardci-core/pkg/k8s"
+	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	runi "github.com/SAP/stewardci-core/pkg/run"
 	gomock "github.com/golang/mock/gomock"
+	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
 	"gotest.tools/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+const runNamespaceName = "rn"
 
 func Test_EnsureRunManager_CreateIfMissing(t *testing.T) {
 	t.Parallel()
@@ -111,6 +117,42 @@ func Test_StartRunManager(t *testing.T) {
 	}
 }
 
+func Test_GetRun_missing(t *testing.T) {
+	t.Parallel()
+	// SETUP
+	rm, ctx := createRunManagerAndContext()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	ctx = mockFactories(ctx, mockCtrl)
+	pipelineRun := mockPipelineRunWithNamespace(mockCtrl)
+	// EXERCISE
+	_, err := rm.GetRun(ctx, pipelineRun)
+	assert.Assert(t, err != nil)
+}
+
+func Test_GetRun_found(t *testing.T) {
+	t.Parallel()
+	// SETUP
+	rm, ctx := createRunManagerAndContext()
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+pipelineRun := mockPipelineRunWithNamespace(mockCtrl)
+	tektonTaskRun := tekton.TaskRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      tektonTaskRunName,
+			Namespace: runNamespaceName,
+		},
+	}
+	cf := fake.NewClientFactory()
+        _,err := cf.TektonV1alpha1().TaskRuns(runNamespaceName).Create(&tektonTaskRun)
+        assert.NilError(t,err)	
+        ctx = k8s.WithClientFactory(ctx, cf)
+	// EXERCISE
+	run, err := rm.GetRun(ctx, pipelineRun)
+	assert.NilError(t, err)
+	assert.Assert(t, run != nil)
+}
+
 func Test_CleanupRunManager(t *testing.T) {
 	t.Parallel()
 	// SETUP
@@ -165,10 +207,9 @@ func createRunManagerAndContext() (runi.Manager, context.Context) {
 }
 
 func mockPipelineRunWithNamespace(ctrl *gomock.Controller) *mocks.MockPipelineRun {
-	runNamespace := "rn"
 	mockPipelineRun := mocks.NewMockPipelineRun(ctrl)
 	mockPipelineRun.EXPECT().GetRunNamespace().DoAndReturn(func() string {
-		return runNamespace
+		return runNamespaceName
 	}).AnyTimes()
 	return mockPipelineRun
 }
