@@ -10,19 +10,18 @@ const (
 	testingKey contextKey = "testing"
 )
 
-// GetRunInstanceTesting returns runInstanceTesting from the context
+// getRunInstanceTesting returns runInstanceTesting from the context
 // or nil if it doesn't contain one.
-func GetRunInstanceTesting(ctx context.Context) *runInstanceTesting {
+func getRunInstanceTesting(ctx context.Context) *runInstanceTesting {
 	v := ctx.Value(testingKey)
 	if v == nil {
 		return nil
-	} else {
-		return v.(*runInstanceTesting)
 	}
+	return v.(*runInstanceTesting)
 }
 
-// WithRunInstanceTesting returns Context with RunInstanceTesting
-func WithRunInstanceTesting(ctx context.Context, i *runInstanceTesting) context.Context {
+// withRunInstanceTesting returns Context with RunInstanceTesting
+func withRunInstanceTesting(ctx context.Context, i *runInstanceTesting) context.Context {
 	if i == nil {
 		return ctx
 	}

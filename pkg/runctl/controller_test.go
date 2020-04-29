@@ -563,7 +563,7 @@ func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 	testing := &runInstanceTesting{
 		getServiceAccountSecretNameStub: func(ctx context.Context) string { return "foo" },
 	}
-	ctx = WithRunInstanceTesting(ctx, testing)
+	ctx = withRunInstanceTesting(ctx, testing)
 
 	ctx = k8s.WithClientFactory(ctx, cf)
 	controller := NewController(ctx, metrics)

@@ -31,7 +31,7 @@ func Test_RunManager_StartPipelineRun_DoesNotSetPipelineRunStatus(t *testing.T) 
 	defer mockCtrl.Finish()
 	ctx := mockContext(mockCtrl)
 	mockPipelineRun := prepareMocksWithSpec(mockCtrl, nil)
-	preparePredefinedClusterRole(t, ctx)
+	preparePredefinedClusterRole(ctx, t)
 	config := &pipelineRunsConfigStruct{}
 	ctx = EnsureRunManager(ctx, config)
 	examinee := runi.GetRunManager(ctx)
@@ -72,7 +72,7 @@ func Test_RunManager_StartPipelineRun_DoesCopySecret(t *testing.T) {
 		Do(func(interface{}) { panic("unexpected call") }).
 		AnyTimes()
 
-	preparePredefinedClusterRole(t, ctx)
+	preparePredefinedClusterRole(ctx, t)
 	config := &pipelineRunsConfigStruct{}
 
 	// inject secret helper mock
@@ -81,7 +81,7 @@ func Test_RunManager_StartPipelineRun_DoesCopySecret(t *testing.T) {
 	testing.getSecretHelperStub = func(string, corev1.SecretInterface) secrets.SecretHelper {
 		return mockSecretHelper
 	}
-	ctx = WithRunInstanceTesting(ctx, testing)
+	ctx = withRunInstanceTesting(ctx, testing)
 	ctx = EnsureRunManager(ctx, config)
 	examinee := runi.GetRunManager(ctx)
 	// EXPECT
@@ -114,9 +114,9 @@ func Test_RunManager_Start_FailsWithContentErrorWhenPipelineCloneSecretNotFound(
 	}
 	mockPipelineRun := prepareMocksWithSpec(mockCtrl, spec)
 	ctx := mockContext(mockCtrl)
-	preparePredefinedClusterRole(t, ctx)
+	preparePredefinedClusterRole(ctx, t)
 	config := &pipelineRunsConfigStruct{}
-	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
+	ctx = withRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
 	ctx = EnsureRunManager(ctx, config)
 	examinee := runi.GetRunManager(ctx)
 	// EXPECT
@@ -146,8 +146,8 @@ func Test_RunManager_Start_FailsWithContentErrorWhenSecretNotFound(t *testing.T)
 	}
 	mockPipelineRun := prepareMocksWithSpec(mockCtrl, spec)
 	config := &pipelineRunsConfigStruct{}
-	ctx := WithRunInstanceTesting(mockContext(mockCtrl), newRunManagerTestingWithRequiredStubs())
-	preparePredefinedClusterRole(t, ctx)
+	ctx := withRunInstanceTesting(mockContext(mockCtrl), newRunManagerTestingWithRequiredStubs())
+	preparePredefinedClusterRole(ctx, t)
 	ctx = EnsureRunManager(ctx, config)
 	examinee := runi.GetRunManager(ctx)
 	// EXPECT
@@ -178,8 +178,8 @@ func Test_RunManager_Start_FailsWithContentErrorWhenImagePullSecretNotFound(t *t
 	mockPipelineRun := prepareMocksWithSpec(mockCtrl, spec)
 
 	config := &pipelineRunsConfigStruct{}
-	ctx := WithRunInstanceTesting(mockContext(mockCtrl), newRunManagerTestingWithRequiredStubs())
-	preparePredefinedClusterRole(t, ctx)
+	ctx := withRunInstanceTesting(mockContext(mockCtrl), newRunManagerTestingWithRequiredStubs())
+	preparePredefinedClusterRole(ctx, t)
 	ctx = EnsureRunManager(ctx, config)
 	examinee := runi.GetRunManager(ctx)
 	// EXPECT
@@ -212,8 +212,8 @@ func Test_RunManager_Start_FailsWithInfraErrorWhenForbidden(t *testing.T) {
 
 	config := &pipelineRunsConfigStruct{}
 	ctx := mockContext(mockCtrl)
-	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
-	preparePredefinedClusterRole(t, ctx)
+	ctx = withRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
+	preparePredefinedClusterRole(ctx, t)
 	ctx = EnsureRunManager(ctx, config)
 	examinee := runi.GetRunManager(ctx)
 	// EXPECT
@@ -266,7 +266,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 		k8sPipelineRun, err := k8s.NewPipelineRun(pipelineRun, cf)
 		assert.NilError(t, err)
 		ctx = secrets.WithSecretProvider(ctx, k8s.NewTenantNamespace(cf, pipelineRun.GetNamespace()).GetSecretProvider())
-		ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
+		ctx = withRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
 		ctxOut = k8s.WithNamespaceManager(ctx, k8s.NewNamespaceManager(cf, "prefix1", 0))
 		runInstanceObj = &runInstance{
 			pipelineRun: k8sPipelineRun,
@@ -346,7 +346,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			defer mockCtrl.Finish()
 			ctx := mockServiceAccountTokenSecretRetriever(context.TODO(), mockCtrl)
 			ctx, runInstance, cf := setupExaminee(ctx, t, pipelineRunJSON)
-			ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
+			ctx = withRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
 
 			// exercise
 			err = runInstance.createTektonTaskRun(ctx)

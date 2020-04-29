@@ -15,9 +15,8 @@ func GetRunManager(ctx context.Context) Manager {
 	result := ctx.Value(runManagerKey)
 	if result == nil {
 		return nil
-	} else {
-		return result.(Manager)
 	}
+	return result.(Manager)
 }
 
 // WithRunManager returns Context with Manager

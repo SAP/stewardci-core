@@ -99,7 +99,7 @@ func Test_StartRunManager(t *testing.T) {
 					return test.createRunNamespaceError
 				},
 			}
-			ctx = WithRunInstanceTesting(ctx, testing)
+			ctx = withRunInstanceTesting(ctx, testing)
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 			pipelineRun := mockPipelineRunWithNamespace(mockCtrl)
@@ -179,7 +179,7 @@ func Test_CleanupRunManager(t *testing.T) {
 					return test.cleanupError
 				},
 			}
-			ctx = WithRunInstanceTesting(ctx, testing)
+			ctx = withRunInstanceTesting(ctx, testing)
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 			pipelineRun := mockPipelineRunWithNamespace(mockCtrl)

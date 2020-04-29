@@ -82,7 +82,7 @@ func Test_RunManager_PrepareRunNamespace_Calls_copySecretsToRunNamespace_AndProp
 
 	expectedError := errors.New("some error")
 	var methodCalled bool
-	testing := GetRunInstanceTesting(ctx)
+	testing := getRunInstanceTesting(ctx)
 	testing.copySecretsToRunNamespaceStub = func(ctx context.Context) (string, []string, error) {
 		methodCalled = true
 		return "", nil, expectedError
@@ -94,7 +94,7 @@ func Test_RunManager_PrepareRunNamespace_Calls_copySecretsToRunNamespace_AndProp
 		return nil
 	}
 
-	ctx = WithRunInstanceTesting(ctx, testing)
+	ctx = withRunInstanceTesting(ctx, testing)
 
 	// EXERCISE
 	resultError := examinee.prepareRunNamespace(ctx)
@@ -134,7 +134,7 @@ func Test_RunManager_PrepareRunNamespace_Calls_setupServiceAccount_AndPropagates
 		cleanupCalled = true
 		return nil
 	}
-	ctx = WithRunInstanceTesting(ctx, testing)
+	ctx = withRunInstanceTesting(ctx, testing)
 	// EXERCISE
 	resultError := examinee.prepareRunNamespace(ctx)
 
@@ -166,7 +166,7 @@ func Test_RunManager_PrepareRunNamespace_Calls_setupStaticNetworkPolicies_AndPro
 		cleanupCalled = true
 		return nil
 	}
-	ctx = WithRunInstanceTesting(ctx, testing)
+	ctx = withRunInstanceTesting(ctx, testing)
 	// EXERCISE
 	resultError := examinee.prepareRunNamespace(ctx)
 
@@ -182,7 +182,7 @@ func Test_RunManager_setupStaticNetworkPolicies_Succeeds(t *testing.T) {
 	// SETUP
 	testing := newRunManagerTestingWithAllNoopStubs()
 	testing.setupStaticNetworkPoliciesStub = nil
-	ctx := WithRunInstanceTesting(context.TODO(), testing)
+	ctx := withRunInstanceTesting(context.TODO(), testing)
 	examinee := &runInstance{}
 	// EXERCISE
 	resultError := examinee.setupStaticNetworkPolicies(ctx)
@@ -208,7 +208,7 @@ func Test_RunManager_setupStaticNetworkPolicies_Calls_setupNetworkPolicyThatIsol
 		methodCalled = true
 		return expectedError
 	}
-	ctx := WithRunInstanceTesting(context.TODO(), testing)
+	ctx := withRunInstanceTesting(context.TODO(), testing)
 
 	// EXERCISE
 	resultError := examinee.setupStaticNetworkPolicies(ctx)
@@ -236,7 +236,7 @@ func Test_RunManager_setupStaticNetworkPolicies_Calls_setupNetworkPolicyFromConf
 		methodCalled = true
 		return expectedError
 	}
-	ctx := WithRunInstanceTesting(context.TODO(), testing)
+	ctx := withRunInstanceTesting(context.TODO(), testing)
 	// EXERCISE
 	resultError := examinee.setupStaticNetworkPolicies(ctx)
 
@@ -260,7 +260,7 @@ func Test_RunManager_setupNetworkPolicyThatIsolatesAllPods(t *testing.T) {
 	ctx := k8s.WithClientFactory(context.TODO(), cf)
 	testing := newRunManagerTestingWithAllNoopStubs()
 	testing.setupNetworkPolicyThatIsolatesAllPodsStub = nil
-	ctx = WithRunInstanceTesting(ctx, testing)
+	ctx = withRunInstanceTesting(ctx, testing)
 	// EXERCISE
 	resultError := examinee.setupNetworkPolicyThatIsolatesAllPods(ctx)
 	assert.NilError(t, resultError)
@@ -301,7 +301,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_NoPolicyConfigured(t *testing.
 	ctx := k8s.WithClientFactory(context.TODO(), cf)
 	testing := newRunManagerTestingWithAllNoopStubs()
 	testing.setupNetworkPolicyFromConfigStub = nil
-	ctx = WithRunInstanceTesting(ctx, testing)
+	ctx = withRunInstanceTesting(ctx, testing)
 
 	// EXERCISE
 	resultError := examinee.setupNetworkPolicyFromConfig(ctx)
@@ -345,7 +345,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_SetsMetadataAndLeavesOtherThin
 	}
 	testing := newRunManagerTestingWithAllNoopStubs()
 	testing.setupNetworkPolicyFromConfigStub = nil
-	ctx = WithRunInstanceTesting(ctx, testing)
+	ctx = withRunInstanceTesting(ctx, testing)
 
 	// EXERCISE
 	resultError := examinee.setupNetworkPolicyFromConfig(ctx)
@@ -430,7 +430,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ReplacesAllMetadata(t *testing
 	}
 	testing := newRunManagerTestingWithAllNoopStubs()
 	testing.setupNetworkPolicyFromConfigStub = nil
-	ctx = WithRunInstanceTesting(ctx, testing)
+	ctx = withRunInstanceTesting(ctx, testing)
 
 	// EXERCISE
 	resultError := examinee.setupNetworkPolicyFromConfig(ctx)
@@ -481,7 +481,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_MalformedPolicy(t *testing.T) 
 	}
 	testing := newRunManagerTestingWithAllNoopStubs()
 	testing.setupNetworkPolicyFromConfigStub = nil
-	ctx = WithRunInstanceTesting(ctx, testing)
+	ctx = withRunInstanceTesting(ctx, testing)
 
 	// EXERCISE
 	resultError := examinee.setupNetworkPolicyFromConfig(ctx)
@@ -515,7 +515,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedGroup(t *testing.T) 
 	}
 	testing := newRunManagerTestingWithAllNoopStubs()
 	testing.setupNetworkPolicyFromConfigStub = nil
-	ctx = WithRunInstanceTesting(ctx, testing)
+	ctx = withRunInstanceTesting(ctx, testing)
 
 	// EXERCISE
 	resultError := examinee.setupNetworkPolicyFromConfig(ctx)
@@ -553,7 +553,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedKind(t *testing.T) {
 	}
 	testing := newRunManagerTestingWithAllNoopStubs()
 	testing.setupNetworkPolicyFromConfigStub = nil
-	ctx = WithRunInstanceTesting(ctx, testing)
+	ctx = withRunInstanceTesting(ctx, testing)
 
 	// EXERCISE
 	resultError := examinee.setupNetworkPolicyFromConfig(ctx)
@@ -579,7 +579,7 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_IsNotEmptyIfNoValuesToSet(t
 	examinee.pipelineRun.UpdateRunNamespace(runNamespaceName)
 	cf := fake.NewClientFactory()
 	ctx := k8s.WithClientFactory(context.TODO(), cf)
-	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithAllNoopStubs())
+	ctx = withRunInstanceTesting(ctx, newRunManagerTestingWithAllNoopStubs())
 	// EXERCISE
 	resultError := examinee.createTektonTaskRun(ctx)
 
@@ -617,7 +617,7 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_AllValuesSet(t *testing.T) 
 	}
 	cf := fake.NewClientFactory()
 	ctx := k8s.WithClientFactory(context.TODO(), cf)
-	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
+	ctx = withRunInstanceTesting(ctx, newRunManagerTestingWithRequiredStubs())
 	// EXERCISE
 	resultError := examinee.createTektonTaskRun(ctx)
 
@@ -651,7 +651,7 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_AllValuesSet(t *testing.T) 
 	assert.Assert(t, podTemplate.SecurityContext.RunAsUser != examinee.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsUser)
 }
 
-func preparePredefinedClusterRole(t *testing.T, ctx context.Context) {
+func preparePredefinedClusterRole(ctx context.Context, t *testing.T) {
 	// Create expected cluster role
 	factory := k8s.GetClientFactory(ctx)
 	_, err := factory.RbacV1beta1().ClusterRoles().Create(k8sfake.ClusterRole(string(runClusterRoleName)))
@@ -667,7 +667,7 @@ func prepareMocks(ctrl *gomock.Controller) *runInstance {
 
 func mockContext(ctrl *gomock.Controller) context.Context {
 	ctx := context.TODO()
-	ctx = WithRunInstanceTesting(ctx, newRunManagerTestingWithAllNoopStubs())
+	ctx = withRunInstanceTesting(ctx, newRunManagerTestingWithAllNoopStubs())
 
 	return mockFactories(ctx, ctrl)
 }

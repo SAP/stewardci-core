@@ -12,6 +12,9 @@ type runManager struct {
 	pipelineRunsConfig *pipelineRunsConfigStruct
 }
 
+// EnsureRunManager returns a context with an runManager implementation.
+// If context already contains a runManager implementaton, context is unchanged.
+// Otherwise runManager implementation based on pipelineRunsConfig is added to the returned context.
 func EnsureRunManager(ctx context.Context, pipelineRunsConfig *pipelineRunsConfigStruct) context.Context {
 	result := runi.GetRunManager(ctx)
 	if result == nil {
@@ -19,9 +22,8 @@ func EnsureRunManager(ctx context.Context, pipelineRunsConfig *pipelineRunsConfi
 			pipelineRunsConfig: pipelineRunsConfig}
 
 		return runi.WithRunManager(ctx, rm)
-	} else {
-		return ctx
 	}
+	return ctx
 }
 
 // Start prepares the isolated environment for a new run and starts
@@ -45,15 +47,15 @@ func (r *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun) err
 	return nil
 }
 
-// Get based on a pipelineRun
-func (_ *runManager) GetRun(ctx context.Context, pipelineRun k8s.PipelineRun) (runi.Run, error) {
+// GetRun returns a Run based on a pipelineRun
+func (r *runManager) GetRun(ctx context.Context, pipelineRun k8s.PipelineRun) (runi.Run, error) {
 	namespace := pipelineRun.GetRunNamespace()
 	run, err := k8s.GetClientFactory(ctx).TektonV1alpha1().TaskRuns(namespace).Get(tektonTaskRunName, metav1.GetOptions{})
 	return NewRun(run), err
 }
 
 // Cleanup a run based on a pipelineRun
-func (_ *runManager) Cleanup(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+func (r *runManager) Cleanup(ctx context.Context, pipelineRun k8s.PipelineRun) error {
 	instance := &runInstance{
 		pipelineRun:  pipelineRun,
 		runNamespace: pipelineRun.GetRunNamespace(),

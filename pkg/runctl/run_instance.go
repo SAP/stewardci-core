@@ -70,8 +70,8 @@ type runInstance struct {
 // prepareRunNamespace creates a new namespace for the pipeline run
 // and populates it with needed resources.
 func (c *runInstance) prepareRunNamespace(ctx context.Context) error {
-	if GetRunInstanceTesting(ctx) != nil && GetRunInstanceTesting(ctx).prepareRunNamespaceStub != nil {
-		return GetRunInstanceTesting(ctx).prepareRunNamespaceStub(ctx)
+	if getRunInstanceTesting(ctx) != nil && getRunInstanceTesting(ctx).prepareRunNamespaceStub != nil {
+		return getRunInstanceTesting(ctx).prepareRunNamespaceStub(ctx)
 	}
 	var err error
 
@@ -108,8 +108,8 @@ func (c *runInstance) prepareRunNamespace(ctx context.Context) error {
 }
 
 func (c *runInstance) setupServiceAccount(ctx context.Context, pipelineCloneSecretName string, imagePullSecrets []string) error {
-	if GetRunInstanceTesting(ctx) != nil && GetRunInstanceTesting(ctx).setupServiceAccountStub != nil {
-		return GetRunInstanceTesting(ctx).setupServiceAccountStub(ctx, pipelineCloneSecretName, imagePullSecrets)
+	if getRunInstanceTesting(ctx) != nil && getRunInstanceTesting(ctx).setupServiceAccountStub != nil {
+		return getRunInstanceTesting(ctx).setupServiceAccountStub(ctx, pipelineCloneSecretName, imagePullSecrets)
 	}
 	// TODO: New Service Account Manager with Context
 	factory := k8s.GetClientFactory(ctx)
@@ -161,8 +161,8 @@ func (c *runInstance) setupServiceAccount(ctx context.Context, pipelineCloneSecr
 }
 
 func (c *runInstance) copySecretsToRunNamespace(ctx context.Context) (string, []string, error) {
-	if GetRunInstanceTesting(ctx) != nil && GetRunInstanceTesting(ctx).copySecretsToRunNamespaceStub != nil {
-		return GetRunInstanceTesting(ctx).copySecretsToRunNamespaceStub(ctx)
+	if getRunInstanceTesting(ctx) != nil && getRunInstanceTesting(ctx).copySecretsToRunNamespaceStub != nil {
+		return getRunInstanceTesting(ctx).copySecretsToRunNamespaceStub(ctx)
 	}
 
 	targetClient := k8s.GetClientFactory(ctx).CoreV1().Secrets(c.runNamespace)
@@ -229,8 +229,8 @@ func (c *runInstance) copyPipelineSecretsToRunNamespace(ctx context.Context, sec
 }
 
 func (c *runInstance) getSecretHelper(ctx context.Context, targetClient corev1.SecretInterface) secrets.SecretHelper {
-	if GetRunInstanceTesting(ctx) != nil && GetRunInstanceTesting(ctx).getSecretHelperStub != nil {
-		return GetRunInstanceTesting(ctx).getSecretHelperStub(c.runNamespace, targetClient)
+	if getRunInstanceTesting(ctx) != nil && getRunInstanceTesting(ctx).getSecretHelperStub != nil {
+		return getRunInstanceTesting(ctx).getSecretHelperStub(c.runNamespace, targetClient)
 	}
 	//TODO: Secret Helper creation with context
 	secretProvider := secrets.GetSecretProvider(ctx)
@@ -253,8 +253,8 @@ func (c *runInstance) copySecrets(ctx context.Context, secretHelper secrets.Secr
 }
 
 func (c *runInstance) setupStaticNetworkPolicies(ctx context.Context) error {
-	if GetRunInstanceTesting(ctx) != nil && GetRunInstanceTesting(ctx).setupStaticNetworkPoliciesStub != nil {
-		return GetRunInstanceTesting(ctx).setupStaticNetworkPoliciesStub(ctx)
+	if getRunInstanceTesting(ctx) != nil && getRunInstanceTesting(ctx).setupStaticNetworkPoliciesStub != nil {
+		return getRunInstanceTesting(ctx).setupStaticNetworkPoliciesStub(ctx)
 	}
 
 	if err := c.setupNetworkPolicyThatIsolatesAllPods(ctx); err != nil {
@@ -273,8 +273,8 @@ func (c *runInstance) setupStaticNetworkPolicies(ctx context.Context) error {
 }
 
 func (c *runInstance) setupNetworkPolicyThatIsolatesAllPods(ctx context.Context) error {
-	if GetRunInstanceTesting(ctx) != nil && GetRunInstanceTesting(ctx).setupNetworkPolicyThatIsolatesAllPodsStub != nil {
-		return GetRunInstanceTesting(ctx).setupNetworkPolicyThatIsolatesAllPodsStub(ctx)
+	if getRunInstanceTesting(ctx) != nil && getRunInstanceTesting(ctx).setupNetworkPolicyThatIsolatesAllPodsStub != nil {
+		return getRunInstanceTesting(ctx).setupNetworkPolicyThatIsolatesAllPodsStub(ctx)
 	}
 
 	policy := &networkingv1api.NetworkPolicy{
@@ -303,8 +303,8 @@ func (c *runInstance) setupNetworkPolicyThatIsolatesAllPods(ctx context.Context)
 }
 
 func (c *runInstance) setupNetworkPolicyFromConfig(ctx context.Context) error {
-	if GetRunInstanceTesting(ctx) != nil && GetRunInstanceTesting(ctx).setupNetworkPolicyFromConfigStub != nil {
-		return GetRunInstanceTesting(ctx).setupNetworkPolicyFromConfigStub(ctx)
+	if getRunInstanceTesting(ctx) != nil && getRunInstanceTesting(ctx).setupNetworkPolicyFromConfigStub != nil {
+		return getRunInstanceTesting(ctx).setupNetworkPolicyFromConfigStub(ctx)
 	}
 
 	expectedGroupKind := schema.GroupKind{
@@ -382,22 +382,21 @@ func (c *runInstance) volumesWithServiceAccountSecret(ctx context.Context) []cor
 }
 
 func (c *runInstance) getServiceAccountSecretName(ctx context.Context) string {
-	if GetRunInstanceTesting(ctx) != nil && GetRunInstanceTesting(ctx).getServiceAccountSecretNameStub != nil {
-		return GetRunInstanceTesting(ctx).getServiceAccountSecretNameStub(ctx)
+	if getRunInstanceTesting(ctx) != nil && getRunInstanceTesting(ctx).getServiceAccountSecretNameStub != nil {
+		return getRunInstanceTesting(ctx).getServiceAccountSecretNameStub(ctx)
 	}
 	k8s.EnsureServiceAccountTokenSecretRetriever(ctx)
 	ret := k8s.GetServiceAccountTokenSecretRetriever(ctx)
 	secret, err := ret.ForObj(ctx, c.serviceAccount.GetServiceAccount())
 	if err != nil {
 		return secret.GetName()
-	} else {
-		return ""
 	}
+	return ""
 }
 
 func (c *runInstance) createTektonTaskRun(ctx context.Context) error {
-	if GetRunInstanceTesting(ctx) != nil && GetRunInstanceTesting(ctx).createTektonTaskRunStub != nil {
-		return GetRunInstanceTesting(ctx).createTektonTaskRunStub(ctx)
+	if getRunInstanceTesting(ctx) != nil && getRunInstanceTesting(ctx).createTektonTaskRunStub != nil {
+		return getRunInstanceTesting(ctx).createTektonTaskRunStub(ctx)
 	}
 	var err error
 	copyInt64Ptr := func(ptr *int64) *int64 {
@@ -536,8 +535,8 @@ func (c *runInstance) addTektonTaskRunParamsForLoggingElasticsearch(
 }
 
 func (c *runInstance) cleanup(ctx context.Context) error {
-	if GetRunInstanceTesting(ctx) != nil && GetRunInstanceTesting(ctx).cleanupStub != nil {
-		return GetRunInstanceTesting(ctx).cleanupStub(ctx)
+	if getRunInstanceTesting(ctx) != nil && getRunInstanceTesting(ctx).cleanupStub != nil {
+		return getRunInstanceTesting(ctx).cleanupStub(ctx)
 	}
 
 	namespace := c.runNamespace
