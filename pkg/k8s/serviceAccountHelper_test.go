@@ -12,7 +12,6 @@ import (
 )
 
 func Test_GetServiceAccountSecretName_works(t *testing.T) {
-	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{
@@ -42,7 +41,6 @@ func Test_GetServiceAccountSecretName_works(t *testing.T) {
 }
 
 func Test_GetServiceAccountSecretNameRepeat_delayedRef_works(t *testing.T) {
-	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{
@@ -83,7 +81,6 @@ func Test_GetServiceAccountSecretNameRepeat_delayedRef_works(t *testing.T) {
 }
 
 func Test_GetServiceAccountSecretNameRepeat_delayedSecret_works(t *testing.T) {
-	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{
@@ -122,7 +119,6 @@ func Test_GetServiceAccountSecretNameRepeat_delayedSecret_works(t *testing.T) {
 }
 
 func Test_GetServiceAccountSecretName_wrongType(t *testing.T) {
-	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{
@@ -153,7 +149,6 @@ func Test_GetServiceAccountSecretName_wrongType(t *testing.T) {
 }
 
 func Test_GetServiceAccountSecretName_ref_missing(t *testing.T) {
-	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	secret := &v1.Secret{
@@ -184,7 +179,6 @@ func Test_GetServiceAccountSecretName_ref_missing(t *testing.T) {
 }
 
 func Test_GetServiceAccountSecretName_secret_missing(t *testing.T) {
-	t.Parallel()
 	//SETUP
 	secretName := "ns1-token-foo"
 	setupAccountManager()
