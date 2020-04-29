@@ -10,7 +10,7 @@ const (
 	secretProviderKey contextKey = "secretProvider"
 )
 
-// GetSecretProvicer returns SecretProvider from the context
+// GetSecretProvider returns SecretProvider from the context
 // or nil if it doesn't contain one.
 func GetSecretProvider(ctx context.Context) SecretProvider {
 	return ctx.Value(secretProviderKey).(SecretProvider)
