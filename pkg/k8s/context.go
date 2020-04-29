@@ -15,7 +15,11 @@ const (
 // GetNamespaceManager returns NamespaceManager from the context
 // or nil if it doesn't contain one.
 func GetNamespaceManager(ctx context.Context) NamespaceManager {
-	return ctx.Value(namespaceManagerKey).(NamespaceManager)
+	result := ctx.Value(namespaceManagerKey)
+	if result == nil {
+		return nil
+	}
+	return result.(NamespaceManager)
 }
 
 // WithNamespaceManager returns Context with NamespaceManager
@@ -29,7 +33,11 @@ func WithNamespaceManager(ctx context.Context, namespaceManager NamespaceManager
 // GetClientFactory returns ClientFactory from the context
 // or nil if it doesn't contain one.
 func GetClientFactory(ctx context.Context) ClientFactory {
-	return ctx.Value(factoryKey).(ClientFactory)
+	result := ctx.Value(factoryKey)
+	if result == nil {
+		return nil
+	}
+	return result.(ClientFactory)
 }
 
 // WithClientFactory returns Context with ClientFactory
