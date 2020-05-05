@@ -30,7 +30,17 @@ The project "Steward" sources are structured in the following folders:
 
   The go implementation of the controllers
 
+## Versioning
 
+Although the controller images and the Helm chart are independent they are always released together. Our release pipeline performs the following steps:
+
+- Identify the new semver2 release version to release. This is done by taking the `version` from the Chart.yaml and removing the `-dev` suffix. This means, if we need to increase the major or minor version we can do so in the Chart.yaml before, while keeping the `-dev` suffix.
+- Update the Helm chart with the new release version. This includes `version` and `appVersion` in the `Chart.yaml` and `tenantController.image.tag` and `tenantController.image.tag` in the `values.yaml`. The image tags are prepared with the new version, although the imags do not exist yet.
+- Push commit to GitHub into a `prepare-<version>` branch.
+- Push the controller images built and validated earlier in the pipeline with the new version tag.
+- Create a GitHub release tag based on the pushed commit with the chart version changes.
+- Prepare the next dev version in `prepare-<version>` by updating `version` and `appVersion` in Chart.yaml with an incremented patch version and `-dev` suffix.
+- Merge the `prepare-<version>` branch into the `master` branch and delete the `prepare-<version>` branch.
 
 ## Contribution
 
