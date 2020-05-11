@@ -210,6 +210,11 @@ func (a *ServiceAccountWrap) GetServiceAccount() *v1.ServiceAccount {
 	return a.cache
 }
 
-func (a *ServiceAccountWrap) GetHelper() *serviceAccountHelper {
-	return NewServiceAccountHelper(a.factory, a.cache.DeepCopy())
+type ServiceAccountHelper interface {
+	GetServiceAccountSecretNameRepeat() string
+	GetServiceAccountSecretName() string
+}
+
+func (a *ServiceAccountWrap) GetHelper() ServiceAccountHelper {
+	return newServiceAccountHelper(a.factory, a.cache.DeepCopy())
 }

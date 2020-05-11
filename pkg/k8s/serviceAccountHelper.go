@@ -12,8 +12,8 @@ type serviceAccountHelper struct {
 	cache   *v1.ServiceAccount
 }
 
-//NewServiceAccountHelper creates ServiceAccountManager
-func NewServiceAccountHelper(factory ClientFactory, cache *v1.ServiceAccount) *serviceAccountHelper {
+//newServiceAccountHelper creates ServiceAccountManager
+func newServiceAccountHelper(factory ClientFactory, cache *v1.ServiceAccount) *serviceAccountHelper {
 	return &serviceAccountHelper{
 		factory: factory,
 		cache:   cache,
