@@ -210,11 +210,13 @@ func (a *ServiceAccountWrap) GetServiceAccount() *v1.ServiceAccount {
 	return a.cache
 }
 
+// ServiceAccountHelper implements functions to get service account secret
 type ServiceAccountHelper interface {
 	GetServiceAccountSecretNameRepeat() string
 	GetServiceAccountSecretName() string
 }
 
+// GetHelper returns a ServiceAccountHelper
 func (a *ServiceAccountWrap) GetHelper() ServiceAccountHelper {
 	return newServiceAccountHelper(a.factory, a.cache.DeepCopy())
 }
