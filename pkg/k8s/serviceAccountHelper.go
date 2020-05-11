@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"log"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -47,9 +48,11 @@ func (a *serviceAccountHelper) GetServiceAccountSecretNameRepeat() string {
 
 // GetServiceAccountSecretName returns the name of the default-token of the service account
 func (a *serviceAccountHelper) GetServiceAccountSecretName() string {
+	log.Printf("ServiceAccount: %+v", a.cache)
 	for _, secretRef := range a.cache.Secrets {
 		client := a.factory.CoreV1().Secrets(secretRef.Namespace)
 		secret, err := client.Get(secretRef.Name, metav1.GetOptions{})
+		log.Printf("Secret: %+v %+v", err, secret)
 		if err == nil &&
 			secret != nil &&
 			secret.Type == v1.SecretTypeServiceAccountToken {
