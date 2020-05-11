@@ -9,6 +9,9 @@ spec:
     kind: PipelineRun
     singular: pipelinerun
     plural: pipelineruns
+    shortNames:
+    - spr
+    - sprs
   scope: Namespaced
   subresources:
     status: {}
