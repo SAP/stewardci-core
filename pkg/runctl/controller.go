@@ -11,6 +11,7 @@ import (
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
+	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	run "github.com/SAP/stewardci-core/pkg/run"
 	"github.com/pkg/errors"
@@ -35,7 +36,8 @@ type Controller struct {
 }
 
 type controllerTesting struct {
-	runManagerStub run.Manager
+	runManagerStub    run.Manager
+	newRunManagerStub func(k8s.ClientFactory, *pipelineRunsConfigStruct, secrets.SecretProvider, k8s.NamespaceManager) run.Manager
 }
 
 // NewController creates new Controller
@@ -166,7 +168,15 @@ func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun, pipelineRunsC
 	tenant := k8s.NewTenantNamespace(c.factory, pipelineRun.GetNamespace())
 	workFactory := tenant.TargetClientFactory()
 	namespaceManager := k8s.NewNamespaceManager(c.factory, runNamespacePrefix, runNamespaceRandomLength)
-	return NewRunManager(workFactory, pipelineRunsConfig, tenant.GetSecretProvider(), namespaceManager)
+	return c.newRunManager(workFactory, pipelineRunsConfig, tenant.GetSecretProvider(), namespaceManager)
+}
+
+func (c *Controller) newRunManager(workFactory k8s.ClientFactory, pipelineRunsConfig *pipelineRunsConfigStruct, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) run.Manager {
+	if c.testing != nil && c.testing.newRunManagerStub != nil {
+		return c.testing.newRunManagerStub(workFactory, pipelineRunsConfig, secretProvider, namespaceManager)
+
+	}
+	return NewRunManager(workFactory, pipelineRunsConfig, secretProvider, namespaceManager)
 }
 
 // syncHandler compares the actual state with the desired, and attempts to

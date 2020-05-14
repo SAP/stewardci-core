@@ -10,7 +10,9 @@ import (
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
 	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
+	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	metrics "github.com/SAP/stewardci-core/pkg/metrics"
+	run "github.com/SAP/stewardci-core/pkg/run"
 	runmocks "github.com/SAP/stewardci-core/pkg/run/mocks"
 	gomock "github.com/golang/mock/gomock"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
@@ -546,12 +548,21 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 	assert.Equal(t, "message from Succeeded condition", status.Message)
 }
 
+func newTestRunManager(workFactory k8s.ClientFactory, pipelineRunsConfig *pipelineRunsConfigStruct, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) run.Manager {
+	runManager := NewRunManager(workFactory, pipelineRunsConfig, secretProvider, namespaceManager).(*runManager)
+	runManager.testing = &runManagerTesting{
+		getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" },
+	}
+	return runManager
+}
+
 func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 	cs := cf.StewardClientset()
 	cs.PrependReactor("create", "*", fake.NewCreationTimestampReactor())
 	stopCh := make(chan struct{}, 0)
 	metrics := metrics.NewMetrics()
 	controller := NewController(cf, metrics)
+	controller.testing = &controllerTesting{newRunManagerStub: newTestRunManager}
 	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(cf.StewardV1alpha1())
 	cf.StewardInformerFactory().Start(stopCh)
 	cf.TektonInformerFactory().Start(stopCh)

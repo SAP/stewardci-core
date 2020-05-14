@@ -145,6 +145,16 @@ func (a *ServiceAccountWrap) AttachImagePullSecrets(secretNames ...string) {
 	}
 }
 
+// SetDoAutomountServiceAccountToken sets the `automountServiceAccountToken` flag in the
+// service account spec.
+// It does NOT create or update the resource via the underlying client.
+func (a ServiceAccountWrap) SetDoAutomountServiceAccountToken(doAutomount bool) {
+	var doAutomountPtrFromResource *bool = a.cache.AutomountServiceAccountToken
+	if doAutomountPtrFromResource == nil || *doAutomountPtrFromResource != doAutomount {
+		a.cache.AutomountServiceAccountToken = &doAutomount
+	}
+}
+
 // Update performs an update of the service account resource object
 // via the underlying client.
 func (a *ServiceAccountWrap) Update() error {
@@ -198,4 +208,15 @@ func (a *ServiceAccountWrap) AddRoleBinding(clusterRole RoleName, targetNamespac
 // GetServiceAccount returns *v1.ServiceAccount
 func (a *ServiceAccountWrap) GetServiceAccount() *v1.ServiceAccount {
 	return a.cache
+}
+
+// ServiceAccountHelper implements functions to get service account secret
+type ServiceAccountHelper interface {
+	GetServiceAccountSecretNameRepeat() string
+	GetServiceAccountSecretName() string
+}
+
+// GetHelper returns a ServiceAccountHelper
+func (a *ServiceAccountWrap) GetHelper() ServiceAccountHelper {
+	return newServiceAccountHelper(a.factory, a.cache.DeepCopy())
 }
