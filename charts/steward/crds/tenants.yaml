@@ -9,6 +9,9 @@ spec:
     kind: Tenant
     singular: tenant
     plural: tenants
+    shortNames:
+    - stn
+    - stns
   scope: Namespaced
   subresources:
     status: {}
