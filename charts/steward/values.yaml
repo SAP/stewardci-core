@@ -73,7 +73,7 @@ pipelineRuns:
   jenkinsfileRunner:
     image:
       repository: stewardci/stewardci-jenkinsfile-runner
-      tag: "200518_b4a932c"
+      tag: "200603_f666776"
       pullPolicy: IfNotPresent
     resources:
       limits:
