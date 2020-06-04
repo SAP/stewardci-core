@@ -1,6 +1,6 @@
 module github.com/SAP/stewardci-core
 
-go 1.12
+go 1.14
 
 require (
 	cloud.google.com/go v0.48.0 // indirect
