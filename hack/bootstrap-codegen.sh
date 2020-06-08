@@ -59,6 +59,7 @@ is_git_origin_url "$CODEGEN_GIT_URL" || die "\$CODEGEN_PKG ('${CODEGEN_PKG}'): u
 # (see https://github.com/kubernetes/code-generator#compatibility)
 git clean -dxf || die "failed to execute `git clean -dxf`"
 git reset --hard || die "failed to execute `git reset --hard`"
+git fetch origin --tags || die "failed to execute `git fetch origin --tags`"
 git checkout "kubernetes-$K8S_VERSION" || die "\$CODEGEN_PKG ('${CODEGEN_PKG}'): could not checkout revision kubernetes-$K8S_VERSION"
 if [[ ! -f "go.mod" ]]; then
     # this revision is not a Go module
