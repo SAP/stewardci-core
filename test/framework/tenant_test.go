@@ -13,7 +13,7 @@ import (
 
 func Test_TenantCreation(t *testing.T) {
 	t.Parallel()
-	ctx := setup(t)
+	ctx := Setup(t)
 	test := TenantSuccessTest(ctx)
 	tenant := test.tenant
 	tenant, err := CreateTenant(ctx, tenant)

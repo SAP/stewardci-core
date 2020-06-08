@@ -3,9 +3,10 @@
 package framework
 
 import (
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"testing"
 	"time"
+
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/test/builder"
@@ -28,7 +29,7 @@ func Test_FirstFinishBeforeSecondStarts(t *testing.T) {
 		CreationDelay: time.Second * 1,
 		Name:          "FirstFinishBeforeSecondStartsu",
 	}
-	ctx := setup(t)
+	ctx := Setup(t)
 	executePipelineRunTests(ctx, t, test)
 }
 
@@ -40,15 +41,16 @@ func Test_FrameworkTest(t *testing.T) {
 			Count: 1,
 		}
 	}
-	ctx := setup(t)
+	ctx := Setup(t)
 	executePipelineRunTests(ctx, t, allTests...)
 }
 
 // PipelineRunSleepTooLong is a PipelineRunTestBuilder to test if Timeout works correctly
-func PipelineRunSleepTooLong(Namespace string) PipelineRunTest {
+func PipelineRunSleepTooLong(Namespace string, logging *api.CustomJSON) PipelineRunTest {
 	return PipelineRunTest{
 		PipelineRun: builder.PipelineRun("sleeptoolong-", Namespace,
 			builder.PipelineRunSpec(
+				builder.Logging(logging),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"sleep/Jenkinsfile"),
 				builder.ArgSpec("SLEEP_FOR_SECONDS", "10"),
@@ -60,10 +62,11 @@ func PipelineRunSleepTooLong(Namespace string) PipelineRunTest {
 }
 
 // PipelineRunWrongExpect is a PipelineRunTestBuilder to test Check returning error
-func PipelineRunWrongExpect(Namespace string) PipelineRunTest {
+func PipelineRunWrongExpect(Namespace string, logging *api.CustomJSON) PipelineRunTest {
 	return PipelineRunTest{
 		PipelineRun: builder.PipelineRun("wrongexpect-", Namespace,
 			builder.PipelineRunSpec(
+				builder.Logging(logging),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"success/Jenkinsfile"),
 			)),
@@ -74,10 +77,11 @@ func PipelineRunWrongExpect(Namespace string) PipelineRunTest {
 }
 
 // PipelineRunWrongName is a PipelineRunTestBuilder to Check failed pipeline runpipeline run creation
-func PipelineRunWrongName(Namespace string) PipelineRunTest {
+func PipelineRunWrongName(Namespace string, logging *api.CustomJSON) PipelineRunTest {
 	return PipelineRunTest{
 		PipelineRun: builder.PipelineRun("wrong_Name", Namespace,
 			builder.PipelineRunSpec(
+				builder.Logging(logging),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"success/Jenkinsfile"),
 			)),
@@ -88,10 +92,11 @@ func PipelineRunWrongName(Namespace string) PipelineRunTest {
 }
 
 // PipelineRunWithSecretNameConflict is a PipelineRunTestBuilder to test Name conflict with Secrets
-func PipelineRunWithSecretNameConflict(Namespace string) PipelineRunTest {
+func PipelineRunWithSecretNameConflict(Namespace string, logging *api.CustomJSON) PipelineRunTest {
 	return PipelineRunTest{
 		PipelineRun: builder.PipelineRun("with-secret-name-conflict", Namespace,
 			builder.PipelineRunSpec(
+				builder.Logging(logging),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"secret/Jenkinsfile"),
 			)),
