@@ -34,8 +34,8 @@ replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v12.3.0+incompatible // not used, but resolves ambiguous import from multi-module repo (see https://github.com/Azure/azure-event-hubs-go/issues/117, https://github.com/Azure/go-autorest/issues/414)
 	github.com/tektoncd/pipeline => github.com/tektoncd/pipeline v0.8.0
 	gopkg.in/yaml.v2 => gopkg.in/yaml.v2 v2.3.0
-	k8s.io/api => k8s.io/api v0.16.10 // kubernetes-1.16.10
-	k8s.io/apimachinery => k8s.io/apimachinery v0.16.10 // kubernetes-1.16.10
-	k8s.io/client-go => k8s.io/client-go v0.16.10 // kubernetes-1.16.10
+	k8s.io/api => k8s.io/api v0.17.6 // kubernetes-1.17.6
+	k8s.io/apimachinery => k8s.io/apimachinery v0.17.6 // kubernetes-1.17.6
+	k8s.io/client-go => k8s.io/client-go v0.17.6 // kubernetes-1.17.6
 	knative.dev/pkg => knative.dev/pkg v0.0.0-20200528142800-1c6815d7e4c9 // release-0.15
 )
