@@ -37,7 +37,6 @@ require (
 )
 
 replace (
-	github.com/Azure/go-autorest => github.com/Azure/go-autorest v12.3.0+incompatible // not used, but resolves ambiguous import from multi-module repo (see https://github.com/Azure/azure-event-hubs-go/issues/117, https://github.com/Azure/go-autorest/issues/414)
 	github.com/tektoncd/pipeline => github.com/tektoncd/pipeline v0.8.0
 	k8s.io/api => k8s.io/api v0.17.6 // kubernetes-1.17.6
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.6 // kubernetes-1.17.6
