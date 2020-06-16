@@ -77,7 +77,7 @@ pipelineRuns:
       pullPolicy: IfNotPresent
     resources:
       limits:
-        cpu: 3
+        cpu: 2
         memory: 2Gi
       requests:
         cpu: 500m
@@ -89,6 +89,8 @@ pipelineRuns:
       fsGroup: 1000
     terminationMessagePath: "/run/termination-log"
   networkPolicy: ""
+  limitRange: ""
+  resourceQuota: ""
 
 hooks:
   images:

@@ -137,6 +137,14 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 		return err
 	}
 
+	if err = c.setupLimitRanger(ctx); err != nil {
+		return err
+	}
+
+	if err = c.setupResourceQuota(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -342,27 +350,85 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		Kind:  "NetworkPolicy",
 	}
 
-	policyStr := c.pipelineRunsConfig.NetworkPolicy
-	if policyStr == "" {
+	configStr := c.pipelineRunsConfig.NetworkPolicy
+
+	if configStr == "" {
 		return nil
 	}
 
-	var obj *unstructured.Unstructured
+	c.createResource(configStr, "networkpolicies", expectedGroupKind, ctx)
 
+	return nil
+}
+
+func (c *runManager) setupLimitRanger(ctx *runContext) error {
+	if err := c.setupLimitRangerFromConfig(ctx); err != nil {
+		return errors.Wrapf(err,
+			"failed to set up the configured LimitRanger in namespace %q",
+			ctx.runNamespace,
+		)
+	}
+	return nil
+}
+
+func (c *runManager) setupLimitRangerFromConfig(ctx *runContext) error {
+	expectedGroupKind := schema.GroupKind{
+		Group: "",
+		Kind:  "LimitRange",
+	}
+
+	configStr := c.pipelineRunsConfig.LimitRange
+	if configStr == "" {
+		return nil
+	}
+
+	c.createResource(configStr, "limitranges", expectedGroupKind, ctx)
+
+	return nil
+}
+
+func (c *runManager) setupResourceQuota(ctx *runContext) error {
+	if err := c.setupResourceQuotaFromConfig(ctx); err != nil {
+		return errors.Wrapf(err,
+			"failed to set up the configured ResourceQuota in namespace %q",
+			ctx.runNamespace,
+		)
+	}
+	return nil
+}
+
+func (c *runManager) setupResourceQuotaFromConfig(ctx *runContext) error {
+	expectedGroupKind := schema.GroupKind{
+		Group: "",
+		Kind:  "ResourceQuota",
+	}
+
+	configStr := c.pipelineRunsConfig.ResourceQuota
+	if configStr == "" {
+		return nil
+	}
+
+	c.createResource(configStr, "resourcequotas", expectedGroupKind, ctx)
+
+	return nil
+}
+
+func (c *runManager) createResource(configStr string, resourceName string, expectedGroupKind schema.GroupKind, ctx *runContext) error {
+	var obj *unstructured.Unstructured
 	// decode
 	{
 		// We don't assume a specific resource version so that users can configure
 		// whatever the K8s apiserver understands.
 		yamlSerializer := yamlserial.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-		o, err := runtime.Decode(yamlSerializer, []byte(policyStr))
+		o, err := runtime.Decode(yamlSerializer, []byte(configStr))
 		if err != nil {
-			return errors.Wrap(err, "failed to decode configured network policy")
+			return errors.Wrapf(err, "failed to decode configured %q", resourceName)
 		}
 		gvk := o.GetObjectKind().GroupVersionKind()
 		if gvk.GroupKind() != expectedGroupKind {
 			return errors.Errorf(
-				"configured network policy does not denote a %q but a %q",
-				expectedGroupKind.String(), gvk.GroupKind().String(),
+				"configured %q does not denote a %q but a %q",
+				resourceName, expectedGroupKind.String(), gvk.GroupKind().String(),
 			)
 		}
 		obj = o.(*unstructured.Unstructured)
@@ -385,11 +451,11 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		gvr := schema.GroupVersionResource{
 			Group:    expectedGroupKind.Group,
 			Version:  obj.GetObjectKind().GroupVersionKind().Version,
-			Resource: "networkpolicies",
+			Resource: resourceName,
 		}
 		dynamicIfce := c.factory.Dynamic().Resource(gvr).Namespace(ctx.runNamespace)
 		if _, err := dynamicIfce.Create(obj, metav1.CreateOptions{}); err != nil {
-			return errors.Wrap(err, "failed to create configured network policy")
+			return errors.Wrapf(err, "failed to create configured %q", resourceName)
 		}
 	}
 
