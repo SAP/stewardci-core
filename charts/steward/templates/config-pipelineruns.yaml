@@ -48,8 +48,6 @@ data:
     limitRange: |
       apiVersion: v1
       kind: LimitRange
-      metadata:
-        name: core-resource-limits
       spec:
         limits:
           - type: "Container"
@@ -62,9 +60,7 @@ data:
 
     resourceQuota: |
       apiVersion: v1
-      kind: ResourceQuota # namespace lavel total allowed request and limits
-      metadata:
-        name: total-mem-cpu-quota
+      kind: ResourceQuota # namespace level total allowed request and limits
       spec:
         hard:
           requests.cpu: 6
@@ -87,7 +83,7 @@ data:
     jenkinsfileRunner.podSecurityContext.fsGroup: "1000"
 
   networkPolicy: {{ default ( .Files.Get "data/pipelineruns-default-networkpolicy.yaml" ) .Values.pipelineRuns.networkPolicy | quote }}
-  limitRange: {{ default ( .Files.Get "data/pipelineruns-default-limitranger.yaml" ) .Values.pipelineRuns.limitRange | quote }}
+  limitRange: {{ default ( .Files.Get "data/pipelineruns-default-limitrange.yaml" ) .Values.pipelineRuns.limitRange | quote }}
   resourceQuota: {{ default ( .Files.Get "data/pipelineruns-default-resourcequota.yaml" ) .Values.pipelineRuns.resourceQuota | quote }}
 
 {{- with .Values.pipelineRuns.jenkinsfileRunner.podSecurityContext }}

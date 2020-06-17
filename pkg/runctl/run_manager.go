@@ -137,7 +137,7 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 		return err
 	}
 
-	if err = c.setupLimitRanger(ctx); err != nil {
+	if err = c.setupLimitRange(ctx); err != nil {
 		return err
 	}
 
@@ -341,6 +341,7 @@ func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(ctx *runContext) erro
 }
 
 func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
+
 	if c.testing != nil && c.testing.setupNetworkPolicyFromConfigStub != nil {
 		return c.testing.setupNetworkPolicyFromConfigStub(ctx)
 	}
@@ -356,22 +357,25 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		return nil
 	}
 
-	c.createResource(configStr, "networkpolicies", expectedGroupKind, ctx)
+	if err := c.createResource(configStr, "networkpolicies", "network policy", expectedGroupKind, ctx); err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (c *runManager) setupLimitRanger(ctx *runContext) error {
-	if err := c.setupLimitRangerFromConfig(ctx); err != nil {
+func (c *runManager) setupLimitRange(ctx *runContext) error {
+	if err := c.setupLimitRangeFromConfig(ctx); err != nil {
 		return errors.Wrapf(err,
-			"failed to set up the configured LimitRanger in namespace %q",
+			"failed to set up the configured limit range in namespace %q",
 			ctx.runNamespace,
 		)
 	}
+
 	return nil
 }
 
-func (c *runManager) setupLimitRangerFromConfig(ctx *runContext) error {
+func (c *runManager) setupLimitRangeFromConfig(ctx *runContext) error {
 	expectedGroupKind := schema.GroupKind{
 		Group: "",
 		Kind:  "LimitRange",
@@ -382,7 +386,9 @@ func (c *runManager) setupLimitRangerFromConfig(ctx *runContext) error {
 		return nil
 	}
 
-	c.createResource(configStr, "limitranges", expectedGroupKind, ctx)
+	if err := c.createResource(configStr, "limitranges", "limit range", expectedGroupKind, ctx); err != nil {
+		return errors.Wrap(err, "failed to create configured limit range.")
+	}
 
 	return nil
 }
@@ -390,10 +396,11 @@ func (c *runManager) setupLimitRangerFromConfig(ctx *runContext) error {
 func (c *runManager) setupResourceQuota(ctx *runContext) error {
 	if err := c.setupResourceQuotaFromConfig(ctx); err != nil {
 		return errors.Wrapf(err,
-			"failed to set up the configured ResourceQuota in namespace %q",
+			"failed to set up the configured resource quota in namespace %q",
 			ctx.runNamespace,
 		)
 	}
+
 	return nil
 }
 
@@ -408,12 +415,14 @@ func (c *runManager) setupResourceQuotaFromConfig(ctx *runContext) error {
 		return nil
 	}
 
-	c.createResource(configStr, "resourcequotas", expectedGroupKind, ctx)
+	if err := c.createResource(configStr, "resourcequotas", "resource quota", expectedGroupKind, ctx); err != nil {
+		return errors.Wrap(err, "failed to create configured resource quota object.")
+	}
 
 	return nil
 }
 
-func (c *runManager) createResource(configStr string, resourceName string, expectedGroupKind schema.GroupKind, ctx *runContext) error {
+func (c *runManager) createResource(configStr string, resource string, resourceDisplayName string, expectedGroupKind schema.GroupKind, ctx *runContext) error {
 	var obj *unstructured.Unstructured
 	// decode
 	{
@@ -422,13 +431,13 @@ func (c *runManager) createResource(configStr string, resourceName string, expec
 		yamlSerializer := yamlserial.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 		o, err := runtime.Decode(yamlSerializer, []byte(configStr))
 		if err != nil {
-			return errors.Wrapf(err, "failed to decode configured %q", resourceName)
+			return errors.Wrapf(err, "failed to decode configured %s", resourceDisplayName)
 		}
 		gvk := o.GetObjectKind().GroupVersionKind()
 		if gvk.GroupKind() != expectedGroupKind {
 			return errors.Errorf(
-				"configured %q does not denote a %q but a %q",
-				resourceName, expectedGroupKind.String(), gvk.GroupKind().String(),
+				"configured %s does not denote a %q but a %q",
+				resourceDisplayName, expectedGroupKind.String(), gvk.GroupKind().String(),
 			)
 		}
 		obj = o.(*unstructured.Unstructured)
@@ -451,11 +460,11 @@ func (c *runManager) createResource(configStr string, resourceName string, expec
 		gvr := schema.GroupVersionResource{
 			Group:    expectedGroupKind.Group,
 			Version:  obj.GetObjectKind().GroupVersionKind().Version,
-			Resource: resourceName,
+			Resource: resource,
 		}
 		dynamicIfce := c.factory.Dynamic().Resource(gvr).Namespace(ctx.runNamespace)
 		if _, err := dynamicIfce.Create(obj, metav1.CreateOptions{}); err != nil {
-			return errors.Wrapf(err, "failed to create configured %q", resourceName)
+			return errors.Wrapf(err, "failed to create configured %s", resourceDisplayName)
 		}
 	}
 
