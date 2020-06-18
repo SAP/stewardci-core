@@ -682,6 +682,111 @@ func Test_RunManager_setupLimitRangeFromConfig_NoLimitRangeConfigured(t *testing
 	assert.NilError(t, resultError)
 }
 
+func Test_RunManager_setupLimitRangeFromConfig_MalformedLimitRange(t *testing.T) {
+        t.Parallel()
+
+        // SETUP
+        const (
+                runNamespaceName = "runNamespace1"
+        )
+        runCtx := &runContext{runNamespace: runNamespaceName}
+        mockCtrl := gomock.NewController(t)
+        defer mockCtrl.Finish()
+
+        // We use a mocked client factory without expected calls, because
+        // the SUT should not use it if policy decoding fails.
+        cf := mocks.NewMockClientFactory(mockCtrl)
+
+        examinee := runManager{
+                factory: cf,
+                pipelineRunsConfig: pipelineRunsConfigStruct{
+                        LimitRange: ":", // malformed YAML
+                },
+                testing: newRunManagerTestingWithAllNoopStubs(),
+        }
+        examinee.testing.setupLimitRangeFromConfigStub = nil
+
+        // EXERCISE
+        resultError := examinee.setupLimitRangeFromConfig(runCtx)
+
+        // VERIFY
+        assert.ErrorContains(t, resultError, "failed to decode configured limit range: ")
+}
+
+func Test_RunManager_setupLimitRangeFromConfig_UnexpectedGroup(t *testing.T) {
+    t.Parallel()
+
+        // SETUP
+        const (
+                runNamespaceName = "runNamespace1"
+        )
+        runCtx := &runContext{runNamespace: runNamespaceName}
+        mockCtrl := gomock.NewController(t)
+        defer mockCtrl.Finish()
+
+        // We use a mocked client factory without expected calls, because
+        // the SUT should not use it if policy decoding fails.
+        cf := mocks.NewMockClientFactory(mockCtrl)
+
+        examinee := runManager{
+                factory: cf,
+                pipelineRunsConfig: pipelineRunsConfigStruct{
+                        LimitRange: fixIndent(`
+                                apiVersion: unexpected.group/v1
+                                kind: LimitRange
+                                `),
+                },
+                testing: newRunManagerTestingWithAllNoopStubs(),
+        }
+        examinee.testing.setupLimitRangeFromConfigStub = nil
+
+        // EXERCISE
+        resultError := examinee.setupLimitRangeFromConfig(runCtx)
+
+        // VERIFY
+        assert.Error(t, resultError,
+                "configured limit range does not denote a"+
+                        " \"LimitRange\" but a"+
+                        " \"LimitRange.unexpected.group\"")
+}
+
+func Test_RunManager_setupLimitRangeFromConfig_UnexpectedKind(t *testing.T) {
+    t.Parallel()
+
+        // SETUP
+        const (
+                runNamespaceName = "runNamespace1"
+        )
+        runCtx := &runContext{runNamespace: runNamespaceName}
+        mockCtrl := gomock.NewController(t)
+        defer mockCtrl.Finish()
+
+        // We use a mocked client factory without expected calls, because
+        // the SUT should not use it if policy decoding fails.
+        cf := mocks.NewMockClientFactory(mockCtrl)
+
+        examinee := runManager{
+                factory: cf,
+                pipelineRunsConfig: pipelineRunsConfigStruct{
+                        LimitRange: fixIndent(`
+                                apiVersion: v1
+                                kind: UnexpectedKind
+                                `),
+                },
+                testing: newRunManagerTestingWithAllNoopStubs(),
+        }
+        examinee.testing.setupLimitRangeFromConfigStub = nil
+
+        // EXERCISE
+        resultError := examinee.setupLimitRangeFromConfig(runCtx)
+
+        // VERIFY
+        assert.Error(t, resultError,
+                "configured limit range does not denote a"+
+                        " \"LimitRange\" but a"+
+                        " \"UnexpectedKind\"")
+}
+
 func Test_RunManager_createTektonTaskRun_PodTemplate_IsNotEmptyIfNoValuesToSet(t *testing.T) {
 	t.Parallel()
 
