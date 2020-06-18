@@ -135,7 +135,7 @@ func (in *PipelineRunDetails) DeepCopy() *PipelineRunDetails {
 func (in *PipelineRunList) DeepCopyInto(out *PipelineRunList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]PipelineRun, len(*in))
@@ -295,7 +295,7 @@ func (in *Tenant) DeepCopyObject() runtime.Object {
 func (in *TenantList) DeepCopyInto(out *TenantList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Tenant, len(*in))
