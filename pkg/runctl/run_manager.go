@@ -357,11 +357,7 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		return nil
 	}
 
-	if err := c.createResource(configStr, "networkpolicies", "network policy", expectedGroupKind, ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return c.createResource(configStr, "networkpolicies", "network policy", expectedGroupKind, ctx)
 }
 
 func (c *runManager) setupLimitRange(ctx *runContext) error {
@@ -386,11 +382,7 @@ func (c *runManager) setupLimitRangeFromConfig(ctx *runContext) error {
 		return nil
 	}
 
-	if err := c.createResource(configStr, "limitranges", "limit range", expectedGroupKind, ctx); err != nil {
-		return errors.Wrap(err, "failed to create configured limit range.")
-	}
-
-	return nil
+	return c.createResource(configStr, "limitranges", "limit range", expectedGroupKind, ctx)
 }
 
 func (c *runManager) setupResourceQuota(ctx *runContext) error {
@@ -415,11 +407,7 @@ func (c *runManager) setupResourceQuotaFromConfig(ctx *runContext) error {
 		return nil
 	}
 
-	if err := c.createResource(configStr, "resourcequotas", "resource quota", expectedGroupKind, ctx); err != nil {
-		return errors.Wrap(err, "failed to create configured resource quota object.")
-	}
-
-	return nil
+	return c.createResource(configStr, "resourcequotas", "resource quota", expectedGroupKind, ctx)
 }
 
 func (c *runManager) createResource(configStr string, resource string, resourceDisplayName string, expectedGroupKind schema.GroupKind, ctx *runContext) error {
