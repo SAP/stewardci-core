@@ -36,9 +36,11 @@ func newRunManagerTestingWithAllNoopStubs() *runManagerTesting {
 		copySecretsToRunNamespaceStub:             func(*runContext) (string, []string, error) { return "", []string{}, nil },
 		getServiceAccountSecretNameStub:           func(*runContext) string { return "" },
 		setupNetworkPolicyFromConfigStub:          func(*runContext) error { return nil },
+		setupLimitRangeFromConfigStub:             func(*runContext) error { return nil },
 		setupNetworkPolicyThatIsolatesAllPodsStub: func(*runContext) error { return nil },
 		setupServiceAccountStub:                   func(*runContext, string, []string) error { return nil },
 		setupStaticNetworkPoliciesStub:            func(*runContext) error { return nil },
+		setupStaticLimitRangeStub:                 func(*runContext) error { return nil },
 	}
 }
 
@@ -604,6 +606,80 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedKind(t *testing.T) {
 		"configured network policy does not denote a"+
 			" \"NetworkPolicy.networking.k8s.io\" but a"+
 			" \"UnexpectedKind.networking.k8s.io\"")
+}
+
+func Test_RunManager_setupStaticLimitRange_Calls_setupLimitRangeFromConfig_AndPropagatesError(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	runNamespaceName := "runNamespace1"
+	runCtx := &runContext{runNamespace: runNamespaceName}
+	examinee := runManager{
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+	examinee.testing.setupStaticLimitRangeStub = nil
+
+	var methodCalled bool
+	expectedError := errors.New("some error")
+	examinee.testing.setupLimitRangeFromConfigStub = func(ctx *runContext) error {
+		methodCalled = true
+		assert.Equal(t, runNamespaceName, ctx.runNamespace)
+		return expectedError
+	}
+
+	// EXERCISE
+	resultError := examinee.setupLimitRange(runCtx)
+
+	// VERIFY
+	assert.ErrorContains(t, resultError, "failed to set up the configured limit range in namespace \""+runNamespaceName+"\": ")
+	assert.Assert(t, errors.Cause(resultError) == expectedError)
+	assert.Assert(t, methodCalled == true)
+}
+
+func Test_RunManager_setupLimitRange_Succeeds(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	runCtx := &runContext{}
+	examinee := runManager{
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+	examinee.testing.setupStaticLimitRangeStub = nil
+
+	// EXERCISE
+	resultError := examinee.setupLimitRange(runCtx)
+
+	// VERIFY
+	assert.NilError(t, resultError)
+}
+
+func Test_RunManager_setupLimitRangeFromConfig_NoLimitRangeConfigured(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+	runCtx := &runContext{runNamespace: runNamespaceName}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// We use a mocked client factory without expected calls, because
+	// the SUT should not use it if no policy is configured.
+	cf := mocks.NewMockClientFactory(mockCtrl)
+
+	examinee := runManager{
+		factory: cf,
+		pipelineRunsConfig: pipelineRunsConfigStruct{
+			LimitRange: "", // no policy
+		},
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+	examinee.testing.setupLimitRangeFromConfigStub = nil
+
+	// EXERCISE
+	resultError := examinee.setupLimitRangeFromConfig(runCtx)
+	assert.NilError(t, resultError)
 }
 
 func Test_RunManager_createTektonTaskRun_PodTemplate_IsNotEmptyIfNoValuesToSet(t *testing.T) {

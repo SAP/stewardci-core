@@ -61,9 +61,11 @@ type runManagerTesting struct {
 	copySecretsToRunNamespaceStub             func(*runContext) (string, []string, error)
 	getSecretHelperStub                       func(string, corev1.SecretInterface) secrets.SecretHelper
 	setupNetworkPolicyFromConfigStub          func(*runContext) error
+	setupLimitRangeFromConfigStub             func(*runContext) error
 	setupNetworkPolicyThatIsolatesAllPodsStub func(*runContext) error
 	setupServiceAccountStub                   func(*runContext, string, []string) error
 	setupStaticNetworkPoliciesStub            func(*runContext) error
+	setupStaticLimitRangeStub                 func(*runContext) error
 	getServiceAccountSecretNameStub           func(*runContext) string
 }
 
@@ -361,6 +363,11 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 }
 
 func (c *runManager) setupLimitRange(ctx *runContext) error {
+
+	if c.testing != nil && c.testing.setupStaticLimitRangeStub != nil {
+		return c.testing.setupStaticLimitRangeStub(ctx)
+	}
+
 	if err := c.setupLimitRangeFromConfig(ctx); err != nil {
 		return errors.Wrapf(err,
 			"failed to set up the configured limit range in namespace %q",
@@ -372,6 +379,10 @@ func (c *runManager) setupLimitRange(ctx *runContext) error {
 }
 
 func (c *runManager) setupLimitRangeFromConfig(ctx *runContext) error {
+	if c.testing != nil && c.testing.setupLimitRangeFromConfigStub != nil {
+		return c.testing.setupLimitRangeFromConfigStub(ctx)
+	}
+
 	expectedGroupKind := schema.GroupKind{
 		Group: "",
 		Kind:  "LimitRange",
