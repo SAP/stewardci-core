@@ -84,7 +84,7 @@ data:
 
   networkPolicy: {{ default ( .Files.Get "data/pipelineruns-default-networkpolicy.yaml" ) .Values.pipelineRuns.networkPolicy | quote }}
   limitRange: {{ default ( .Files.Get "data/pipelineruns-default-limitrange.yaml" ) .Values.pipelineRuns.limitRange | quote }}
-  resourceQuota: {{ default ( .Files.Get "data/pipelineruns-default-resourcequota.yaml" ) .Values.pipelineRuns.resourceQuota | quote }}
+  resourceQuota: {{ .Values.pipelineRuns.resourceQuota | quote }}
 
 {{- with .Values.pipelineRuns.jenkinsfileRunner.podSecurityContext }}
 {{- if and ( ge ( .runAsUser | int64 ) 1 ) ( le ( .runAsUser | int64 ) 65535 ) }}
