@@ -1,0 +1,25 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: steward-tenant-controller
+  labels:
+    {{- include "steward.labels" . | nindent 4 }}
+rules:
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["rolebindings"]
+  verbs: ["get","list","create"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["clusterroles"]
+  verbs: ["bind"]
+  resourceNames:
+  {{- toYaml .Values.tenantController.mappableClusterRoles | nindent 2 }}
+- apiGroups: ["steward.sap.com"]
+  resources: ["tenants","tenants/status"]
+  verbs: ["get","list","patch","update","watch"]
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["create","delete","get","list","patch","update","watch"]
+- apiGroups: ['policy']
+  resources: ['podsecuritypolicies']
+  verbs:     ['use']
+  resourceNames: ['00-steward-controller']

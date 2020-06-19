@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: steward-tenant-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: steward-tenant-controller
+subjects:
+- kind: ServiceAccount
+  name: steward-tenant-controller
+  namespace: {{ .Values.targetNamespace.name | quote }}
