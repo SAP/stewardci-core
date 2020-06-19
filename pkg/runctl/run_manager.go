@@ -62,12 +62,12 @@ type runManagerTesting struct {
 	getSecretHelperStub                       func(string, corev1.SecretInterface) secrets.SecretHelper
 	setupNetworkPolicyFromConfigStub          func(*runContext) error
 	setupLimitRangeFromConfigStub             func(*runContext) error
-    setupResourceQuotaFromConfigStub          func(*runContext) error
+	setupResourceQuotaFromConfigStub          func(*runContext) error
 	setupNetworkPolicyThatIsolatesAllPodsStub func(*runContext) error
 	setupServiceAccountStub                   func(*runContext, string, []string) error
 	setupStaticNetworkPoliciesStub            func(*runContext) error
 	setupStaticLimitRangeStub                 func(*runContext) error
-    setupStaticResourceQuotaStub              func(*runContext) error
+	setupStaticResourceQuotaStub              func(*runContext) error
 	getServiceAccountSecretNameStub           func(*runContext) string
 }
 
@@ -399,9 +399,9 @@ func (c *runManager) setupLimitRangeFromConfig(ctx *runContext) error {
 }
 
 func (c *runManager) setupResourceQuota(ctx *runContext) error {
-    if c.testing != nil && c.testing.setupStaticResourceQuotaStub != nil {
-        return c.testing.setupStaticResourceQuotaStub(ctx)
-    }
+	if c.testing != nil && c.testing.setupStaticResourceQuotaStub != nil {
+		return c.testing.setupStaticResourceQuotaStub(ctx)
+	}
 
 	if err := c.setupResourceQuotaFromConfig(ctx); err != nil {
 		return errors.Wrapf(err,
@@ -414,9 +414,9 @@ func (c *runManager) setupResourceQuota(ctx *runContext) error {
 }
 
 func (c *runManager) setupResourceQuotaFromConfig(ctx *runContext) error {
-    if c.testing != nil && c.testing.setupResourceQuotaFromConfigStub != nil {
-        return c.testing.setupResourceQuotaFromConfigStub(ctx)
-    }
+	if c.testing != nil && c.testing.setupResourceQuotaFromConfigStub != nil {
+		return c.testing.setupResourceQuotaFromConfigStub(ctx)
+	}
 
 	expectedGroupKind := schema.GroupKind{
 		Group: "",

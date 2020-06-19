@@ -37,12 +37,12 @@ func newRunManagerTestingWithAllNoopStubs() *runManagerTesting {
 		getServiceAccountSecretNameStub:           func(*runContext) string { return "" },
 		setupNetworkPolicyFromConfigStub:          func(*runContext) error { return nil },
 		setupLimitRangeFromConfigStub:             func(*runContext) error { return nil },
-        setupResourceQuotaFromConfigStub:          func(*runContext) error { return nil },
+		setupResourceQuotaFromConfigStub:          func(*runContext) error { return nil },
 		setupNetworkPolicyThatIsolatesAllPodsStub: func(*runContext) error { return nil },
 		setupServiceAccountStub:                   func(*runContext, string, []string) error { return nil },
 		setupStaticNetworkPoliciesStub:            func(*runContext) error { return nil },
 		setupStaticLimitRangeStub:                 func(*runContext) error { return nil },
-        setupStaticResourceQuotaStub:              func(*runContext) error { return nil },
+		setupStaticResourceQuotaStub:              func(*runContext) error { return nil },
 	}
 }
 
@@ -685,287 +685,287 @@ func Test_RunManager_setupLimitRangeFromConfig_NoLimitRangeConfigured(t *testing
 }
 
 func Test_RunManager_setupLimitRangeFromConfig_MalformedLimitRange(t *testing.T) {
-        t.Parallel()
+	t.Parallel()
 
-        // SETUP
-        const (
-                runNamespaceName = "runNamespace1"
-        )
-        runCtx := &runContext{runNamespace: runNamespaceName}
-        mockCtrl := gomock.NewController(t)
-        defer mockCtrl.Finish()
+	// SETUP
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+	runCtx := &runContext{runNamespace: runNamespaceName}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-        // We use a mocked client factory without expected calls, because
-        // the SUT should not use it if policy decoding fails.
-        cf := mocks.NewMockClientFactory(mockCtrl)
+	// We use a mocked client factory without expected calls, because
+	// the SUT should not use it if policy decoding fails.
+	cf := mocks.NewMockClientFactory(mockCtrl)
 
-        examinee := runManager{
-                factory: cf,
-                pipelineRunsConfig: pipelineRunsConfigStruct{
-                        LimitRange: ":", // malformed YAML
-                },
-                testing: newRunManagerTestingWithAllNoopStubs(),
-        }
-        examinee.testing.setupLimitRangeFromConfigStub = nil
+	examinee := runManager{
+		factory: cf,
+		pipelineRunsConfig: pipelineRunsConfigStruct{
+			LimitRange: ":", // malformed YAML
+		},
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+	examinee.testing.setupLimitRangeFromConfigStub = nil
 
-        // EXERCISE
-        resultError := examinee.setupLimitRangeFromConfig(runCtx)
+	// EXERCISE
+	resultError := examinee.setupLimitRangeFromConfig(runCtx)
 
-        // VERIFY
-        assert.ErrorContains(t, resultError, "failed to decode configured limit range: ")
+	// VERIFY
+	assert.ErrorContains(t, resultError, "failed to decode configured limit range: ")
 }
 
 func Test_RunManager_setupLimitRangeFromConfig_UnexpectedGroup(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
-        // SETUP
-        const (
-                runNamespaceName = "runNamespace1"
-        )
-        runCtx := &runContext{runNamespace: runNamespaceName}
-        mockCtrl := gomock.NewController(t)
-        defer mockCtrl.Finish()
+	// SETUP
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+	runCtx := &runContext{runNamespace: runNamespaceName}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-        // We use a mocked client factory without expected calls, because
-        // the SUT should not use it if policy decoding fails.
-        cf := mocks.NewMockClientFactory(mockCtrl)
+	// We use a mocked client factory without expected calls, because
+	// the SUT should not use it if policy decoding fails.
+	cf := mocks.NewMockClientFactory(mockCtrl)
 
-        examinee := runManager{
-                factory: cf,
-                pipelineRunsConfig: pipelineRunsConfigStruct{
-                        LimitRange: fixIndent(`
+	examinee := runManager{
+		factory: cf,
+		pipelineRunsConfig: pipelineRunsConfigStruct{
+			LimitRange: fixIndent(`
                                 apiVersion: unexpected.group/v1
                                 kind: LimitRange
                                 `),
-                },
-                testing: newRunManagerTestingWithAllNoopStubs(),
-        }
-        examinee.testing.setupLimitRangeFromConfigStub = nil
+		},
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+	examinee.testing.setupLimitRangeFromConfigStub = nil
 
-        // EXERCISE
-        resultError := examinee.setupLimitRangeFromConfig(runCtx)
+	// EXERCISE
+	resultError := examinee.setupLimitRangeFromConfig(runCtx)
 
-        // VERIFY
-        assert.Error(t, resultError,
-                "configured limit range does not denote a"+
-                        " \"LimitRange\" but a"+
-                        " \"LimitRange.unexpected.group\"")
+	// VERIFY
+	assert.Error(t, resultError,
+		"configured limit range does not denote a"+
+			" \"LimitRange\" but a"+
+			" \"LimitRange.unexpected.group\"")
 }
 
 func Test_RunManager_setupLimitRangeFromConfig_UnexpectedKind(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
-        // SETUP
-        const (
-                runNamespaceName = "runNamespace1"
-        )
-        runCtx := &runContext{runNamespace: runNamespaceName}
-        mockCtrl := gomock.NewController(t)
-        defer mockCtrl.Finish()
+	// SETUP
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+	runCtx := &runContext{runNamespace: runNamespaceName}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-        // We use a mocked client factory without expected calls, because
-        // the SUT should not use it if policy decoding fails.
-        cf := mocks.NewMockClientFactory(mockCtrl)
+	// We use a mocked client factory without expected calls, because
+	// the SUT should not use it if policy decoding fails.
+	cf := mocks.NewMockClientFactory(mockCtrl)
 
-        examinee := runManager{
-                factory: cf,
-                pipelineRunsConfig: pipelineRunsConfigStruct{
-                        LimitRange: fixIndent(`
+	examinee := runManager{
+		factory: cf,
+		pipelineRunsConfig: pipelineRunsConfigStruct{
+			LimitRange: fixIndent(`
                                 apiVersion: v1
                                 kind: UnexpectedKind
                                 `),
-                },
-                testing: newRunManagerTestingWithAllNoopStubs(),
-        }
-        examinee.testing.setupLimitRangeFromConfigStub = nil
+		},
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+	examinee.testing.setupLimitRangeFromConfigStub = nil
 
-        // EXERCISE
-        resultError := examinee.setupLimitRangeFromConfig(runCtx)
+	// EXERCISE
+	resultError := examinee.setupLimitRangeFromConfig(runCtx)
 
-        // VERIFY
-        assert.Error(t, resultError,
-                "configured limit range does not denote a"+
-                        " \"LimitRange\" but a"+
-                        " \"UnexpectedKind\"")
+	// VERIFY
+	assert.Error(t, resultError,
+		"configured limit range does not denote a"+
+			" \"LimitRange\" but a"+
+			" \"UnexpectedKind\"")
 }
 
 func Test_RunManager_setupStaticResourceQuota_Calls_setupResourceQuotaFromConfig_AndPropagatesError(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
-    // SETUP
-    runNamespaceName := "runNamespace1"
-    runCtx := &runContext{runNamespace: runNamespaceName}
-    examinee := runManager{
-        testing: newRunManagerTestingWithAllNoopStubs(),
-    }
-    examinee.testing.setupStaticResourceQuotaStub = nil
+	// SETUP
+	runNamespaceName := "runNamespace1"
+	runCtx := &runContext{runNamespace: runNamespaceName}
+	examinee := runManager{
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+	examinee.testing.setupStaticResourceQuotaStub = nil
 
-    var methodCalled bool
-    expectedError := errors.New("some error")
-    examinee.testing.setupResourceQuotaFromConfigStub = func(ctx *runContext) error {
-        methodCalled = true
-        assert.Equal(t, runNamespaceName, ctx.runNamespace)
-        return expectedError
-    }
+	var methodCalled bool
+	expectedError := errors.New("some error")
+	examinee.testing.setupResourceQuotaFromConfigStub = func(ctx *runContext) error {
+		methodCalled = true
+		assert.Equal(t, runNamespaceName, ctx.runNamespace)
+		return expectedError
+	}
 
-    // EXERCISE
-    resultError := examinee.setupResourceQuota(runCtx)
+	// EXERCISE
+	resultError := examinee.setupResourceQuota(runCtx)
 
-    // VERIFY
-    assert.ErrorContains(t, resultError, "failed to set up the configured resource quota in namespace \""+runNamespaceName+"\": ")
-    assert.Assert(t, errors.Cause(resultError) == expectedError)
-    assert.Assert(t, methodCalled == true)
+	// VERIFY
+	assert.ErrorContains(t, resultError, "failed to set up the configured resource quota in namespace \""+runNamespaceName+"\": ")
+	assert.Assert(t, errors.Cause(resultError) == expectedError)
+	assert.Assert(t, methodCalled == true)
 }
 
 func Test_RunManager_setupResourceQuota_Succeeds(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
-    // SETUP
-    runCtx := &runContext{}
-    examinee := runManager{
-        testing: newRunManagerTestingWithAllNoopStubs(),
-    }
-    examinee.testing.setupStaticResourceQuotaStub = nil
+	// SETUP
+	runCtx := &runContext{}
+	examinee := runManager{
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+	examinee.testing.setupStaticResourceQuotaStub = nil
 
-    // EXERCISE
-    resultError := examinee.setupResourceQuota(runCtx)
+	// EXERCISE
+	resultError := examinee.setupResourceQuota(runCtx)
 
-    // VERIFY
-    assert.NilError(t, resultError)
+	// VERIFY
+	assert.NilError(t, resultError)
 }
 
 func Test_RunManager_setupResourceQuotaFromConfig_NoQuotaConfigured(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
-    // SETUP
-    const (
-        runNamespaceName = "runNamespace1"
-    )
-    runCtx := &runContext{runNamespace: runNamespaceName}
-    mockCtrl := gomock.NewController(t)
-    defer mockCtrl.Finish()
+	// SETUP
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+	runCtx := &runContext{runNamespace: runNamespaceName}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-    // We use a mocked client factory without expected calls, because
-    // the SUT should not use it if no policy is configured.
-    cf := mocks.NewMockClientFactory(mockCtrl)
+	// We use a mocked client factory without expected calls, because
+	// the SUT should not use it if no policy is configured.
+	cf := mocks.NewMockClientFactory(mockCtrl)
 
-    examinee := runManager{
-        factory: cf,
-        pipelineRunsConfig: pipelineRunsConfigStruct{
-            LimitRange: "", // no policy
-        },
-        testing: newRunManagerTestingWithAllNoopStubs(),
-    }
-    examinee.testing.setupResourceQuotaFromConfigStub = nil
+	examinee := runManager{
+		factory: cf,
+		pipelineRunsConfig: pipelineRunsConfigStruct{
+			LimitRange: "", // no policy
+		},
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+	examinee.testing.setupResourceQuotaFromConfigStub = nil
 
-    // EXERCISE
-    resultError := examinee.setupResourceQuotaFromConfig(runCtx)
-    assert.NilError(t, resultError)
+	// EXERCISE
+	resultError := examinee.setupResourceQuotaFromConfig(runCtx)
+	assert.NilError(t, resultError)
 }
 
 func Test_RunManager_setupResourceQuotaFromConfig_MalformedResourceQuota(t *testing.T) {
-        t.Parallel()
+	t.Parallel()
 
-        // SETUP
-        const (
-                runNamespaceName = "runNamespace1"
-        )
-        runCtx := &runContext{runNamespace: runNamespaceName}
-        mockCtrl := gomock.NewController(t)
-        defer mockCtrl.Finish()
+	// SETUP
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+	runCtx := &runContext{runNamespace: runNamespaceName}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-        // We use a mocked client factory without expected calls, because
-        // the SUT should not use it if policy decoding fails.
-        cf := mocks.NewMockClientFactory(mockCtrl)
+	// We use a mocked client factory without expected calls, because
+	// the SUT should not use it if policy decoding fails.
+	cf := mocks.NewMockClientFactory(mockCtrl)
 
-        examinee := runManager{
-                factory: cf,
-                pipelineRunsConfig: pipelineRunsConfigStruct{
-                        ResourceQuota: ":", // malformed YAML
-                },
-                testing: newRunManagerTestingWithAllNoopStubs(),
-        }
-        examinee.testing.setupResourceQuotaFromConfigStub = nil
+	examinee := runManager{
+		factory: cf,
+		pipelineRunsConfig: pipelineRunsConfigStruct{
+			ResourceQuota: ":", // malformed YAML
+		},
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+	examinee.testing.setupResourceQuotaFromConfigStub = nil
 
-        // EXERCISE
-        resultError := examinee.setupResourceQuotaFromConfig(runCtx)
+	// EXERCISE
+	resultError := examinee.setupResourceQuotaFromConfig(runCtx)
 
-        // VERIFY
-        assert.ErrorContains(t, resultError, "failed to decode configured resource quota: ")
+	// VERIFY
+	assert.ErrorContains(t, resultError, "failed to decode configured resource quota: ")
 }
 
 func Test_RunManager_setupResourceQuotaFromConfig_UnexpectedGroup(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
-        // SETUP
-        const (
-                runNamespaceName = "runNamespace1"
-        )
-        runCtx := &runContext{runNamespace: runNamespaceName}
-        mockCtrl := gomock.NewController(t)
-        defer mockCtrl.Finish()
+	// SETUP
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+	runCtx := &runContext{runNamespace: runNamespaceName}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-        // We use a mocked client factory without expected calls, because
-        // the SUT should not use it if policy decoding fails.
-        cf := mocks.NewMockClientFactory(mockCtrl)
+	// We use a mocked client factory without expected calls, because
+	// the SUT should not use it if policy decoding fails.
+	cf := mocks.NewMockClientFactory(mockCtrl)
 
-        examinee := runManager{
-                factory: cf,
-                pipelineRunsConfig: pipelineRunsConfigStruct{
-                        ResourceQuota: fixIndent(`
+	examinee := runManager{
+		factory: cf,
+		pipelineRunsConfig: pipelineRunsConfigStruct{
+			ResourceQuota: fixIndent(`
                                 apiVersion: unexpected.group/v1
                                 kind: ResourceQuota
                                 `),
-                },
-                testing: newRunManagerTestingWithAllNoopStubs(),
-        }
-        examinee.testing.setupResourceQuotaFromConfigStub = nil
+		},
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+	examinee.testing.setupResourceQuotaFromConfigStub = nil
 
-        // EXERCISE
-        resultError := examinee.setupResourceQuotaFromConfig(runCtx)
+	// EXERCISE
+	resultError := examinee.setupResourceQuotaFromConfig(runCtx)
 
-        // VERIFY
-        assert.Error(t, resultError,
-                "configured resource quota does not denote a"+
-                        " \"ResourceQuota\" but a"+
-                        " \"ResourceQuota.unexpected.group\"")
+	// VERIFY
+	assert.Error(t, resultError,
+		"configured resource quota does not denote a"+
+			" \"ResourceQuota\" but a"+
+			" \"ResourceQuota.unexpected.group\"")
 }
 
 func Test_RunManager_setupResourceQuotaFromConfig_UnexpectedKind(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
-        // SETUP
-        const (
-                runNamespaceName = "runNamespace1"
-        )
-        runCtx := &runContext{runNamespace: runNamespaceName}
-        mockCtrl := gomock.NewController(t)
-        defer mockCtrl.Finish()
+	// SETUP
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+	runCtx := &runContext{runNamespace: runNamespaceName}
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-        // We use a mocked client factory without expected calls, because
-        // the SUT should not use it if policy decoding fails.
-        cf := mocks.NewMockClientFactory(mockCtrl)
+	// We use a mocked client factory without expected calls, because
+	// the SUT should not use it if policy decoding fails.
+	cf := mocks.NewMockClientFactory(mockCtrl)
 
-        examinee := runManager{
-                factory: cf,
-                pipelineRunsConfig: pipelineRunsConfigStruct{
-                        ResourceQuota: fixIndent(`
+	examinee := runManager{
+		factory: cf,
+		pipelineRunsConfig: pipelineRunsConfigStruct{
+			ResourceQuota: fixIndent(`
                                 apiVersion: v1
                                 kind: UnexpectedKind
                                 `),
-                },
-                testing: newRunManagerTestingWithAllNoopStubs(),
-        }
-        examinee.testing.setupResourceQuotaFromConfigStub = nil
+		},
+		testing: newRunManagerTestingWithAllNoopStubs(),
+	}
+	examinee.testing.setupResourceQuotaFromConfigStub = nil
 
-        // EXERCISE
-        resultError := examinee.setupResourceQuotaFromConfig(runCtx)
+	// EXERCISE
+	resultError := examinee.setupResourceQuotaFromConfig(runCtx)
 
-        // VERIFY
-        assert.Error(t, resultError,
-                "configured resource quota does not denote a"+
-                        " \"ResourceQuota\" but a"+
-                        " \"UnexpectedKind\"")
+	// VERIFY
+	assert.Error(t, resultError,
+		"configured resource quota does not denote a"+
+			" \"ResourceQuota\" but a"+
+			" \"UnexpectedKind\"")
 }
 
 func Test_RunManager_createTektonTaskRun_PodTemplate_IsNotEmptyIfNoValuesToSet(t *testing.T) {
