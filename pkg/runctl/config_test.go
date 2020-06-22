@@ -58,6 +58,8 @@ func Test_loadPipelineRunsConfig_EmptyEntries(t *testing.T) {
 			pipelineRunsConfigKeyPSCFSGroup:    "",
 			pipelineRunsConfigKeyPSCRunAsGroup: "",
 			pipelineRunsConfigKeyPSCRunAsUser:  "",
+			pipelineRunsConfigKeyLimitRange:    "",
+			pipelineRunsConfigKeyResourceQuota: "",
 		}),
 	)
 
@@ -81,6 +83,8 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 			map[string]string{
 				"_example":                         "exampleString",
 				pipelineRunsConfigKeyNetworkPolicy: "networkPolicy1",
+				pipelineRunsConfigKeyLimitRange:    "limitRange1",
+				pipelineRunsConfigKeyResourceQuota: "resourceQuota1",
 				pipelineRunsConfigKeyPSCRunAsUser:  "1111",
 				pipelineRunsConfigKeyPSCRunAsGroup: "2222",
 				pipelineRunsConfigKeyPSCFSGroup:    "3333",
@@ -96,6 +100,8 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	assert.NilError(t, err)
 	expectedConfig := &pipelineRunsConfigStruct{
 		NetworkPolicy: "networkPolicy1",
+		LimitRange:    "limitRange1",
+		ResourceQuota: "resourceQuota1",
 		JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(1111),
 		JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
 		JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(3333),

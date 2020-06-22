@@ -60,11 +60,15 @@ type runManagerTesting struct {
 	cleanupStub                               func(*runContext) error
 	copySecretsToRunNamespaceStub             func(*runContext) (string, []string, error)
 	getSecretHelperStub                       func(string, corev1.SecretInterface) secrets.SecretHelper
+	getServiceAccountSecretNameStub           func(*runContext) string
+	setupLimitRangeFromConfigStub             func(*runContext) error
 	setupNetworkPolicyFromConfigStub          func(*runContext) error
 	setupNetworkPolicyThatIsolatesAllPodsStub func(*runContext) error
+	setupResourceQuotaFromConfigStub          func(*runContext) error
 	setupServiceAccountStub                   func(*runContext, string, []string) error
+	setupStaticLimitRangeStub                 func(*runContext) error
 	setupStaticNetworkPoliciesStub            func(*runContext) error
-	getServiceAccountSecretNameStub           func(*runContext) string
+	setupStaticResourceQuotaStub              func(*runContext) error
 }
 
 type runContext struct {
@@ -134,6 +138,14 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 	}
 
 	if err = c.setupStaticNetworkPolicies(ctx); err != nil {
+		return err
+	}
+
+	if err = c.setupStaticLimitRange(ctx); err != nil {
+		return err
+	}
+
+	if err = c.setupStaticResourceQuota(ctx); err != nil {
 		return err
 	}
 
@@ -342,11 +354,81 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		Kind:  "NetworkPolicy",
 	}
 
-	policyStr := c.pipelineRunsConfig.NetworkPolicy
-	if policyStr == "" {
+	configStr := c.pipelineRunsConfig.NetworkPolicy
+	if configStr == "" {
 		return nil
 	}
 
+	return c.createResource(configStr, "networkpolicies", "network policy", expectedGroupKind, ctx)
+}
+
+func (c *runManager) setupStaticLimitRange(ctx *runContext) error {
+	if c.testing != nil && c.testing.setupStaticLimitRangeStub != nil {
+		return c.testing.setupStaticLimitRangeStub(ctx)
+	}
+
+	if err := c.setupLimitRangeFromConfig(ctx); err != nil {
+		return errors.Wrapf(err,
+			"failed to set up the configured limit range in namespace %q",
+			ctx.runNamespace,
+		)
+	}
+
+	return nil
+}
+
+func (c *runManager) setupLimitRangeFromConfig(ctx *runContext) error {
+	if c.testing != nil && c.testing.setupLimitRangeFromConfigStub != nil {
+		return c.testing.setupLimitRangeFromConfigStub(ctx)
+	}
+
+	expectedGroupKind := schema.GroupKind{
+		Group: "",
+		Kind:  "LimitRange",
+	}
+
+	configStr := c.pipelineRunsConfig.LimitRange
+	if configStr == "" {
+		return nil
+	}
+
+	return c.createResource(configStr, "limitranges", "limit range", expectedGroupKind, ctx)
+}
+
+func (c *runManager) setupStaticResourceQuota(ctx *runContext) error {
+	if c.testing != nil && c.testing.setupStaticResourceQuotaStub != nil {
+		return c.testing.setupStaticResourceQuotaStub(ctx)
+	}
+
+	if err := c.setupResourceQuotaFromConfig(ctx); err != nil {
+		return errors.Wrapf(err,
+			"failed to set up the configured resource quota in namespace %q",
+			ctx.runNamespace,
+		)
+	}
+
+	return nil
+}
+
+func (c *runManager) setupResourceQuotaFromConfig(ctx *runContext) error {
+	if c.testing != nil && c.testing.setupResourceQuotaFromConfigStub != nil {
+		return c.testing.setupResourceQuotaFromConfigStub(ctx)
+	}
+
+	expectedGroupKind := schema.GroupKind{
+		Group: "",
+		Kind:  "ResourceQuota",
+	}
+
+	configStr := c.pipelineRunsConfig.ResourceQuota
+	if configStr == "" {
+		return nil
+	}
+
+	return c.createResource(configStr, "resourcequotas", "resource quota", expectedGroupKind, ctx)
+}
+
+func (c *runManager) createResource(configStr string, resource string, resourceDisplayName string, expectedGroupKind schema.GroupKind, ctx *runContext) error {
 	var obj *unstructured.Unstructured
 
 	// decode
@@ -354,15 +436,15 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		// We don't assume a specific resource version so that users can configure
 		// whatever the K8s apiserver understands.
 		yamlSerializer := yamlserial.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-		o, err := runtime.Decode(yamlSerializer, []byte(policyStr))
+		o, err := runtime.Decode(yamlSerializer, []byte(configStr))
 		if err != nil {
-			return errors.Wrap(err, "failed to decode configured network policy")
+			return errors.Wrapf(err, "failed to decode configured %s", resourceDisplayName)
 		}
 		gvk := o.GetObjectKind().GroupVersionKind()
 		if gvk.GroupKind() != expectedGroupKind {
 			return errors.Errorf(
-				"configured network policy does not denote a %q but a %q",
-				expectedGroupKind.String(), gvk.GroupKind().String(),
+				"configured %s does not denote a %q but a %q",
+				resourceDisplayName, expectedGroupKind.String(), gvk.GroupKind().String(),
 			)
 		}
 		obj = o.(*unstructured.Unstructured)
@@ -385,11 +467,11 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		gvr := schema.GroupVersionResource{
 			Group:    expectedGroupKind.Group,
 			Version:  obj.GetObjectKind().GroupVersionKind().Version,
-			Resource: "networkpolicies",
+			Resource: resource,
 		}
 		dynamicIfce := c.factory.Dynamic().Resource(gvr).Namespace(ctx.runNamespace)
 		if _, err := dynamicIfce.Create(obj, metav1.CreateOptions{}); err != nil {
-			return errors.Wrap(err, "failed to create configured network policy")
+			return errors.Wrapf(err, "failed to create configured %s", resourceDisplayName)
 		}
 	}
 
@@ -399,7 +481,7 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 func (c *runManager) volumesWithServiceAccountSecret(ctx *runContext) []corev1api.Volume {
 	var mode int32 = 0644
 	return []corev1api.Volume{
-		corev1api.Volume{
+		{
 			Name: "service-account-token",
 			VolumeSource: corev1api.VolumeSource{
 				Secret: &corev1api.SecretVolumeSource{

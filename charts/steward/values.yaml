@@ -89,6 +89,8 @@ pipelineRuns:
       fsGroup: 1000
     terminationMessagePath: "/run/termination-log"
   networkPolicy: ""
+  limitRange: ""
+  resourceQuota: ""
 
 hooks:
   images:

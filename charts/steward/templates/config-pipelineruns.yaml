@@ -45,6 +45,29 @@ data:
           from:
           - podSelector: {}
 
+    limitRange: |
+      apiVersion: v1
+      kind: LimitRange
+      spec:
+        limits:
+          - type: "Container"
+            default:
+              cpu: 3
+              memory: 3Gi
+            defaultRequest:
+              cpu: "0.5"
+              memory: "0.5Gi"
+
+    resourceQuota: |
+      apiVersion: v1
+      kind: ResourceQuota # namespace level total allowed request and limits
+      spec:
+        hard:
+          requests.cpu: 6
+          requests.memory: 6Gi
+          limits.cpu: 10
+          limits.memory: 20Gi
+
     # jenkinsfileRunner.podSecurityContext.* allow configuring selected fields
     # of the pod security context of the Jenkinsfile Runner pod.
     #
@@ -60,6 +83,8 @@ data:
     jenkinsfileRunner.podSecurityContext.fsGroup: "1000"
 
   networkPolicy: {{ default ( .Files.Get "data/pipelineruns-default-networkpolicy.yaml" ) .Values.pipelineRuns.networkPolicy | quote }}
+  limitRange: {{ default ( .Files.Get "data/pipelineruns-default-limitrange.yaml" ) .Values.pipelineRuns.limitRange | quote }}
+  resourceQuota: {{ .Values.pipelineRuns.resourceQuota | quote }}
 
 {{- with .Values.pipelineRuns.jenkinsfileRunner.podSecurityContext }}
 {{- if and ( ge ( .runAsUser | int64 ) 1 ) ( le ( .runAsUser | int64 ) 65535 ) }}
