@@ -28,23 +28,6 @@ function main() {
 
     check_dependencies
 
-    GOLINT_EXE=$(which golint); rc=$?
-    [[ $rc > 1 ]] && die
-    if [[ $rc == 1 || -z $GOLINT_EXE ]]; then
-        # don't run go list from current directory, because it would modify our go.mod file
-        GOLINT_EXE=$(cd "$GOPATH_1" && go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null); rc=$?
-        if [[ $rc != 0 || -z $GOLINT_EXE || ! -f $GOLINT_EXE ]]; then
-            echo "golint not found. Installing golint into current GOPATH ..."
-            # don't run go get/list from current directory, because it would modify our go.mod file
-            ( cd "$GOPATH_1" && go get -u 'golang.org/x/lint/golint' ) || die
-            GOLINT_EXE=$(cd "$GOPATH_1" && go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null); rc=$?
-            if [[ $rc != 0 || -z $GOLINT_EXE || ! -f $GOLINT_EXE ]]; then
-                die "error: could not install golint"
-            fi
-        fi
-    fi
-    unset rc
-
     banner1 "Settings"
     info \
         "GOLANG_VERSION=$GOLANG_VERSION" \
@@ -144,6 +127,7 @@ function banner1() {
 
 function check_dependencies() {
     check_go
+    check_golint_or_install
 }
 
 function check_go() {
@@ -161,6 +145,27 @@ function check_go() {
     fi
     if [[ $actual_version != "$expected_version" ]]; then
         die "error: expected Go version ${expected_version} but found ${actual_version}"
+    fi
+}
+
+function check_golint_or_install() {
+    local rc=0
+    GOLINT_EXE=$(which golint) || rc=$?
+    (( rc > 1 )) && die
+    if [[ $rc == 1 || ! $GOLINT_EXE ]]; then
+        # don't run go list from current directory, because it would modify our go.mod file
+        rc=0
+        GOLINT_EXE=$(cd "$GOPATH_1" && go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null) || rc=$?
+        if [[ $rc != 0 || ! $GOLINT_EXE || ! -f $GOLINT_EXE ]]; then
+            echo "golint not found. Installing golint into current GOPATH ..."
+            # don't run go get/list from current directory, because it would modify our go.mod file
+            ( cd "$GOPATH_1" && go get -u 'golang.org/x/lint/golint' ) || die
+            rc=0
+            GOLINT_EXE=$(cd "$GOPATH_1" && go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null) || rc=$?
+            if [[ $rc != 0 || ! $GOLINT_EXE || ! -f $GOLINT_EXE ]]; then
+                die "error: could not install golint"
+            fi
+        fi
     fi
 }
 
