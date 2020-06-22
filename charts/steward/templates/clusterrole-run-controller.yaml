@@ -1,0 +1,38 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: steward-run-controller
+  labels:
+    {{- include "steward.labels" . | nindent 4 }}
+rules:
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["rolebindings"]
+  verbs: ["get","list","create"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["clusterroles"]
+  verbs: ["bind","get"]
+  resourceNames:
+  {{- toYaml .Values.runController.mappableClusterRoles | nindent 2 }}
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["serviceaccounts"]
+  verbs: ["get","list","create","update"]
+- apiGroups: ["steward.sap.com"]
+  resources: ["pipelineruns","pipelineruns/status"]
+  verbs: ["get","list","patch","update","watch"]
+- apiGroups: ["tekton.dev"]
+  resources: ["taskruns"]
+  verbs: ["create","delete","get","list","patch","update","watch"]
+- apiGroups: [""]
+  resources: ["namespaces","secrets"]
+  verbs: ["create","delete","get","list","patch","update","watch"]
+## may be restricted to steward-system namespace???
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get"]
+- apiGroups: ['policy']
+  resources: ['podsecuritypolicies']
+  verbs:     ['use']
+  resourceNames: ['00-steward-controller']

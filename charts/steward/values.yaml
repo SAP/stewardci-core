@@ -18,16 +18,18 @@ runController:
       cpu: 50m
   podSecurityContext: {}
     # fsGroup: 2000
-  securityContext: {}
-    # capabilities:
-    #   drop:
-    #   - ALL
-    # readOnlyRootFilesystem: true
-    # runAsNonRoot: true
-    # runAsUser: 1000
+  securityContext:
+    capabilities:
+      drop:
+      - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
   nodeSelector: {}
   affinity: {}
   tolerations: []
+  mappableClusterRoles: ["steward-run"]
 
 tenantController:
   image:

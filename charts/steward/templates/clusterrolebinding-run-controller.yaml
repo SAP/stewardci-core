@@ -1,15 +1,14 @@
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: steward-system
+  name: steward-run-controller
   labels:
     {{- include "steward.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  #TODO: Restrict permissions!
-  name: cluster-admin
+  name: steward-run-controller
 subjects:
 - kind: ServiceAccount
-  name: steward-system
+  name: steward-run-controller
   namespace: {{ .Values.targetNamespace.name | quote }}
