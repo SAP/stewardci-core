@@ -60,15 +60,15 @@ type runManagerTesting struct {
 	cleanupStub                               func(*runContext) error
 	copySecretsToRunNamespaceStub             func(*runContext) (string, []string, error)
 	getSecretHelperStub                       func(string, corev1.SecretInterface) secrets.SecretHelper
-	setupNetworkPolicyFromConfigStub          func(*runContext) error
-	setupLimitRangeFromConfigStub             func(*runContext) error
-	setupResourceQuotaFromConfigStub          func(*runContext) error
-	setupNetworkPolicyThatIsolatesAllPodsStub func(*runContext) error
-	setupServiceAccountStub                   func(*runContext, string, []string) error
-	setupStaticNetworkPoliciesStub            func(*runContext) error
-	setupStaticLimitRangeStub                 func(*runContext) error
-	setupStaticResourceQuotaStub              func(*runContext) error
 	getServiceAccountSecretNameStub           func(*runContext) string
+	setupLimitRangeFromConfigStub             func(*runContext) error
+	setupNetworkPolicyFromConfigStub          func(*runContext) error
+	setupNetworkPolicyThatIsolatesAllPodsStub func(*runContext) error
+	setupResourceQuotaFromConfigStub          func(*runContext) error
+	setupServiceAccountStub                   func(*runContext, string, []string) error
+	setupStaticLimitRangeStub                 func(*runContext) error
+	setupStaticNetworkPoliciesStub            func(*runContext) error
+	setupStaticResourceQuotaStub              func(*runContext) error
 }
 
 type runContext struct {
@@ -141,11 +141,11 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 		return err
 	}
 
-	if err = c.setupLimitRange(ctx); err != nil {
+	if err = c.setupStaticLimitRange(ctx); err != nil {
 		return err
 	}
 
-	if err = c.setupResourceQuota(ctx); err != nil {
+	if err = c.setupStaticResourceQuota(ctx); err != nil {
 		return err
 	}
 
@@ -345,7 +345,6 @@ func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(ctx *runContext) erro
 }
 
 func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
-
 	if c.testing != nil && c.testing.setupNetworkPolicyFromConfigStub != nil {
 		return c.testing.setupNetworkPolicyFromConfigStub(ctx)
 	}
@@ -356,7 +355,6 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 	}
 
 	configStr := c.pipelineRunsConfig.NetworkPolicy
-
 	if configStr == "" {
 		return nil
 	}
@@ -364,8 +362,7 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 	return c.createResource(configStr, "networkpolicies", "network policy", expectedGroupKind, ctx)
 }
 
-func (c *runManager) setupLimitRange(ctx *runContext) error {
-
+func (c *runManager) setupStaticLimitRange(ctx *runContext) error {
 	if c.testing != nil && c.testing.setupStaticLimitRangeStub != nil {
 		return c.testing.setupStaticLimitRangeStub(ctx)
 	}
@@ -398,7 +395,7 @@ func (c *runManager) setupLimitRangeFromConfig(ctx *runContext) error {
 	return c.createResource(configStr, "limitranges", "limit range", expectedGroupKind, ctx)
 }
 
-func (c *runManager) setupResourceQuota(ctx *runContext) error {
+func (c *runManager) setupStaticResourceQuota(ctx *runContext) error {
 	if c.testing != nil && c.testing.setupStaticResourceQuotaStub != nil {
 		return c.testing.setupStaticResourceQuotaStub(ctx)
 	}
@@ -433,6 +430,7 @@ func (c *runManager) setupResourceQuotaFromConfig(ctx *runContext) error {
 
 func (c *runManager) createResource(configStr string, resource string, resourceDisplayName string, expectedGroupKind schema.GroupKind, ctx *runContext) error {
 	var obj *unstructured.Unstructured
+
 	// decode
 	{
 		// We don't assume a specific resource version so that users can configure
@@ -483,7 +481,7 @@ func (c *runManager) createResource(configStr string, resource string, resourceD
 func (c *runManager) volumesWithServiceAccountSecret(ctx *runContext) []corev1api.Volume {
 	var mode int32 = 0644
 	return []corev1api.Volume{
-		corev1api.Volume{
+		{
 			Name: "service-account-token",
 			VolumeSource: corev1api.VolumeSource{
 				Secret: &corev1api.SecretVolumeSource{

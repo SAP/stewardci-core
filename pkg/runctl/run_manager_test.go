@@ -35,13 +35,13 @@ func newRunManagerTestingWithAllNoopStubs() *runManagerTesting {
 		cleanupStub:                               func(*runContext) error { return nil },
 		copySecretsToRunNamespaceStub:             func(*runContext) (string, []string, error) { return "", []string{}, nil },
 		getServiceAccountSecretNameStub:           func(*runContext) string { return "" },
-		setupNetworkPolicyFromConfigStub:          func(*runContext) error { return nil },
 		setupLimitRangeFromConfigStub:             func(*runContext) error { return nil },
-		setupResourceQuotaFromConfigStub:          func(*runContext) error { return nil },
+		setupNetworkPolicyFromConfigStub:          func(*runContext) error { return nil },
 		setupNetworkPolicyThatIsolatesAllPodsStub: func(*runContext) error { return nil },
+		setupResourceQuotaFromConfigStub:          func(*runContext) error { return nil },
 		setupServiceAccountStub:                   func(*runContext, string, []string) error { return nil },
-		setupStaticNetworkPoliciesStub:            func(*runContext) error { return nil },
 		setupStaticLimitRangeStub:                 func(*runContext) error { return nil },
+		setupStaticNetworkPoliciesStub:            func(*runContext) error { return nil },
 		setupStaticResourceQuotaStub:              func(*runContext) error { return nil },
 	}
 }
@@ -630,7 +630,7 @@ func Test_RunManager_setupStaticLimitRange_Calls_setupLimitRangeFromConfig_AndPr
 	}
 
 	// EXERCISE
-	resultError := examinee.setupLimitRange(runCtx)
+	resultError := examinee.setupStaticLimitRange(runCtx)
 
 	// VERIFY
 	assert.ErrorContains(t, resultError, "failed to set up the configured limit range in namespace \""+runNamespaceName+"\": ")
@@ -638,7 +638,7 @@ func Test_RunManager_setupStaticLimitRange_Calls_setupLimitRangeFromConfig_AndPr
 	assert.Assert(t, methodCalled == true)
 }
 
-func Test_RunManager_setupLimitRange_Succeeds(t *testing.T) {
+func Test_RunManager_setupStaticLimitRange_Succeeds(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -649,7 +649,7 @@ func Test_RunManager_setupLimitRange_Succeeds(t *testing.T) {
 	examinee.testing.setupStaticLimitRangeStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupLimitRange(runCtx)
+	resultError := examinee.setupStaticLimitRange(runCtx)
 
 	// VERIFY
 	assert.NilError(t, resultError)
@@ -809,7 +809,7 @@ func Test_RunManager_setupStaticResourceQuota_Calls_setupResourceQuotaFromConfig
 	}
 
 	// EXERCISE
-	resultError := examinee.setupResourceQuota(runCtx)
+	resultError := examinee.setupStaticResourceQuota(runCtx)
 
 	// VERIFY
 	assert.ErrorContains(t, resultError, "failed to set up the configured resource quota in namespace \""+runNamespaceName+"\": ")
@@ -817,7 +817,7 @@ func Test_RunManager_setupStaticResourceQuota_Calls_setupResourceQuotaFromConfig
 	assert.Assert(t, methodCalled == true)
 }
 
-func Test_RunManager_setupResourceQuota_Succeeds(t *testing.T) {
+func Test_RunManager_setupStaticResourceQuota_Succeeds(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -828,7 +828,7 @@ func Test_RunManager_setupResourceQuota_Succeeds(t *testing.T) {
 	examinee.testing.setupStaticResourceQuotaStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupResourceQuota(runCtx)
+	resultError := examinee.setupStaticResourceQuota(runCtx)
 
 	// VERIFY
 	assert.NilError(t, resultError)
