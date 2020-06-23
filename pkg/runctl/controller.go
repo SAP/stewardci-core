@@ -275,12 +275,8 @@ func (c *Controller) syncHandler(key string) error {
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
-			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
-				return err
-			}
-			pipelineRun.UpdateResult(api.ResultErrorInfra)
-			c.metrics.CountResult(api.ResultErrorInfra)
-			return nil
+			// should we count errors here?
+			return err
 		}
 		started := run.GetStartTime()
 		if started != nil {

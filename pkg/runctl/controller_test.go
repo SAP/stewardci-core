@@ -229,6 +229,7 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 }
 
 func Test_Controller_syncHandler_mock(t *testing.T) {
+	expectedError := fmt.Errorf("expected")
 	for _, test := range []struct {
 		name                  string
 		pipelineSpec          api.PipelineSpec
@@ -237,6 +238,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 		expectedResult        api.Result
 		expectedState         api.State
 		expectedMessage       string
+		expectedError         error
 	}{
 		{name: "new_ok",
 			pipelineSpec:  api.PipelineSpec{},
@@ -278,10 +280,11 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				State: api.StateWaiting,
 			},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().GetRun(gomock.Any()).Return(nil, fmt.Errorf("expected"))
+				rm.EXPECT().GetRun(gomock.Any()).Return(nil, expectedError)
 			},
-			expectedResult: api.ResultErrorInfra,
-			expectedState:  api.StateCleaning,
+			expectedResult: "",
+			expectedState:  api.StateWaiting,
+			expectedError:  expectedError,
 		},
 		{name: "waiting_not_started",
 			pipelineSpec: api.PipelineSpec{},
@@ -431,7 +434,11 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			// EXERCISE
 			err := controller.syncHandler("ns1/foo")
 			// VERIFY
-			assert.NilError(t, err)
+			if test.expectedError != nil {
+				assert.Equal(t, test.expectedError, err)
+			} else {
+				assert.NilError(t, err)
+			}
 			result, err := getAPIPipelineRun(cf, "foo", "ns1")
 			assert.NilError(t, err)
 			log.Printf("%+v", result.Status)
