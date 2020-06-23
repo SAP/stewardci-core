@@ -78,9 +78,10 @@ pipelineRuns:
     resources:
       limits:
         cpu: 3
-        memory: 2Gi
+        memory: 1.2Gi
       requests:
         cpu: 500m
+        memory: 1Gi
     podSecurityContext:
       # The values below must be supported by the Jenkinsfile Runner image,
       # e.g. by having file ownerships set accordingly.
