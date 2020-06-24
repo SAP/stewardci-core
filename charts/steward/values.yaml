@@ -29,7 +29,6 @@ runController:
   nodeSelector: {}
   affinity: {}
   tolerations: []
-  mappableClusterRoles: ["steward-run"]
 
 tenantController:
   image:

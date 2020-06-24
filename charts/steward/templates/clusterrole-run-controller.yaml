@@ -11,8 +11,7 @@ rules:
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources: ["clusterroles"]
   verbs: ["bind","get"]
-  resourceNames:
-  {{- toYaml .Values.runController.mappableClusterRoles | nindent 4 }}
+  resourceNames: ["steward-run"]
 - apiGroups: ["networking.k8s.io"]
   resources: ["networkpolicies"]
   verbs: ["create"]
