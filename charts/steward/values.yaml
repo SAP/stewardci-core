@@ -55,7 +55,7 @@ tenantController:
   nodeSelector: {}
   affinity: {}
   tolerations: []
-  mappableClusterRoles: ["steward-tenant"]
+  possibleTenantRoles: ["steward-tenant"]
 
 # imagePullSecrets are used to pull controller images, but no other images.
 imagePullSecrets: []
