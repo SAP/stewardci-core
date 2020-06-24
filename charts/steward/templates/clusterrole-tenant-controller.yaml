@@ -17,7 +17,7 @@ rules:
   resources: ["tenants","tenants/status"]
   verbs: ["get","list","patch","update","watch"]
 - apiGroups: [""]
-  resources: ["namespaces"]
+  resources: ["namespaces","resourcequotas","limitranges"]
   verbs: ["create","delete","get","list","patch","update","watch"]
 - apiGroups: ['policy']
   resources: ['podsecuritypolicies']
