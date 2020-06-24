@@ -12,7 +12,7 @@ rules:
   resources: ["clusterroles"]
   verbs: ["bind","get"]
   resourceNames:
-  {{- toYaml .Values.runController.mappableClusterRoles | nindent 2 }}
+  {{- toYaml .Values.runController.mappableClusterRoles | nindent 4 }}
 - apiGroups: ["networking.k8s.io"]
   resources: ["networkpolicies"]
   verbs: ["create"]
@@ -26,7 +26,7 @@ rules:
   resources: ["taskruns"]
   verbs: ["create","delete","get","list","patch","update","watch"]
 - apiGroups: [""]
-  resources: ["namespaces","secrets"]
+  resources: ["namespaces","secrets","resourcequotas","limitranges"]
   verbs: ["create","delete","get","list","patch","update","watch"]
 ## may be restricted to steward-system namespace???
 - apiGroups: [""]

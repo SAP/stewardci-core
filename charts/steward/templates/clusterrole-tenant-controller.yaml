@@ -12,12 +12,12 @@ rules:
   resources: ["clusterroles"]
   verbs: ["bind"]
   resourceNames:
-  {{- toYaml .Values.tenantController.mappableClusterRoles | nindent 2 }}
+  {{- toYaml .Values.tenantController.mappableClusterRoles | nindent 4 }}
 - apiGroups: ["steward.sap.com"]
   resources: ["tenants","tenants/status"]
   verbs: ["get","list","patch","update","watch"]
 - apiGroups: [""]
-  resources: ["namespaces","resourcequotas","limitranges"]
+  resources: ["namespaces"]
   verbs: ["create","delete","get","list","patch","update","watch"]
 - apiGroups: ['policy']
   resources: ['podsecuritypolicies']
