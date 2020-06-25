@@ -18,13 +18,14 @@ runController:
       cpu: 50m
   podSecurityContext: {}
     # fsGroup: 2000
-  securityContext: {}
-    # capabilities:
-    #   drop:
-    #   - ALL
-    # readOnlyRootFilesystem: true
-    # runAsNonRoot: true
-    # runAsUser: 1000
+  securityContext:
+    capabilities:
+      drop:
+      - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
   nodeSelector: {}
   affinity: {}
   tolerations: []
@@ -42,16 +43,18 @@ tenantController:
       cpu: 10m
   podSecurityContext: {}
     # fsGroup: 2000
-  securityContext: {}
-    # capabilities:
-    #   drop:
-    #   - ALL
-    # readOnlyRootFilesystem: true
-    # runAsNonRoot: true
-    # runAsUser: 1000
+  securityContext:
+    capabilities:
+      drop:
+      - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
   nodeSelector: {}
   affinity: {}
   tolerations: []
+  possibleTenantRoles: ["steward-tenant"]
 
 # imagePullSecrets are used to pull controller images, but no other images.
 imagePullSecrets: []

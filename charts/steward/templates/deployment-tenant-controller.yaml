@@ -18,7 +18,7 @@ spec:
         {{- include "steward.selectorLabels" . | nindent 8 }}
         {{- include "steward.tenantController.componentLabel" . | nindent 8 }}
     spec:
-      serviceAccountName: steward-system
+      serviceAccountName: steward-tenant-controller
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
