@@ -121,6 +121,7 @@ Tenant Controller:
 | <code>tenantController.<wbr/>nodeSelector</code> | (object)<br/> The `nodeSelector` field of the Tenant Controller [pod spec][k8s-podspec]. | `{}` |
 | <code>tenantController.<wbr/>affinity</code> | (object of [`Affinity`][k8s-affinity])<br/> The `affinity` field of the Tenant Controller [pod spec][k8s-podspec]. | `{}` |
 | <code>tenantController.<wbr/>tolerations</code> | (array of [`Toleration`][k8s-tolerations])<br/> The `tolerations` field of the Tenant Controller [pod spec][k8s-podspec]. | `[]` |
+| <code>tenantController.<wbr/>possibleTenantRoles</code> | (array of string)<br/> The names of all possible tenant roles. A tenant role is a Kubernetes ClusterRole that the controller binds within a tenant namespace to (a) the default service account of the client namespace the tenant belongs to and (b) to the default service account of the tenant namespace. The tenant role to be used can be configured per Steward client namespace via annotation `steward.sap.com/tenant-role`. | `['steward-tenant']` |
 
 Common parameters:
 
