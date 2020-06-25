@@ -282,9 +282,8 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 				rm.EXPECT().GetRun(gomock.Any()).Return(nil, expectedError)
 			},
-			expectedResult: "",
-			expectedState:  api.StateWaiting,
-			expectedError:  expectedError,
+			expectedResult: api.ResultErrorInfra,
+			expectedState:  api.StateCleaning,
 		},
 		{name: "waiting_not_started",
 			pipelineSpec: api.PipelineSpec{},
