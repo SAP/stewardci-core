@@ -246,14 +246,12 @@ func (c *Controller) syncHandler(key string) error {
 	runManager := c.createRunManager(pipelineRun, pipelineRunsConfig)
 	// Process pipeline run based on current state
 	switch state := pipelineRun.GetStatus().State; state {
-	// TODO fix #117
-	// Runs might be left in state `preparing` after a controller crash.
-	// Those must be recovered.
 	case api.StateUndefined:
-		c.metrics.CountStart()
 		if err = c.changeState(pipelineRun, api.StatePreparing); err != nil {
 			return err
 		}
+		c.metrics.CountStart()
+	case api.StatePreparing:
 		err = runManager.Start(pipelineRun)
 		if err != nil {
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")

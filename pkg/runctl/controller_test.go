@@ -244,14 +244,26 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			pipelineSpec:  api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+			},
+			expectedResult: api.ResultUndefined,
+			expectedState:  api.StatePreparing,
+		},
+		{name: "preparing_ok",
+			pipelineSpec: api.PipelineSpec{},
+			currentStatus: api.PipelineStatus{
+				State: api.StatePreparing,
+			},
+			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 				rm.EXPECT().Start(gomock.Any()).Return(nil)
 			},
 			expectedResult: api.ResultUndefined,
 			expectedState:  api.StateWaiting,
 		},
-		{name: "new_fail",
-			pipelineSpec:  api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{},
+		{name: "preparing_fail",
+			pipelineSpec: api.PipelineSpec{},
+			currentStatus: api.PipelineStatus{
+				State: api.StatePreparing,
+			},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 				rm.EXPECT().Start(gomock.Any()).Return(fmt.Errorf("expected"))
 			},
@@ -259,11 +271,13 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			expectedState:   api.StateCleaning,
 			expectedMessage: "error syncing resource .*expected",
 		},
-		{name: "new_fail_content_error",
+		{name: "preparing_fail_content_error",
 			pipelineSpec: api.PipelineSpec{
 				Secrets: []string{"secret1"},
 			},
-			currentStatus: api.PipelineStatus{},
+			currentStatus: api.PipelineStatus{
+				State: api.StatePreparing,
+			},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 
 				rm.EXPECT().Start(gomock.Any()).Do(func(run k8s.PipelineRun) {
