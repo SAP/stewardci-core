@@ -1,7 +1,7 @@
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: 00-steward-controller
+  name: 00-steward-controllers
   labels:
     {{- include "steward.labels" . | nindent 4 }}
   annotations:
