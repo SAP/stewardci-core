@@ -94,7 +94,14 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 	ctx := &runContext{
 		pipelineRun: pipelineRun,
 	}
-
+	runNamespace := pipelineRun.GetRunNamespace()
+	if runNamespace != "" {
+		ctx.runNamespace = runNamespace
+		err = c.cleanup(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	err = c.prepareRunNamespace(ctx)
 	if err != nil {
 		return err

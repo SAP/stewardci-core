@@ -265,11 +265,12 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				State: api.StatePreparing,
 			},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().Start(gomock.Any()).Return(fmt.Errorf("expected"))
+				rm.EXPECT().Start(gomock.Any()).Return(expectedError)
 			},
-			expectedResult:  api.ResultErrorInfra,
-			expectedState:   api.StateCleaning,
+			expectedResult:  "",
+			expectedState:   api.StatePreparing,
 			expectedMessage: "error syncing resource .*expected",
+			expectedError:   expectedError,
 		},
 		{name: "preparing_fail_content_error",
 			pipelineSpec: api.PipelineSpec{

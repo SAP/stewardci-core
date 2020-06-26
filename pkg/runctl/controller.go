@@ -254,15 +254,16 @@ func (c *Controller) syncHandler(key string) error {
 	case api.StatePreparing:
 		err = runManager.Start(pipelineRun)
 		if err != nil {
+			// create Event here
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
-			if pipelineRun.GetStatus().Result == api.ResultUndefined {
-				pipelineRun.UpdateResult(api.ResultErrorInfra)
+			if pipelineRun.GetStatus().Result != api.ResultUndefined {
+				if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
+					return err
+				}
+				c.metrics.CountResult(pipelineRun.GetStatus().Result)
+				return nil
 			}
-			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
-				return err
-			}
-			c.metrics.CountResult(pipelineRun.GetStatus().Result)
-			return nil
+			return err
 		}
 		if err = c.changeState(pipelineRun, api.StateWaiting); err != nil {
 			log.Printf("ERROR: the pipeline run %q will be in state %q forever",
