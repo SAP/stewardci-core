@@ -94,13 +94,9 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 	ctx := &runContext{
 		pipelineRun: pipelineRun,
 	}
-	runNamespace := pipelineRun.GetRunNamespace()
-	if runNamespace != "" {
-		ctx.runNamespace = runNamespace
-		err = c.cleanup(ctx)
-		if err != nil {
-			return err
-		}
+	err = c.cleanupPreviousAttempt(ctx)
+	if err != nil {
+		return err
 	}
 	err = c.prepareRunNamespace(ctx)
 	if err != nil {
@@ -111,6 +107,15 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 		return err
 	}
 
+	return nil
+}
+
+func (c *runManager) cleanupPreviousAttempt(ctx *runContext) error {
+	runNamespace := ctx.pipelineRun.GetRunNamespace()
+	if runNamespace != "" {
+		ctx.runNamespace = runNamespace
+		return c.cleanup(ctx)
+	}
 	return nil
 }
 
