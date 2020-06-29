@@ -254,7 +254,7 @@ func (c *Controller) syncHandler(key string) error {
 	case api.StatePreparing:
 		err = runManager.Start(pipelineRun)
 		if err != nil {
-			// create Event here
+			// TODO: create Event here
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
 			if pipelineRun.GetStatus().Result != api.ResultUndefined {
 				if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
