@@ -256,6 +256,7 @@ func (c *Controller) syncHandler(key string) error {
 		if err != nil {
 			// TODO: create Event here
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
+			//In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 			if pipelineRun.GetStatus().Result != api.ResultUndefined {
 				if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
 					return err
