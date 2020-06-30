@@ -6,17 +6,34 @@ import (
 	"testing"
 )
 
-func Test_IsRecoverable_recoverable_error_returns_true(t *testing.T) {
-	err := NewRecoverabilityInfoError(fmt.Errorf("foo"), true)
-	assert.Assert(t, IsRecoverable(err) == true)
-}
+func Test_IsRecoverable(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		err      error
+		expected bool
+	}{
 
-func Test_IsRecoverable_permanent_error_returns_false(t *testing.T) {
-	err := NewRecoverabilityInfoError(fmt.Errorf("foo"), false)
-	assert.Assert(t, IsRecoverable(err) == false)
-}
-
-func Test_IsRecoverable_otherError_returns_false(t *testing.T) {
-	t.Parallel()
-	assert.Assert(t, IsRecoverable(fmt.Errorf("My Error")) == false)
+		{name: "nil returns false",
+			err:      nil,
+			expected: false,
+		},
+		{name: "other error returns false",
+			err:      fmt.Errorf("foo"),
+			expected: false,
+		},
+		{name: "permanent error returns false",
+			err:      NewRecoverabilityInfoError(fmt.Errorf("foo"), false),
+			expected: false,
+		},
+		{name: "recoverable error returns true",
+			err:      NewRecoverabilityInfoError(fmt.Errorf("foo"), true),
+			expected: true,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			test := test
+			t.Parallel()
+			assert.Assert(t, test.expected == IsRecoverable(test.err))
+		})
+	}
 }

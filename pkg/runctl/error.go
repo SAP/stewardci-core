@@ -17,6 +17,10 @@ type RecoverabilityInfo interface {
 
 // NewRecoverabilityInfoError creates a new error implementing the RecoverabilityInfo interface
 func NewRecoverabilityInfoError(err error, recoverable bool) *Error {
+	if err == nil {
+		panic("Cannot use nil as error")
+	}
+
 	return &Error{e: err,
 		recoverable: recoverable,
 	}
@@ -34,6 +38,9 @@ func (err *Error) IsRecoverable() bool {
 
 // IsRecoverable returns true if error can be recovered from
 func IsRecoverable(err error) bool {
+	if err == nil {
+		return false
+	}
 	if recoverability := RecoverabilityInfo(nil); errors.As(err, &recoverability) {
 		return recoverability.IsRecoverable()
 	}
