@@ -267,8 +267,6 @@ func (c *Controller) syncHandler(key string) error {
 			return err
 		}
 		if err = c.changeState(pipelineRun, api.StateWaiting); err != nil {
-			log.Printf("ERROR: the pipeline run %q will be in state %q forever",
-				pipelineRun.GetName(), api.StatePreparing)
 			return err
 		}
 	case api.StateWaiting:

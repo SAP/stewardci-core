@@ -229,7 +229,7 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 }
 
 func Test_Controller_syncHandler_mock(t *testing.T) {
-	expectedError := fmt.Errorf("expected")
+	error1 := fmt.Errorf("error1")
 	for _, test := range []struct {
 		name                  string
 		pipelineSpec          api.PipelineSpec
@@ -265,12 +265,12 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				State: api.StatePreparing,
 			},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().Start(gomock.Any()).Return(expectedError)
+				rm.EXPECT().Start(gomock.Any()).Return(error1)
 			},
 			expectedResult:  api.ResultUndefined,
 			expectedState:   api.StatePreparing,
-			expectedMessage: "error syncing resource .*expected",
-			expectedError:   expectedError,
+			expectedMessage: "error syncing resource .*error1",
+			expectedError:   error1,
 		},
 		{name: "preparing_fail_content_error",
 			pipelineSpec: api.PipelineSpec{
@@ -283,11 +283,11 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 
 				rm.EXPECT().Start(gomock.Any()).Do(func(run k8s.PipelineRun) {
 					run.UpdateResult(api.ResultErrorContent)
-				}).Return(fmt.Errorf("expected"))
+				}).Return(error1)
 			},
 			expectedResult:  api.ResultErrorContent,
 			expectedState:   api.StateCleaning,
-			expectedMessage: "error syncing resource .*expected",
+			expectedMessage: "error syncing resource .*error1",
 		},
 		{name: "waiting_fail",
 			pipelineSpec: api.PipelineSpec{},
@@ -295,7 +295,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				State: api.StateWaiting,
 			},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().GetRun(gomock.Any()).Return(nil, expectedError)
+				rm.EXPECT().GetRun(gomock.Any()).Return(nil, error1)
 			},
 			expectedResult: api.ResultErrorInfra,
 			expectedState:  api.StateCleaning,
@@ -344,11 +344,11 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				State: api.StateRunning,
 			},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().GetRun(gomock.Any()).Return(nil, fmt.Errorf("expected"))
+				rm.EXPECT().GetRun(gomock.Any()).Return(nil, error1)
 			},
 			expectedResult:  "",
 			expectedState:   api.StateCleaning,
-			expectedMessage: "error syncing resource .*expected",
+			expectedMessage: "error syncing resource .*error1",
 		},
 		{name: "running_finished_timeout",
 			pipelineSpec: api.PipelineSpec{},
