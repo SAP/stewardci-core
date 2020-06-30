@@ -660,9 +660,9 @@ func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runi.Run, error) {
 	}
 	if err != nil {
 		return nil, NewRecoverabilityInfoError(err, true)
-	} else {
-		return NewRun(run), nil
 	}
+	return NewRun(run), nil
+
 }
 
 // Cleanup a run based on a pipelineRun

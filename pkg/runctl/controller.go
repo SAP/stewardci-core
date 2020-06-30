@@ -244,13 +244,15 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	runManager := c.createRunManager(pipelineRun, pipelineRunsConfig)
-	// Process pipeline run based on current state
-	switch state := pipelineRun.GetStatus().State; state {
-	case api.StateUndefined:
+
+	if pipelineRun.GetStatus().State == api.StateUndefined {
 		if err = c.changeState(pipelineRun, api.StatePreparing); err != nil {
 			return err
 		}
 		c.metrics.CountStart()
+	}
+	// Process pipeline run based on current state
+	switch state := pipelineRun.GetStatus().State; state {
 	case api.StatePreparing:
 		err = runManager.Start(pipelineRun)
 		if err != nil {

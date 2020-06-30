@@ -230,7 +230,7 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 
 func Test_Controller_syncHandler_mock(t *testing.T) {
 	error1 := fmt.Errorf("error1")
-        errorRecover1 := NewRecoverabilityInfoError(error1,true)
+	errorRecover1 := NewRecoverabilityInfoError(error1, true)
 	for _, test := range []struct {
 		name                  string
 		pipelineSpec          api.PipelineSpec
@@ -245,9 +245,10 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			pipelineSpec:  api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+				rm.EXPECT().Start(gomock.Any()).Return(nil)
 			},
 			expectedResult: api.ResultUndefined,
-			expectedState:  api.StatePreparing,
+			expectedState:  api.StateWaiting,
 		},
 		{name: "preparing_ok",
 			pipelineSpec: api.PipelineSpec{},
@@ -301,18 +302,18 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			expectedResult: api.ResultErrorInfra,
 			expectedState:  api.StateCleaning,
 		},
-                {name: "waiting_recover",
-                        pipelineSpec: api.PipelineSpec{},
-                        currentStatus: api.PipelineStatus{
-                                State: api.StateWaiting,
-                        },
-                        runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-                                rm.EXPECT().GetRun(gomock.Any()).Return(nil, errorRecover1)
-                        },
-                        expectedResult: api.ResultUndefined,
-                        expectedState:  api.StateWaiting,
-                        expectedError: errorRecover1,
-                },
+		{name: "waiting_recover",
+			pipelineSpec: api.PipelineSpec{},
+			currentStatus: api.PipelineStatus{
+				State: api.StateWaiting,
+			},
+			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+				rm.EXPECT().GetRun(gomock.Any()).Return(nil, errorRecover1)
+			},
+			expectedResult: api.ResultUndefined,
+			expectedState:  api.StateWaiting,
+			expectedError:  errorRecover1,
+		},
 		{name: "waiting_not_started",
 			pipelineSpec: api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{
