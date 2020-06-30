@@ -273,6 +273,9 @@ func (c *Controller) syncHandler(key string) error {
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
 			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
+			if IsRecoverable(err) {
+				return err
+			}
 			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
 				return err
 			}

@@ -655,7 +655,14 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runi.Run, error) {
 	namespace := pipelineRun.GetRunNamespace()
 	run, err := c.factory.TektonV1alpha1().TaskRuns(namespace).Get(tektonTaskRunName, metav1.GetOptions{})
-	return NewRun(run), err
+	if k8serrors.IsResourceExpired(err) || k8serrors.IsGone(err) {
+		return nil, NewRecoverabilityInfoError(err, false)
+	}
+	if err != nil {
+		return nil, NewRecoverabilityInfoError(err, true)
+	} else {
+		return NewRun(run), nil
+	}
 }
 
 // Cleanup a run based on a pipelineRun
