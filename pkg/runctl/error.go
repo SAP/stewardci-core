@@ -33,6 +33,9 @@ func (err *Error) Error() string {
 
 // IsRecoverable returns true if error can be recovered from
 func (err *Error) IsRecoverable() bool {
+	if err == nil {
+		return false
+	}
 	return err.recoverable
 }
 
