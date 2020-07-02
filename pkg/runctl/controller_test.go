@@ -22,6 +22,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/record"
 )
 
 func Test_Controller_Success(t *testing.T) {
@@ -140,6 +141,7 @@ func newController(runs ...*api.PipelineRun) (*Controller, *fake.ClientFactory) 
 	metrics := metrics.NewMetrics()
 	controller := NewController(cf, metrics)
 	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(client)
+	controller.recorder = record.NewFakeRecorder(20)
 	return controller, cf
 }
 
@@ -271,7 +273,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			},
 			expectedResult:  api.ResultUndefined,
 			expectedState:   api.StatePreparing,
-			expectedMessage: "error syncing resource .*error1",
+			expectedMessage: "",
 			expectedError:   error1,
 		},
 		{name: "preparing_fail_content_error",
