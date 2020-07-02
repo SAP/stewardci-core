@@ -658,11 +658,11 @@ func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runi.Run, error) {
 	if err != nil {
 		return nil, NewRecoverabilityInfoError(err,
 			k8serrors.IsServerTimeout(err) ||
-			k8serrors.IsServiceUnavailable(err) ||
-			k8serrors.IsTimeout(err) ||
-			k8serrors.IsTooManyRequests(err) ||
-			k8serrors.IsInternalError(err) ||
-			k8serrors.IsUnexpectedServerError(err))
+				k8serrors.IsServiceUnavailable(err) ||
+				k8serrors.IsTimeout(err) ||
+				k8serrors.IsTooManyRequests(err) ||
+				k8serrors.IsInternalError(err) ||
+				k8serrors.IsUnexpectedServerError(err))
 	}
 	return NewRun(run), nil
 

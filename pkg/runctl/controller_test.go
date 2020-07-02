@@ -354,6 +354,18 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			expectedResult: "",
 			expectedState:  api.StateRunning,
 		},
+		{name: "running_recover",
+			pipelineSpec: api.PipelineSpec{},
+			currentStatus: api.PipelineStatus{
+				State: api.StateRunning,
+			},
+			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+				rm.EXPECT().GetRun(gomock.Any()).Return(run, errorRecover1)
+			},
+			expectedResult: "",
+			expectedState:  api.StateRunning,
+			expectedError:  errorRecover1,
+		},
 		{name: "running_get_error",
 			pipelineSpec: api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{
