@@ -267,7 +267,7 @@ func (c *Controller) syncHandler(key string) error {
 	case api.StatePreparing:
 		err = runManager.Start(pipelineRun)
 		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, "PreparingError", err.Error())
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			//In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 			if pipelineRun.GetStatus().Result != api.ResultUndefined {
 				if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
@@ -285,7 +285,7 @@ func (c *Controller) syncHandler(key string) error {
 	case api.StateWaiting:
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, "WaitingGetFailed", err.Error())
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
 			if IsRecoverable(err) {
 				return err
 			}
@@ -306,7 +306,7 @@ func (c *Controller) syncHandler(key string) error {
 	case api.StateRunning:
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, "RunningGetFailed", err.Error())
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
 			if IsRecoverable(err) {
 				return err
 			}

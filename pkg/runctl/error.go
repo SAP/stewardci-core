@@ -11,7 +11,7 @@ type recoverableInfoError struct {
 
 // RecoverabilityInfo is exposed by errors that can be converted to an RecoverabilityInfo object
 type RecoverabilityInfo interface {
-        error 
+	error
 	IsRecoverable() bool
 }
 
