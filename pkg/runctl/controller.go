@@ -292,7 +292,7 @@ func (c *Controller) syncHandler(key string) error {
 			if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
 				return errClean
 			}
-			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
+			pipelineRun.StoreErrorAsMessage(err, "waiting failed")
 			pipelineRun.UpdateResult(api.ResultErrorInfra)
 			c.metrics.CountResult(api.ResultErrorInfra)
 			return nil
