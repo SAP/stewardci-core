@@ -273,7 +273,7 @@ func (c *Controller) syncHandler(key string) error {
 				if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
 					return errClean
 				}
-				pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
+				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
 				c.metrics.CountResult(pipelineRun.GetStatus().Result)
 				return nil
 			}
@@ -313,7 +313,7 @@ func (c *Controller) syncHandler(key string) error {
 			if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
 				return errClean
 			}
-			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
+			pipelineRun.StoreErrorAsMessage(err, "running failed")
 			return nil
 		}
 		containerInfo := run.GetContainerInfo()
