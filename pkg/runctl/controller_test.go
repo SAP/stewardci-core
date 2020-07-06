@@ -276,7 +276,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			expectedMessage: "",
 			expectedError:   error1,
 		},
-		{name: "preparing_fail_content_error",
+		{name: "preparing_fail_on_content_error_during_start",
 			pipelineSpec: api.PipelineSpec{
 				Secrets: []string{"secret1"},
 			},
