@@ -25,4 +25,16 @@ const (
 	// modified otherwise.
 	// The value of the label is ignored and should be empty.
 	LabelSystemManaged = steward.GroupName + "/system-managed"
+
+	// EventReasonPreparingFailed is the reason for a event occuring when the run controller
+	// faces an intermittent error during preparing phase.
+	EventReasonPreparingFailed = "PreparingFailed"
+
+	// EventReasonWaitingFailed is the reason for a event occuring when the run controller
+	// faces an intermittent error during wait phase.
+	EventReasonWaitingFailed = "WaitingFailed"
+
+	// EventReasonRunningFailed is the reason for a event occuring when the run controller
+	// faces an intermittent error during running phase.
+	EventReasonRunningFailed = "RunningFailed"
 )

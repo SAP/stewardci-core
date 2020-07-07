@@ -10,15 +10,19 @@ import (
 	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	"github.com/SAP/stewardci-core/pkg/client/clientset/versioned/scheme"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	run "github.com/SAP/stewardci-core/pkg/run"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -33,6 +37,7 @@ type Controller struct {
 	workqueue            workqueue.RateLimitingInterface
 	metrics              metrics.Metrics
 	testing              *controllerTesting
+	recorder             record.EventRecorder
 }
 
 type controllerTesting struct {
@@ -45,6 +50,11 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1alpha1().TaskRuns()
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartLogging(log.Printf)
+	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
+	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
+
 	controller := &Controller{
 		factory:            factory,
 		pipelineRunFetcher: pipelineRunFetcher,
@@ -53,6 +63,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 		tektonTaskRunsSynced: tektonTaskRunInformer.Informer().HasSynced,
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
 		metrics:              metrics,
+		recorder:             recorder,
 	}
 	pipelineRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.addPipelineRun,
@@ -244,40 +255,44 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	runManager := c.createRunManager(pipelineRun, pipelineRunsConfig)
-	// Process pipeline run based on current state
-	switch state := pipelineRun.GetStatus().State; state {
-	// TODO fix #117
-	// Runs might be left in state `preparing` after a controller crash.
-	// Those must be recovered.
-	case api.StateUndefined:
-		c.metrics.CountStart()
+
+	if pipelineRun.GetStatus().State == api.StateUndefined {
 		if err = c.changeState(pipelineRun, api.StatePreparing); err != nil {
 			return err
 		}
+		c.metrics.CountStart()
+	}
+	// Process pipeline run based on current state
+	switch state := pipelineRun.GetStatus().State; state {
+	case api.StatePreparing:
 		err = runManager.Start(pipelineRun)
 		if err != nil {
-			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
-			if pipelineRun.GetStatus().Result == api.ResultUndefined {
-				pipelineRun.UpdateResult(api.ResultErrorInfra)
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
+			//In case we have a result we can cleanup. Otherwise we retry in the next iteration.
+			if pipelineRun.GetStatus().Result != api.ResultUndefined {
+				if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
+					return errClean
+				}
+				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
+				c.metrics.CountResult(pipelineRun.GetStatus().Result)
+				return nil
 			}
-			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
-				return err
-			}
-			c.metrics.CountResult(pipelineRun.GetStatus().Result)
-			return nil
+			return err
 		}
 		if err = c.changeState(pipelineRun, api.StateWaiting); err != nil {
-			log.Printf("ERROR: the pipeline run %q will be in state %q forever",
-				pipelineRun.GetName(), api.StatePreparing)
 			return err
 		}
 	case api.StateWaiting:
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
-			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
-			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
+			if IsRecoverable(err) {
 				return err
 			}
+			if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
+				return errClean
+			}
+			pipelineRun.StoreErrorAsMessage(err, "waiting failed")
 			pipelineRun.UpdateResult(api.ResultErrorInfra)
 			c.metrics.CountResult(api.ResultErrorInfra)
 			return nil
@@ -291,10 +306,14 @@ func (c *Controller) syncHandler(key string) error {
 	case api.StateRunning:
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
-			pipelineRun.StoreErrorAsMessage(err, "error syncing resource")
-			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
+			if IsRecoverable(err) {
 				return err
 			}
+			if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
+				return errClean
+			}
+			pipelineRun.StoreErrorAsMessage(err, "running failed")
 			return nil
 		}
 		containerInfo := run.GetContainerInfo()

@@ -94,7 +94,10 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 	ctx := &runContext{
 		pipelineRun: pipelineRun,
 	}
-
+	err = c.cleanupPreviousAttempt(ctx)
+	if err != nil {
+		return err
+	}
 	err = c.prepareRunNamespace(ctx)
 	if err != nil {
 		return err
@@ -104,6 +107,15 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
 		return err
 	}
 
+	return nil
+}
+
+func (c *runManager) cleanupPreviousAttempt(ctx *runContext) error {
+	runNamespace := ctx.pipelineRun.GetRunNamespace()
+	if runNamespace != "" {
+		ctx.runNamespace = runNamespace
+		return c.cleanup(ctx)
+	}
 	return nil
 }
 
@@ -643,7 +655,17 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runi.Run, error) {
 	namespace := pipelineRun.GetRunNamespace()
 	run, err := c.factory.TektonV1alpha1().TaskRuns(namespace).Get(tektonTaskRunName, metav1.GetOptions{})
-	return NewRun(run), err
+	if err != nil {
+		return nil, NewRecoverabilityInfoError(err,
+			k8serrors.IsServerTimeout(err) ||
+				k8serrors.IsServiceUnavailable(err) ||
+				k8serrors.IsTimeout(err) ||
+				k8serrors.IsTooManyRequests(err) ||
+				k8serrors.IsInternalError(err) ||
+				k8serrors.IsUnexpectedServerError(err))
+	}
+	return NewRun(run), nil
+
 }
 
 // Cleanup a run based on a pipelineRun
