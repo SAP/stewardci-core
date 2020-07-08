@@ -25,7 +25,7 @@ rules:
   resources: ["taskruns"]
   verbs: ["create","delete","get","list","patch","update","watch"]
 - apiGroups: [""]
-  resources: ["namespaces","secrets","resourcequotas","limitranges"]
+  resources: ["namespaces","secrets","resourcequotas","limitranges","events"]
   verbs: ["create","delete","get","list","patch","update","watch"]
 ## may be restricted to steward-system namespace???
 - apiGroups: [""]
