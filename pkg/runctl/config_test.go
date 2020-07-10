@@ -3,6 +3,7 @@ package runctl
 import (
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
@@ -60,6 +61,7 @@ func Test_loadPipelineRunsConfig_EmptyEntries(t *testing.T) {
 			pipelineRunsConfigKeyPSCRunAsUser:  "",
 			pipelineRunsConfigKeyLimitRange:    "",
 			pipelineRunsConfigKeyResourceQuota: "",
+			pipelineRunsConfigKeyTimeout:       "",
 		}),
 	)
 
@@ -70,6 +72,10 @@ func Test_loadPipelineRunsConfig_EmptyEntries(t *testing.T) {
 	assert.NilError(t, err)
 	expectedConfig := &pipelineRunsConfigStruct{}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
+}
+
+var metav1Duration = func(d time.Duration) *metav1.Duration {
+	return &metav1.Duration{Duration: d}
 }
 
 func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
@@ -88,6 +94,7 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 				pipelineRunsConfigKeyPSCRunAsUser:  "1111",
 				pipelineRunsConfigKeyPSCRunAsGroup: "2222",
 				pipelineRunsConfigKeyPSCFSGroup:    "3333",
+				pipelineRunsConfigKeyTimeout:       "4444m",
 				"someKeyThatShouldBeIgnored":       "34957349",
 			},
 		),
@@ -99,6 +106,7 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, err)
 	expectedConfig := &pipelineRunsConfigStruct{
+		Timeout:       metav1Duration(time.Minute * 4444),
 		NetworkPolicy: "networkPolicy1",
 		LimitRange:    "limitRange1",
 		ResourceQuota: "resourceQuota1",
@@ -121,6 +129,9 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 
 		{pipelineRunsConfigKeyPSCFSGroup, "a"},
 		{pipelineRunsConfigKeyPSCFSGroup, "1a"},
+
+		{pipelineRunsConfigKeyTimeout, "a"},
+		{pipelineRunsConfigKeyTimeout, "1a"},
 	} {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			p := p // capture current value before going parallel

@@ -14,6 +14,15 @@ data:
 
     # Copy and paste example settings directly under `.data` of this configmap!
 
+    # timeout is the maximum execution time of pipelines. If a pipeline run
+    # exceeds this time, it gets aborted.
+    # The value is a duration string that can be parsed by Go's time.parseDuration()
+    # (https://godoc.org/time#ParseDuration):
+    #   A duration string is a possibly signed sequence of decimal numbers,
+    #   each with optional fraction and a unit suffix, such as "300ms", "-1.5h"
+    #   or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+    timeout: 2h15m
+
     # networkPolicy is the network policy to be created in every pipeline
     # run namespace. The value must be a complete
     # `networkpolicy.networking.k8s.io` resource manifest in YAML format.
@@ -82,6 +91,7 @@ data:
     jenkinsfileRunner.podSecurityContext.runAsGroup: "1000"
     jenkinsfileRunner.podSecurityContext.fsGroup: "1000"
 
+  timeout: {{ .Values.pipelineRuns.timeout | quote }}
   networkPolicy: {{ default ( .Files.Get "data/pipelineruns-default-networkpolicy.yaml" ) .Values.pipelineRuns.networkPolicy | quote }}
   limitRange: {{ default ( .Files.Get "data/pipelineruns-default-limitrange.yaml" ) .Values.pipelineRuns.limitRange | quote }}
   resourceQuota: {{ .Values.pipelineRuns.resourceQuota | quote }}

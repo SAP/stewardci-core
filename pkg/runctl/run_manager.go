@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"time"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -545,8 +544,7 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 					tektonStringParam("RUN_NAMESPACE", namespace),
 				},
 			},
-			// use default timeout from tekton
-			// Timeout: toDuration(defaultBuildTimeout),
+			Timeout: c.pipelineRunsConfig.Timeout,
 
 			// Always set a non-empty pod template even if we don't have
 			// values to set. Otherwise the Tekton default pod template
@@ -702,17 +700,6 @@ func toJSONString(value interface{}) (string, error) {
 		return "", errors.Wrapf(err, "error while serializing to JSON: %v", err)
 	}
 	return string(bytes), nil
-}
-
-// toDuration converts a duration string (see time.ParseDuration) into
-// a "k8s.io/apimachinery/pkg/apis/meta/v1".Duration object.
-// Panics in case of errors.
-func toDuration(duration string) *metav1.Duration {
-	d, err := time.ParseDuration(duration)
-	if err != nil {
-		panic(err)
-	}
-	return &metav1.Duration{Duration: d}
 }
 
 func tektonStringParam(name string, value string) tekton.Param {
