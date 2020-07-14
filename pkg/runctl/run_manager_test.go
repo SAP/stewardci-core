@@ -1028,6 +1028,7 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_AllValuesSet(t *testing.T) 
 	examinee := runManager{
 		factory: cf,
 		pipelineRunsConfig: pipelineRunsConfigStruct{
+			Timeout: metav1Duration(4444),
 			JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(1111),
 			JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
 			JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(3333),
@@ -1069,6 +1070,7 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_AllValuesSet(t *testing.T) 
 	assert.Assert(t, podTemplate.SecurityContext.FSGroup != examinee.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup)
 	assert.Assert(t, podTemplate.SecurityContext.RunAsGroup != examinee.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup)
 	assert.Assert(t, podTemplate.SecurityContext.RunAsUser != examinee.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsUser)
+	assert.DeepEqual(t, metav1Duration(4444), taskRun.Spec.Timeout)
 }
 
 func Test_RunManager_Start_CreatesTektonTaskRun(t *testing.T) {

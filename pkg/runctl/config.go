@@ -2,6 +2,7 @@ package runctl
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
 
@@ -13,6 +14,7 @@ import (
 
 const (
 	pipelineRunsConfigMapName          = "steward-pipelineruns"
+	pipelineRunsConfigKeyTimeout       = "timeout"
 	pipelineRunsConfigKeyNetworkPolicy = "networkPolicy"
 	pipelineRunsConfigKeyLimitRange    = "limitRange"
 	pipelineRunsConfigKeyResourceQuota = "resourceQuota"
@@ -22,6 +24,7 @@ const (
 )
 
 type pipelineRunsConfigStruct struct {
+	Timeout                                       *metav1.Duration
 	NetworkPolicy                                 string
 	LimitRange                                    string
 	ResourceQuota                                 string
@@ -50,11 +53,27 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 		if strVal, ok := configMap.Data[key]; ok && strVal != "" {
 			intVal, err := strconv.ParseInt(strVal, 10, 64)
 			if err != nil {
-				return nil, errors.Wrapf(err, "cannot parse configuration value %q", key)
+				return nil, errors.Wrapf(err, "cannot parse configuration value %q at %q", strVal, key)
 			}
 			return &intVal, nil
 		}
 		return nil, nil
+	}
+
+	parseDuration := func(key string) (*metav1.Duration, error) {
+		if strVal, ok := configMap.Data[key]; ok && strVal != "" {
+			d, err := time.ParseDuration(strVal)
+			if err != nil {
+				return nil, errors.Wrapf(err, "cannot parse configuration value %q at %q", strVal, key)
+			}
+			return &metav1.Duration{Duration: d}, nil
+		}
+		return nil, nil
+	}
+
+	if config.Timeout, err =
+		parseDuration(pipelineRunsConfigKeyTimeout); err != nil {
+		return nil, err
 	}
 
 	if config.JenkinsfileRunnerPodSecurityContextRunAsUser, err =
