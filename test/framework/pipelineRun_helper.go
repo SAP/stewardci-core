@@ -21,6 +21,7 @@ type testRun struct {
 	check    PipelineRunCheck
 	result   error
 	expected string
+	cleanup  bool
 }
 
 // ExecutePipelineRunTests execute a set of testPlans
@@ -56,6 +57,7 @@ func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...Tes
 				ctx:      ctx,
 				check:    pipelineTest.Check,
 				expected: pipelineTest.Expected,
+				cleanup:  testPlan.cleanup,
 			}
 			if testPlan.ParallelCreation {
 				go func(waitWG *sync.WaitGroup) {
@@ -92,16 +94,24 @@ func checkResult(run testRun) error {
 }
 
 func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
+	ctx := run.ctx
+	pr := GetPipelineRun(ctx)
 	defer func() {
+		if run.cleanup {
+			log.Printf("Test: %q deleting pipelineRun %q", run.name, pr.GetName())
+			err := DeletePipelineRun(ctx, pr)
+			if err != nil {
+				log.Printf("error happened while cleaning up the pipelineRun %q: %q", run.name, err)
+			}
+		}
 		waitWG.Done()
 	}()
 	if run.result != nil {
 		assert.NilError(t, checkResult(run), "Test: %q", run.name)
 		return
 	}
-	ctx := run.ctx
+
 	assert.NilError(t, ctx.Err(), "Test: %q", run.name)
-	pr := GetPipelineRun(ctx)
 	PipelineRunCheck := CreatePipelineRunCondition(pr, run.check)
 	duration, err := WaitFor(ctx, PipelineRunCheck)
 	log.Printf("Test: %q waited for %.2f s", run.name, duration.Seconds())
@@ -170,7 +180,7 @@ func DeletePipelineRun(ctx context.Context, pipelineRun *api.PipelineRun) error 
 	if pipelineRun == nil {
 		return nil
 	}
-	stewardClient := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
+	stewardClient := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetTenantNamespace(ctx))
 	uid := pipelineRun.GetObjectMeta().GetUID()
 	return stewardClient.Delete(pipelineRun.GetName(), &metav1.DeleteOptions{
 		Preconditions: &metav1.Preconditions{UID: &uid},

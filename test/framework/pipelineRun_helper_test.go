@@ -63,6 +63,50 @@ func Test_ExecutePipelineRunTests(t *testing.T) {
 	assert.Equal(t, 15, len(pipelineRuns.Items))
 }
 
+func Test_ExecutePipelineRunTestAndCleanupAfterwards(t *testing.T) {
+	// SETUP
+	test := []TestPlan{
+		TestPlan{Name: "parallelcreation",
+			TestBuilder: pipelineWithStatusSuccess,
+			Count:       1,
+			cleanup:     true,
+		},
+	}
+	ctx := setupTestContext()
+	//EXERCISE
+	executePipelineRunTests(ctx, t, test...)
+	//VERIFY
+	assert.NilError(t, ctx.Err())
+	pipelineRunInterface := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
+	pipelineRuns, err := pipelineRunInterface.List(metav1.ListOptions{})
+	assert.NilError(t, err)
+	assert.Equal(t, 0, len(pipelineRuns.Items))
+}
+
+func Test_ExecutePipelineRunTestAndDoNotCleanupAfterwards(t *testing.T) {
+	// SETUP
+	test := []TestPlan{
+		TestPlan{Name: "parallelcreationWithCleanupSetToFalse",
+			TestBuilder: pipelineWithStatusSuccess,
+			Count:       1,
+			cleanup:     false,
+		},
+		TestPlan{Name: "parallelcreationWithoutCleanup",
+			TestBuilder: pipelineWithStatusSuccess,
+			Count:       1,
+		},
+	}
+	ctx := setupTestContext()
+	//EXERCISE
+	executePipelineRunTests(ctx, t, test...)
+	//VERIFY
+	assert.NilError(t, ctx.Err())
+	pipelineRunInterface := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
+	pipelineRuns, err := pipelineRunInterface.List(metav1.ListOptions{})
+	assert.NilError(t, err)
+	assert.Equal(t, 2, len(pipelineRuns.Items))
+}
+
 func Test_CheckResult(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
