@@ -13,9 +13,9 @@ runController:
   resources:
     limits:
       cpu: 1
-      memory: 64Mi
+      memory: 128Mi
     requests:
-      cpu: 50m
+      cpu: 100m
   podSecurityContext: {}
     # fsGroup: 2000
   securityContext:
