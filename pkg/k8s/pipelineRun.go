@@ -260,6 +260,7 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 		return fmt.Errorf("No factory provided to store updates [%s]", r.String())
 	}
 	var result *api.PipelineRun
+	log.Printf("start update %s", r.apiObj.Name)
 	for { // retry loop
 		var err error
 
@@ -289,6 +290,7 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 		}
 	}
 	r.apiObj = result
+	log.Printf("finish update %s", r.apiObj.Name)
 	return nil
 }
 

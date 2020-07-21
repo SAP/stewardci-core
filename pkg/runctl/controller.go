@@ -11,6 +11,7 @@ import (
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/client/clientset/versioned/scheme"
+	"github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/metrics"
@@ -18,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -38,6 +40,7 @@ type Controller struct {
 	metrics              metrics.Metrics
 	testing              *controllerTesting
 	recorder             record.EventRecorder
+	pipelineRunLister    v1alpha1.PipelineRunLister
 }
 
 type controllerTesting struct {
@@ -48,6 +51,7 @@ type controllerTesting struct {
 // NewController creates new Controller
 func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controller {
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
+	pipelineRunLister := pipelineRunInformer.Lister()
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1alpha1().TaskRuns()
 	eventBroadcaster := record.NewBroadcaster()
@@ -58,6 +62,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 	controller := &Controller{
 		factory:            factory,
 		pipelineRunFetcher: pipelineRunFetcher,
+		pipelineRunLister:  pipelineRunLister,
 		pipelineRunSynced:  pipelineRunInformer.Informer().HasSynced,
 
 		tektonTaskRunsSynced: tektonTaskRunInformer.Informer().HasSynced,
@@ -137,6 +142,15 @@ func (c *Controller) processNextWorkItem() bool {
 		}
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
+		log.Printf("process %s queue length: %d", key, c.workqueue.Len())
+		c.metrics.SetQueueCount(c.workqueue.Len())
+
+		allPipelineruns, err := c.pipelineRunLister.List(labels.Everything())
+		if err == nil {
+			log.Printf("total pipelineruns: %d", len(allPipelineruns))
+			c.metrics.SetTotalCount(len(allPipelineruns))
+		}
+
 		if err := c.syncHandler(key); err != nil {
 			// Put the item back on the workqueue to handle any transient errors.
 			c.workqueue.AddRateLimited(key)
@@ -283,7 +297,9 @@ func (c *Controller) syncHandler(key string) error {
 			return err
 		}
 	case api.StateWaiting:
+		log.Printf("state waiting %s", pipelineRun.GetName())
 		run, err := runManager.GetRun(pipelineRun)
+		log.Printf("get done %s", pipelineRun.GetName())
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
 			if IsRecoverable(err) {
@@ -298,11 +314,13 @@ func (c *Controller) syncHandler(key string) error {
 			return nil
 		}
 		started := run.GetStartTime()
+		log.Printf("found start time %s for %s", started, pipelineRun.GetName())
 		if started != nil {
 			if err = c.changeState(pipelineRun, api.StateRunning); err != nil {
 				return err
 			}
 		}
+		log.Printf("state changed %s", pipelineRun.GetName())
 	case api.StateRunning:
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {

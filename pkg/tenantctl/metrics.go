@@ -46,3 +46,5 @@ func provideMetrics() {
 func (metrics *metrics) SetTenantNumber(count float64) {
 	metrics.TenantCount.Set(count)
 }
+
+

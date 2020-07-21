@@ -18,12 +18,16 @@ type Metrics interface {
 	CountResult(api.Result)
 	ObserveDurationByState(state *api.StateItem) error
 	StartServer()
+	SetQueueCount(int)
+	SetTotalCount(int)
 }
 
 type metrics struct {
 	Started   prometheus.Counter
 	Completed *prometheus.CounterVec
 	Duration  *prometheus.HistogramVec
+	Queued    prometheus.Gauge
+	Total     prometheus.Gauge
 }
 
 // NewMetrics create metrics
@@ -44,6 +48,14 @@ func NewMetrics() Metrics {
 			Buckets: prometheus.ExponentialBuckets(0.125, 2, 15),
 		},
 			[]string{"state"}),
+		Queued: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "steward_queued_total",
+			Help: "total queue count of pipelineruns",
+		}),
+		Total: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "steward_pipelineruns_total",
+			Help: "total number of pipelineruns",
+		}),
 	}
 }
 
@@ -84,4 +96,14 @@ func (metrics *metrics) ObserveDurationByState(state *api.StateItem) error {
 	}
 	metrics.Duration.With(prometheus.Labels{"state": string(state.State)}).Observe(duration.Seconds())
 	return nil
+}
+
+// SetQueueCount logs queue count metric
+func (metrics *metrics) SetQueueCount(count int) {
+	metrics.Queued.Set(float64(count))
+}
+
+// SetTotalCount logs total number of pipelineruns
+func (metrics *metrics) SetTotalCount(count int) {
+	metrics.Total.Set(float64(count))
 }
