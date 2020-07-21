@@ -139,7 +139,7 @@ function check_go() {
     GOLANG_VERSION=$expected_version
 
     local actual_version
-    actual_version=$(go version | sed -E -e '2,$d; /^go version go[0]*[0-9]{1,4}\.[0]*[0-9]{1,4}\.[0]*[0-9]{1,4}([^0-9]|$)/!d; s/^go version go[0]*([0-9]+)\.[0]*([0-9]+)\.[0]*([0-9]+).*/\1.\2.\3/')
+    actual_version=$(go version | sed -E -e '2,$d; /^go version go[0]*[0-9]{1,4}\.[0]*[0-9]{1,4}(\.[0]*[0-9]{1,4})?([^0-9]|$)/!d; s/^go version go[0]*([0-9]+)\.[0]*([0-9]+)((\.)[0]*([0-9]+))?.*/\1.\2\4\5/')
     if [[ ! $actual_version ]]; then
         die "error: could not determine go version"
     fi
