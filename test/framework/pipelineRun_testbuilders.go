@@ -31,6 +31,7 @@ type TestPlan struct {
 	Count            int
 	ParallelCreation bool
 	CreationDelay    time.Duration
+	cleanup          bool
 }
 
 func getTestPlanName(plan TestPlan) string {
