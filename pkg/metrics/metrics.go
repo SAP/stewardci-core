@@ -73,6 +73,8 @@ func (metrics *metrics) StartServer() {
 	prometheus.MustRegister(metrics.Started)
 	prometheus.MustRegister(metrics.Completed)
 	prometheus.MustRegister(metrics.Duration)
+	prometheus.MustRegister(metrics.Update)
+	prometheus.MustRegister(metrics.Queued)
 	go provideMetrics()
 }
 
