@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
@@ -242,8 +243,12 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 		return fmt.Errorf("No factory provided to store updates [%s]", r.String())
 	}
 	r.ensureCopy()
+	start := time.Now()
 	r.apiObj.ObjectMeta.Finalizers = finalizerList
 	result, err := r.client.Update(r.apiObj)
+	end := time.Now()
+	elapsed := end.Sub(start)
+	log.Printf("finish update finalizer after %s in %s", elapsed, r.apiObj.Name)
 	if err != nil {
 		return errors.Wrap(err,
 			fmt.Sprintf("Failed to update finalizers [%s]", r.String()))
@@ -260,11 +265,15 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 		return fmt.Errorf("No factory provided to store updates [%s]", r.String())
 	}
 	var result *api.PipelineRun
+	log.Printf("start update %s", r.apiObj.Name)
+	start := time.Now()
+	iteration := 0
 	for { // retry loop
 		var err error
 
 		change()
 		result, err = r.client.UpdateStatus(r.apiObj)
+		iteration = iteration + 1
 		if err == nil {
 			break // success
 		} else {
@@ -287,8 +296,15 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 					fmt.Sprintf("Failed to update status [%s]", r.String()))
 			}
 		}
+
 	}
 	r.apiObj = result
+	end := time.Now()
+	elapsed := end.Sub(start)
+	if r.apiObj != nil {
+		log.Printf("finish update after %d iteration %s in %s", iteration, elapsed, r.apiObj.Name)
+	}
+
 	return nil
 }
 

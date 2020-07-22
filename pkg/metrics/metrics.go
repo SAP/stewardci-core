@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/prometheus/client_golang/prometheus"
@@ -17,13 +18,19 @@ type Metrics interface {
 	CountStart()
 	CountResult(api.Result)
 	ObserveDurationByState(state *api.StateItem) error
+	ObserveUpdateDurationByType(kind string, duration time.Duration)
 	StartServer()
+	SetQueueCount(int)
+	//SetTotalCount(int)
 }
 
 type metrics struct {
 	Started   prometheus.Counter
 	Completed *prometheus.CounterVec
 	Duration  *prometheus.HistogramVec
+	Update    *prometheus.HistogramVec
+	Queued    prometheus.Gauge
+	Total     prometheus.Gauge
 }
 
 // NewMetrics create metrics
@@ -44,6 +51,20 @@ func NewMetrics() Metrics {
 			Buckets: prometheus.ExponentialBuckets(0.125, 2, 15),
 		},
 			[]string{"state"}),
+		Queued: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "steward_queued_total",
+			Help: "total queue count of pipelineruns",
+		}),
+		Update: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "steward_pipelinerun_update_seconds",
+			Help:    "pipeline run update duration",
+			Buckets: prometheus.ExponentialBuckets(0.0125, 2, 15),
+		},
+			[]string{"state"}),
+		Total: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "steward_pipelineruns_total",
+			Help: "total number of pipelineruns",
+		}),
 	}
 }
 
@@ -84,4 +105,18 @@ func (metrics *metrics) ObserveDurationByState(state *api.StateItem) error {
 	}
 	metrics.Duration.With(prometheus.Labels{"state": string(state.State)}).Observe(duration.Seconds())
 	return nil
+}
+
+func (metrics *metrics) ObserveUpdateDurationByType(kind string, duration time.Duration) {
+	metrics.Update.With(prometheus.Labels{"state": kind}).Observe(duration.Seconds())
+}
+
+// SetQueueCount logs queue count metric
+func (metrics *metrics) SetQueueCount(count int) {
+	metrics.Queued.Set(float64(count))
+}
+
+// SetTotalCount logs total number of pipelineruns
+func (metrics *metrics) SetTotalCount(count int) {
+	metrics.Total.Set(float64(count))
 }
