@@ -53,6 +53,8 @@ func main() {
 	system.Namespace() // ensure that namespace is set in environment
 
 	log.Printf("Create Factory (resync period: %s)", resyncPeriod.String())
+	config.QPS = 500
+	config.Burst = 1000
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
 	log.Printf("Provide metrics")
