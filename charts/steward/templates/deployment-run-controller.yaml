@@ -33,6 +33,10 @@ spec:
         image: {{ printf "%s:%s" .repository .tag | quote }}
         imagePullPolicy: {{ .pullPolicy | quote }}
         {{- end }}
+        args:
+        - -qps={{ .Values.runController.args.qps }}
+        - -burst={{ .Values.runController.args.burst }}
+    command:
         env:
         - name: SYSTEM_NAMESPACE
           valueFrom:
