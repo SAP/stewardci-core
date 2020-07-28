@@ -69,7 +69,7 @@ func Test_ExecutePipelineRunTestAndCleanupAfterwards(t *testing.T) {
 		TestPlan{Name: "parallelcreation",
 			TestBuilder: pipelineWithStatusSuccess,
 			Count:       1,
-			cleanup:     true,
+			Cleanup:     true,
 		},
 	}
 	ctx := setupTestContext()
@@ -89,7 +89,7 @@ func Test_ExecutePipelineRunTestAndDoNotCleanupAfterwards(t *testing.T) {
 		TestPlan{Name: "parallelcreationWithCleanupSetToFalse",
 			TestBuilder: pipelineWithStatusSuccess,
 			Count:       1,
-			cleanup:     false,
+			Cleanup:     false,
 		},
 		TestPlan{Name: "parallelcreationWithoutCleanup",
 			TestBuilder: pipelineWithStatusSuccess,
