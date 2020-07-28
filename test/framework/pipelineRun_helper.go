@@ -57,7 +57,7 @@ func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...Tes
 				ctx:      ctx,
 				check:    pipelineTest.Check,
 				expected: pipelineTest.Expected,
-				cleanup:  testPlan.cleanup,
+				cleanup:  testPlan.Cleanup,
 			}
 			if testPlan.ParallelCreation {
 				go func(waitWG *sync.WaitGroup) {
