@@ -302,9 +302,7 @@ func (c *Controller) syncHandler(key string) error {
 			return err
 		}
 	case api.StateWaiting:
-		log.Printf("state waiting %s", pipelineRun.GetName())
 		run, err := runManager.GetRun(pipelineRun)
-		log.Printf("get done %s", pipelineRun.GetName())
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
 			if IsRecoverable(err) {
@@ -319,13 +317,11 @@ func (c *Controller) syncHandler(key string) error {
 			return nil
 		}
 		started := run.GetStartTime()
-		log.Printf("found start time %s for %s", started, pipelineRun.GetName())
 		if started != nil {
 			if err = c.changeState(pipelineRun, api.StateRunning); err != nil {
 				return err
 			}
 		}
-		log.Printf("state changed %s", pipelineRun.GetName())
 	case api.StateRunning:
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
