@@ -36,7 +36,8 @@ spec:
         args:
         - -qps={{ .Values.runController.args.qps }}
         - -burst={{ .Values.runController.args.burst }}
-    command:
+        command:
+        - /app/main
         env:
         - name: SYSTEM_NAMESPACE
           valueFrom:

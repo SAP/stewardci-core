@@ -24,8 +24,8 @@ const resyncPeriod = 30 * time.Second
 
 func init() {
 	log.SetFlags(log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
-	flag.IntVar(&burst, "burst", 200, "burst for RESTClient")
-	flag.IntVar(&qps, "qps", 100, "QPS for RESTClient")
+	flag.IntVar(&burst, "burst", 10, "burst for RESTClient")
+	flag.IntVar(&qps, "qps", 5, "QPS for RESTClient")
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to Kubernetes config file")
 	flag.Parse()
 }
