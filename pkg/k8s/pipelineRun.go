@@ -302,7 +302,7 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 	end := time.Now()
 	elapsed := end.Sub(start)
 	if r.apiObj != nil {
-		log.Printf("finish update after %d iteration %s in %s", iteration, elapsed, r.apiObj.Name)
+		log.Printf("finished update after %s (with %d retries) in %s", elapsed, iteration, r.apiObj.Name)
 	}
 
 	return nil
