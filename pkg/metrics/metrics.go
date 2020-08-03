@@ -60,7 +60,7 @@ func NewMetrics() Metrics {
 			Help:    "pipeline run update duration",
 			Buckets: prometheus.ExponentialBuckets(0.001, 1.3, 30),
 		},
-			[]string{"state"}),
+			[]string{"type"}),
 		Total: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "steward_pipelineruns_total",
 			Help: "total number of pipelineruns",
@@ -109,8 +109,8 @@ func (metrics *metrics) ObserveDurationByState(state *api.StateItem) error {
 	return nil
 }
 
-func (metrics *metrics) ObserveUpdateDurationByType(kind string, duration time.Duration) {
-	metrics.Update.With(prometheus.Labels{"state": kind}).Observe(duration.Seconds())
+func (metrics *metrics) ObserveUpdateDurationByType(typ string, duration time.Duration) {
+	metrics.Update.With(prometheus.Labels{"type": typ}).Observe(duration.Seconds())
 }
 
 // SetQueueCount logs queue count metric

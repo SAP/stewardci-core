@@ -26,6 +26,11 @@ func Test_Duration_End_Before_Beginning(t *testing.T) {
 	assert.Equal(t, "cannot observe StateItem if FinishedAt is before StartedAt", e.Error())
 }
 
+func Test_ObserveUpdateDurationByType(t *testing.T) {
+	m := NewMetrics()
+	m.ObserveUpdateDurationByType("foo", 1)
+}
+
 func fakeStateItem(state api.State, duration time.Duration) *api.StateItem {
 	startTime := metav1.Now()
 	endTime := metav1.NewTime(startTime.Time.Add(duration))
