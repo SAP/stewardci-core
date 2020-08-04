@@ -19,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -144,11 +145,11 @@ func (c *Controller) processNextWorkItem() bool {
 		log.Printf("process %s queue length: %d", key, c.workqueue.Len())
 		c.metrics.SetQueueCount(c.workqueue.Len())
 
-		/*allPipelineruns, err := c.pipelineRunLister.List(labels.Everything())
+		allPipelineruns, err := c.pipelineRunLister.List(labels.Everything())
 		if err == nil {
 			log.Printf("total pipelineruns: %d", len(allPipelineruns))
 			c.metrics.SetTotalCount(len(allPipelineruns))
-		}*/
+		}
 
 		if err := c.syncHandler(key); err != nil {
 			// Put the item back on the workqueue to handle any transient errors.

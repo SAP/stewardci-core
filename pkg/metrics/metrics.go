@@ -21,7 +21,7 @@ type Metrics interface {
 	ObserveUpdateDurationByType(kind string, duration time.Duration)
 	StartServer()
 	SetQueueCount(int)
-	//SetTotalCount(int)
+	SetTotalCount(int)
 }
 
 type metrics struct {
