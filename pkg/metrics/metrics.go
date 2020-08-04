@@ -21,7 +21,6 @@ type Metrics interface {
 	ObserveUpdateDurationByType(kind string, duration time.Duration)
 	StartServer()
 	SetQueueCount(int)
-	//SetTotalCount(int)
 }
 
 type metrics struct {
@@ -116,9 +115,4 @@ func (metrics *metrics) ObserveUpdateDurationByType(typ string, duration time.Du
 // SetQueueCount logs queue count metric
 func (metrics *metrics) SetQueueCount(count int) {
 	metrics.Queued.Set(float64(count))
-}
-
-// SetTotalCount logs total number of pipelineruns
-func (metrics *metrics) SetTotalCount(count int) {
-	metrics.Total.Set(float64(count))
 }
