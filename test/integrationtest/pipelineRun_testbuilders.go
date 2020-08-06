@@ -15,6 +15,7 @@ var AllTestBuilders = []f.PipelineRunTestBuilder{
 	PipelineRunSleep,
 	PipelineRunFail,
 	PipelineRunOK,
+	PipelineRunK8SPlugin,
 	PipelineRunWithSecret,
 	PipelineRunWrongJenkinsfileRepo,
 	PipelineRunWrongJenkinsfilePath,
@@ -78,6 +79,22 @@ func PipelineRunOK(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 					"success/Jenkinsfile"),
 
 				builder.RunDetails("myJobName1", "myCause1", 17),
+			)),
+		Check:   f.PipelineRunHasStateResult(api.ResultSuccess),
+		Timeout: 600 * time.Second,
+	}
+}
+
+// PipelineRunK8SPlugin is a PipelineRunTestBuilder to build PipelineRunTest which uses k8s plugin
+func PipelineRunK8SPlugin(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
+	return f.PipelineRunTest{
+		PipelineRun: builder.PipelineRun("k8s-", Namespace,
+			builder.PipelineRunSpec(
+				builder.Logging(runID),
+				builder.JenkinsFileSpec(pipelineRepoURL,
+					"k8sPlugin/Jenkinsfile"),
+
+				builder.RunDetails("myK8SJob1", "myCause1", 18),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultSuccess),
 		Timeout: 600 * time.Second,
