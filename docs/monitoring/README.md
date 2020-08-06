@@ -18,6 +18,8 @@ There is also an [example dashboard][example-dashboard] for [Grafana] available 
 | `steward_pipelineruns_started_total`   | counter   | _none_ | counter is increased by every started pipeline run |
 | `steward_pipelineruns_completed_total` | counter   | result | counters with result label are increased when result of pipeline run is set |
 | `steward_pipelinerun_duration_seconds` | histogram | state  | histogram with 15 exponential buckets starting from 125ms with factor 2 for the different pipelinerun states |
+| `steward_pipelinerun_update_seconds`   | histogram | state  | histogram with 30 exponential buckets starting from 1 ms with factor 1.3 for a pipelinerun update |
+| `steward_queued_total`                 | gauge     | _none_ | number of pipelineruns waiting in the queue to be processed by the controller |
 
 ## Example Installation with Prometheus Operator
 

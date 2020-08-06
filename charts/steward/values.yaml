@@ -6,6 +6,9 @@ targetNamespace:
   name: "steward-system"
 
 runController:
+  args:
+    qps: 5
+    burst: 10
   image:
     repository: stewardci/stewardci-run-controller
     tag: "0.4.7" #Do not modify this line! RunController tag updated automatically

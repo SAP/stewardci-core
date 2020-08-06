@@ -11,6 +11,7 @@ import (
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/client/clientset/versioned/scheme"
+	"github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/metrics"
@@ -38,6 +39,7 @@ type Controller struct {
 	metrics              metrics.Metrics
 	testing              *controllerTesting
 	recorder             record.EventRecorder
+	pipelineRunLister    v1alpha1.PipelineRunLister
 }
 
 type controllerTesting struct {
@@ -48,6 +50,7 @@ type controllerTesting struct {
 // NewController creates new Controller
 func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controller {
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
+	pipelineRunLister := pipelineRunInformer.Lister()
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1alpha1().TaskRuns()
 	eventBroadcaster := record.NewBroadcaster()
@@ -58,6 +61,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 	controller := &Controller{
 		factory:            factory,
 		pipelineRunFetcher: pipelineRunFetcher,
+		pipelineRunLister:  pipelineRunLister,
 		pipelineRunSynced:  pipelineRunInformer.Informer().HasSynced,
 
 		tektonTaskRunsSynced: tektonTaskRunInformer.Informer().HasSynced,
@@ -137,6 +141,9 @@ func (c *Controller) processNextWorkItem() bool {
 		}
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
+		log.Printf("process %s queue length: %d", key, c.workqueue.Len())
+		c.metrics.SetQueueCount(c.workqueue.Len())
+
 		if err := c.syncHandler(key); err != nil {
 			// Put the item back on the workqueue to handle any transient errors.
 			c.workqueue.AddRateLimited(key)
@@ -158,11 +165,17 @@ func (c *Controller) processNextWorkItem() bool {
 }
 
 func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) error {
+	start := time.Now()
 	oldState, err := pipelineRun.UpdateState(state)
 	if err != nil {
 		log.Printf("Failed to UpdateState of [%s] to %q: %q", pipelineRun.String(), state, err.Error())
 		return err
 	}
+
+	end := time.Now()
+	elapsed := end.Sub(start)
+	c.metrics.ObserveUpdateDurationByType("UpdateState", elapsed)
+
 	if oldState != nil {
 		err := c.metrics.ObserveDurationByState(oldState)
 		if err != nil {

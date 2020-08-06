@@ -16,6 +16,7 @@ import (
 )
 
 var kubeconfig string
+var burst, qps int
 
 // Time to wait until the next resync takes place.
 // Resync is only required if events got lost or if the controller restarted (and missed events).
@@ -23,7 +24,8 @@ const resyncPeriod = 30 * time.Second
 
 func init() {
 	log.SetFlags(log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
-
+	flag.IntVar(&burst, "burst", 10, "burst for RESTClient")
+	flag.IntVar(&qps, "qps", 5, "QPS for RESTClient")
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to Kubernetes config file")
 	flag.Parse()
 }
@@ -52,7 +54,9 @@ func main() {
 
 	system.Namespace() // ensure that namespace is set in environment
 
-	log.Printf("Create Factory (resync period: %s)", resyncPeriod.String())
+	log.Printf("Create Factory (resync period: %s, QPS: %d, burst: %d)", resyncPeriod.String(), qps, burst)
+	config.QPS = float32(qps)
+	config.Burst = burst
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
 	log.Printf("Provide metrics")
