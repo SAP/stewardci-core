@@ -82,7 +82,7 @@ spec:
     - name: XDG_CONFIG_HOME
       value: /home/jenkins
     - name: JAVA_OPTS
-      value: {{ default "" .Values.pipelineRuns.jenkinsfileRunner.javaOpts | quote }}
+      value: {{ default "" .Values.pipelineRuns.jenkinsfileRunner.javaOpts | squote }}
     - name: PIPELINE_GIT_URL
       value: '$(inputs.params.PIPELINE_GIT_URL)'
     - name: PIPELINE_GIT_REVISION
