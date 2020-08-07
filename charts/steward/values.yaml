@@ -81,6 +81,7 @@ pipelineRuns:
       repository: stewardci/stewardci-jenkinsfile-runner
       tag: "200807_55a9fc2"
       pullPolicy: IfNotPresent
+    javaOpts: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dhudson.slaves.NodeProvisioner.initialDelay=0 -Dhudson.slaves.NodeProvisioner.MARGIN=50 -Dhudson.slaves.NodeProvisioner.MARGIN0=0.8"
     resources:
       limits:
         cpu: 3
