@@ -11,7 +11,7 @@ runController:
     burst: 10
   image:
     repository: stewardci/stewardci-run-controller
-    tag: "0.4.9" #Do not modify this line! RunController tag updated automatically
+    tag: "0.4.10" #Do not modify this line! RunController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -36,7 +36,7 @@ runController:
 tenantController:
   image:
     repository: stewardci/stewardci-tenant-controller
-    tag: "0.4.9" #Do not modify this line! TenantController tag updated automatically
+    tag: "0.4.10" #Do not modify this line! TenantController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
