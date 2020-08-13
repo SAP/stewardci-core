@@ -16,7 +16,7 @@ runController:
   resources:
     limits:
       cpu: 1
-      memory: 128Mi
+      memory: 256Mi
     requests:
       cpu: 100m
   podSecurityContext: {}
