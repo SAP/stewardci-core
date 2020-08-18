@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"sync"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/client/clientset/versioned/scheme"
@@ -28,6 +29,9 @@ import (
 )
 
 const kind = "PipelineRuns"
+
+var finishedRuns sync.Map
+var aliveTimer int64 = 0
 
 // Controller processes PipelineRun resources
 type Controller struct {
@@ -104,6 +108,11 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 
 func (c *Controller) runWorker() {
 	for c.processNextWorkItem() {
+		now := time.Now().Unix()
+		if aliveTimer <= now - 30 {
+			aliveTimer = now
+			log.Printf("Run Controller still alive")
+		}
 	}
 }
 
@@ -141,7 +150,9 @@ func (c *Controller) processNextWorkItem() bool {
 		}
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
-		log.Printf("process %s queue length: %d", key, c.workqueue.Len())
+		if _, finished := finishedRuns.Load(key); !finished {
+			log.Printf("process %s queue length: %d", key, c.workqueue.Len())
+		}
 		c.metrics.SetQueueCount(c.workqueue.Len())
 
 		if err := c.syncHandler(key); err != nil {
@@ -152,7 +163,9 @@ func (c *Controller) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		log.Printf("Successfully synced '%s'", key)
+		if _, finished := finishedRuns.Load(key); !finished {
+			log.Printf("Successfully synced '%s'", key)
+		}
 		return nil
 	}(obj)
 
@@ -218,6 +231,7 @@ func (c *Controller) syncHandler(key string) error {
 	}
 	// fast exit
 	if pipelineRunAPIObj.Status.State == api.StateFinished && pipelineRunAPIObj.GetDeletionTimestamp().IsZero() {
+		finishedRuns.Store(key, true)
 		return nil
 	}
 
@@ -256,6 +270,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	// Finished and no deletion timestamp, no need to process anything further
 	if pipelineRun.GetStatus().State == api.StateFinished {
+		finishedRuns.Store(key, true)
 		return nil
 	}
 
@@ -354,6 +369,9 @@ func (c *Controller) syncHandler(key string) error {
 		if err == nil {
 			err = c.changeState(pipelineRun, api.StateFinished)
 		}
+		if err == nil {
+			finishedRuns.Store(key, true)
+		}
 		return err
 	default:
 		log.Printf("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
@@ -380,7 +398,9 @@ func (c *Controller) addPipelineRun(obj interface{}) {
 		utilruntime.HandleError(err)
 		return
 	}
-	log.Printf("Add to workqueue '%s'", key)
+	if _, finished := finishedRuns.Load(key); !finished {
+		log.Printf("Add to workqueue '%s'", key)
+	}
 	c.workqueue.Add(key)
 }
 
