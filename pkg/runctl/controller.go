@@ -34,8 +34,8 @@ const kind = "PipelineRuns"
 var finishedRuns sync.Map
 
 // Used for logging (control loop) "still alive" messages
-var aliveIntervalSeconds int64 = 60
-var aliveTimer int64 = 0
+var heartbeatIntervalSeconds int64 = 60
+var heartbeatTimer int64 = 0
 
 // Controller processes PipelineRun resources
 type Controller struct {
@@ -113,8 +113,8 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 func (c *Controller) runWorker() {
 	for c.processNextWorkItem() {
 		now := time.Now().Unix()
-		if aliveTimer <= now - aliveIntervalSeconds {
-			aliveTimer = now
+		if heartbeatTimer <= now - heartbeatIntervalSeconds {
+			heartbeatTimer = now
 			log.Printf("Run Controller still alive")
 		}
 	}
