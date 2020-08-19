@@ -30,7 +30,11 @@ import (
 
 const kind = "PipelineRuns"
 
+// Map with keys of finished PipelineRuns, e.g. to avoid unnecessary logging.
 var finishedRuns sync.Map
+
+// Used for logging (control loop) "still alive" messages
+var aliveIntervalSeconds int64 = 60
 var aliveTimer int64 = 0
 
 // Controller processes PipelineRun resources
@@ -109,7 +113,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 func (c *Controller) runWorker() {
 	for c.processNextWorkItem() {
 		now := time.Now().Unix()
-		if aliveTimer <= now - 30 {
+		if aliveTimer <= now - aliveIntervalSeconds {
 			aliveTimer = now
 			log.Printf("Run Controller still alive")
 		}
