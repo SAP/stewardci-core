@@ -109,7 +109,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 func (c *Controller) runWorker() {
 	for c.processNextWorkItem() {
 		now := time.Now().Unix()
-		if heartbeatTimer <= now - heartbeatIntervalSeconds {
+		if heartbeatTimer <= now-heartbeatIntervalSeconds {
 			heartbeatTimer = now
 			klog.V(3).Infof("Run Controller still alive")
 		}
