@@ -12,6 +12,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	klog "k8s.io/klog/v2"
 	"knative.dev/pkg/system"
 )
 
@@ -23,6 +24,7 @@ var burst, qps int
 const resyncPeriod = 30 * time.Second
 
 func init() {
+	klog.InitFlags(nil)
 	log.SetFlags(log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
 	flag.IntVar(&burst, "burst", 10, "burst for RESTClient")
 	flag.IntVar(&qps, "qps", 5, "QPS for RESTClient")

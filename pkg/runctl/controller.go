@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	klog "k8s.io/klog/v2"
 )
 
 const kind = "PipelineRuns"
@@ -154,9 +155,11 @@ func (c *Controller) processNextWorkItem() bool {
 		}
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
-		if _, finished := finishedRuns.Load(key); !finished {
-			log.Printf("process %s queue length: %d", key, c.workqueue.Len())
+		verbosity := klog.Level(2)
+		if _, finished := finishedRuns.Load(key); finished {
+			verbosity = klog.Level(4)
 		}
+		klog.V(verbosity).Infof("[v%d]process %s queue length: %d", verbosity, key, c.workqueue.Len())
 		c.metrics.SetQueueCount(c.workqueue.Len())
 
 		if err := c.syncHandler(key); err != nil {
