@@ -109,6 +109,7 @@ Pipeline Run Controller:
 | <code>runController.<wbr/>tolerations</code> | (array of [`Toleration`][k8s-tolerations])<br/> The `tolerations` field of the Run Controller [pod spec][k8s-podspec]. | `[]` |
 | <code>runController.<wbr/>args.<wbr/>qps</code> | (integer)<br/> The maximum queries per second (QPS) from the controller to the cluster. | 5 |
 | <code>runController.<wbr/>args.<wbr/>burst</code> | (integer)<br/> The burst limit for throttle connections (maximum number of concurrent requests). | 10 |
+| <code>runController.<wbr/>args.<wbr/>logVerbosity</code> | (integer)<br/> The log verbosity. 0=error, 1=warning, 2=info, 3=extended, 4=debug, 5=trace (see also [logging-conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md#logging-conventions)) | 3 |
 
 Tenant Controller:
 

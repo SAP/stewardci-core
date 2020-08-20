@@ -6,7 +6,6 @@ package runctl
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -25,9 +24,14 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	klog "k8s.io/klog/v2"
 )
 
 const kind = "PipelineRuns"
+
+// Used for logging (control loop) "still alive" messages
+var heartbeatIntervalSeconds int64 = 60
+var heartbeatTimer int64 = 0
 
 // Controller processes PipelineRun resources
 type Controller struct {
@@ -54,7 +58,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1alpha1().TaskRuns()
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(log.Printf)
+	eventBroadcaster.StartLogging(klog.V(2).Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
 
@@ -88,22 +92,27 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
-	log.Printf("Sync cache")
+	klog.V(2).Infof("Sync cache")
 	if ok := cache.WaitForCacheSync(stopCh, c.pipelineRunSynced, c.tektonTaskRunsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
-	log.Printf("Start workers")
+	klog.V(2).Infof("Start workers")
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
-	log.Printf("Workers running")
+	klog.V(2).Infof("Workers running")
 	<-stopCh
-	log.Printf("Workers stopped")
+	klog.V(2).Infof("Workers stopped")
 	return nil
 }
 
 func (c *Controller) runWorker() {
 	for c.processNextWorkItem() {
+		now := time.Now().Unix()
+		if heartbeatTimer <= now-heartbeatIntervalSeconds {
+			heartbeatTimer = now
+			klog.V(3).Infof("Run Controller still alive")
+		}
 	}
 }
 
@@ -141,7 +150,7 @@ func (c *Controller) processNextWorkItem() bool {
 		}
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
-		log.Printf("process %s queue length: %d", key, c.workqueue.Len())
+		klog.V(4).Infof("process %s queue length: %d", key, c.workqueue.Len())
 		c.metrics.SetQueueCount(c.workqueue.Len())
 
 		if err := c.syncHandler(key); err != nil {
@@ -152,7 +161,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		log.Printf("Successfully synced '%s'", key)
+		klog.V(4).Infof("Successfully synced '%s'", key)
 		return nil
 	}(obj)
 
@@ -168,7 +177,7 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) e
 	start := time.Now()
 	oldState, err := pipelineRun.UpdateState(state)
 	if err != nil {
-		log.Printf("Failed to UpdateState of [%s] to %q: %q", pipelineRun.String(), state, err.Error())
+		klog.Errorf("Failed to UpdateState of [%s] to %q: %q", pipelineRun.String(), state, err.Error())
 		return err
 	}
 
@@ -179,7 +188,7 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) e
 	if oldState != nil {
 		err := c.metrics.ObserveDurationByState(oldState)
 		if err != nil {
-			log.Printf("Faild to measure state '%+v': '%s'", oldState, err)
+			klog.Warningf("Failed to measure state '%+v': '%s'", oldState, err)
 		}
 	}
 	return nil
@@ -356,7 +365,7 @@ func (c *Controller) syncHandler(key string) error {
 		}
 		return err
 	default:
-		log.Printf("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
+		klog.V(3).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
 	return nil
 }
@@ -380,7 +389,7 @@ func (c *Controller) addPipelineRun(obj interface{}) {
 		utilruntime.HandleError(err)
 		return
 	}
-	log.Printf("Add to workqueue '%s'", key)
+	klog.V(4).Infof("Add to workqueue '%s'", key)
 	c.workqueue.Add(key)
 }
 
@@ -402,13 +411,13 @@ func (c *Controller) handleTektonTaskRun(obj interface{}) {
 			utilruntime.HandleError(fmt.Errorf("error decoding object tombstone, invalid type"))
 			return
 		}
-		log.Printf("Recovered deleted object '%s' from tombstone", object.GetName())
+		klog.V(2).Infof("Recovered deleted object '%s' from tombstone", object.GetName())
 	}
-	log.Printf("Processing object: %s", object.GetSelfLink())
+	klog.V(4).Infof("Processing object: %s", object.GetSelfLink())
 	annotations := object.GetAnnotations()
 	runKey := annotations[annotationPipelineRunKey]
 	if runKey != "" {
-		log.Printf("Add to workqueue '%s'", runKey)
+		klog.V(4).Infof("Add to workqueue '%s'", runKey)
 		c.workqueue.Add(runKey)
 	}
 }

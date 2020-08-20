@@ -33,9 +33,13 @@ spec:
         image: {{ printf "%s:%s" .repository .tag | quote }}
         imagePullPolicy: {{ .pullPolicy | quote }}
         {{- end }}
-        args:
-        - -qps={{ .Values.runController.args.qps }}
-        - -burst={{ .Values.runController.args.burst }}
+        args: [
+        "-qps={{ .Values.runController.args.qps }}",
+        "-burst={{ .Values.runController.args.burst }}",
+        {{- if .Values.runController.args.logVerbosity }}
+        "-v", {{ .Values.runController.args.logVerbosity | quote }},
+        {{- end }}
+        ]
         command:
         - /app/main
         env:

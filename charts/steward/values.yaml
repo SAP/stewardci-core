@@ -9,6 +9,7 @@ runController:
   args:
     qps: 5
     burst: 10
+    logVerbosity: 3
   image:
     repository: stewardci/stewardci-run-controller
     tag: "0.4.12" #Do not modify this line! RunController tag updated automatically
