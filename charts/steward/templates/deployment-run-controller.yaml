@@ -39,6 +39,7 @@ spec:
         {{- if .Values.runController.args.logVerbosity }}
         "-v", {{ .Values.runController.args.logVerbosity | quote }},
         {{- end }}
+        ]
         command:
         - /app/main
         env:
