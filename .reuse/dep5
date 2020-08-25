@@ -1,0 +1,12 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: github.com/SAP/stewardci-core
+Upstream-Contact: roman.isbrecht_at_sap.com
+Source: github.com/SAP/stewardci-core
+
+Files: **
+Copyright: 2019-2020 SAP SE or an SAP affiliate company and project "Steward" contributors
+License: Apache-2.0
+
+Files: pkg/runctl/controller.go pkg/tenantctl/controller.go
+Copyright: The Kubernetes Authors
+License: Apache-2.0
