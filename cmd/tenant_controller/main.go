@@ -11,6 +11,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	klog "k8s.io/klog/v2"
 	"knative.dev/pkg/system"
 )
 
@@ -21,6 +22,7 @@ var kubeconfig string
 const resyncPeriod = 1 * time.Minute
 
 func init() {
+	klog.InitFlags(nil)
 	log.SetFlags(log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
 
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to Kubernetes config file")
