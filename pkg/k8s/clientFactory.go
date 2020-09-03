@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"log"
 	"time"
 
 	steward "github.com/SAP/stewardci-core/pkg/client/clientset/versioned"
@@ -16,6 +15,7 @@ import (
 	networkingv1 "k8s.io/client-go/kubernetes/typed/networking/v1"
 	rbacv1beta1 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
 	"k8s.io/client-go/rest"
+	klog "k8s.io/klog/v2"
 )
 
 // ClientFactory is the interface for Kubernet client factories.
@@ -58,26 +58,26 @@ type clientFactory struct {
 func NewClientFactory(config *rest.Config, resyncPeriod time.Duration) ClientFactory {
 	stewardClientset, err := steward.NewForConfig(config)
 	if err != nil {
-		log.Printf("could not create Steward clientset: %s", err)
+		klog.V(2).Printf("could not create Steward clientset: %s", err)
 		return nil
 	}
 	stewardInformerFactory := stewardinformer.NewSharedInformerFactory(stewardClientset, resyncPeriod)
 
 	kubernetesClientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Printf("could not create Kubernetes clientset: %s", err)
+		klog.V(2).Printf("could not create Kubernetes clientset: %s", err)
 		return nil
 	}
 
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
-		log.Printf("could not create dynamic Kubernetes clientset: %s", err)
+		klog.V(2).Printf("could not create dynamic Kubernetes clientset: %s", err)
 		return nil
 	}
 
 	tektonClientset, err := tektonclient.NewForConfig(config)
 	if err != nil {
-		log.Printf("could not create Tekton clientset: %s", err)
+		klog.V(2).Printf("could not create Tekton clientset: %s", err)
 		return nil
 	}
 	tektonInformerFactory := tektoninformers.NewSharedInformerFactory(tektonClientset, resyncPeriod)

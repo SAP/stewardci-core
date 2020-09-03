@@ -1,7 +1,6 @@
 package fake
 
 import (
-	"log"
 	"time"
 
 	stewardApi "github.com/SAP/stewardci-core/pkg/apis/steward"
@@ -20,6 +19,7 @@ import (
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	networkingv1 "k8s.io/client-go/kubernetes/typed/networking/v1"
 	rbacv1beta1 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
+	klog "k8s.io/klog/v2"
 )
 
 // ClientFactory is a factory for fake clients.
@@ -135,9 +135,9 @@ func (f *ClientFactory) TektonV1alpha1() tektonclientv1alpha1.TektonV1alpha1Inte
 
 // Sleep sleeps and logs the start and the end of the sleep.
 func (f *ClientFactory) Sleep(message string) {
-	log.Printf("Sleep start: %s", message)
+	klog.Printf("Sleep start: %s", message)
 	time.Sleep(f.sleepDuration)
-	log.Printf("Sleep end: %s", message)
+	klog.Printf("Sleep end: %s", message)
 }
 
 // CheckTimeOrder checks if the duration between start and end is at least one sleep duration long.

@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
@@ -23,7 +22,6 @@ const resyncPeriod = 1 * time.Minute
 
 func init() {
 	klog.InitFlags(nil)
-	log.SetFlags(log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
 
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to Kubernetes config file")
 	flag.Parse()
@@ -34,14 +32,14 @@ func main() {
 	var config *rest.Config
 	var err error
 	if kubeconfig == "" {
-		log.Printf("In cluster")
+		klog.Printf("In cluster")
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			log.Printf("Hint: You can use parameter '-kubeconfig' for local testing. See --help")
+			klog.Printf("Hint: You can use parameter '-kubeconfig' for local testing. See --help")
 			panic(err.Error())
 		}
 	} else {
-		log.Printf("Outside cluster")
+		klog.Printf("Outside cluster")
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
 			panic(err.Error())
@@ -50,24 +48,24 @@ func main() {
 
 	system.Namespace() // ensure that namespace is set in environment
 
-	log.Printf("Create Factory (resync period: %s)", resyncPeriod.String())
+	klog.Printf("Create Factory (resync period: %s)", resyncPeriod.String())
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
-	log.Printf("Provide metrics")
+	klog.Printf("Provide metrics")
 	metrics := tenantctl.NewMetrics()
 	metrics.StartServer()
 
-	log.Printf("Create Controller")
+	klog.Printf("Create Controller")
 	controller := tenantctl.NewController(factory, metrics)
 
-	log.Printf("Create Signal Handler")
+	klog.Printf("Create Signal Handler")
 	stopCh := signals.SetupSignalHandler()
 
-	log.Printf("Start Informer")
+	klog.Printf("Start Informer")
 	factory.StewardInformerFactory().Start(stopCh)
 
-	log.Printf("Run controller")
+	klog.Printf("Run controller")
 	if err = controller.Run(2, stopCh); err != nil {
-		log.Fatalf("Error running controller: %s", err.Error())
+		klog.Fatalf("Error running controller: %s", err.Error())
 	}
 }

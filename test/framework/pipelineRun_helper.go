@@ -3,7 +3,6 @@ package framework
 import (
 	"context"
 	"fmt"
-	"log"
 	"regexp"
 	"sync"
 	"testing"
@@ -13,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"gotest.tools/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	klog "k8s.io/klog/v2"
 )
 
 type testRun struct {
@@ -51,7 +51,7 @@ func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...Tes
 
 			ctx, cancel := context.WithTimeout(ctx, pipelineTest.Timeout)
 			defer cancel()
-			log.Printf("Test: %q start", name)
+			klog.Printf("Test: %q start", name)
 			myTestRun := testRun{
 				name:     name,
 				ctx:      ctx,
@@ -98,10 +98,10 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 	pr := GetPipelineRun(ctx)
 	defer func() {
 		if run.cleanup {
-			log.Printf("Test: %q deleting pipelineRun %q", run.name, pr.GetName())
+			klog.Printf("Test: %q deleting pipelineRun %q", run.name, pr.GetName())
 			err := DeletePipelineRun(ctx, pr)
 			if err != nil {
-				log.Printf("error happened while cleaning up the pipelineRun %q: %q", run.name, err)
+				klog.Printf("error happened while cleaning up the pipelineRun %q: %q", run.name, err)
 			}
 		}
 		waitWG.Done()
@@ -114,7 +114,7 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 	assert.NilError(t, ctx.Err(), "Test: %q", run.name)
 	PipelineRunCheck := CreatePipelineRunCondition(pr, run.check)
 	duration, err := WaitFor(ctx, PipelineRunCheck)
-	log.Printf("Test: %q waited for %.2f s", run.name, duration.Seconds())
+	klog.Printf("Test: %q waited for %.2f s", run.name, duration.Seconds())
 	run.result = err
 	assert.NilError(t, checkResult(run), "Test: %q", run.name)
 }
@@ -123,7 +123,7 @@ func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
 	startTime := time.Now()
 	defer func() {
 		duration := time.Now().Sub(startTime)
-		log.Printf("Test: %q setup took %.2f s", run.name, duration.Seconds())
+		klog.Printf("Test: %q setup took %.2f s", run.name, duration.Seconds())
 	}()
 	PipelineRun := pipelineTest.PipelineRun
 	ctx := run.ctx
@@ -143,7 +143,7 @@ func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
 		run.result = fmt.Errorf("pipeline run creation failed: %q", err.Error())
 		return run
 	}
-	log.Printf("Test: %q pipeline run created '%s/%s'", run.name, pr.GetNamespace(), pr.GetName())
+	klog.Printf("Test: %q pipeline run created '%s/%s'", run.name, pr.GetNamespace(), pr.GetName())
 	ctx = SetPipelineRun(ctx, pr)
 	run.ctx = ctx
 	return run
