@@ -184,23 +184,21 @@ func (c *Controller) syncHandler(key string) error {
 
 	tenant := origTenant.DeepCopy()
 
-	c.logPrintln(4, tenant, "started reconciliation")
-	if klog.V(4).enabled() {
-		defer c.logPrintln(4, &api.Tenant{ObjectMeta: *tenant.ObjectMeta.DeepCopy()}, "finished reconciliation")
-	}
+	klog.V(4).Infof(c.formatLog(tenant, "started reconciliation"))
+	defer klog.V(4).Infof(c.formatLog(&api.Tenant{ObjectMeta: *tenant.ObjectMeta.DeepCopy()}, "finished reconciliation"))
 
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
 	config, err := c.getClientConfig(c.factory, tenant.GetNamespace())
 	if err != nil {
-		c.logPrintln(3, tenant, err)
+		klog.V(2).ErrorS(err, c.formatLog(tenant))
 		return err
 	}
 
 	if !tenant.ObjectMeta.DeletionTimestamp.IsZero() {
-		c.logPrintln(4, tenant, "tenant is marked as deleted")
+		klog.V(4).Infof(c.formatLog(tenant, "tenant is marked as deleted"))
 		if !c.hasFinalizer(tenant) {
-			c.logPrintln(4, tenant, "dependent resources cleaned already, nothing to do")
+			klog.V(4).Infof(c.formatLog(tenant, "dependent resources cleaned already, nothing to do"))
 			return nil
 		}
 		err = c.deleteTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config)
@@ -254,7 +252,7 @@ func (c *Controller) reconcile(config clientConfig, tenant *api.Tenant) (err err
 }
 
 func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Tenant) error {
-	c.logPrintln(4, tenant, "tenant not initialized yet")
+	klog.V(4).Infof(c.formatLog(tenant, "tenant not initialized yet"))
 
 	nsName, err := c.createTenantNamespace(config, tenant)
 	if err != nil {
@@ -292,13 +290,13 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 }
 
 func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenant) error {
-	c.logPrintln(4, tenant, "tenant is initialized already")
+	klog.V(4).Infof(c.formatLog(tenant, "tenant is initialized already"))
 
 	nsName := tenant.Status.TenantNamespaceName
 
 	exists, err := c.checkNamespaceExists(nsName)
 	if err != nil {
-		c.logPrintln(3, tenant, err)
+		klog.V(2).ErrorS(err, c.formatLog(tenant))
 		return err
 	}
 
@@ -315,7 +313,7 @@ func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenan
 			Message: condMsg,
 		})
 		err = errors.Errorf("tenant namespace %q does not exist anymore", nsName)
-		c.logPrintln(3, tenant, err)
+		klog.V(2).ErrorS(err, c.formatLog(tenant))
 		return err
 	}
 
@@ -382,7 +380,7 @@ func (c *Controller) updateStatus(tenant *api.Tenant) (*api.Tenant, error) {
 	updatedTenant, err := client.UpdateStatus(tenant)
 	if err != nil {
 		err = errors.WithMessage(err, "failed to update resource status")
-		c.logPrintln(3, tenant, err)
+		klog.V(2).ErrorS(err, c.formatLog(tenant))
 		return nil, err
 	}
 	return updatedTenant, nil
@@ -396,7 +394,7 @@ func (c *Controller) update(tenant *api.Tenant) (*api.Tenant, error) {
 			"failed to update tenant %q in namespace %q",
 			tenant.GetName(), tenant.GetNamespace(),
 		)
-		c.logPrintln(3, tenant, err)
+		klog.V(2).ErrorS(err, c.formatLog(tenant))
 		return tenant, err
 	}
 	return result, nil
@@ -416,12 +414,12 @@ func (c *Controller) checkNamespaceExists(name string) (bool, error) {
 }
 
 func (c *Controller) createTenantNamespace(config clientConfig, tenant *api.Tenant) (string, error) {
-	c.logPrintln(3, tenant, "creating new tenant namespace")
+	klog.V(3).Infof(c.formatLog(tenant, "creating new tenant namespace"))
 	namespaceManager := c.getNamespaceManager(config)
 	nsName, err := namespaceManager.Create(tenant.GetName(), nil)
 	if err != nil {
 		err = errors.WithMessage(err, "failed to create new tenant namespace")
-		c.logPrintln(3, tenant, err)
+		klog.V(2).ErrorS(err, c.formatLog(tenant))
 		return "", err
 	}
 	return nsName, err
@@ -431,12 +429,12 @@ func (c *Controller) deleteTenantNamespace(namespace string, tenant *api.Tenant,
 	if namespace == "" {
 		return nil
 	}
-	c.logPrintf(4, tenant, "rolling back tenant namespace %q", namespace)
+	klog.V(3).Infof(c.formatLogf(tenant, "rolling back tenant namespace %q", namespace))
 	namespaceManager := c.getNamespaceManager(config)
 	err := namespaceManager.Delete(namespace)
 	if err != nil {
 		err = errors.WithMessagef(err, "failed to delete tenant namespace %q", namespace)
-		c.logPrintln(3, tenant, err)
+		klog.V(2).ErrorS(err, c.formatLog(tenant))
 		return err
 	}
 	return nil
@@ -492,7 +490,7 @@ func (c *Controller) reconcileTenantRoleBinding(tenant *api.Tenant, namespace st
 		}
 
 		if needForUpdateDetected {
-			c.logPrintf(3, tenant, "updating RoleBinding in tenant namespace %q", namespace)
+			klog.V(3).Infof(c.formatLogf(tenant, "updating RoleBinding in tenant namespace %q", namespace))
 			_, err = c.createRoleBinding(expectedTenantRB)
 			if err != nil {
 				return err
@@ -511,7 +509,7 @@ func (c *Controller) reconcileTenantRoleBinding(tenant *api.Tenant, namespace st
 			"failed to reconcile the RoleBinding in tenant namespace %q",
 			namespace,
 		)
-		c.logPrintln(3, tenant, err)
+		klog.V(2).ErrorS(err, c.formatLog(tenant))
 	}
 	return
 }
@@ -637,27 +635,23 @@ func (c *Controller) deleteRoleBinding(roleBinding *rbacv1beta1.RoleBinding) err
 	return nil
 }
 
-func (c *Controller) logPrintln(l klog.Level, tenant *api.Tenant, v ...interface{}) {
-	if klog.V(l).Enabled() {
-	    klog.Infof(
+func (c *Controller) formatLog(tenant *api.Tenant, v ...interface{}) string {
+	return fmt.Sprintf(
 		"client %q: tenant %q: %s",
 		tenant.GetNamespace(), tenant.GetName(),
 		fmt.Sprint(v...),
 	)
-	}
 }
 
-func (c *Controller) logPrintf(l klog.Level, tenant *api.Tenant, format string, v ...interface{}) {
-if klog.V(l).Enabled() {
-	c.logPrintln(l, tenant, fmt.Sprintf(format, v...))
-	}
+func (c *Controller) formatLogf(tenant *api.Tenant, format string, v ...interface{}) string {
+	return c.formatLog(tenant, fmt.Sprintf(format, v...))
 }
 
 func (c *Controller) updateMetrics() {
 	// TODO determine number of tenants per client
 	list, err := c.tenantLister.List(labels.Everything())
 	if err != nil {
-		klog.V(2).Infof("Cannot update tenant metrics: %s", err.Error())
+		klog.V(2).Infof("Cannot update tenant metrics: %s", err.Error()) //TODO log Error
 	}
 	count := len(list)
 	c.metrics.SetTenantNumber(float64(count))
@@ -704,7 +698,7 @@ func (c *Controller) getKey(obj interface{}) string {
 func (c *Controller) onTenantDelete(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		klog.V(2).Infof("'Delete' event - could not identify key: %s", err.Error())
+		klog.Warningf("'Delete' event - could not identify key: %s", err.Error())
 	} else {
 		klog.V(2).Infof("'Delete' event - '%s'", key)
 	}

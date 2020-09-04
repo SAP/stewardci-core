@@ -192,7 +192,7 @@ func (c *runManager) setupServiceAccount(ctx *runContext, pipelineCloneSecretNam
 			}
 			if k8serrors.IsConflict(err) {
 				// resource version conflict -> retry update with latest version
-				klog.V(3).Infof(
+				klog.V(2).Infof(
 					"retrying update of service account %q in namespace %q"+
 						" after resource version conflict",
 					serviceAccountName, ctx.runNamespace,
@@ -293,7 +293,7 @@ func (c *runManager) getSecretHelper(ctx *runContext, targetClient corev1.Secret
 func (c *runManager) copySecrets(ctx *runContext, secretHelper secrets.SecretHelper, secretNames []string, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
 	storedSecretNames, err := secretHelper.CopySecrets(secretNames, filter, transformers...)
 	if err != nil {
-		klog.V(2).Infof("Cannot copy secrets %s for [%s]. Error: %s", secretNames, ctx.pipelineRun.String(), err)
+		klog.Errorf("Cannot copy secrets %s for [%s]. Error: %s", secretNames, ctx.pipelineRun.String(), err)
 		ctx.pipelineRun.UpdateMessage(err.Error())
 		if secretHelper.IsNotFound(err) {
 			ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
