@@ -80,7 +80,7 @@ pipelineRuns:
   jenkinsfileRunner:
     image:
       repository: stewardci/stewardci-jenkinsfile-runner
-      tag: "200826_aa1e67d"
+      tag: "200903_b053f5f"
       pullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0
