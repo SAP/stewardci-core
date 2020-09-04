@@ -278,7 +278,7 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 			break // success
 		} else {
 			if k8serrors.IsConflict(err) {
-				klog.V(2).Infof(
+				klog.V(3).Infof(
 					"retrying update of pipeline run %q in namespace %q"+
 						" after resource version conflict",
 					r.apiObj.Name, r.apiObj.Namespace,

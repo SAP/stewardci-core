@@ -135,9 +135,9 @@ func (f *ClientFactory) TektonV1alpha1() tektonclientv1alpha1.TektonV1alpha1Inte
 
 // Sleep sleeps and logs the start and the end of the sleep.
 func (f *ClientFactory) Sleep(message string) {
-	klog.Printf("Sleep start: %s", message)
+	klog.Infof("Sleep start: %s", message)
 	time.Sleep(f.sleepDuration)
-	klog.Printf("Sleep end: %s", message)
+	klog.Infof("Sleep end: %s", message)
 }
 
 // CheckTimeOrder checks if the duration between start and end is at least one sleep duration long.

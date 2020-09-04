@@ -219,7 +219,7 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 			}
 			result, err := getAPIPipelineRun(cf, "foo", "ns1")
 			assert.NilError(t, err)
-			klog.Printf("%+v", result.Status)
+			klog.Infof("%+v", result.Status)
 
 			if test.expectedFinalizer {
 				assert.Assert(t, len(result.GetFinalizers()) == 1)
@@ -483,7 +483,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			}
 			result, err := getAPIPipelineRun(cf, "foo", "ns1")
 			assert.NilError(t, err)
-			klog.Printf("%+v", result.Status)
+			klog.Infof("%+v", result.Status)
 			assert.Equal(t, test.expectedResult, result.Status.Result, test.name)
 			assert.Equal(t, test.expectedState, result.Status.State, test.name)
 
@@ -621,7 +621,7 @@ func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 }
 
 func stopController(t *testing.T, stopCh chan struct{}) {
-	klog.Printf("Trigger controller stop")
+	klog.Infof("Trigger controller stop")
 	stopCh <- struct{}{}
 }
 

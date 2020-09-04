@@ -32,14 +32,14 @@ func main() {
 	var config *rest.Config
 	var err error
 	if kubeconfig == "" {
-		klog.Printf("In cluster")
+		klog.Infof("In cluster")
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			klog.Printf("Hint: You can use parameter '-kubeconfig' for local testing. See --help")
+			klog.Infof("Hint: You can use parameter '-kubeconfig' for local testing. See --help")
 			panic(err.Error())
 		}
 	} else {
-		klog.Printf("Outside cluster")
+		klog.Infof("Outside cluster")
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
 			panic(err.Error())
@@ -48,23 +48,23 @@ func main() {
 
 	system.Namespace() // ensure that namespace is set in environment
 
-	klog.Printf("Create Factory (resync period: %s)", resyncPeriod.String())
+	klog.Infof("Create Factory (resync period: %s)", resyncPeriod.String())
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
-	klog.Printf("Provide metrics")
+	klog.Infof("Provide metrics")
 	metrics := tenantctl.NewMetrics()
 	metrics.StartServer()
 
-	klog.Printf("Create Controller")
+	klog.Infof("Create Controller")
 	controller := tenantctl.NewController(factory, metrics)
 
-	klog.Printf("Create Signal Handler")
+	klog.Infof("Create Signal Handler")
 	stopCh := signals.SetupSignalHandler()
 
-	klog.Printf("Start Informer")
+	klog.Infof("Start Informer")
 	factory.StewardInformerFactory().Start(stopCh)
 
-	klog.Printf("Run controller")
+	klog.Infof("Run controller")
 	if err = controller.Run(2, stopCh); err != nil {
 		klog.Fatalf("Error running controller: %s", err.Error())
 	}

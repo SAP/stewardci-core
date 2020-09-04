@@ -20,7 +20,7 @@ func Setup(t *testing.T) context.Context {
 	t.Helper()
 	kubeconfig := knativetest.Flags.Kubeconfig
 	clusterName := knativetest.Flags.Cluster
-	klog.V(3).Printf("Create Factory (config: %s,resync period: %s)", kubeconfig, resyncPeriod.String())
+	klog.V(3).Infof("Create Factory (config: %s,resync period: %s)", kubeconfig, resyncPeriod.String())
 	config, err := knativetest.BuildClientConfig(kubeconfig, clusterName)
 	if err != nil {
 		panic(err.Error())
@@ -39,6 +39,6 @@ func Setup(t *testing.T) context.Context {
 	ctx = SetTenantNamespace(ctx, tenantNamespace)
 	ctx = SetClientFactory(ctx, factory)
 	ctx = SetRealmUUID(ctx)
-	klog.V(3).Printf("RealmUUID: %q", GetRealmUUID(ctx))
+	klog.V(3).Infof("RealmUUID: %q", GetRealmUUID(ctx))
 	return ctx
 }
