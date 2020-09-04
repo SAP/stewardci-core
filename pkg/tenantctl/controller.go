@@ -185,7 +185,9 @@ func (c *Controller) syncHandler(key string) error {
 	tenant := origTenant.DeepCopy()
 
 	c.logPrintln(4, tenant, "started reconciliation")
-	defer c.logPrintln(4, &api.Tenant{ObjectMeta: *tenant.ObjectMeta.DeepCopy()}, "finished reconciliation")
+	if klog.V(4).enabled() {
+		defer c.logPrintln(4, &api.Tenant{ObjectMeta: *tenant.ObjectMeta.DeepCopy()}, "finished reconciliation")
+	}
 
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
@@ -636,15 +638,19 @@ func (c *Controller) deleteRoleBinding(roleBinding *rbacv1beta1.RoleBinding) err
 }
 
 func (c *Controller) logPrintln(l klog.Level, tenant *api.Tenant, v ...interface{}) {
-	klog.V(l).Infof(
+	if klog.V(l).Enabled() {
+	    klog.Infof(
 		"client %q: tenant %q: %s",
 		tenant.GetNamespace(), tenant.GetName(),
 		fmt.Sprint(v...),
 	)
+	}
 }
 
 func (c *Controller) logPrintf(l klog.Level, tenant *api.Tenant, format string, v ...interface{}) {
+if klog.V(l).Enabled() {
 	c.logPrintln(l, tenant, fmt.Sprintf(format, v...))
+	}
 }
 
 func (c *Controller) updateMetrics() {
