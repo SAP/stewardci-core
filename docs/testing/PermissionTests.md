@@ -1,6 +1,6 @@
 # How to test permissions
 
-Prerequisites: steward-system and a steward-client called `steward-client-1` [prepared](README.md).
+Prerequisites: steward-system and a steward-client called `steward-client-1` prepared.
 
 ## Test `client namespace` with `client service account`
 
