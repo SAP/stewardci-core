@@ -9,5 +9,5 @@ License: Apache-2.0
 
 Files: pkg/runctl/controller.go pkg/tenantctl/controller.go
 Copyright: The Kubernetes Authors. 
-Modifications Copyright SAP SE (year). All rights reserved.
+Modifications Copyright SAP SE 2020. All rights reserved.
 License: Apache-2.0
