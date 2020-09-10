@@ -192,7 +192,7 @@ func (c *runManager) setupServiceAccount(ctx *runContext, pipelineCloneSecretNam
 			}
 			if k8serrors.IsConflict(err) {
 				// resource version conflict -> retry update with latest version
-				klog.V(2).Infof(
+				klog.V(3).Infof(
 					"retrying update of service account %q in namespace %q"+
 						" after resource version conflict",
 					serviceAccountName, ctx.runNamespace,

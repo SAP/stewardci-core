@@ -6,6 +6,7 @@ package tenantctl
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
@@ -90,17 +91,17 @@ func (c *Controller) getNamespaceManager(config clientConfig) k8s.NamespaceManag
 func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
-	klog.V(2).Infof("Sync cache")
+	klog.V(1).Infof("Sync cache")
 	if ok := cache.WaitForCacheSync(stopCh, c.tenantSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
-	klog.V(2).Infof("Start workers")
+	klog.V(1).Infof("Start workers")
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
-	klog.V(2).Infof("Workers running [%v]", threadiness)
+	klog.V(1).Infof("Workers running [%v]", threadiness)
 	<-stopCh
-	klog.V(2).Infof("Workers stopped")
+	klog.V(1).Infof("Workers stopped")
 	return nil
 }
 
@@ -119,7 +120,7 @@ func (c *Controller) processNextWorkItem() bool {
 
 	numRequeues := c.workqueue.NumRequeues(obj)
 	if numRequeues > 0 {
-		klog.V(4).Infof("Requeued %v times '%s'", numRequeues, obj.(string))
+		klog.V(3).Infof("Requeued %v times '%s'", numRequeues, obj.(string))
 	}
 
 	// We wrap this block in a func so we can defer c.workqueue.Done.
@@ -157,7 +158,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		klog.V(4).Infof("Finished syncing '%s'", key)
+		klog.V(2).Infof("Finished syncing '%s'", key)
 		return nil
 	}(obj)
 
@@ -184,21 +185,24 @@ func (c *Controller) syncHandler(key string) error {
 
 	tenant := origTenant.DeepCopy()
 
-	klog.V(4).Infof(c.formatLog(tenant, "started reconciliation"))
-	defer klog.V(4).Infof(c.formatLog(&api.Tenant{ObjectMeta: *tenant.ObjectMeta.DeepCopy()}, "finished reconciliation"))
+	klog.V(1).Infof(c.formatLog(tenant, "started reconciliation"))
+	start := time.Now()
+	klog.V(1).Infof(c.formatLog(&api.Tenant{ObjectMeta: *tenant.ObjectMeta.DeepCopy()}, "finished reconciliation"))
+	elapsed := time.Since(start)
+	log.Printf("Binomial took %s", elapsed)
 
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
 	config, err := c.getClientConfig(c.factory, tenant.GetNamespace())
 	if err != nil {
-		klog.V(2).ErrorS(err, c.formatLog(tenant))
+		klog.Infof(c.formatLog(tenant), err)
 		return err
 	}
 
 	if !tenant.ObjectMeta.DeletionTimestamp.IsZero() {
-		klog.V(4).Infof(c.formatLog(tenant, "tenant is marked as deleted"))
+		klog.V(2).Infof(c.formatLog(tenant, "tenant is marked as deleted"))
 		if !c.hasFinalizer(tenant) {
-			klog.V(4).Infof(c.formatLog(tenant, "dependent resources cleaned already, nothing to do"))
+			klog.V(2).Infof(c.formatLog(tenant, "dependent resources cleaned already, nothing to do"))
 			return nil
 		}
 		err = c.deleteTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config)
@@ -252,7 +256,7 @@ func (c *Controller) reconcile(config clientConfig, tenant *api.Tenant) (err err
 }
 
 func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Tenant) error {
-	klog.V(4).Infof(c.formatLog(tenant, "tenant not initialized yet"))
+	klog.V(1).Infof(c.formatLog(tenant, "tenant not initialized yet"))
 
 	nsName, err := c.createTenantNamespace(config, tenant)
 	if err != nil {
@@ -290,13 +294,13 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 }
 
 func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenant) error {
-	klog.V(4).Infof(c.formatLog(tenant, "tenant is initialized already"))
+	klog.V(2).Infof(c.formatLog(tenant, "tenant is initialized already"))
 
 	nsName := tenant.Status.TenantNamespaceName
 
 	exists, err := c.checkNamespaceExists(nsName)
 	if err != nil {
-		klog.V(2).ErrorS(err, c.formatLog(tenant))
+		klog.Infof(c.formatLog(tenant), err)
 		return err
 	}
 
@@ -313,7 +317,7 @@ func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenan
 			Message: condMsg,
 		})
 		err = errors.Errorf("tenant namespace %q does not exist anymore", nsName)
-		klog.V(2).ErrorS(err, c.formatLog(tenant))
+		klog.V(2).Infof(c.formatLog(tenant), err)
 		return err
 	}
 
@@ -380,7 +384,7 @@ func (c *Controller) updateStatus(tenant *api.Tenant) (*api.Tenant, error) {
 	updatedTenant, err := client.UpdateStatus(tenant)
 	if err != nil {
 		err = errors.WithMessage(err, "failed to update resource status")
-		klog.V(2).ErrorS(err, c.formatLog(tenant))
+		klog.V(2).Infof(c.formatLog(tenant), err)
 		return nil, err
 	}
 	return updatedTenant, nil
@@ -394,7 +398,7 @@ func (c *Controller) update(tenant *api.Tenant) (*api.Tenant, error) {
 			"failed to update tenant %q in namespace %q",
 			tenant.GetName(), tenant.GetNamespace(),
 		)
-		klog.V(2).ErrorS(err, c.formatLog(tenant))
+		klog.V(2).Infof(c.formatLog(tenant), err)
 		return tenant, err
 	}
 	return result, nil
@@ -419,7 +423,7 @@ func (c *Controller) createTenantNamespace(config clientConfig, tenant *api.Tena
 	nsName, err := namespaceManager.Create(tenant.GetName(), nil)
 	if err != nil {
 		err = errors.WithMessage(err, "failed to create new tenant namespace")
-		klog.V(2).ErrorS(err, c.formatLog(tenant))
+		klog.V(3).Infof(c.formatLog(tenant), err)
 		return "", err
 	}
 	return nsName, err
@@ -434,7 +438,7 @@ func (c *Controller) deleteTenantNamespace(namespace string, tenant *api.Tenant,
 	err := namespaceManager.Delete(namespace)
 	if err != nil {
 		err = errors.WithMessagef(err, "failed to delete tenant namespace %q", namespace)
-		klog.V(2).ErrorS(err, c.formatLog(tenant))
+		klog.V(3).Infof(c.formatLog(tenant), err)
 		return err
 	}
 	return nil
@@ -509,7 +513,7 @@ func (c *Controller) reconcileTenantRoleBinding(tenant *api.Tenant, namespace st
 			"failed to reconcile the RoleBinding in tenant namespace %q",
 			namespace,
 		)
-		klog.V(2).ErrorS(err, c.formatLog(tenant))
+		klog.V(3).Infof(c.formatLog(tenant), err)
 	}
 	return
 }
@@ -678,9 +682,9 @@ func (c *Controller) onTenantUpdate(old, new interface{}) {
 
 func (c *Controller) addToQueue(key string, eventType string) {
 	if key == "" {
-		klog.Warningf("WARN: '%s' event - key empty, skipping item", eventType)
+		klog.V(1).Infof("WARN: '%s' event - key empty, skipping item", eventType)
 	} else {
-		klog.V(4).Infof("'%s' event - Add to workqueue '%s'", eventType, key)
+		klog.V(3).Infof("'%s' event - Add to workqueue '%s'", eventType, key)
 		c.workqueue.Add(key)
 	}
 }
@@ -698,7 +702,7 @@ func (c *Controller) getKey(obj interface{}) string {
 func (c *Controller) onTenantDelete(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		klog.Warningf("'Delete' event - could not identify key: %s", err.Error())
+		klog.Errorf("'Delete' event - could not identify key: %s", err.Error())
 	} else {
 		klog.V(2).Infof("'Delete' event - '%s'", key)
 	}

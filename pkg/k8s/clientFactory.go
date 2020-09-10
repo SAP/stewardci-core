@@ -58,26 +58,26 @@ type clientFactory struct {
 func NewClientFactory(config *rest.Config, resyncPeriod time.Duration) ClientFactory {
 	stewardClientset, err := steward.NewForConfig(config)
 	if err != nil {
-		klog.V(2).Infof("could not create Steward clientset: %s", err)
+		klog.ErrorS(err, "could not create Steward clientset: %s")
 		return nil
 	}
 	stewardInformerFactory := stewardinformer.NewSharedInformerFactory(stewardClientset, resyncPeriod)
 
 	kubernetesClientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		klog.V(2).Infof("could not create Kubernetes clientset: %s", err)
+		klog.ErrorS(err, "could not create Kubernetes clientset: %s")
 		return nil
 	}
 
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
-		klog.V(2).Infof("could not create dynamic Kubernetes clientset: %s", err)
+		klog.ErrorS(err, "could not create dynamic Kubernetes clientset: %s")
 		return nil
 	}
 
 	tektonClientset, err := tektonclient.NewForConfig(config)
 	if err != nil {
-		klog.V(2).Infof("could not create Tekton clientset: %s", err)
+		klog.ErrorS(err, "could not create Tekton clientset: %s")
 		return nil
 	}
 	tektonInformerFactory := tektoninformers.NewSharedInformerFactory(tektonClientset, resyncPeriod)

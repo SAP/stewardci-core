@@ -265,7 +265,7 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 		return fmt.Errorf("No factory provided to store updates [%s]", r.String())
 	}
 	var result *api.PipelineRun
-	klog.V(4).Infof("start update %s", r.apiObj.Name)
+	klog.V(3).Infof("start update %s", r.apiObj.Name)
 	start := time.Now()
 	iteration := 0
 	for { // retry loop
@@ -302,7 +302,7 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 	end := time.Now()
 	elapsed := end.Sub(start)
 	if r.apiObj != nil {
-		klog.V(4).Infof("finished update after %s (with %d retries) in %s", elapsed, iteration, r.apiObj.Name)
+		klog.V(3).Infof("finished update after %s (with %d retries) in %s", elapsed, iteration, r.apiObj.Name)
 	}
 
 	return nil
