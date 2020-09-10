@@ -18,7 +18,7 @@ require (
 	github.com/prometheus/client_golang v1.6.0
 	github.com/prometheus/common v0.10.0 // indirect
 	github.com/prometheus/procfs v0.1.3 // indirect
-	github.com/tektoncd/pipeline v0.13.2
+	github.com/tektoncd/pipeline v0.15.2
 	github.com/vdemeester/k8s-pkg-credentialprovider v1.18.0 // indirect
 	go.uber.org/zap v1.15.0 // indirect
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9 // indirect
@@ -34,11 +34,10 @@ require (
 	k8s.io/klog/v2 v2.1.0
 	k8s.io/legacy-cloud-providers v0.18.3 // indirect
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451 // indirect
-	knative.dev/pkg v0.0.0-20200528142800-1c6815d7e4c9
+	knative.dev/pkg v0.0.0-20200702222342-ea4d6e985ba0
 )
 
 replace (
-	github.com/tektoncd/pipeline => github.com/tektoncd/pipeline v0.8.0
 	k8s.io/api => k8s.io/api v0.17.6 // kubernetes-1.17.6
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.6 // kubernetes-1.17.6
 	k8s.io/client-go => k8s.io/client-go v0.17.6 // kubernetes-1.17.6

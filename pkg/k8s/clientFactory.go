@@ -8,7 +8,7 @@ import (
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	stewardinformer "github.com/SAP/stewardci-core/pkg/client/informers/externalversions"
 	tektonclient "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned"
-	tektonclientv1alpha1 "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/typed/pipeline/v1alpha1"
+	tektonclientv1beta1 "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/typed/pipeline/v1beta1"
 	tektoninformers "github.com/SAP/stewardci-core/pkg/tektonclient/informers/externalversions"
 	dynamic "k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -38,8 +38,8 @@ type ClientFactory interface {
 	// StewardInformerFactory returns the informer factory for Steward
 	StewardInformerFactory() stewardinformer.SharedInformerFactory
 
-	// TektonV1alpha1 returns the tekton.dev/v1alpha1 Kubernetes client
-	TektonV1alpha1() tektonclientv1alpha1.TektonV1alpha1Interface
+	// TektonV1beta1 returns the tekton.dev/v1beta1 Kubernetes client
+	TektonV1beta1() tektonclientv1beta1.TektonV1beta1Interface
 
 	// TektonInformerFactory returns the informer factory for Tekton
 	TektonInformerFactory() tektoninformers.SharedInformerFactory
@@ -127,7 +127,7 @@ func (f *clientFactory) TektonInformerFactory() tektoninformers.SharedInformerFa
 	return f.tektonInformerFactory
 }
 
-// TektonV1alpha1 implements interface ClientFactory
-func (f *clientFactory) TektonV1alpha1() tektonclientv1alpha1.TektonV1alpha1Interface {
-	return f.tektonClientset.TektonV1alpha1()
+// TektonV1beta1 implements interface ClientFactory
+func (f *clientFactory) TektonV1beta1() tektonclientv1beta1.TektonV1beta1Interface {
+	return f.tektonClientset.TektonV1beta1()
 }

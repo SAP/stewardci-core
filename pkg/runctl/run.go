@@ -3,8 +3,7 @@ package runctl
 import (
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	run "github.com/SAP/stewardci-core/pkg/run"
-	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
-	tektonStatus "github.com/tektoncd/pipeline/pkg/status"
+	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativeapis "knative.dev/pkg/apis"
@@ -49,9 +48,9 @@ func (r *tektonRun) IsFinished() (bool, steward.Result) {
 	}
 	// TaskRun finished unsuccessfully, check reason...
 	switch condition.Reason {
-	case tektonStatus.ReasonTimedOut:
+	case tekton.TaskRunReasonTimedOut.String():
 		return true, steward.ResultTimeout
-	case tektonStatus.ReasonFailed:
+	case tekton.TaskRunReasonFailed.String():
 		jfrStepState := r.getJenkinsfileRunnerStepState()
 		if jfrStepState != nil && jfrStepState.Terminated != nil && jfrStepState.Terminated.ExitCode != 0 {
 			return true, steward.ResultErrorContent
