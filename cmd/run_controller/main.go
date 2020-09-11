@@ -39,7 +39,7 @@ func main() {
 	var config *rest.Config
 	var err error
 	defer klog.Flush()
-	
+
 	if kubeconfig == "" {
 		klog.Infof("In cluster")
 		config, err = rest.InClusterConfig()
