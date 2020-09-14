@@ -184,8 +184,8 @@ func (c *Controller) syncHandler(key string) error {
 
 	tenant := origTenant.DeepCopy()
 
-	klog.V(2).Infof(c.formatLog(tenant, "started reconciliation"))
-	klog.V(2).Infof(c.formatLog(&api.Tenant{ObjectMeta: *tenant.ObjectMeta.DeepCopy()}, "finished reconciliation"))
+	klog.V(4).Infof(c.formatLog(tenant, "started reconciliation"))
+	defer klog.V(4).Infof(c.formatLog(&api.Tenant{ObjectMeta: *tenant.ObjectMeta.DeepCopy()}, "finished reconciliation"))
 
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
@@ -252,7 +252,7 @@ func (c *Controller) reconcile(config clientConfig, tenant *api.Tenant) (err err
 }
 
 func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Tenant) error {
-	klog.V(2).Infof(c.formatLog(tenant, "tenant not initialized yet"))
+	klog.V(3).Infof(c.formatLog(tenant, "tenant not initialized yet"))
 
 	nsName, err := c.createTenantNamespace(config, tenant)
 	if err != nil {
@@ -290,7 +290,7 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 }
 
 func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenant) error {
-	klog.V(3).Infof(c.formatLog(tenant, "tenant is initialized already"))
+	klog.V(4).Infof(c.formatLog(tenant, "tenant is initialized already"))
 
 	nsName := tenant.Status.TenantNamespaceName
 
