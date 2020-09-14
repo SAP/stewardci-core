@@ -109,7 +109,7 @@ Pipeline Run Controller:
 | <code>runController.<wbr/>tolerations</code> | (array of [`Toleration`][k8s-tolerations])<br/> The `tolerations` field of the Run Controller [pod spec][k8s-podspec]. | `[]` |
 | <code>runController.<wbr/>args.<wbr/>qps</code> | (integer)<br/> The maximum queries per second (QPS) from the controller to the cluster. | 5 |
 | <code>runController.<wbr/>args.<wbr/>burst</code> | (integer)<br/> The burst limit for throttle connections (maximum number of concurrent requests). | 10 |
-| <code>runController.<wbr/>args.<wbr/>logVerbosity</code> | (integer)<br/> The log verbosity. 0=default, 1=info, 2=debug, 3=trace (see also [logging-conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md#logging-conventions)) | 1 |
+| <code>runController.<wbr/>args.<wbr/>logVerbosity</code> | (integer)<br/> The log verbosity. 0=error, 1=warning, 2=info, 3=extended, 4=debug, 5=trace (see also [logging-conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md#logging-conventions)) | 3 |
 
 Tenant Controller:
 
@@ -125,7 +125,7 @@ Tenant Controller:
 | <code>tenantController.<wbr/>affinity</code> | (object of [`Affinity`][k8s-affinity])<br/> The `affinity` field of the Tenant Controller [pod spec][k8s-podspec]. | `{}` |
 | <code>tenantController.<wbr/>tolerations</code> | (array of [`Toleration`][k8s-tolerations])<br/> The `tolerations` field of the Tenant Controller [pod spec][k8s-podspec]. | `[]` |
 | <code>tenantController.<wbr/>possibleTenantRoles</code> | (array of string)<br/> The names of all possible tenant roles. A tenant role is a Kubernetes ClusterRole that the controller binds within a tenant namespace to (a) the default service account of the client namespace the tenant belongs to and (b) to the default service account of the tenant namespace. The tenant role to be used can be configured per Steward client namespace via annotation `steward.sap.com/tenant-role`. | `['steward-tenant']` |
-| <code>tenantController.<wbr/>args.<wbr/>logVerbosity</code> | (integer)<br/> The log verbosity. 0=default, 1=info, 2=debug, 3=trace (see also [logging-conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md#logging-conventions)) | 1 |
+| <code>tenantController.<wbr/>args.<wbr/>logVerbosity</code> | (integer)<br/> The log verbosity. 0=error, 1=warning, 2=info, 3=extended, 4=debug, 5=trace (see also [logging-conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md#logging-conventions)) | 1 |
 
 Common parameters:
 

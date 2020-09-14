@@ -125,7 +125,7 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 // Returns the state details of state A
 func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	r.ensureCopy()
-	klog.V(2).Infof("Update State to %s [%s]", state, r.String())
+	klog.V(3).Infof("Update State to %s [%s]", state, r.String())
 	now := metav1.Now()
 	oldstate := r.finishCurrentState()
 	newState := api.StateItem{State: state, StartedAt: now}
@@ -185,7 +185,7 @@ func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
 func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 	if err != nil {
 		text := fmt.Sprintf("ERROR: %s [%s]: %s", utils.Trim(message), r.String(), err.Error())
-		klog.V(2).Infof(text)
+		klog.V(3).Infof(text)
 		return r.UpdateMessage(text)
 	}
 	return nil
@@ -248,7 +248,7 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 	result, err := r.client.Update(r.apiObj)
 	end := time.Now()
 	elapsed := end.Sub(start)
-	klog.V(2).Infof("finish update finalizer after %s in %s", elapsed, r.apiObj.Name)
+	klog.V(3).Infof("finish update finalizer after %s in %s", elapsed, r.apiObj.Name)
 	if err != nil {
 		return errors.Wrap(err,
 			fmt.Sprintf("Failed to update finalizers [%s]", r.String()))
@@ -265,7 +265,7 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 		return fmt.Errorf("No factory provided to store updates [%s]", r.String())
 	}
 	var result *api.PipelineRun
-	klog.V(3).Infof("start update %s", r.apiObj.Name)
+	klog.V(4).Infof("start update %s", r.apiObj.Name)
 	start := time.Now()
 	iteration := 0
 	for { // retry loop
@@ -278,7 +278,7 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 			break // success
 		} else {
 			if k8serrors.IsConflict(err) {
-				klog.V(3).Infof(
+				klog.V(4).Infof(
 					"retrying update of pipeline run %q in namespace %q"+
 						" after resource version conflict",
 					r.apiObj.Name, r.apiObj.Namespace,
@@ -302,7 +302,7 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 	end := time.Now()
 	elapsed := end.Sub(start)
 	if r.apiObj != nil {
-		klog.V(3).Infof("finished update after %s (with %d retries) in %s", elapsed, iteration, r.apiObj.Name)
+		klog.V(4).Infof("finished update after %s (with %d retries) in %s", elapsed, iteration, r.apiObj.Name)
 	}
 
 	return nil

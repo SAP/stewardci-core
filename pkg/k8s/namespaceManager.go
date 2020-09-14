@@ -45,7 +45,7 @@ const (
 func (m *namespaceManager) Create(nameCustomPart string, annotations map[string]string) (string, error) {
 	name, err := m.generateName(nameCustomPart)
 	if err != nil {
-		klog.V(1).Infof("Namespace creation failed %s", err)
+		klog.V(2).Infof("Namespace creation failed %s", err)
 		return "", err
 	}
 	meta := metav1.ObjectMeta{
@@ -60,10 +60,10 @@ func (m *namespaceManager) Create(nameCustomPart string, annotations map[string]
 	namespace := &v1.Namespace{ObjectMeta: meta}
 	createdNamespace, err := m.nsInterface.Create(namespace)
 	if err != nil {
-		klog.V(1).Infof("Namespace creation failed: %s", err)
+		klog.V(2).Infof("Namespace creation failed: %s", err)
 		return "", err
 	}
-	klog.V(1).Infof("Namespace '%s' created", createdNamespace.GetName())
+	klog.V(2).Infof("Namespace '%s' created", createdNamespace.GetName())
 	return createdNamespace.GetName(), nil
 }
 
@@ -93,7 +93,7 @@ func (m *namespaceManager) Delete(name string) error {
 		}
 		return errors.WithMessagef(err, "error deleting namespace '%s'", name)
 	}
-	klog.V(1).Infof("deleted namespace '%s'", name)
+	klog.V(2).Infof("deleted namespace '%s'", name)
 	return nil
 }
 
