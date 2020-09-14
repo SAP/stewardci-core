@@ -6,7 +6,6 @@ package tenantctl
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
@@ -186,10 +185,7 @@ func (c *Controller) syncHandler(key string) error {
 	tenant := origTenant.DeepCopy()
 
 	klog.V(1).Infof(c.formatLog(tenant, "started reconciliation"))
-	start := time.Now()
 	klog.V(1).Infof(c.formatLog(&api.Tenant{ObjectMeta: *tenant.ObjectMeta.DeepCopy()}, "finished reconciliation"))
-	elapsed := time.Since(start)
-	log.Printf("Binomial took %s", elapsed)
 
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
@@ -655,7 +651,7 @@ func (c *Controller) updateMetrics() {
 	// TODO determine number of tenants per client
 	list, err := c.tenantLister.List(labels.Everything())
 	if err != nil {
-		klog.V(2).Infof("Cannot update tenant metrics: %s", err.Error()) //TODO log Error
+		klog.Errorf("Cannot update tenant metrics: %s", err.Error())
 	}
 	count := len(list)
 	c.metrics.SetTenantNumber(float64(count))
