@@ -111,7 +111,7 @@ func (c *Controller) runWorker() {
 		now := time.Now().Unix()
 		if heartbeatTimer <= now-heartbeatIntervalSeconds {
 			heartbeatTimer = now
-			klog.V(4).Infof("Run Controller still alive")
+			klog.V(3).Infof("Run Controller still alive")
 		}
 	}
 }
@@ -161,7 +161,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		klog.V(3).Infof("Successfully synced '%s'", key)
+		klog.V(5).Infof("Finished syncing '%s'", key)
 		return nil
 	}(obj)
 
