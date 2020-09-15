@@ -18,7 +18,7 @@ require (
 	github.com/prometheus/client_golang v1.6.0
 	github.com/prometheus/common v0.10.0 // indirect
 	github.com/prometheus/procfs v0.1.3 // indirect
-	github.com/tektoncd/pipeline v0.15.2
+	github.com/tektoncd/pipeline v0.14.3
 	github.com/vdemeester/k8s-pkg-credentialprovider v1.18.0 // indirect
 	go.uber.org/zap v1.15.0 // indirect
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9 // indirect
