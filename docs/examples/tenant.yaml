@@ -2,5 +2,4 @@ apiVersion: steward.sap.com/v1alpha1
 kind: Tenant
 metadata:
   # 'name' should be the Tenant ID
-  name: tenant9
-
+  name: tenant1
