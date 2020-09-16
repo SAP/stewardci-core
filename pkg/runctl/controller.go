@@ -177,7 +177,7 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) e
 	start := time.Now()
 	oldState, err := pipelineRun.UpdateState(state)
 	if err != nil {
-		klog.Infof("Failed to UpdateState of [%s] to %q: %q", pipelineRun.String(), state, err.Error())
+		klog.V(3).Infof("Failed to UpdateState of [%s] to %q: %q", pipelineRun.String(), state, err.Error())
 		return err
 	}
 
