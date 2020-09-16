@@ -185,7 +185,9 @@ func (c *Controller) syncHandler(key string) error {
 	tenant := origTenant.DeepCopy()
 
 	klog.V(4).Infof(c.formatLog(tenant, "started reconciliation"))
-	defer klog.V(4).Infof(c.formatLog(&api.Tenant{ObjectMeta: *tenant.ObjectMeta.DeepCopy()}, "finished reconciliation"))
+	if klog.V(4).enabled() {
+		defer klog.V(4).Infof(c.formatLog(&api.Tenant{ObjectMeta: *tenant.ObjectMeta.DeepCopy()}, "finished reconciliation"))
+	}
 
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
