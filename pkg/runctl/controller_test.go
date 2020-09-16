@@ -389,7 +389,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 						Running: &corev1.ContainerStateRunning{},
 					})
 				run.EXPECT().IsFinished().Return(true, api.ResultTimeout)
-				run.EXPECT().GetSucceededCondition().Return(nil)
+				run.EXPECT().GetMessage()
 				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
 			},
 			expectedResult: api.ResultTimeout,
@@ -408,6 +408,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 						},
 					})
 				run.EXPECT().IsFinished().Return(true, api.ResultSuccess)
+				run.EXPECT().GetMessage()
 				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
 			},
 			expectedResult: api.ResultSuccess,

@@ -107,12 +107,15 @@ spec:
       value: '$(inputs.params.RUN_NUMBER)'
     - name: RUN_CAUSE
       value: '$(inputs.params.RUN_CAUSE)'
+    - name: TERMINATION_LOG_PATH
+      value: /tekton/results/jfr-termination-log
     resources:
       {{- toYaml .Values.pipelineRuns.jenkinsfileRunner.resources | nindent 6 }}
-    {{- if .Values.pipelineRuns.jenkinsfileRunner.terminationMessagePath }}
-    terminationMessagePath: {{ .Values.pipelineRuns.jenkinsfileRunner.terminationMessagePath | quote }}
-    {{- end }}
+    terminationMessagePath: /tekton/results/jfr-termination-log
     volumeMounts:
     - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
       name: service-account-token
       readOnly: true
+  results:
+  - name: jfr-termination-log
+    description: The termination log message from the Jenkinsfile Runner

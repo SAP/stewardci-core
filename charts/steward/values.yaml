@@ -100,7 +100,6 @@ pipelineRuns:
       runAsUser: 1000
       runAsGroup: 1000
       fsGroup: 1000
-    terminationMessagePath: "/run/termination-log"
   timeout: "60m"
   networkPolicy: ""
   limitRange: ""

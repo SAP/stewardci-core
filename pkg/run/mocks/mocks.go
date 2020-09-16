@@ -34,7 +34,6 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 	v10 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	apis "knative.dev/pkg/apis"
 	reflect "reflect"
 )
 
@@ -75,6 +74,20 @@ func (mr *MockRunMockRecorder) GetContainerInfo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerInfo", reflect.TypeOf((*MockRun)(nil).GetContainerInfo))
 }
 
+// GetMessage mocks base method
+func (m *MockRun) GetMessage() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMessage")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetMessage indicates an expected call of GetMessage
+func (mr *MockRunMockRecorder) GetMessage() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMessage", reflect.TypeOf((*MockRun)(nil).GetMessage))
+}
+
 // GetStartTime mocks base method
 func (m *MockRun) GetStartTime() *v10.Time {
 	m.ctrl.T.Helper()
@@ -87,20 +100,6 @@ func (m *MockRun) GetStartTime() *v10.Time {
 func (mr *MockRunMockRecorder) GetStartTime() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStartTime", reflect.TypeOf((*MockRun)(nil).GetStartTime))
-}
-
-// GetSucceededCondition mocks base method
-func (m *MockRun) GetSucceededCondition() *apis.Condition {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSucceededCondition")
-	ret0, _ := ret[0].(*apis.Condition)
-	return ret0
-}
-
-// GetSucceededCondition indicates an expected call of GetSucceededCondition
-func (mr *MockRunMockRecorder) GetSucceededCondition() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSucceededCondition", reflect.TypeOf((*MockRun)(nil).GetSucceededCondition))
 }
 
 // IsFinished mocks base method

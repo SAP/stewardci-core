@@ -4,6 +4,7 @@ import (
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	run "github.com/SAP/stewardci-core/pkg/run"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	termination "github.com/tektoncd/pipeline/pkg/termination"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativeapis "knative.dev/pkg/apis"
@@ -33,13 +34,13 @@ func (r *tektonRun) GetContainerInfo() *corev1.ContainerState {
 	return &stepState.ContainerState
 }
 
-func (r *tektonRun) GetSucceededCondition() *knativeapis.Condition {
+func (r *tektonRun) getSucceededCondition() *knativeapis.Condition {
 	return r.tektonTaskRun.Status.GetCondition(knativeapis.ConditionSucceeded)
 }
 
 // IsFinished returns true if run is finished
 func (r *tektonRun) IsFinished() (bool, steward.Result) {
-	condition := r.GetSucceededCondition()
+	condition := r.getSucceededCondition()
 	if condition.IsUnknown() {
 		return false, steward.ResultUndefined
 	}
@@ -59,6 +60,32 @@ func (r *tektonRun) IsFinished() (bool, steward.Result) {
 		// TODO handle other failure reasons like quota exceedance
 	}
 	return true, steward.ResultErrorInfra
+}
+
+// GetMessage returns the termination message
+func (r *tektonRun) GetMessage() string {
+	var msg string
+	containerInfo := r.GetContainerInfo()
+	if containerInfo != nil && containerInfo.Terminated != nil {
+		msg = containerInfo.Terminated.Message
+	}
+	if msg == "" {
+		cond := r.getSucceededCondition()
+		if cond != nil {
+			msg = cond.Message
+		}
+	} else {
+		allMessages, err := termination.ParseMessage(msg)
+		if err != nil {
+			for _, singleMessage := range allMessages {
+				if singleMessage.Key == "jfr-termination-log" {
+					msg = singleMessage.Value
+					break
+				}
+			}
+		}
+	}
+	return msg
 }
 
 func (r *tektonRun) getJenkinsfileRunnerStepState() *tekton.StepState {

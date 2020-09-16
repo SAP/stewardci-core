@@ -341,16 +341,7 @@ func (c *Controller) syncHandler(key string) error {
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
 		if finished, result := run.IsFinished(); finished {
-			var msg string
-			if containerInfo != nil && containerInfo.Terminated != nil {
-				msg = containerInfo.Terminated.Message
-			}
-			if msg == "" {
-				cond := run.GetSucceededCondition()
-				if cond != nil {
-					msg = cond.Message
-				}
-			}
+			msg := run.GetMessage()
 			pipelineRun.UpdateMessage(msg)
 			pipelineRun.UpdateResult(result)
 			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
