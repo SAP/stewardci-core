@@ -50,23 +50,23 @@ func main() {
 
 	system.Namespace() // ensure that namespace is set in environment
 
-	klog.Infof("Create Factory (resync period: %s)", resyncPeriod.String())
+	klog.V(2).Infof("Create Factory (resync period: %s)", resyncPeriod.String())
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
-	klog.Infof("Provide metrics")
+	klog.V(2).Infof("Provide metrics")
 	metrics := tenantctl.NewMetrics()
 	metrics.StartServer()
 
-	klog.Infof("Create Controller")
+	klog.V(2).Infof("Create Controller")
 	controller := tenantctl.NewController(factory, metrics)
 
-	klog.Infof("Create Signal Handler")
+	klog.V(2).Infof("Create Signal Handler")
 	stopCh := signals.SetupSignalHandler()
 
-	klog.Infof("Start Informer")
+	klog.V(2).Infof("Start Informer")
 	factory.StewardInformerFactory().Start(stopCh)
 
-	klog.Infof("Run controller")
+	klog.V(2).Infof("Run controller")
 	if err = controller.Run(2, stopCh); err != nil {
 		klog.Fatalf("Error running controller: %s", err.Error())
 	}
