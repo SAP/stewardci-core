@@ -57,7 +57,7 @@ func main() {
 
 	system.Namespace() // ensure that namespace is set in environment
 
-	klog.V(2).Infof("Create Factory (resync period: %s, QPS: %d, burst: %d)", resyncPeriod.String(), qps, burst)
+	klog.V(3).Infof("Create Factory (resync period: %s, QPS: %d, burst: %d)", resyncPeriod.String(), qps, burst)
 	config.QPS = float32(qps)
 	config.Burst = burst
 	factory := k8s.NewClientFactory(config, resyncPeriod)
@@ -66,10 +66,10 @@ func main() {
 	metrics := metrics.NewMetrics()
 	metrics.StartServer()
 
-	klog.V(2).Infof("Create Controller")
+	klog.V(3).Infof("Create Controller")
 	controller := runctl.NewController(factory, metrics)
 
-	klog.V(2).Infof("Create Signal Handler")
+	klog.V(3).Infof("Create Signal Handler")
 	stopCh := signals.SetupSignalHandler()
 
 	klog.V(2).Infof("Start Informer")
