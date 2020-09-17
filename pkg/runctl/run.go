@@ -87,6 +87,8 @@ func (r *tektonRun) GetMessage() string {
 					return singleMessage.Value
 				}
 			}
+		} else {
+			return msg
 		}
 	}
 	return "internal error"

@@ -181,6 +181,10 @@ func Test__GetMessage(t *testing.T) {
 			inputMessage:    `[{"key": "foo", "value": "bar"}, {"key":"termination-log","value":"foo"}]`,
 			expectedMessage: "internal error",
 		},
+		{name: "invalid_yaml_message",
+			inputMessage:    "{no valid yaml",
+			expectedMessage: "{no valid yaml",
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			test := test
