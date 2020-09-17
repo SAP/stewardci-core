@@ -1,6 +1,8 @@
 package runctl
 
 import (
+	"log"
+
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	run "github.com/SAP/stewardci-core/pkg/run"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -65,6 +67,7 @@ func (r *tektonRun) IsFinished() (bool, steward.Result) {
 // GetMessage returns the termination message
 func (r *tektonRun) GetMessage() string {
 	var msg string
+
 	containerInfo := r.GetContainerInfo()
 	if containerInfo != nil && containerInfo.Terminated != nil {
 		msg = containerInfo.Terminated.Message
@@ -72,20 +75,21 @@ func (r *tektonRun) GetMessage() string {
 	if msg == "" {
 		cond := r.getSucceededCondition()
 		if cond != nil {
-			msg = cond.Message
+			return cond.Message
 		}
 	} else {
 		allMessages, err := termination.ParseMessage(msg)
-		if err != nil {
+		log.Printf("Err: %+v, Messages: %+v", err, allMessages)
+		if err == nil {
 			for _, singleMessage := range allMessages {
-				if singleMessage.Key == "jfr-termination-log" {
-					msg = singleMessage.Value
-					break
+				log.Printf("%+v, %s %s", singleMessage, singleMessage.Key, singleMessage.Value)
+				if singleMessage.Key == jfrResultKey {
+					return singleMessage.Value
 				}
 			}
 		}
 	}
-	return msg
+	return "internal error"
 }
 
 func (r *tektonRun) getJenkinsfileRunnerStepState() *tekton.StepState {
