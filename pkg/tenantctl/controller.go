@@ -185,7 +185,7 @@ func (c *Controller) syncHandler(key string) error {
 	tenant := origTenant.DeepCopy()
 
 	klog.V(4).Infof(c.formatLog(tenant, "started reconciliation"))
-	if klog.V(4).enabled() {
+	if klog.V(4).Enabled() {
 		defer klog.V(4).Infof(c.formatLog(&api.Tenant{ObjectMeta: *tenant.ObjectMeta.DeepCopy()}, "finished reconciliation"))
 	}
 
