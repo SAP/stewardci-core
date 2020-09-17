@@ -109,7 +109,7 @@ Pipeline Run Controller:
 | <code>runController.<wbr/>tolerations</code> | (array of [`Toleration`][k8s-tolerations])<br/> The `tolerations` field of the Run Controller [pod spec][k8s-podspec]. | `[]` |
 | <code>runController.<wbr/>args.<wbr/>qps</code> | (integer)<br/> The maximum queries per second (QPS) from the controller to the cluster. | 5 |
 | <code>runController.<wbr/>args.<wbr/>burst</code> | (integer)<br/> The burst limit for throttle connections (maximum number of concurrent requests). | 10 |
-| <code>runController.<wbr/>args.<wbr/>logVerbosity</code> | (integer)<br/> The log verbosity. Levels adopted from [kubernetes logging conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md#logging-conventions) | 2 |
+| <code>runController.<wbr/>args.<wbr/>logVerbosity</code> | (integer)<br/> The log verbosity. Levels are adopted from [Kubernetes logging conventions][k8s-logging-conventions]. | 2 |
 
 Tenant Controller:
 
@@ -125,7 +125,7 @@ Tenant Controller:
 | <code>tenantController.<wbr/>affinity</code> | (object of [`Affinity`][k8s-affinity])<br/> The `affinity` field of the Tenant Controller [pod spec][k8s-podspec]. | `{}` |
 | <code>tenantController.<wbr/>tolerations</code> | (array of [`Toleration`][k8s-tolerations])<br/> The `tolerations` field of the Tenant Controller [pod spec][k8s-podspec]. | `[]` |
 | <code>tenantController.<wbr/>possibleTenantRoles</code> | (array of string)<br/> The names of all possible tenant roles. A tenant role is a Kubernetes ClusterRole that the controller binds within a tenant namespace to (a) the default service account of the client namespace the tenant belongs to and (b) to the default service account of the tenant namespace. The tenant role to be used can be configured per Steward client namespace via annotation `steward.sap.com/tenant-role`. | `['steward-tenant']` |
-| <code>tenantController.<wbr/>args.<wbr/>logVerbosity</code> | The log verbosity. Levels adopted from [kubernetes logging conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md#logging-conventions) | 2 |
+| <code>tenantController.<wbr/>args.<wbr/>logVerbosity</code> | The log verbosity. Levels are adopted from [Kubernetes logging conventions][k8s-logging-conventions]. | 2 |
 
 Common parameters:
 
@@ -188,4 +188,5 @@ By doing so, all resource objects of those types will be removed by Kubernetes, 
 [k8s-networkpolicies]: https://kubernetes.io/docs/concepts/services-networking/network-policies/
 [k8s-limitranges]: https://kubernetes.io/docs/concepts/policy/limit-range/
 [k8s-resourcequotas]: https://kubernetes.io/docs/concepts/policy/resource-quotas/
+[k8s-logging-conventions]: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md#logging-conventions
 [prometheus-operator]: https://github.com/coreos/prometheus-operator
