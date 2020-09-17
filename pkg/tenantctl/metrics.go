@@ -1,11 +1,11 @@
 package tenantctl
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	klog "k8s.io/klog/v2"
 )
 
 // Metrics provides metrics
@@ -38,7 +38,7 @@ func provideMetrics() {
 	http.Handle("/metrics", promhttp.Handler())
 	err := http.ListenAndServe(":9090", nil)
 	if err != nil {
-		log.Fatalf("Failed to start metrics server for tenant controller:%v", err)
+		klog.Fatalf("Failed to start metrics server for tenant controller:%v", err)
 	}
 }
 

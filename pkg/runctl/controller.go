@@ -58,7 +58,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1alpha1().TaskRuns()
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(klog.V(2).Infof)
+	eventBroadcaster.StartLogging(klog.V(3).Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
 
@@ -161,7 +161,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		klog.V(4).Infof("Successfully synced '%s'", key)
+		klog.V(5).Infof("Finished syncing '%s'", key)
 		return nil
 	}(obj)
 
@@ -177,7 +177,7 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) e
 	start := time.Now()
 	oldState, err := pipelineRun.UpdateState(state)
 	if err != nil {
-		klog.Errorf("Failed to UpdateState of [%s] to %q: %q", pipelineRun.String(), state, err.Error())
+		klog.V(3).Infof("Failed to UpdateState of [%s] to %q: %q", pipelineRun.String(), state, err.Error())
 		return err
 	}
 
@@ -188,7 +188,7 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) e
 	if oldState != nil {
 		err := c.metrics.ObserveDurationByState(oldState)
 		if err != nil {
-			klog.Warningf("Failed to measure state '%+v': '%s'", oldState, err)
+			klog.Errorf("Failed to measure state '%+v': '%s'", oldState, err)
 		}
 	}
 	return nil
@@ -365,7 +365,7 @@ func (c *Controller) syncHandler(key string) error {
 		}
 		return err
 	default:
-		klog.V(3).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
+		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
 	return nil
 }
@@ -411,7 +411,7 @@ func (c *Controller) handleTektonTaskRun(obj interface{}) {
 			utilruntime.HandleError(fmt.Errorf("error decoding object tombstone, invalid type"))
 			return
 		}
-		klog.V(2).Infof("Recovered deleted object '%s' from tombstone", object.GetName())
+		klog.V(3).Infof("Recovered deleted object '%s' from tombstone", object.GetName())
 	}
 	klog.V(4).Infof("Processing object: %s", object.GetSelfLink())
 	annotations := object.GetAnnotations()

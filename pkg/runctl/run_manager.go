@@ -3,7 +3,6 @@ package runctl
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -21,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	yamlserial "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	klog "k8s.io/klog/v2"
 )
 
 const (
@@ -192,7 +192,7 @@ func (c *runManager) setupServiceAccount(ctx *runContext, pipelineCloneSecretNam
 			}
 			if k8serrors.IsConflict(err) {
 				// resource version conflict -> retry update with latest version
-				log.Printf(
+				klog.V(4).Infof(
 					"retrying update of service account %q in namespace %q"+
 						" after resource version conflict",
 					serviceAccountName, ctx.runNamespace,
@@ -293,7 +293,7 @@ func (c *runManager) getSecretHelper(ctx *runContext, targetClient corev1.Secret
 func (c *runManager) copySecrets(ctx *runContext, secretHelper secrets.SecretHelper, secretNames []string, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
 	storedSecretNames, err := secretHelper.CopySecrets(secretNames, filter, transformers...)
 	if err != nil {
-		log.Printf("Cannot copy secrets %s for [%s]. Error: %s", secretNames, ctx.pipelineRun.String(), err)
+		klog.Errorf("Cannot copy secrets %s for [%s]. Error: %s", secretNames, ctx.pipelineRun.String(), err)
 		ctx.pipelineRun.UpdateMessage(err.Error())
 		if secretHelper.IsNotFound(err) {
 			ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
