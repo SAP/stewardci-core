@@ -168,6 +168,7 @@ if ! is_verify_mode; then
         "${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go" \
         "${PROJECT_ROOT}/pkg/k8s/mocks/client-go/corev1/mocks.go" \
         "${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
+        "${PROJECT_ROOT}/pkg/run/mocks/mocks.go" \
         || die "Cleanup failed"
     { set +x; } 2>/dev/null
 fi
