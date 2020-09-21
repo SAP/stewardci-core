@@ -72,6 +72,10 @@ type PipelineSpec struct {
 	// Jenkinsfile Runner.
 	// +optional
 	RunDetails *PipelineRunDetails `json:"runDetails,omitempty"`
+
+	// Profiles defines a set of aspects which are restricted to a named profile
+	// for this aspect.`
+	Profiles *Profiles `json:"profiles,omitempty"`
 }
 
 // JenkinsFile represents the location from where to get the pipeline
@@ -219,3 +223,22 @@ type PipelineRunDetails struct {
 	// +optional
 	Cause string `json:"cause,omitempty"`
 }
+
+// Profiles defines a set of aspects which are restricted to a named profile
+// for this aspect.
+type Profiles struct {
+
+	// Network is the name of a network profile which is used during the run
+	Network NetworkProfileName `json:"network,omitempty"`
+}
+
+// NetworkProfileName is the name of a network profile
+type NetworkProfileName string
+
+const (
+	// FullInernetAccess is the name of the Network Profile providing full internet access
+	FullInernetAccess NetworkProfileName = "full-internet-access"
+
+	// RestrictedInternetAccess is the name of the Network Profile providing restricted internet access
+	RestrictedInternetAccess NetworkProfileName = "restricted-internet-access"
+)
