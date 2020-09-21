@@ -1,8 +1,6 @@
 package runctl
 
 import (
-	"log"
-
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	run "github.com/SAP/stewardci-core/pkg/run"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
@@ -79,10 +77,8 @@ func (r *tektonRun) GetMessage() string {
 		}
 	} else {
 		allMessages, err := termination.ParseMessage(msg)
-		log.Printf("Err: %+v, Messages: %+v", err, allMessages)
 		if err == nil {
 			for _, singleMessage := range allMessages {
-				log.Printf("%+v, %s %s", singleMessage, singleMessage.Key, singleMessage.Value)
 				if singleMessage.Key == jfrResultKey {
 					return singleMessage.Value
 				}
