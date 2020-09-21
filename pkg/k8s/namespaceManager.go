@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"log"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -9,6 +8,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	klog "k8s.io/klog/v2"
 
 	utils "github.com/SAP/stewardci-core/pkg/utils"
 )
@@ -45,7 +45,7 @@ const (
 func (m *namespaceManager) Create(nameCustomPart string, annotations map[string]string) (string, error) {
 	name, err := m.generateName(nameCustomPart)
 	if err != nil {
-		log.Printf("Namespace creation failed %s", err)
+		klog.V(2).Infof("Namespace creation failed %s", err)
 		return "", err
 	}
 	meta := metav1.ObjectMeta{
@@ -60,10 +60,10 @@ func (m *namespaceManager) Create(nameCustomPart string, annotations map[string]
 	namespace := &v1.Namespace{ObjectMeta: meta}
 	createdNamespace, err := m.nsInterface.Create(namespace)
 	if err != nil {
-		log.Printf("Namespace creation failed: %s", err)
+		klog.V(2).Infof("Namespace creation failed: %s", err)
 		return "", err
 	}
-	log.Printf("Namespace '%s' created", createdNamespace.GetName())
+	klog.V(2).Infof("Namespace '%s' created", createdNamespace.GetName())
 	return createdNamespace.GetName(), nil
 }
 
@@ -93,7 +93,7 @@ func (m *namespaceManager) Delete(name string) error {
 		}
 		return errors.WithMessagef(err, "error deleting namespace '%s'", name)
 	}
-	log.Printf("deleted namespace '%s'", name)
+	klog.V(2).Infof("deleted namespace '%s'", name)
 	return nil
 }
 

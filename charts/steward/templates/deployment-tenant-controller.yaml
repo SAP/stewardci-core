@@ -33,6 +33,12 @@ spec:
         image: {{ printf "%s:%s" .repository .tag | quote }}
         imagePullPolicy: {{ .pullPolicy | quote }}
         {{- end }}
+        args:
+        {{- if .Values.tenantController.args.logVerbosity }}
+        - {{ printf "-v=%d" ( .Values.tenantController.args.logVerbosity | int ) | quote }}
+        {{- end }}
+        command:
+        - /app/main
         env:
         - name: SYSTEM_NAMESPACE
           valueFrom:

@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
@@ -11,6 +10,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	klog "k8s.io/klog/v2"
 	"knative.dev/pkg/system"
 )
 
@@ -21,7 +21,7 @@ var kubeconfig string
 const resyncPeriod = 1 * time.Minute
 
 func init() {
-	log.SetFlags(log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
+	klog.InitFlags(nil)
 
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to Kubernetes config file")
 	flag.Parse()
@@ -31,15 +31,17 @@ func main() {
 	// creates the in-cluster config
 	var config *rest.Config
 	var err error
+	defer klog.Flush()
+
 	if kubeconfig == "" {
-		log.Printf("In cluster")
+		klog.Infof("In cluster")
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			log.Printf("Hint: You can use parameter '-kubeconfig' for local testing. See --help")
+			klog.Infof("Hint: You can use parameter '-kubeconfig' for local testing. See --help")
 			panic(err.Error())
 		}
 	} else {
-		log.Printf("Outside cluster")
+		klog.Infof("Outside cluster")
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
 			panic(err.Error())
@@ -48,24 +50,24 @@ func main() {
 
 	system.Namespace() // ensure that namespace is set in environment
 
-	log.Printf("Create Factory (resync period: %s)", resyncPeriod.String())
+	klog.V(3).Infof("Create Factory (resync period: %s)", resyncPeriod.String())
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
-	log.Printf("Provide metrics")
+	klog.V(2).Infof("Provide metrics")
 	metrics := tenantctl.NewMetrics()
 	metrics.StartServer()
 
-	log.Printf("Create Controller")
+	klog.V(3).Infof("Create Controller")
 	controller := tenantctl.NewController(factory, metrics)
 
-	log.Printf("Create Signal Handler")
+	klog.V(3).Infof("Create Signal Handler")
 	stopCh := signals.SetupSignalHandler()
 
-	log.Printf("Start Informer")
+	klog.V(2).Infof("Start Informer")
 	factory.StewardInformerFactory().Start(stopCh)
 
-	log.Printf("Run controller")
+	klog.V(2).Infof("Run controller")
 	if err = controller.Run(2, stopCh); err != nil {
-		log.Fatalf("Error running controller: %s", err.Error())
+		klog.Fatalf("Error running controller: %s", err.Error())
 	}
 }

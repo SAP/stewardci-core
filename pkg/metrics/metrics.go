@@ -2,13 +2,13 @@ package metrics
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	klog "k8s.io/klog/v2"
 )
 
 //TODO: Move to pipeline run controller
@@ -81,7 +81,7 @@ func provideMetrics() {
 	http.Handle("/metrics", promhttp.Handler())
 	err := http.ListenAndServe(":9090", nil)
 	if err != nil {
-		log.Fatalf("Failed to start metrics server for pipeline run controller:%v", err)
+		klog.Fatalf("Failed to start metrics server for pipeline run controller:%v", err)
 	}
 }
 

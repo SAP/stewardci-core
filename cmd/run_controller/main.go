@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
@@ -25,7 +24,7 @@ const resyncPeriod = 30 * time.Second
 
 func init() {
 	klog.InitFlags(nil)
-	log.SetFlags(log.Ldate | log.Ltime | log.LUTC | log.Lshortfile)
+
 	flag.IntVar(&burst, "burst", 10, "burst for RESTClient")
 	flag.IntVar(&qps, "qps", 5, "QPS for RESTClient")
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to Kubernetes config file")
@@ -39,15 +38,17 @@ func main() {
 	// creates the in-cluster config
 	var config *rest.Config
 	var err error
+	defer klog.Flush()
+
 	if kubeconfig == "" {
-		log.Printf("In cluster")
+		klog.Infof("In cluster")
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			log.Printf("Hint: You can use parameter '-kubeconfig' for local testing. See --help")
+			klog.Infof("Hint: You can use parameter '-kubeconfig' for local testing. See --help")
 			panic(err.Error())
 		}
 	} else {
-		log.Printf("Outside cluster")
+		klog.Infof("Outside cluster")
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
 			panic(err.Error())
@@ -56,27 +57,27 @@ func main() {
 
 	system.Namespace() // ensure that namespace is set in environment
 
-	log.Printf("Create Factory (resync period: %s, QPS: %d, burst: %d)", resyncPeriod.String(), qps, burst)
+	klog.V(3).Infof("Create Factory (resync period: %s, QPS: %d, burst: %d)", resyncPeriod.String(), qps, burst)
 	config.QPS = float32(qps)
 	config.Burst = burst
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
-	log.Printf("Provide metrics")
+	klog.V(2).Infof("Provide metrics")
 	metrics := metrics.NewMetrics()
 	metrics.StartServer()
 
-	log.Printf("Create Controller")
+	klog.V(3).Infof("Create Controller")
 	controller := runctl.NewController(factory, metrics)
 
-	log.Printf("Create Signal Handler")
+	klog.V(3).Infof("Create Signal Handler")
 	stopCh := signals.SetupSignalHandler()
 
-	log.Printf("Start Informer")
+	klog.V(2).Infof("Start Informer")
 	factory.StewardInformerFactory().Start(stopCh)
 	factory.TektonInformerFactory().Start(stopCh)
 
-	log.Printf("Run controller")
+	klog.V(2).Infof("Run controller")
 	if err = controller.Run(2, stopCh); err != nil {
-		log.Fatalf("Error running controller: %s", err.Error())
+		klog.Fatalf("Error running controller: %s", err.Error())
 	}
 }
