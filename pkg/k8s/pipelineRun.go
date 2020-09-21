@@ -20,11 +20,13 @@ import (
 // PipelineRun is a wrapper for the K8s PipelineRun resource
 type PipelineRun interface {
 	fmt.Stringer
+	GetAPIObject() *api.PipelineRun
 	GetStatus() *api.PipelineStatus
 	GetSpec() *api.PipelineSpec
 	GetName() string
 	GetKey() string
 	GetRunNamespace() string
+	GetAuxNamespace() string
 	GetNamespace() string
 	GetPipelineRepoServerURL() (string, error)
 	HasDeletionTimestamp() bool
@@ -36,6 +38,7 @@ type PipelineRun interface {
 	UpdateContainer(*corev1.ContainerState) error
 	StoreErrorAsMessage(error, string) error
 	UpdateRunNamespace(string) error
+	UpdateAuxNamespace(string) error
 	UpdateMessage(string) error
 }
 
@@ -75,9 +78,20 @@ func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun
 	}, nil
 }
 
+// GetAPIObject implements part of interface `PipelineRun`.
+func (r *pipelineRun) GetAPIObject() *api.PipelineRun {
+	return r.apiObj
+}
+
 // GetRunNamespace returns the namespace in which the build takes place
 func (r *pipelineRun) GetRunNamespace() string {
 	return r.apiObj.Status.Namespace
+}
+
+// GetAuxNamespace returns the namespace hosting auxiliary services
+// for the pipeline run.
+func (r *pipelineRun) GetAuxNamespace() string {
+	return r.apiObj.Status.AuxiliaryNamespace
 }
 
 // GetKey returns the key of the pipelineRun
@@ -248,6 +262,16 @@ func (r *pipelineRun) UpdateRunNamespace(ns string) error {
 	r.ensureCopy()
 	return r.changeStatusAndUpdateSafely(func() error {
 		r.apiObj.Status.Namespace = ns
+		return nil
+	})
+}
+
+// UpdateAuxNamespace overrides the namespace hosting auxiliary services
+// for the pipeline run.
+func (r *pipelineRun) UpdateAuxNamespace(ns string) error {
+	r.ensureCopy()
+	return r.changeStatusAndUpdateSafely(func() error {
+		r.apiObj.Status.AuxiliaryNamespace = ns
 		return nil
 	})
 }

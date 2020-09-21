@@ -280,6 +280,34 @@ func (mr *MockPipelineRunMockRecorder) DeleteFinalizerIfExists() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFinalizerIfExists", reflect.TypeOf((*MockPipelineRun)(nil).DeleteFinalizerIfExists))
 }
 
+// GetAPIObject mocks base method
+func (m *MockPipelineRun) GetAPIObject() *v1alpha1.PipelineRun {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAPIObject")
+	ret0, _ := ret[0].(*v1alpha1.PipelineRun)
+	return ret0
+}
+
+// GetAPIObject indicates an expected call of GetAPIObject
+func (mr *MockPipelineRunMockRecorder) GetAPIObject() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAPIObject", reflect.TypeOf((*MockPipelineRun)(nil).GetAPIObject))
+}
+
+// GetAuxNamespace mocks base method
+func (m *MockPipelineRun) GetAuxNamespace() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAuxNamespace")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetAuxNamespace indicates an expected call of GetAuxNamespace
+func (mr *MockPipelineRunMockRecorder) GetAuxNamespace() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAuxNamespace", reflect.TypeOf((*MockPipelineRun)(nil).GetAuxNamespace))
+}
+
 // GetKey mocks base method
 func (m *MockPipelineRun) GetKey() string {
 	m.ctrl.T.Helper()
@@ -433,6 +461,20 @@ func (m *MockPipelineRun) String() string {
 func (mr *MockPipelineRunMockRecorder) String() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "String", reflect.TypeOf((*MockPipelineRun)(nil).String))
+}
+
+// UpdateAuxNamespace mocks base method
+func (m *MockPipelineRun) UpdateAuxNamespace(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAuxNamespace", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAuxNamespace indicates an expected call of UpdateAuxNamespace
+func (mr *MockPipelineRunMockRecorder) UpdateAuxNamespace(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAuxNamespace", reflect.TypeOf((*MockPipelineRun)(nil).UpdateAuxNamespace), arg0)
 }
 
 // UpdateContainer mocks base method

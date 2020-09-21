@@ -51,7 +51,7 @@ type Controller struct {
 
 type controllerTesting struct {
 	runManagerStub             run.Manager
-	newRunManagerStub          func(k8s.ClientFactory, secrets.SecretProvider, k8s.NamespaceManager) run.Manager
+	newRunManagerStub          func(k8s.ClientFactory, secrets.SecretProvider) run.Manager
 	loadPipelineRunsConfigStub func() (*cfg.PipelineRunsConfigStruct, error)
 	isMaintenanceModeStub      func() (bool, error)
 }
@@ -205,16 +205,15 @@ func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) run.Manager {
 	}
 	tenant := k8s.NewTenantNamespace(c.factory, pipelineRun.GetNamespace())
 	workFactory := tenant.TargetClientFactory()
-	namespaceManager := k8s.NewNamespaceManager(c.factory, runNamespacePrefix, runNamespaceRandomLength)
-	return c.newRunManager(workFactory, tenant.GetSecretProvider(), namespaceManager)
+	return c.newRunManager(workFactory, tenant.GetSecretProvider())
 }
 
-func (c *Controller) newRunManager(workFactory k8s.ClientFactory, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) run.Manager {
+func (c *Controller) newRunManager(workFactory k8s.ClientFactory, secretProvider secrets.SecretProvider) run.Manager {
 	if c.testing != nil && c.testing.newRunManagerStub != nil {
-		return c.testing.newRunManagerStub(workFactory, secretProvider, namespaceManager)
+		return c.testing.newRunManagerStub(workFactory, secretProvider)
 
 	}
-	return NewRunManager(workFactory, secretProvider, namespaceManager)
+	return newRunManager(workFactory, secretProvider)
 }
 
 func (c *Controller) loadPipelineRunsConfig() (*cfg.PipelineRunsConfigStruct, error) {
