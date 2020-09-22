@@ -191,7 +191,7 @@ set -x
     "client,informer,lister" \
     github.com/SAP/stewardci-core/pkg/tektonclient \
     github.com/tektoncd/pipeline/pkg/apis \
-    pipeline:v1alpha1 \
+    pipeline:v1beta1 \
     --go-header-file "${PROJECT_ROOT}/hack/boilerplate.go.txt" \
     --output-base "${GEN_DIR}" \
     || die "Code generation failed"
