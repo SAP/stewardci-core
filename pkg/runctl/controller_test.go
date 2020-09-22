@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
 	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
@@ -232,7 +233,8 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 
 func Test_Controller_syncHandler_mock(t *testing.T) {
 	error1 := fmt.Errorf("error1")
-	errorRecover1 := NewRecoverabilityInfoError(error1, true)
+	errorRecover1 := serrors.Recoverable(error1)
+
 	for _, test := range []struct {
 		name                  string
 		pipelineSpec          api.PipelineSpec
