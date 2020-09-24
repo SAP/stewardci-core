@@ -241,7 +241,7 @@ func (r *pipelineRun) DeleteFinalizerIfExists() error {
 
 func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 	if r.client == nil {
-		return fmt.Errorf("No factory provided to store updates [%s]", r.String())
+		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
 	}
 	r.ensureCopy()
 	start := time.Now()
@@ -279,7 +279,7 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 // by tests, as those typically do not encounter update conflicts.
 func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 	if r.client == nil {
-		return fmt.Errorf("No factory provided to store updates [%s]", r.String())
+		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
 	}
 
 	isRetry := false

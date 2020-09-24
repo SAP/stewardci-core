@@ -8,6 +8,7 @@ import (
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
+	"gotest.tools/assert/cmp"
 	is "gotest.tools/assert/cmp"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -297,19 +298,20 @@ func Test_pipelineRun_UpdateResult(t *testing.T) {
 	assert.Assert(t, !examinee.GetStatus().FinishedAt.IsZero())
 }
 
-func Test_pipelineRun_UpdateResult_noFactory(t *testing.T) {
+func Test_pipelineRun_UpdateResult_PanicsIfNoClientFactory(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
-	examinee, err := NewPipelineRun(pipelineRun, nil)
+	examinee, err := NewPipelineRun(pipelineRun, nil /* client factory */)
 	assert.NilError(t, err)
 
-	// EXERCISE
-	err = examinee.UpdateResult(api.ResultSuccess)
-
-	// VERIFY
-	assert.Equal(t, "No factory provided to store updates [PipelineRun{name: pipelinerun1, namespace: namespace1, state: }]", err.Error())
+	// EXERCISE and VERIFY
+	assert.Assert(t, cmp.Panics(
+		func() {
+			examinee.UpdateResult(api.ResultSuccess)
+		},
+	))
 }
 
 func Test_pipelineRun_GetPipelineRepoServerURL_CorrectURLs(t *testing.T) {
@@ -367,7 +369,7 @@ func Test_pipelineRun_GetPipelineRepoServerURL_WrongURLs(t *testing.T) {
 	}
 }
 
-func Test_pipelineRun_UpdatePropagates_Error(t *testing.T) {
+func Test_pipelineRun_UpdateState_PropagatesError(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -385,7 +387,7 @@ func Test_pipelineRun_UpdatePropagates_Error(t *testing.T) {
 	assert.Assert(t, err != nil)
 }
 
-func Test_pipelineRun_UpdateStatus_RetriesOnConflict(t *testing.T) {
+func Test_pipelineRun_UpdateState_RetriesOnConflict(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -414,6 +416,22 @@ func Test_pipelineRun_UpdateStatus_RetriesOnConflict(t *testing.T) {
 	assert.NilError(t, resultErr)
 	assert.Equal(t, examinee.(*pipelineRun).apiObj.Status.State, api.StateWaiting)
 	assert.Assert(t, count == 3)
+}
+
+func Test_pipelineRun_changeStatusAndUpdateSafely_PanicsIfNoClientFactory(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	run := newPipelineRunWithEmptySpec(ns1, run1)
+	examinee, err := NewPipelineRun(run, nil /* client factory */)
+	assert.NilError(t, err)
+
+	// EXERCISE and VERIFY
+	assert.Assert(t, cmp.Panics(
+		func() {
+			examinee.(*pipelineRun).changeStatusAndUpdateSafely(func() {})
+		},
+	))
 }
 
 func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfNoConflict(t *testing.T) {
@@ -571,6 +589,22 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_ReturnsErrorIfFetchFailed(t *t
 	assert.ErrorContains(t, resultErr, "failed to fetch pipeline after update conflict")
 	assert.ErrorContains(t, resultErr, "error on get")
 	assert.Equal(t, changeCallCount, 1)
+}
+
+func Test_pipelineRun_updateFinalizers_PanicsIfNoClientFactory(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	run := newPipelineRunWithEmptySpec(ns1, run1)
+	examinee, err := NewPipelineRun(run, nil /* client factory */)
+	assert.NilError(t, err)
+
+	// EXERCISE and VERIFY
+	assert.Assert(t, cmp.Panics(
+		func() {
+			examinee.(*pipelineRun).updateFinalizers([]string{"dummy"})
+		},
+	))
 }
 
 func newPipelineRunWithSecret(ns string, name string, secretName string) *api.PipelineRun {
