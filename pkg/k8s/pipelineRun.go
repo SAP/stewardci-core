@@ -13,6 +13,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/retry"
 	klog "k8s.io/klog/v2"
 )
 
@@ -257,55 +258,57 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 	return nil
 }
 
-// changeStatusAndUpdateSafely executes the change encapsuled in the function parameter "change"
-// and updates the Kubernetes object afterwards.
-// If the updated fails with "conflict", the object is fetched again, the change is redone and another update try is made.
+// changeStatusAndUpdateSafely executes `change` and writes the
+// status of the underlying PipelineRun object to storage afterwards.
+// `change` is expected to mutate only the status of the underlying
+// object, not more.
+// In case of a conflict (object in storage is different version than
+// ours), the update is retried with backoff:
+//     - wait
+//     - fetch object from storage
+//     - run `change`
+//     - write object status to storage
+// After too many conflicts retrying is aborted, in which case an
+// error is returned.
+// Non-conflict errors are returned without retrying.
+//
+// Pitfall: If the underlying PipelineRun object was changed in memory
+// compared to the version in storage _before calling this function_,
+// that change _gets_ persisted in case there's _no_ update conflict, but
+// gets _lost_ in case there _is_ an update conflict! This is hard to find
+// by tests, as those typically do not encounter update conflicts.
 func (r *pipelineRun) changeStatusAndUpdateSafely(change func()) error {
 	if r.client == nil {
 		return fmt.Errorf("No factory provided to store updates [%s]", r.String())
 	}
-	var result *api.PipelineRun
-	klog.V(4).Infof("start update %s", r.apiObj.Name)
-	start := time.Now()
-	iteration := 0
-	for { // retry loop
+
+	isRetry := false
+	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		var err error
 
-		change()
-		result, err = r.client.UpdateStatus(r.apiObj)
-		iteration = iteration + 1
-		if err == nil {
-			break // success
-		} else {
-			if k8serrors.IsConflict(err) {
-				klog.V(4).Infof(
-					"retrying update of pipeline run %q in namespace %q"+
-						" after resource version conflict",
-					r.apiObj.Name, r.apiObj.Namespace,
-				)
-
-				new, err := r.client.Get(r.apiObj.GetName(), metav1.GetOptions{})
-				if err != nil {
-					return errors.Wrap(err,
-						"failed to refetch pipeline run for update")
-				}
-				r.apiObj = new
-				r.copied = true
-			} else {
+		if isRetry {
+			new, err := r.client.Get(r.apiObj.GetName(), metav1.GetOptions{})
+			if err != nil {
 				return errors.Wrap(err,
-					fmt.Sprintf("Failed to update status [%s]", r.String()))
+					"failed to fetch pipeline after update conflict")
 			}
+			r.apiObj = new
+			r.copied = true
+		} else {
+			defer func() { isRetry = true }()
 		}
 
-	}
-	r.apiObj = result
-	end := time.Now()
-	elapsed := end.Sub(start)
-	if r.apiObj != nil {
-		klog.V(4).Infof("finished update after %s (with %d retries) in %s", elapsed, iteration, r.apiObj.Name)
-	}
+		change()
 
-	return nil
+		result, err := r.client.UpdateStatus(r.apiObj)
+		if err == nil {
+			r.apiObj = result
+			return nil
+		}
+		return err
+	})
+
+	return errors.Wrapf(err, "failed to update status [%s]", r.String())
 }
 
 func (r *pipelineRun) ensureCopy() {
