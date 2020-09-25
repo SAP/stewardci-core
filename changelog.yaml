@@ -1,6 +1,6 @@
-## ----------------------------------
-## Copy this template for new entries
-## ----------------------------------
+## -----------------------------------------
+## Copy this template for new change entries
+## -----------------------------------------
 #    - type: [bug, enhancement, internal]
 #      impact: [incompatible, minor, patch]
 #      title: <title>
