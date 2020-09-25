@@ -6,6 +6,7 @@ import (
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	runi "github.com/SAP/stewardci-core/pkg/run"
@@ -654,7 +655,7 @@ func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runi.Run, error) {
 	namespace := pipelineRun.GetRunNamespace()
 	run, err := c.factory.TektonV1alpha1().TaskRuns(namespace).Get(tektonTaskRunName, metav1.GetOptions{})
 	if err != nil {
-		return nil, NewRecoverabilityInfoError(err,
+		return nil, serrors.RecoverableIf(err,
 			k8serrors.IsServerTimeout(err) ||
 				k8serrors.IsServiceUnavailable(err) ||
 				k8serrors.IsTimeout(err) ||

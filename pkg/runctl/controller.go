@@ -11,6 +11,7 @@ import (
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/client/clientset/versioned/scheme"
 	"github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
+	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/metrics"
@@ -308,7 +309,7 @@ func (c *Controller) syncHandler(key string) error {
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
-			if IsRecoverable(err) {
+			if serrors.IsRecoverable(err) {
 				return err
 			}
 			if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
@@ -329,7 +330,7 @@ func (c *Controller) syncHandler(key string) error {
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
-			if IsRecoverable(err) {
+			if serrors.IsRecoverable(err) {
 				return err
 			}
 			if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
