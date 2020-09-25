@@ -10,8 +10,10 @@
 #        <optional warning message>
 #      upgradeNotes: >-
 #        <optional upgrade guidelines>
-#      pullRequest: <pull request number>
-#      jiraIssue: <Jira issue number in CLOUDCISERVICE>
+#      pullRequestNumber: <pull request number>
+
+#      jiraIssueNumber: <Internal Jira issue number>
+
 
 - version: "NEXT"
   date: TBD
@@ -28,5 +30,6 @@
       The target Kubernetes system must have Tekton v0.14.3 installed. Higher versions may also work.
       In addition, Steward Jenkinsfile Runner Image version <a href="https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/200921_6cc247f">200921_6cc247f</a> or later is required.
       or higher.
-    pullRequest: 151
-    jiraIssue: 1330
+    pullRequestNumber: 151
+
+    jiraIssueNumber: 1330
