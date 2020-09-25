@@ -1,5 +1,3 @@
-# THE CHANGELOG FORMAT IS BASED ON https://github.wdf.sap.corp/ConCISe/Concepts/blob/master/docs/Implementation/cloudci_backend_release_process/changelog.yaml
-
 ## ----------------------------------
 ## Copy this template for new entries
 ## ----------------------------------
@@ -20,14 +18,15 @@
   changes:
   - type: enhancement
     impact: incompatible
-    title: Upgrade tekton dependency to version v0.14.3
+    title: Upgrade dependency to Tekton v0.14.3
+
     description: >-
-      Upgrade tekton dependency to version v0.14.3 and adjust controller accordingly.
-    warning: Requires tekton version v0.14.3
+      Build and run against Tekton v0.14.3.
+    warning: Requires Tekton v0.14.3.
+
     upgradeNotes: >-
-      In order to consume this change the tekton version on the system needs to be upgraded first.
-      You also need to use JFR image version 
-      <a href="https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/200921_6cc247f">200921_6cc247f</a> 
+      The target Kubernetes system must have Tekton v0.14.3 installed. Higher versions may also work.
+      In addition, Steward Jenkinsfile Runner Image version <a href="https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/200921_6cc247f">200921_6cc247f</a> or later is required.
       or higher.
     pullRequest: 151
     jiraIssue: 1330
