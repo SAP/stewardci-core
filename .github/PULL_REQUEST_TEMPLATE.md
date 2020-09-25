@@ -13,7 +13,6 @@ N/A
 ### Submitter checklist
 
 - [ ] Change has been tested (on a back-end cluster)
-- [ ] (If applicable) Jira issue is linked in PR and [changelog.yaml]
 - [ ] [changelog.yaml] with upgrade notes are prepared and appropriate for the audience affected by the change (users or developer, depending on the change).
 - [ ] Semantic version diffed against [last release][releases] and updated accordingly. In this project the version has to be maintained here:
   - [/charts/steward/Chart.yaml](https://github.com/SAP/stewardci-core/blob/master/charts/steward/Chart.yaml)
@@ -36,4 +35,4 @@ Before the changes are marked as `ready-for-merge`:
   - [ ] Changelog entry contains all required information
 
 [changelog.yaml]: https://github.com/SAP/stewardci-core/changelog.yaml
-[last release]: https://github.com/SAP/stewardci-core/releases
+[releases]: https://github.com/SAP/stewardci-core/releases
