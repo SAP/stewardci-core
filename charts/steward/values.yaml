@@ -114,3 +114,5 @@ hooks:
       repository: docker.io/bitnami/kubectl
       tag: "1.17"
       pullPolicy: IfNotPresent
+
+featureFlags: ""
