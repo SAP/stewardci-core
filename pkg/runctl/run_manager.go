@@ -367,6 +367,12 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 	}
 
 	configStr := c.pipelineRunsConfig.NetworkPolicy
+
+	spec := ctx.pipelineRun.GetSpec()
+	if spec.Profiles != nil && spec.Profiles.Network == v1alpha1.RestrictedInternetAccess {
+		configStr = c.pipelineRunsConfig.NetworkPolicyRestricted
+	}
+
 	if configStr == "" {
 		return nil
 	}

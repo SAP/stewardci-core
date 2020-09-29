@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardfake "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/fake"
 	"github.com/SAP/stewardci-core/pkg/k8s"
@@ -49,6 +50,19 @@ func newRunManagerTestingWithAllNoopStubs() *runManagerTesting {
 func newRunManagerTestingWithRequiredStubs() *runManagerTesting {
 	return &runManagerTesting{
 		getServiceAccountSecretNameStub: func(*runContext) string { return "" },
+	}
+}
+
+const (
+	runNamespaceName = "runNamespace1"
+)
+
+func contextWithSpec(t *testing.T, spec api.PipelineSpec) *runContext {
+	pipelineRun := fake.PipelineRun("run1", "ns1", spec)
+	k8sPipelineRun, err := k8s.NewPipelineRun(pipelineRun, nil)
+	assert.NilError(t, err)
+	return &runContext{runNamespace: runNamespaceName,
+		pipelineRun: k8sPipelineRun,
 	}
 }
 
@@ -329,10 +343,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_NoPolicyConfigured(t *testing.
 	t.Parallel()
 
 	// SETUP
-	const (
-		runNamespaceName = "runNamespace1"
-	)
-	runCtx := &runContext{runNamespace: runNamespaceName}
+	runCtx := contextWithSpec(t, api.PipelineSpec{})
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -359,10 +370,9 @@ func Test_RunManager_setupNetworkPolicyFromConfig_SetsMetadataAndLeavesOtherThin
 
 	// SETUP
 	const (
-		runNamespaceName   = "runNamespace1"
 		expectedNamePrefix = "steward.sap.com--configured-"
 	)
-	runCtx := &runContext{runNamespace: runNamespaceName}
+	runCtx := contextWithSpec(t, api.PipelineSpec{})
 	cf := fake.NewClientFactory()
 	cf.DynamicFake().PrependReactor("create", "*", fake.GenerateNameReactor(0))
 
@@ -442,10 +452,9 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ReplacesAllMetadata(t *testing
 
 	// SETUP
 	const (
-		runNamespaceName   = "runNamespace1"
 		expectedNamePrefix = "steward.sap.com--configured-"
 	)
-	runCtx := &runContext{runNamespace: runNamespaceName}
+	runCtx := contextWithSpec(t, api.PipelineSpec{})
 	cf := fake.NewClientFactory()
 	cf.DynamicFake().PrependReactor("create", "*", fake.GenerateNameReactor(0))
 
@@ -505,14 +514,72 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ReplacesAllMetadata(t *testing
 	}
 }
 
-func Test_RunManager_setupNetworkPolicyFromConfig_MalformedPolicy(t *testing.T) {
+func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	const (
-		runNamespaceName = "runNamespace1"
+		expectedNamePrefix = "steward.sap.com--configured-"
 	)
-	runCtx := &runContext{runNamespace: runNamespaceName}
+	for _, tc := range []struct {
+		name           string
+		pipelineSpec   api.PipelineSpec
+		expectedPolicy string
+	}{
+		{"undefined", api.PipelineSpec{}, "default"},
+		{"nil_profile", api.PipelineSpec{Profiles: nil}, "default"},
+		{"empty_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: ""}}, "default"},
+		{"unknown_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: "foo"}}, "default"},
+		{"default", api.PipelineSpec{Profiles: &api.Profiles{Network: api.FullInernetAccess}}, "default"},
+		{"restricted", api.PipelineSpec{Profiles: &api.Profiles{Network: api.RestrictedInternetAccess}}, "restricted"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			runCtx := contextWithSpec(t, tc.pipelineSpec)
+			cf := fake.NewClientFactory()
+			cf.DynamicFake().PrependReactor("create", "*", fake.GenerateNameReactor(0))
+
+			examinee := runManager{
+				factory: cf,
+				pipelineRunsConfig: pipelineRunsConfigStruct{
+					NetworkPolicy: fixIndent(`
+			   apiVersion: networking.k8s.io/v123
+			   kind: NetworkPolicy
+			   spec: default`),
+					NetworkPolicyRestricted: fixIndent(`
+				apiVersion: networking.k8s.io/v123
+				kind: NetworkPolicy
+				spec: restricted`),
+				},
+				testing: newRunManagerTestingWithAllNoopStubs(),
+			}
+			examinee.testing.setupNetworkPolicyFromConfigStub = nil
+
+			// EXERCISE
+			resultError := examinee.setupNetworkPolicyFromConfig(runCtx)
+			assert.NilError(t, resultError)
+
+			// VERIFY
+			gvr := schema.GroupVersionResource{
+				Group:    "networking.k8s.io",
+				Version:  "v123",
+				Resource: "networkpolicies",
+			}
+			actualPolicies, err := cf.Dynamic().Resource(gvr).List(metav1.ListOptions{})
+			assert.NilError(t, err)
+			assert.Equal(t, 1, len(actualPolicies.Items))
+			{
+				policy := actualPolicies.Items[0]
+				assert.DeepEqual(t, tc.expectedPolicy, policy.Object["spec"])
+			}
+		})
+	}
+}
+
+func Test_RunManager_setupNetworkPolicyFromConfig_MalformedPolicy(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	runCtx := contextWithSpec(t, api.PipelineSpec{})
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -540,10 +607,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedGroup(t *testing.T) 
 	t.Parallel()
 
 	// SETUP
-	const (
-		runNamespaceName = "runNamespace1"
-	)
-	runCtx := &runContext{runNamespace: runNamespaceName}
+	runCtx := contextWithSpec(t, api.PipelineSpec{})
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -577,10 +641,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedKind(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
-	const (
-		runNamespaceName = "runNamespace1"
-	)
-	runCtx := &runContext{runNamespace: runNamespaceName}
+	runCtx := contextWithSpec(t, api.PipelineSpec{})
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 

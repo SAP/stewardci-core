@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+spec:
+  podSelector: {} # any pod in namespace
+  policyTypes:
+  - Ingress
+  - Egress
+  egress:
+  - # rule: allow access to all pods in the same namespace
+    to:
+    - podSelector: {}
+  - # rule: allow restricted access
+    to:
+    - ipBlock:
+       # Allow list of required ip addresses
+       # TBD
+        cidr: 140.82.121.3/31 # github.com
+  - # rule: allow access to cluster DNS
+    to:
+    - namespaceSelector: {}
+        # The namespace is 'kube-system', but has no labels
+        # attached. Therefore we cannot select it here.
+        # If we can set labels on the namespace, make this selector more
+        # specific.
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  - # rule: allow access to K8s apiserver (cluster-internal address)
+    to:
+    - ipBlock:
+        cidr: 172.16.0.0/28 # GKE master address range
+    ports:
+    - port: 443
+  ingress:
+  - # rule: allow access from all pods in the same namespace
+    from:
+    - podSelector: {}

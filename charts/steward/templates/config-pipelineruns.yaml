@@ -93,6 +93,7 @@ data:
 
   timeout: {{ .Values.pipelineRuns.timeout | quote }}
   networkPolicy: {{ default ( .Files.Get "data/pipelineruns-default-networkpolicy.yaml" ) .Values.pipelineRuns.networkPolicy | quote }}
+  networkPolicyRestricted: {{ default ( .Files.Get "data/pipelineruns-restricted-networkpolicy.yaml" ) .Values.pipelineRuns.networkPolicy | quote }}
   limitRange: {{ default ( .Files.Get "data/pipelineruns-default-limitrange.yaml" ) .Values.pipelineRuns.limitRange | quote }}
   resourceQuota: {{ .Values.pipelineRuns.resourceQuota | quote }}
 
