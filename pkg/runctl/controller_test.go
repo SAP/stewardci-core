@@ -15,7 +15,7 @@ import (
 	run "github.com/SAP/stewardci-core/pkg/run"
 	runmocks "github.com/SAP/stewardci-core/pkg/run/mocks"
 	gomock "github.com/golang/mock/gomock"
-	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	assert "gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
@@ -391,7 +391,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 						Running: &corev1.ContainerStateRunning{},
 					})
 				run.EXPECT().IsFinished().Return(true, api.ResultTimeout)
-				run.EXPECT().GetSucceededCondition().Return(nil)
+				run.EXPECT().GetMessage()
 				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
 			},
 			expectedResult: api.ResultTimeout,
@@ -410,6 +410,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 						},
 					})
 				run.EXPECT().IsFinished().Return(true, api.ResultSuccess)
+				run.EXPECT().GetMessage()
 				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
 			},
 			expectedResult: api.ResultSuccess,
@@ -557,7 +558,7 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 
 		// the Tekton TaskRun
 		TektonObjectFromJSON(t, `{
-			"apiVersion": "tekton.dev/v1alpha1",
+			"apiVersion": "tekton.dev/v1beta1",
 			"kind": "TaskRun",
 			"metadata": {
 				"name": "steward-jenkinsfile-runner",
@@ -666,9 +667,9 @@ func updateRun(run *api.PipelineRun, namespace string, cf *fake.ClientFactory) (
 }
 
 func getTektonTaskRun(namespace string, cf *fake.ClientFactory) (*tekton.TaskRun, error) {
-	return cf.TektonV1alpha1().TaskRuns(namespace).Get(tektonTaskRunName, metav1.GetOptions{})
+	return cf.TektonV1beta1().TaskRuns(namespace).Get(tektonTaskRunName, metav1.GetOptions{})
 }
 
 func updateTektonTaskRun(taskRun *tekton.TaskRun, namespace string, cf *fake.ClientFactory) (*tekton.TaskRun, error) {
-	return cf.TektonV1alpha1().TaskRuns(namespace).Update(taskRun)
+	return cf.TektonV1beta1().TaskRuns(namespace).Update(taskRun)
 }

@@ -17,7 +17,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	gomock "github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	corev1api "k8s.io/api/core/v1"
@@ -996,7 +996,7 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_IsNotEmptyIfNoValuesToSet(t
 	// VERIFY
 	assert.NilError(t, resultError)
 
-	taskRun, err := cf.TektonV1alpha1().TaskRuns(runNamespaceName).Get(tektonClusterTaskName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(runNamespaceName).Get(tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	if equality.Semantic.DeepEqual(taskRun.Spec.PodTemplate, tekton.PodTemplate{}) {
 		t.Fatal("podTemplate of TaskRun is empty")
@@ -1045,9 +1045,9 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_AllValuesSet(t *testing.T) 
 	// VERIFY
 	assert.NilError(t, resultError)
 
-	taskRun, err := cf.TektonV1alpha1().TaskRuns(runNamespaceName).Get(tektonClusterTaskName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(runNamespaceName).Get(tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
-	expectedPodTemplate := tekton.PodTemplate{
+	expectedPodTemplate := &tekton.PodTemplate{
 		SecurityContext: &corev1api.PodSecurityContext{
 			FSGroup:    int64Ptr(1111),
 			RunAsGroup: int64Ptr(2222),
@@ -1091,7 +1091,7 @@ func Test_RunManager_Start_CreatesTektonTaskRun(t *testing.T) {
 	assert.NilError(t, err)
 
 	// VERIFY
-	result, err := mockFactory.TektonV1alpha1().TaskRuns(mockPipelineRun.GetRunNamespace()).Get(
+	result, err := mockFactory.TektonV1beta1().TaskRuns(mockPipelineRun.GetRunNamespace()).Get(
 		tektonTaskRunName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	assert.Assert(t, result != nil)
@@ -1322,8 +1322,8 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	)
 
 	findTaskRunParam := func(taskRun *tekton.TaskRun, paramName string) (param *tekton.Param) {
-		assert.Assert(t, taskRun.Spec.Inputs.Params != nil)
-		for _, p := range taskRun.Spec.Inputs.Params {
+		assert.Assert(t, taskRun.Spec.Params != nil)
+		for _, p := range taskRun.Spec.Params {
 			if p.Name == paramName {
 				if param != nil {
 					t.Fatalf("input param specified twice: %s", paramName)
@@ -1363,7 +1363,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	}
 
 	expectSingleTaskRun := func(t *testing.T, cf *k8sfake.ClientFactory, k8sPipelineRun k8s.PipelineRun) *tekton.TaskRun {
-		taskRunList, err := cf.TektonV1alpha1().TaskRuns(k8sPipelineRun.GetRunNamespace()).List(metav1.ListOptions{})
+		taskRunList, err := cf.TektonV1beta1().TaskRuns(k8sPipelineRun.GetRunNamespace()).List(metav1.ListOptions{})
 		assert.NilError(t, err)
 		assert.Equal(t, 1, len(taskRunList.Items), "%s", spew.Sdump(taskRunList))
 		return &taskRunList.Items[0]
@@ -1533,7 +1533,7 @@ func prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv1alpha1.Pipelin
 	mockFactory.EXPECT().StewardV1alpha1().Return(stewardClientset.StewardV1alpha1()).AnyTimes()
 
 	tektonClientset := tektonclientfake.NewSimpleClientset()
-	mockFactory.EXPECT().TektonV1alpha1().Return(tektonClientset.TektonV1alpha1()).AnyTimes()
+	mockFactory.EXPECT().TektonV1beta1().Return(tektonClientset.TektonV1beta1()).AnyTimes()
 
 	runNamespace := ""
 	mockPipelineRun := mocks.NewMockPipelineRun(ctrl)

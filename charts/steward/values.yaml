@@ -82,7 +82,7 @@ pipelineRuns:
   jenkinsfileRunner:
     image:
       repository: stewardci/stewardci-jenkinsfile-runner
-      tag: "200903_b053f5f"
+      tag: "200921_6cc247f"
       pullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0
@@ -102,7 +102,6 @@ pipelineRuns:
       runAsUser: 1000
       runAsGroup: 1000
       fsGroup: 1000
-    terminationMessagePath: "/run/termination-log"
   timeout: "60m"
   networkPolicy: ""
   limitRange: ""

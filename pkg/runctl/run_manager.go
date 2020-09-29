@@ -11,7 +11,7 @@ import (
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	runi "github.com/SAP/stewardci-core/pkg/run"
 	"github.com/pkg/errors"
-	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1api "k8s.io/api/core/v1"
 	networkingv1api "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -540,10 +540,8 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 				Kind: tekton.ClusterTaskKind,
 				Name: tektonClusterTaskName,
 			},
-			Inputs: tekton.TaskRunInputs{
-				Params: []tekton.Param{
-					tektonStringParam("RUN_NAMESPACE", namespace),
-				},
+			Params: []tekton.Param{
+				tektonStringParam("RUN_NAMESPACE", namespace),
 			},
 			Timeout: c.pipelineRunsConfig.Timeout,
 
@@ -551,7 +549,7 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 			// values to set. Otherwise the Tekton default pod template
 			// would be used only in such cases but not if we have values
 			// to set.
-			PodTemplate: tekton.PodTemplate{
+			PodTemplate: &tekton.PodTemplate{
 				SecurityContext: &corev1api.PodSecurityContext{
 					RunAsUser:  copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsUser),
 					RunAsGroup: copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
@@ -565,7 +563,7 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 	c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForRunDetails(ctx, &tektonTaskRun)
-	tektonClient := c.factory.TektonV1alpha1()
+	tektonClient := c.factory.TektonV1beta1()
 	_, err = tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(&tektonTaskRun)
 	return err
 }
@@ -587,7 +585,7 @@ func (c *runManager) addTektonTaskRunParamsForRunDetails(
 		if details.Cause != "" {
 			params = append(params, tektonStringParam("RUN_CAUSE", details.Cause))
 		}
-		tektonTaskRun.Spec.Inputs.Params = append(tektonTaskRun.Spec.Inputs.Params, params...)
+		tektonTaskRun.Spec.Params = append(tektonTaskRun.Spec.Params, params...)
 	}
 }
 
@@ -614,7 +612,7 @@ func (c *runManager) addTektonTaskRunParamsForPipeline(
 		tektonStringParam("PIPELINE_PARAMS_JSON", pipelineArgsJSON),
 	}
 
-	tektonTaskRun.Spec.Inputs.Params = append(tektonTaskRun.Spec.Inputs.Params, params...)
+	tektonTaskRun.Spec.Params = append(tektonTaskRun.Spec.Params, params...)
 	return nil
 }
 
@@ -646,14 +644,14 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 		}
 	}
 
-	tektonTaskRun.Spec.Inputs.Params = append(tektonTaskRun.Spec.Inputs.Params, params...)
+	tektonTaskRun.Spec.Params = append(tektonTaskRun.Spec.Params, params...)
 	return nil
 }
 
 // GetRun based on a pipelineRun
 func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runi.Run, error) {
 	namespace := pipelineRun.GetRunNamespace()
-	run, err := c.factory.TektonV1alpha1().TaskRuns(namespace).Get(tektonTaskRunName, metav1.GetOptions{})
+	run, err := c.factory.TektonV1beta1().TaskRuns(namespace).Get(tektonTaskRunName, metav1.GetOptions{})
 	if err != nil {
 		return nil, serrors.RecoverableIf(err,
 			k8serrors.IsServerTimeout(err) ||

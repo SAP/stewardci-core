@@ -1,0 +1,34 @@
+## ----------------------------------
+## Copy this template for new entries
+## ----------------------------------
+#    - type: [bug, enhancement, internal]
+#      impact: [incompatible, minor, patch]
+#      title: <title>
+#      description: >-
+#        <description>
+#      warning: >-
+#        <optional warning message>
+#      upgradeNotes: >-
+#        <optional upgrade guidelines>
+#      pullRequestNumber: <pull request number>
+
+#      jiraIssueNumber: <Internal Jira issue number>
+
+
+- version: "NEXT"
+  date: TBD
+  changes:
+  - type: enhancement
+    impact: incompatible
+    title: Upgrade dependency to Tekton v0.14.3
+
+    description: >-
+      Build and run against Tekton v0.14.3.
+    warning: Requires Tekton v0.14.3.
+
+    upgradeNotes: >-
+      The target Kubernetes system must have Tekton v0.14.3 installed. Higher versions may also work.
+      In addition, Steward Jenkinsfile Runner Image version <a href="https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/200921_6cc247f">200921_6cc247f</a> or later is required.
+    pullRequestNumber: 151
+
+    jiraIssueNumber: 1330

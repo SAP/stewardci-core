@@ -57,7 +57,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
 	pipelineRunLister := pipelineRunInformer.Lister()
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
-	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1alpha1().TaskRuns()
+	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1beta1().TaskRuns()
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.V(3).Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
@@ -342,16 +342,7 @@ func (c *Controller) syncHandler(key string) error {
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
 		if finished, result := run.IsFinished(); finished {
-			var msg string
-			if containerInfo != nil && containerInfo.Terminated != nil {
-				msg = containerInfo.Terminated.Message
-			}
-			if msg == "" {
-				cond := run.GetSucceededCondition()
-				if cond != nil {
-					msg = cond.Message
-				}
-			}
+			msg := run.GetMessage()
 			pipelineRun.UpdateMessage(msg)
 			pipelineRun.UpdateResult(result)
 			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {

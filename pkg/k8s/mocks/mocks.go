@@ -31,14 +31,14 @@ import (
 	v1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	v1alpha10 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	externalversions "github.com/SAP/stewardci-core/pkg/client/informers/externalversions"
-	v1alpha11 "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/typed/pipeline/v1alpha1"
+	v1beta1 "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/typed/pipeline/v1beta1"
 	externalversions0 "github.com/SAP/stewardci-core/pkg/tektonclient/informers/externalversions"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 	dynamic "k8s.io/client-go/dynamic"
 	v10 "k8s.io/client-go/kubernetes/typed/core/v1"
 	v11 "k8s.io/client-go/kubernetes/typed/networking/v1"
-	v1beta1 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
+	v1beta10 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
 	reflect "reflect"
 )
 
@@ -108,10 +108,10 @@ func (mr *MockClientFactoryMockRecorder) NetworkingV1() *gomock.Call {
 }
 
 // RbacV1beta1 mocks base method
-func (m *MockClientFactory) RbacV1beta1() v1beta1.RbacV1beta1Interface {
+func (m *MockClientFactory) RbacV1beta1() v1beta10.RbacV1beta1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RbacV1beta1")
-	ret0, _ := ret[0].(v1beta1.RbacV1beta1Interface)
+	ret0, _ := ret[0].(v1beta10.RbacV1beta1Interface)
 	return ret0
 }
 
@@ -163,18 +163,18 @@ func (mr *MockClientFactoryMockRecorder) TektonInformerFactory() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TektonInformerFactory", reflect.TypeOf((*MockClientFactory)(nil).TektonInformerFactory))
 }
 
-// TektonV1alpha1 mocks base method
-func (m *MockClientFactory) TektonV1alpha1() v1alpha11.TektonV1alpha1Interface {
+// TektonV1beta1 mocks base method
+func (m *MockClientFactory) TektonV1beta1() v1beta1.TektonV1beta1Interface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TektonV1alpha1")
-	ret0, _ := ret[0].(v1alpha11.TektonV1alpha1Interface)
+	ret := m.ctrl.Call(m, "TektonV1beta1")
+	ret0, _ := ret[0].(v1beta1.TektonV1beta1Interface)
 	return ret0
 }
 
-// TektonV1alpha1 indicates an expected call of TektonV1alpha1
-func (mr *MockClientFactoryMockRecorder) TektonV1alpha1() *gomock.Call {
+// TektonV1beta1 indicates an expected call of TektonV1beta1
+func (mr *MockClientFactoryMockRecorder) TektonV1beta1() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TektonV1alpha1", reflect.TypeOf((*MockClientFactory)(nil).TektonV1alpha1))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TektonV1beta1", reflect.TypeOf((*MockClientFactory)(nil).TektonV1beta1))
 }
 
 // MockNamespaceManager is a mock of NamespaceManager interface

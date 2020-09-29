@@ -8,7 +8,7 @@ import (
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/ghodss/yaml"
-	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	"gotest.tools/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -60,6 +60,29 @@ const (
       exitCode: 0
       finishedAt: "2019-05-14T08:24:49Z"
       reason: Completed
+      startedAt: "2019-05-14T08:24:11Z"
+`
+
+	completedMessageSuccess = `status:
+  completionTime: "2019-05-14T08:24:49Z"
+  conditions:
+  - lastTransitionTime: "2019-10-04T13:57:28Z"
+    message: All Steps have completed executing
+    reason: Succeeded
+    status: "True"
+    type: Succeeded
+  podName: build-pod-38aa76
+  startTime: "2019-05-14T08:24:08Z"
+  steps:
+  - container: step-jenkinsfile-runner
+    imageID: docker-pullable://alpine@sha256:acd3ca9941a85e8ed16515bfc5328e4e2f8c128caa72959a58a127b7801ee01f
+    name: jenkinsfile-runner
+    terminated:
+      containerID: docker://2ee92b9e6971cd76f896c5c4dc403203754bd4aa6c5191541e5f7d8e04ce9326
+      exitCode: 0
+      finishedAt: "2019-05-14T08:24:49Z"
+      reason: Completed
+      message: %q
       startedAt: "2019-05-14T08:24:11Z"
 `
 )
@@ -134,4 +157,43 @@ func Test__IsFinished_Timeout(t *testing.T) {
 	assert.Assert(t, run.GetContainerInfo() == nil)
 	assert.Assert(t, finished == true)
 	assert.Equal(t, result, api.ResultTimeout)
+}
+
+func Test__GetMessage(t *testing.T) {
+	for _, test := range []struct {
+		name            string
+		inputMessage    string
+		expectedMessage string
+	}{
+		{name: "message_ok",
+			inputMessage:    `[{"key":"jfr-termination-log","value":"foo"}]`,
+			expectedMessage: "foo",
+		},
+		{name: "wrong_key",
+			inputMessage:    `[{"key":"termination-log","value":"foo"}]`,
+			expectedMessage: "internal error",
+		},
+		{name: "empty message",
+			inputMessage:    "",
+			expectedMessage: "All Steps have completed executing",
+		},
+		{name: "multi_key",
+			inputMessage:    `[{"key": "foo", "value": "bar"}, {"key":"jfr-termination-log","value":"foo"}]`,
+			expectedMessage: "foo",
+		},
+		{name: "invalid_yaml_message",
+			inputMessage:    "{no valid yaml",
+			expectedMessage: "{no valid yaml",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			test := test
+			t.Parallel()
+			buildString := fmt.Sprintf(completedMessageSuccess, test.inputMessage)
+			build := fakeTektonTaskRunYaml(buildString)
+			run := NewRun(build)
+			result := run.GetMessage()
+			assert.Equal(t, test.expectedMessage, result)
+		})
+	}
 }

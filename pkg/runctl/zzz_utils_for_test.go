@@ -46,7 +46,7 @@ func StewardObjectFromJSON(t *testing.T, doc string) runtime.Object {
 // Panics in case of errors.
 func TektonObjectFromJSON(t *testing.T, doc string) runtime.Object {
 	versions := []schema.GroupVersion{
-		{Group: "tekton.dev", Version: "v1alpha1"},
+		{Group: "tekton.dev", Version: "v1beta1"},
 	}
 	decoder := tektonScheme.Codecs.UniversalDecoder(versions...)
 	obj, _, err := decoder.Decode([]byte(doc), nil, nil)

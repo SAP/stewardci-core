@@ -5,3 +5,4 @@ import (
 )
 
 const runClusterRoleName k8s.RoleName = "steward-run"
+const jfrResultKey string = "jfr-termination-log"
