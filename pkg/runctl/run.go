@@ -77,14 +77,13 @@ func (r *tektonRun) GetMessage() string {
 		}
 	} else {
 		allMessages, err := termination.ParseMessage(msg)
-		if err == nil {
-			for _, singleMessage := range allMessages {
-				if singleMessage.Key == jfrResultKey {
-					return singleMessage.Value
-				}
-			}
-		} else {
+		if err != nil {
 			return msg
+		}
+		for _, singleMessage := range allMessages {
+			if singleMessage.Key == jfrResultKey {
+				return singleMessage.Value
+			}
 		}
 	}
 	return "internal error"
