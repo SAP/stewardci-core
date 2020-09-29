@@ -14,9 +14,11 @@
 
 #      jiraIssueNumber: <Internal Jira issue number>
 
-
 - version: "NEXT"
   date: TBD
+  
+- version: "0.5.0"
+  date: 29/09/2020
   changes:
   - type: enhancement
     impact: incompatible
