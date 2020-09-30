@@ -13,21 +13,22 @@ import (
 )
 
 const (
-	pipelineRunsConfigMapName                    = "steward-pipelineruns"
-	pipelineRunsConfigKeyTimeout                 = "timeout"
-	pipelineRunsConfigKeyNetworkPolicy           = "networkPolicy"
-	pipelineRunsConfigKeyNetworkPolicyRestricted = "networkPolicyRestricted"
-	pipelineRunsConfigKeyLimitRange              = "limitRange"
-	pipelineRunsConfigKeyResourceQuota           = "resourceQuota"
-	pipelineRunsConfigKeyPSCRunAsUser            = "jenkinsfileRunner.podSecurityContext.runAsUser"
-	pipelineRunsConfigKeyPSCRunAsGroup           = "jenkinsfileRunner.podSecurityContext.runAsGroup"
-	pipelineRunsConfigKeyPSCFSGroup              = "jenkinsfileRunner.podSecurityContext.fsGroup"
+	pipelineRunsConfigMapName          = "steward-pipelineruns"
+	pipelineRunsConfigKeyTimeout       = "timeout"
+	pipelineRunsConfigKeyLimitRange    = "limitRange"
+	pipelineRunsConfigKeyResourceQuota = "resourceQuota"
+	pipelineRunsConfigKeyPSCRunAsUser  = "jenkinsfileRunner.podSecurityContext.runAsUser"
+	pipelineRunsConfigKeyPSCRunAsGroup = "jenkinsfileRunner.podSecurityContext.runAsGroup"
+	pipelineRunsConfigKeyPSCFSGroup    = "jenkinsfileRunner.podSecurityContext.fsGroup"
+
+	networkPoliciesConfigMapName    = "steward-network-policies"
+	networkPoliciesConfigKeyDefault = "_default"
 )
 
 type pipelineRunsConfigStruct struct {
 	Timeout                                       *metav1.Duration
-	NetworkPolicy                                 string
-	NetworkPolicyRestricted                       string
+	NetworkPolicies                               map[string]string
+	DefaultNetworkPolicy                          string
 	LimitRange                                    string
 	ResourceQuota                                 string
 	JenkinsfileRunnerPodSecurityContextRunAsUser  *int64
@@ -37,6 +38,7 @@ type pipelineRunsConfigStruct struct {
 
 func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfigStruct, error) {
 	configMapIfce := clientFactory.CoreV1().ConfigMaps(system.Namespace())
+
 	configMap, err := configMapIfce.Get(pipelineRunsConfigMapName, metav1.GetOptions{})
 	if k8serrors.IsNotFound(err) {
 		return &pipelineRunsConfigStruct{}, nil
@@ -45,11 +47,21 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 		return nil, err
 	}
 
+	networkMap, err := configMapIfce.Get(networkPoliciesConfigMapName, metav1.GetOptions{})
+	// Do we need this only for testing?
+	if k8serrors.IsNotFound(err) {
+		return &pipelineRunsConfigStruct{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	defaultNetworkPolicyKey := networkMap.Data[networkPoliciesConfigKeyDefault]
 	config := &pipelineRunsConfigStruct{
-		NetworkPolicy:           configMap.Data[pipelineRunsConfigKeyNetworkPolicy],
-		NetworkPolicyRestricted: configMap.Data[pipelineRunsConfigKeyNetworkPolicyRestricted],
-		LimitRange:              configMap.Data[pipelineRunsConfigKeyLimitRange],
-		ResourceQuota:           configMap.Data[pipelineRunsConfigKeyResourceQuota],
+		LimitRange:           configMap.Data[pipelineRunsConfigKeyLimitRange],
+		ResourceQuota:        configMap.Data[pipelineRunsConfigKeyResourceQuota],
+		NetworkPolicies:      networkMap.Data,
+		DefaultNetworkPolicy: networkMap.Data[defaultNetworkPolicyKey],
 	}
 
 	parseInt64 := func(key string) (*int64, error) {

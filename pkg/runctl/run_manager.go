@@ -3,6 +3,7 @@ package runctl
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -366,11 +367,15 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		Kind:  "NetworkPolicy",
 	}
 
-	configStr := c.pipelineRunsConfig.NetworkPolicy
+	configStr := c.pipelineRunsConfig.DefaultNetworkPolicy
 
 	spec := ctx.pipelineRun.GetSpec()
-	if spec.Profiles != nil && spec.Profiles.Network == v1alpha1.RestrictedInternetAccess {
-		configStr = c.pipelineRunsConfig.NetworkPolicyRestricted
+	log.Printf("NP: %+v", c.pipelineRunsConfig.NetworkPolicies)
+	if spec.Profiles != nil && spec.Profiles.Network != "" {
+		configStr = c.pipelineRunsConfig.NetworkPolicies[spec.Profiles.Network]
+		if configStr == "" {
+			return fmt.Errorf("Cannot find network policy with name %q in network config map", spec.Profiles.Network)
+		}
 	}
 
 	if configStr == "" {

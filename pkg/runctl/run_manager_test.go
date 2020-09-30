@@ -354,7 +354,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_NoPolicyConfigured(t *testing.
 	examinee := runManager{
 		factory: cf,
 		pipelineRunsConfig: pipelineRunsConfigStruct{
-			NetworkPolicy: "", // no policy
+			DefaultNetworkPolicy: "", // no policy
 		},
 		testing: newRunManagerTestingWithAllNoopStubs(),
 	}
@@ -379,7 +379,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_SetsMetadataAndLeavesOtherThin
 	examinee := runManager{
 		factory: cf,
 		pipelineRunsConfig: pipelineRunsConfigStruct{
-			NetworkPolicy: fixIndent(`
+			DefaultNetworkPolicy: fixIndent(`
 				apiVersion: networking.k8s.io/v123
 				kind: NetworkPolicy
 				# no metadata here
@@ -461,7 +461,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ReplacesAllMetadata(t *testing
 	examinee := runManager{
 		factory: cf,
 		pipelineRunsConfig: pipelineRunsConfigStruct{
-			NetworkPolicy: fixIndent(`
+			DefaultNetworkPolicy: fixIndent(`
 				apiVersion: networking.k8s.io/v123
 				kind: NetworkPolicy
 				metadata:
@@ -525,13 +525,15 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 		name           string
 		pipelineSpec   api.PipelineSpec
 		expectedPolicy string
+		expectError    bool
 	}{
-		{"undefined", api.PipelineSpec{}, "default"},
-		{"nil_profile", api.PipelineSpec{Profiles: nil}, "default"},
-		{"empty_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: ""}}, "default"},
-		{"unknown_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: "foo"}}, "default"},
-		{"default", api.PipelineSpec{Profiles: &api.Profiles{Network: api.FullInernetAccess}}, "default"},
-		{"restricted", api.PipelineSpec{Profiles: &api.Profiles{Network: api.RestrictedInternetAccess}}, "restricted"},
+		{"undefined", api.PipelineSpec{}, "default", false},
+		{"nil_profile", api.PipelineSpec{Profiles: nil}, "default", false},
+		{"empty_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: ""}}, "default", false},
+		{"unknown_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: "unknown"}}, "", true},
+		{"default", api.PipelineSpec{Profiles: &api.Profiles{Network: "default"}}, "default", false},
+		{"foo", api.PipelineSpec{Profiles: &api.Profiles{Network: "foo"}}, "foo", false},
+		{"bar", api.PipelineSpec{Profiles: &api.Profiles{Network: "bar"}}, "bar", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			runCtx := contextWithSpec(t, tc.pipelineSpec)
@@ -541,14 +543,24 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 			examinee := runManager{
 				factory: cf,
 				pipelineRunsConfig: pipelineRunsConfigStruct{
-					NetworkPolicy: fixIndent(`
-			   apiVersion: networking.k8s.io/v123
-			   kind: NetworkPolicy
-			   spec: default`),
-					NetworkPolicyRestricted: fixIndent(`
-				apiVersion: networking.k8s.io/v123
-				kind: NetworkPolicy
-				spec: restricted`),
+					DefaultNetworkPolicy: fixIndent(`
+			            apiVersion: networking.k8s.io/v123
+			            kind: NetworkPolicy
+			            spec: default`),
+					NetworkPolicies: map[string]string{
+						"default": fixIndent(`
+					      apiVersion: networking.k8s.io/v123
+					      kind: NetworkPolicy
+					      spec: default`),
+						"foo": fixIndent(`
+						apiVersion: networking.k8s.io/v123
+						kind: NetworkPolicy
+						spec: foo`),
+						"bar": fixIndent(`
+						apiVersion: networking.k8s.io/v123
+						kind: NetworkPolicy
+						spec: bar`),
+					},
 				},
 				testing: newRunManagerTestingWithAllNoopStubs(),
 			}
@@ -556,20 +568,25 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 
 			// EXERCISE
 			resultError := examinee.setupNetworkPolicyFromConfig(runCtx)
-			assert.NilError(t, resultError)
 
 			// VERIFY
-			gvr := schema.GroupVersionResource{
-				Group:    "networking.k8s.io",
-				Version:  "v123",
-				Resource: "networkpolicies",
-			}
-			actualPolicies, err := cf.Dynamic().Resource(gvr).List(metav1.ListOptions{})
-			assert.NilError(t, err)
-			assert.Equal(t, 1, len(actualPolicies.Items))
-			{
-				policy := actualPolicies.Items[0]
-				assert.DeepEqual(t, tc.expectedPolicy, policy.Object["spec"])
+			if tc.expectError {
+				assert.Assert(t, resultError != nil)
+			} else {
+				assert.NilError(t, resultError)
+				gvr := schema.GroupVersionResource{
+					Group:    "networking.k8s.io",
+					Version:  "v123",
+					Resource: "networkpolicies",
+				}
+				actualPolicies, err := cf.Dynamic().Resource(gvr).List(metav1.ListOptions{})
+
+				assert.NilError(t, err)
+				assert.Equal(t, 1, len(actualPolicies.Items))
+				{
+					policy := actualPolicies.Items[0]
+					assert.DeepEqual(t, tc.expectedPolicy, policy.Object["spec"])
+				}
 			}
 		})
 	}
@@ -590,7 +607,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_MalformedPolicy(t *testing.T) 
 	examinee := runManager{
 		factory: cf,
 		pipelineRunsConfig: pipelineRunsConfigStruct{
-			NetworkPolicy: ":", // malformed YAML
+			DefaultNetworkPolicy: ":", // malformed YAML
 		},
 		testing: newRunManagerTestingWithAllNoopStubs(),
 	}
@@ -618,7 +635,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedGroup(t *testing.T) 
 	examinee := runManager{
 		factory: cf,
 		pipelineRunsConfig: pipelineRunsConfigStruct{
-			NetworkPolicy: fixIndent(`
+			DefaultNetworkPolicy: fixIndent(`
 				apiVersion: unexpected.group/v1
 				kind: NetworkPolicy
 				`),
@@ -652,7 +669,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedKind(t *testing.T) {
 	examinee := runManager{
 		factory: cf,
 		pipelineRunsConfig: pipelineRunsConfigStruct{
-			NetworkPolicy: fixIndent(`
+			DefaultNetworkPolicy: fixIndent(`
 				apiVersion: networking.k8s.io/v1
 				kind: UnexpectedKind
 				`),

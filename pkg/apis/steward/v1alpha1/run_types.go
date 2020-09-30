@@ -229,16 +229,5 @@ type PipelineRunDetails struct {
 type Profiles struct {
 
 	// Network is the name of a network profile which is used during the run
-	Network NetworkProfileName `json:"network,omitempty"`
+	Network string `json:"network,omitempty"`
 }
-
-// NetworkProfileName is the name of a network profile
-type NetworkProfileName string
-
-const (
-	// FullInernetAccess is the name of the Network Profile providing full internet access
-	FullInernetAccess NetworkProfileName = "full-internet-access"
-
-	// RestrictedInternetAccess is the name of the Network Profile providing restricted internet access
-	RestrictedInternetAccess NetworkProfileName = "restricted-internet-access"
-)

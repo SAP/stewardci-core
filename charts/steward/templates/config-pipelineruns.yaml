@@ -23,37 +23,6 @@ data:
     #   or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
     timeout: 2h15m
 
-    # networkPolicy is the network policy to be created in every pipeline
-    # run namespace. The value must be a complete
-    # `networkpolicy.networking.k8s.io` resource manifest in YAML format.
-    # The `.metadata` section of the manifest can be omitted, as it will
-    # be replaced anyway.
-    #
-    # See https://kubernetes.io/docs/concepts/services-networking/network-policies/
-    # for details about Kubernetes network policies.
-    #
-    # Note that Steward ensures that all pods in pipeline run namespaces are
-    # _isolated_ in terms of network policies. The policy defined here adds further
-    # egress and/or ingress rules.
-    #
-    networkPolicy: |
-      apiVersion: networking.k8s.io/v1
-      kind: NetworkPolicy
-      spec:
-        podSelector: {} # any pod in namespace
-        policyTypes:
-        - Egress
-        - Ingress
-        egress:
-        - # allow unrestricted outbound connections (may be insecure)
-          to:
-          - ipBlock:
-              cidr: 0.0.0.0/0 # any
-        ingress:
-        - # allow access from all pods in the same namespace
-          from:
-          - podSelector: {}
-
     limitRange: |
       apiVersion: v1
       kind: LimitRange
@@ -92,8 +61,6 @@ data:
     jenkinsfileRunner.podSecurityContext.fsGroup: "1000"
 
   timeout: {{ .Values.pipelineRuns.timeout | quote }}
-  networkPolicy: {{ default ( .Files.Get "data/pipelineruns-default-networkpolicy.yaml" ) .Values.pipelineRuns.networkPolicy | quote }}
-  networkPolicyRestricted: {{ default ( .Files.Get "data/pipelineruns-restricted-networkpolicy.yaml" ) .Values.pipelineRuns.networkPolicy | quote }}
   limitRange: {{ default ( .Files.Get "data/pipelineruns-default-limitrange.yaml" ) .Values.pipelineRuns.limitRange | quote }}
   resourceQuota: {{ .Values.pipelineRuns.resourceQuota | quote }}
 

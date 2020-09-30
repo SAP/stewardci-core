@@ -55,7 +55,6 @@ func Test_loadPipelineRunsConfig_EmptyEntries(t *testing.T) {
 	// SETUP
 	cf := fake.NewClientFactory(
 		newPipelineRunsConfigMap(map[string]string{
-			pipelineRunsConfigKeyNetworkPolicy: "",
 			pipelineRunsConfigKeyPSCFSGroup:    "",
 			pipelineRunsConfigKeyPSCRunAsGroup: "",
 			pipelineRunsConfigKeyPSCRunAsUser:  "",
@@ -63,6 +62,7 @@ func Test_loadPipelineRunsConfig_EmptyEntries(t *testing.T) {
 			pipelineRunsConfigKeyResourceQuota: "",
 			pipelineRunsConfigKeyTimeout:       "",
 		}),
+		newNetworkPolicyConfigMap(nil),
 	)
 
 	// EXERCISE
@@ -88,7 +88,6 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 		newPipelineRunsConfigMap(
 			map[string]string{
 				"_example":                         "exampleString",
-				pipelineRunsConfigKeyNetworkPolicy: "networkPolicy1",
 				pipelineRunsConfigKeyLimitRange:    "limitRange1",
 				pipelineRunsConfigKeyResourceQuota: "resourceQuota1",
 				pipelineRunsConfigKeyPSCRunAsUser:  "1111",
@@ -98,6 +97,11 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 				"someKeyThatShouldBeIgnored":       "34957349",
 			},
 		),
+		newNetworkPolicyConfigMap(map[string]string{
+			networkPoliciesConfigKeyDefault: "defaultKey",
+			"defaultKey":                    "defaultPolicy",
+			"foo":                           "fooPolicy",
+		}),
 	)
 
 	// EXERCISE
@@ -106,10 +110,15 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, err)
 	expectedConfig := &pipelineRunsConfigStruct{
-		Timeout:       metav1Duration(time.Minute * 4444),
-		NetworkPolicy: "networkPolicy1",
-		LimitRange:    "limitRange1",
-		ResourceQuota: "resourceQuota1",
+		Timeout:              metav1Duration(time.Minute * 4444),
+		LimitRange:           "limitRange1",
+		ResourceQuota:        "resourceQuota1",
+		DefaultNetworkPolicy: "defaultPolicy",
+		NetworkPolicies: map[string]string{
+			networkPoliciesConfigKeyDefault: "defaultKey",
+			"defaultKey":                    "defaultPolicy",
+			"foo":                           "fooPolicy",
+		},
 		JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(1111),
 		JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
 		JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(3333),
@@ -143,6 +152,7 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 				newPipelineRunsConfigMap(
 					map[string]string{p.key: p.val},
 				),
+				newNetworkPolicyConfigMap(nil),
 			)
 
 			// EXERCISE
@@ -155,6 +165,7 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 	}
 }
 
+// TO BE DISCUSSED how errors occur if only one cm is existing.
 func Test_loadPipelineRunsConfig_ErrorOnGetConfigMap(t *testing.T) {
 	t.Parallel()
 
@@ -187,6 +198,16 @@ func newPipelineRunsConfigMap(data map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pipelineRunsConfigMapName,
+			Namespace: system.Namespace(),
+		},
+		Data: data,
+	}
+}
+
+func newNetworkPolicyConfigMap(data map[string]string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      networkPoliciesConfigMapName,
 			Namespace: system.Namespace(),
 		},
 		Data: data,
