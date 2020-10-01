@@ -1097,6 +1097,55 @@ func Test_RunManager_Start_CreatesTektonTaskRun(t *testing.T) {
 	assert.Assert(t, result != nil)
 }
 
+func Test_RunManager_addTektonTaskRunParamsForImage_ProvidedImageIsSet(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
+	spec := &stewardv1alpha1.PipelineSpec{Image: "foo"}
+	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
+
+	tektonTaskRun := tekton.TaskRun{
+		Spec: tekton.TaskRunSpec{
+			Params: []tekton.Param{},
+		},
+	}
+
+	// EXERCISE
+	addTektonTaskRunParamsForImage(mockPipelineRun, &tektonTaskRun)
+
+	// VERIFY
+	expectedParam := tektonStringParam("JFR_IMAGE", "foo")
+	assert.DeepEqual(t, expectedParam, tektonTaskRun.Spec.Params[0])
+
+}
+
+func Test_RunManager_addTektonTaskRunParamsForImage_ParameterMissingIfNoImageSet(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
+	spec := &stewardv1alpha1.PipelineSpec{Image: ""}
+	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
+
+	tektonTaskRun := tekton.TaskRun{
+		Spec: tekton.TaskRunSpec{
+			Params: []tekton.Param{},
+		},
+	}
+
+	// EXERCISE
+	addTektonTaskRunParamsForImage(mockPipelineRun, &tektonTaskRun)
+
+	// VERIFY
+	assert.Assert(t, len(tektonTaskRun.Spec.Params) == 0)
+
+}
+
 func Test_RunManager_Start_DoesNotSetPipelineRunStatus(t *testing.T) {
 	t.Parallel()
 

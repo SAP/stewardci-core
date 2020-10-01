@@ -559,13 +559,24 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 			},
 		},
 	}
-
+	addTektonTaskRunParamsForImage(ctx.pipelineRun, &tektonTaskRun)
 	c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForRunDetails(ctx, &tektonTaskRun)
 	tektonClient := c.factory.TektonV1beta1()
 	_, err = tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(&tektonTaskRun)
 	return err
+}
+
+func addTektonTaskRunParamsForImage(
+	pipelineRun k8s.PipelineRun,
+	tektonTaskRun *tekton.TaskRun,
+) {
+	spec := pipelineRun.GetSpec()
+	image := spec.Image
+	if image != "" {
+		tektonTaskRun.Spec.Params = append(tektonTaskRun.Spec.Params, tektonStringParam("JFR_IMAGE", image))
+	}
 }
 
 func (c *runManager) addTektonTaskRunParamsForRunDetails(
