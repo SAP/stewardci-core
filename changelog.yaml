@@ -17,8 +17,19 @@
 - version: "NEXT"
   date: TBD
   
+- version: "0.5.1"
+  date: 2020-10-05
+  changes:
+  - type: bug
+    impact: patch
+    title: Fix clustertask
+
+    description: >-
+      Fix clustertask to match v1beta1 specification.
+    pullRequestNumber: 163
+
 - version: "0.5.0"
-  date: 29/09/2020
+  date: 2020-08-29
   changes:
   - type: enhancement
     impact: incompatible
