@@ -191,7 +191,7 @@ A simple PipelineRun resource example can be found in [docs/examples/pipelinerun
 | `spec.secrets` | (array of string,optional) The list of secrets to be made available to the pipeline execution. Each entry in the list is the name of a Kubernetes `v1/Secret` resource object in the same namespace as the PipelineRun object itself. See [docs/secrets/Secrets.md](../secrets/Secrets.md) for details. |
 | `spec.imagePullSecrets` | (array of string,optional) The list of image pull secrets required by the pipeline run to pull images of custom containers from private registries. Each entry in the list is the name of a Kubernetes `v1/Secret` resource object of type `kubernetes.io/dockerconfigjson` in the same namespace as the PipelineRun object itself. See [docs/secrets/Secrets.md](../secrets/Secrets.md) for details. |
 | `spec.profiles` | (object, optional) Profile settings for the pipeline run. |
-| `spec.profiles.network` | (string, optional) Select which network profile should be used. Possible values are 'full-internet-access' and 'resticted-internet-access'. The corresponding network policies are defined in [pipelineruns-default-networkpolicy.yaml] and [pipelineruns-restricted-networkpolicy.yaml]. If no value is set [pipelineruns-default-networkpolicy.yaml] will be used.|
+| `spec.profiles.network` | (string, optional) Select which network profile should be used. An entry with the network policy must be defined in a configmap with the name `steward-network-policies`. See [config-network-policies.yaml](../../charts/steward/templates/config-network-policies.yaml). If this parameter is not set the default network policy defined in [pipelineruns-default-networkpolicy.yaml] will be used. |
 | `spec.runDetails` | (object,optional) Properties of the Jenkins build object. |
 | `spec.runDetails.jobName` | (string,optional) The name of the job this pipeline run belongs to. It is used as the name of the Jenkins job and therefore must be a valid Jenkins job name. If null or empty, `job` will be used. |
 | `spec.runDetails.sequenceNumber` | (string,optional) The sequence number of the pipeline run, which translates into the build number of the Jenkins job.  If null or empty, `1` is used. |
@@ -301,4 +301,3 @@ The sandbox namespace of a PipelineRun gets deleted immediately after the pipeli
 [k8s_design_principles]: https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/principles.md
 
 [pipelineruns-default-networkpolicy.yaml]: ../../charts/steward/data/pipelineruns-default-networkpolicy.yaml
-[pipelineruns-restricted-networkpolicy.yaml]: ../../charts/steward/data/pipelineruns-restricted-networkpolicy.yaml
