@@ -16,7 +16,15 @@
 
 - version: "NEXT"
   date: TBD
-  
+  changes:
+  - type: enhancement
+    impact: minor
+    title: Make jfr image configurable in spr
+    description: >-
+      Make the jenkins filerunner image configurable for each pipelinerun
+    pullRequestNumber: 162
+    jiraIssueNumber: 983
+
 - version: "0.5.0"
   date: 29/09/2020
   changes:
