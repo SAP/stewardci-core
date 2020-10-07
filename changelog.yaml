@@ -1,6 +1,6 @@
-## ----------------------------------
-## Copy this template for new entries
-## ----------------------------------
+## -----------------------------------------
+## Copy this template for new change entries
+## -----------------------------------------
 #    - type: [bug, enhancement, internal]
 #      impact: [incompatible, minor, patch]
 #      title: <title>
@@ -14,9 +14,33 @@
 
 #      jiraIssueNumber: <Internal Jira issue number>
 
-
 - version: "NEXT"
   date: TBD
+  changes:
+    type: enhancement
+    impact: minor
+    title: Extend pipelinerun to be able to select networkpolicy
+    description: >-
+      Networkpolicy can be selected on pipelinerun now. See <a href="https://github.com/SAP/stewardci-core/tree/PR_profiles/docs/backend-api#fields-2">PipelineRun Fields</a>.
+    warning: -
+    upgradeNotes: -
+      No incompatible changes.
+    pullRequestNumber: 160
+    jiraIssueNumber: 1305
+
+- version: "0.5.1"
+  date: 2020-10-05
+  changes:
+  - type: bug
+    impact: patch
+    title: Fix clustertask
+
+    description: >-
+      Fix clustertask to match v1beta1 specification.
+    pullRequestNumber: 163
+
+- version: "0.5.0"
+  date: 2020-08-29
   changes:
   - type: enhancement
     impact: incompatible
@@ -33,14 +57,4 @@
 
     jiraIssueNumber: 1330
 
-  - type: enhancement
-    impact: minor
-    title: Extend pipelinerun to be able to select networkpolicy
-    description: >-
-      Networkpolicy can be selected on pipelinerun now. See <a href="https://github.com/SAP/stewardci-core/tree/PR_profiles/docs/backend-api#fields-2">PipelineRun Fields</a>.
-    warning: -
-    upgradeNotes: -
-      No incompatible changes.
-    pullRequestNumber: 160
-    jiraIssueNumber: 1305
     
