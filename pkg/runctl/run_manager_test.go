@@ -517,7 +517,6 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ReplacesAllMetadata(t *testing
 func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing.T) {
 	t.Parallel()
 
-	// SETUP
 	const (
 		expectedNamePrefix = "steward.sap.com--configured-"
 	)
@@ -526,18 +525,27 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 		pipelineSpec   api.PipelineSpec
 		expectedPolicy string
 		expectError    bool
+		result         api.Result
 	}{
-		{"undefined", api.PipelineSpec{}, "default", false},
-		{"nil_profile", api.PipelineSpec{Profiles: nil}, "default", false},
-		{"empty_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: ""}}, "default", false},
-		{"unknown_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: "unknown"}}, "", true},
-		{"default", api.PipelineSpec{Profiles: &api.Profiles{Network: "default"}}, "default", false},
-		{"foo", api.PipelineSpec{Profiles: &api.Profiles{Network: "foo"}}, "foo", false},
-		{"bar", api.PipelineSpec{Profiles: &api.Profiles{Network: "bar"}}, "bar", false},
+		{"undefined", api.PipelineSpec{}, "default", false, api.ResultUndefined},
+		{"nil_profile", api.PipelineSpec{Profiles: nil}, "default", false, api.ResultUndefined},
+		{"empty_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: ""}}, "default", false, api.ResultUndefined},
+		{"unknown_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: "unknown"}}, "", true, api.ResultErrorConfig},
+		{"default", api.PipelineSpec{Profiles: &api.Profiles{Network: "default"}}, "default", false, api.ResultUndefined},
+		{"foo", api.PipelineSpec{Profiles: &api.Profiles{Network: "foo"}}, "foo", false, api.ResultUndefined},
+		{"bar", api.PipelineSpec{Profiles: &api.Profiles{Network: "bar"}}, "bar", false, api.ResultUndefined},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			runCtx := contextWithSpec(t, tc.pipelineSpec)
+			// SETUP
 			cf := fake.NewClientFactory()
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
+			mockPipelineRun.EXPECT().GetSpec().Return(&tc.pipelineSpec).AnyTimes()
+			if tc.result != api.ResultUndefined {
+				mockPipelineRun.EXPECT().UpdateResult(tc.result)
+			}
+			runCtx := &runContext{pipelineRun: mockPipelineRun}
 			cf.DynamicFake().PrependReactor("create", "*", fake.GenerateNameReactor(0))
 
 			examinee := runManager{

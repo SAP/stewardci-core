@@ -182,6 +182,8 @@ const (
 	ResultErrorInfra Result = "error_infra"
 	// ResultErrorContent -  the pipeline run failed due to an content problem
 	ResultErrorContent Result = "error_content"
+	// ResultErrorConfig - the pipeline run failed due to a configuration problem
+	ResultErrorConfig Result = "error_config"
 	// ResultAborted - the pipeline run has been aborted
 	ResultAborted Result = "aborted"
 	// ResultTimeout - the pipeline run timed out
