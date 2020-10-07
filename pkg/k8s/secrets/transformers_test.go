@@ -26,6 +26,59 @@ func Test_UniqueNameTransformer_WithNameSet(t *testing.T) {
 	assert.DeepEqual(t, expected, transformed)
 }
 
+func Test_RenameByAttributeTransformer(t *testing.T) {
+	const originalName string = "orig1"
+	for _, tc := range []struct {
+		name         string
+		annotations  map[string]string
+		key          string
+		expectedName string
+	}{
+		{
+			name:         "no_annotation",
+			annotations:  map[string]string{},
+			key:          "any",
+			expectedName: originalName,
+		}, {
+			name:         "working_rename",
+			annotations:  map[string]string{"key1": "newName1"},
+			key:          "key1",
+			expectedName: "newName1",
+		}, {
+			name:         "transformer_with_wrong_key",
+			annotations:  map[string]string{"key1": "newName1"},
+			key:          "wrong_key",
+			expectedName: originalName,
+		}, {
+			name:         "transformer_with_empty_key",
+			annotations:  map[string]string{"key1": "newName1"},
+			key:          "",
+			expectedName: originalName,
+		}, {
+			name:         "annotation_has_empty_new_name",
+			annotations:  map[string]string{"key1": ""},
+			key:          "",
+			expectedName: originalName,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// SETUP
+
+			orig := fake.SecretWithType(originalName, "secret1", v1.SecretTypeDockercfg)
+			orig.SetAnnotations(tc.annotations)
+			transformed := orig.DeepCopy()
+
+			// EXERCISE
+			RenameByAttributeTransformer(tc.key)(transformed)
+
+			// VERIFY
+			expected := orig.DeepCopy()
+			expected.SetName(tc.expectedName)
+			assert.DeepEqual(t, expected, transformed)
+		})
+	}
+}
+
 func Test_SetAnnotationTransformer_SetNew(t *testing.T) {
 	t.Parallel()
 
