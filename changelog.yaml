@@ -14,7 +14,7 @@
 
 #      jiraIssueNumber: <Internal Jira issue number>
 
-- version: "0.5.2"
+- version: "0.6.0"
   date: 2020-10-07
   changes:
   - type: enhancement
