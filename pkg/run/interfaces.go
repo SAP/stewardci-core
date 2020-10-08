@@ -21,3 +21,8 @@ type Run interface {
 	GetContainerInfo() *corev1.ContainerState
 	GetMessage() string
 }
+
+// SecretManager manages secrets of a pipelinerun
+type SecretManager interface {
+	CopyAll(pipelineRun k8s.PipelineRun) (string, []string, error)
+}
