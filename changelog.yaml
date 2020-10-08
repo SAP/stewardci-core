@@ -16,7 +16,11 @@
 
 - version: "NEXT"
   date: TBD
-  
+  changes:
+  - type: enhancement
+    impact: minor
+    title: Rename secrets for jfr if annotation is provided
+
 - version: "0.5.1"
   date: 2020-10-05
   changes:
