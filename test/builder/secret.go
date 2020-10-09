@@ -28,6 +28,7 @@ func SecretBasicAuth(name, namespace, user, pwd string, ops ...SecretOp) *v1.Sec
 	return secret
 }
 
+// SecretRename returns a SecretOp function which is adding a renaming annotation to a secret
 func SecretRename(newName string) SecretOp {
 	return func(secret *v1.Secret) {
 		annotations := secret.GetAnnotations()

@@ -18,6 +18,8 @@ var AllTestBuilders = []f.PipelineRunTestBuilder{
 	PipelineRunK8SPlugin,
 	PipelineRunWithSecret,
 	PipelineRunWithSecretRename,
+	PipelineRunWithSecretInvalidRename,
+	PipelineRunWithSecretRenameDuplicate,
 	PipelineRunWrongJenkinsfileRepo,
 	PipelineRunWrongJenkinsfilePath,
 	PipelineRunWrongJenkinsfileRepoWithUser,
@@ -138,6 +140,50 @@ func PipelineRunWithSecretRename(Namespace string, runID *api.CustomJSON) f.Pipe
 		Timeout: 120 * time.Second,
 		Secrets: []*v1.Secret{builder.SecretBasicAuth("renamed-secret-foo", Namespace, "bar", "baz",
 			builder.SecretRename("renamed-secret-new-name"))},
+	}
+}
+
+// PipelineRunWithSecretInvalidRename is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets with an invalid rename annotation
+func PipelineRunWithSecretInvalidRename(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
+	return f.PipelineRunTest{
+		PipelineRun: builder.PipelineRun("with-secret-", Namespace,
+			builder.PipelineRunSpec(
+				builder.Logging(runID),
+				builder.JenkinsFileSpec(pipelineRepoURL,
+					"secret/Jenkinsfile"),
+				builder.ArgSpec("SECRETID", "InvalidName"),
+				builder.ArgSpec("EXPECTEDUSER", "bar"),
+				builder.ArgSpec("EXPECTEDPWD", "baz"),
+				builder.Secret("invalid-secret-foo"),
+			)),
+		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
+		Timeout: 120 * time.Second,
+		Secrets: []*v1.Secret{builder.SecretBasicAuth("invalid-secret-foo", Namespace, "bar", "baz",
+			builder.SecretRename("InvalidName"))},
+	}
+}
+
+// PipelineRunWithSecretRenameDuplicate is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets with an invalid rename annotation
+func PipelineRunWithSecretRenameDuplicate(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
+	return f.PipelineRunTest{
+		PipelineRun: builder.PipelineRun("with-secret-", Namespace,
+			builder.PipelineRunSpec(
+				builder.Logging(runID),
+				builder.JenkinsFileSpec(pipelineRepoURL,
+					"secret/Jenkinsfile"),
+				builder.ArgSpec("SECRETID", "duplicate"),
+				builder.ArgSpec("EXPECTEDUSER", "bar"),
+				builder.ArgSpec("EXPECTEDPWD", "baz"),
+				builder.Secret("duplicate-secret-foo"),
+				builder.Secret("duplicate-secret-bar"),
+			)),
+		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
+		Timeout: 120 * time.Second,
+		Secrets: []*v1.Secret{
+			builder.SecretBasicAuth("duplicate-secret-foo", Namespace, "bar", "baz",
+				builder.SecretRename("duplicate")),
+			builder.SecretBasicAuth("duplicate-secret-bar", Namespace, "bar", "baz",
+				builder.SecretRename("duplicate"))},
 	}
 }
 

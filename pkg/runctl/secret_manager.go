@@ -6,6 +6,7 @@ import (
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	runi "github.com/SAP/stewardci-core/pkg/run"
 	"github.com/pkg/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	klog "k8s.io/klog/v2"
 )
 
@@ -90,7 +91,7 @@ func (s *secretManager) copySecrets(pipelineRun k8s.PipelineRun, secretNames []s
 	if err != nil {
 		klog.Errorf("Cannot copy secrets %s for [%s]. Error: %s", secretNames, pipelineRun.String(), err)
 		pipelineRun.UpdateMessage(err.Error())
-		if s.secretHelper.IsNotFound(err) {
+		if s.secretHelper.IsNotFound(err) || k8serrors.IsInvalid(err) || k8serrors.IsAlreadyExists(err) {
 			pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
 		} else {
 			pipelineRun.UpdateResult(v1alpha1.ResultErrorInfra)
