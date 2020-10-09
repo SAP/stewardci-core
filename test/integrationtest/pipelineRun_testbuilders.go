@@ -17,6 +17,7 @@ var AllTestBuilders = []f.PipelineRunTestBuilder{
 	PipelineRunOK,
 	PipelineRunK8SPlugin,
 	PipelineRunWithSecret,
+	PipelineRunWithSecretRename,
 	PipelineRunWrongJenkinsfileRepo,
 	PipelineRunWrongJenkinsfilePath,
 	PipelineRunWrongJenkinsfileRepoWithUser,
@@ -117,6 +118,26 @@ func PipelineRunWithSecret(Namespace string, runID *api.CustomJSON) f.PipelineRu
 		Check:   f.PipelineRunHasStateResult(api.ResultSuccess),
 		Timeout: 120 * time.Second,
 		Secrets: []*v1.Secret{builder.SecretBasicAuth("with-secret-foo", Namespace, "bar", "baz")},
+	}
+}
+
+// PipelineRunWithSecretRename is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets with rename annotation
+func PipelineRunWithSecretRename(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
+	return f.PipelineRunTest{
+		PipelineRun: builder.PipelineRun("with-secret-", Namespace,
+			builder.PipelineRunSpec(
+				builder.Logging(runID),
+				builder.JenkinsFileSpec(pipelineRepoURL,
+					"secret/Jenkinsfile"),
+				builder.ArgSpec("SECRETID", "renamed-secret-new-name"),
+				builder.ArgSpec("EXPECTEDUSER", "bar"),
+				builder.ArgSpec("EXPECTEDPWD", "baz"),
+				builder.Secret("renamed-secret-foo"),
+			)),
+		Check:   f.PipelineRunHasStateResult(api.ResultSuccess),
+		Timeout: 120 * time.Second,
+		Secrets: []*v1.Secret{builder.SecretBasicAuth("renamed-secret-foo", Namespace, "bar", "baz",
+			builder.SecretRename("renamed-secret-new-name"))},
 	}
 }
 
