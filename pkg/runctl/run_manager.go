@@ -3,7 +3,6 @@ package runctl
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
