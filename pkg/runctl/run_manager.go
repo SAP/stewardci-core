@@ -370,7 +370,6 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 	configStr := c.pipelineRunsConfig.DefaultNetworkPolicy
 
 	spec := ctx.pipelineRun.GetSpec()
-	log.Printf("NP: %+v", c.pipelineRunsConfig.NetworkPolicies)
 	if spec.Profiles != nil && spec.Profiles.Network != "" {
 		configStr = c.pipelineRunsConfig.NetworkPolicies[spec.Profiles.Network]
 		if configStr == "" {
