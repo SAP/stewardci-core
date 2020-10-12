@@ -573,9 +573,20 @@ func addTektonTaskRunParamsForImage(
 	tektonTaskRun *tekton.TaskRun,
 ) {
 	spec := pipelineRun.GetSpec()
-	image := spec.Image
-	if image != "" {
-		tektonTaskRun.Spec.Params = append(tektonTaskRun.Spec.Params, tektonStringParam("JFR_IMAGE", image))
+	image := spec.JenkinsfileRunnerImage
+	if image != nil {
+		params := []tekton.Param{}
+		if image.Image != "" {
+			params = append(params, tektonStringParam("JFR_IMAGE", image.Image))
+		}
+		if image.PullPolicy != "" {
+			params = append(params, tektonStringParam("JFR_IMAGE_PULL_POLICY", image.PullPolicy))
+		} else {
+			if image.Image != "" {
+				params = append(params, tektonStringParam("JFR_IMAGE_PULL_POLICY", "IfNotPresent"))
+			}
+		}
+		tektonTaskRun.Spec.Params = append(tektonTaskRun.Spec.Params, params...)
 	}
 }
 
