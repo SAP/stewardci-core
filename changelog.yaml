@@ -19,9 +19,9 @@
   changes:
   - type: enhancement
     impact: minor
-    title: Make jfr image configurable in spr
+    title: Make jenkins filerunner image configurable in each pipelinerun
     description: >-
-      Make the jenkins filerunner image configurable for each pipelinerun
+      You can now configure the jenkins filerunner image to be used in a pipelinerun at 'spec.image'.
     pullRequestNumber: 162
     jiraIssueNumber: 983
 
