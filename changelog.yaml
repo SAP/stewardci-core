@@ -19,7 +19,8 @@
   changes:
   - type: enhancement
     impact: minor
-    title: Make jenkins filerunner image configurable in each pipelinerun
+    title: Make Jenkinsfile Runner container image configurable in PipelineRun custom resource objects.
+
     description: >-
       Jenkins filerunner image is configurable in Steward-PipelineRun manifest at 'spec.image' now.
     pullRequestNumber: 162

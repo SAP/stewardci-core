@@ -181,7 +181,7 @@ A simple PipelineRun resource example can be found in [docs/examples/pipelinerun
 | --------- | ----------- |
 | `apiVersion` | `steward.sap.com/v1alpha1` |
 | `kind` | `PipelineRun` |
-| `spec.image` | (string, optional) Override the jfr image to be used for the execution of a single pipeline run here. E.g.: `stewardci/stewardci-jenkinsfile-runner:200921_6cc247f`. Default can be found in the [values.yaml](../../charts/steward/values.yaml) of the steward chart.
+| `spec.image` | (string, optional) The Jenkinsfile Runner container image to be used for this pipeline run. If not specified, a default image configured for the Steward installation will be used.<p>Example: `my-org/my-jenkinsfile-runner:latest`</p>
 | `spec.intent` | (string,optional) The intention of the client regarding the way this pipeline run should be processed. The value `run` indicates that the pipeline should run to completion, while the value `abort` indicates that the pipeline processing should be stopped as soon as possible. Omitting the field  or specifying an empty string value is equivalent to value `run`. |
 | `spec.jenkinsFile` | (object,mandatory) The configuration of the Jenkins pipeline definition to be executed. |
 | `spec.jenkinsFile.repoUrl` | (string,mandatory) The URL of the Git repository containing the pipeline definition (aka `Jenkinsfile`). |
