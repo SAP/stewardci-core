@@ -21,7 +21,7 @@
     impact: minor
     title: Make jenkins filerunner image configurable in each pipelinerun
     description: >-
-      You can now configure the jenkins filerunner image to be used in a pipelinerun at 'spec.image'.
+      Jenkins filerunner image is configurable in Steward-PipelineRun manifest at 'spec.image' now.
     pullRequestNumber: 162
     jiraIssueNumber: 983
 
