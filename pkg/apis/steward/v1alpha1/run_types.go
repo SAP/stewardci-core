@@ -33,7 +33,7 @@ type PipelineRunList struct {
 // PipelineSpec is the spec of a PipelineRun
 type PipelineSpec struct {
 	// Image of the Jenkinsfile runner to be executed
-	Image string `json:"image"`
+	JenkinsfileRunnerImage string `json:"jenkinsfileRunnerImage"`
 
 	// JenkinsFile contains the configuration of the Jenkins pipeline definition
 	// to be executed.

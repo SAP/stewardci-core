@@ -19,7 +19,8 @@
   changes:
   - type: enhancement
     impact: minor
-    title: Make jenkins filerunner image configurable in each pipelinerun
+    title: Make Jenkinsfile Runner container image configurable in PipelineRun custom resource objects.
+
     description: >-
       You can now configure the jenkins filerunner image to be used in a pipelinerun at 'spec.image'.
     pullRequestNumber: 162
