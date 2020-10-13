@@ -12,30 +12,29 @@ data:
     # Configuration examples
     ########################
 
-    # Copy and paste example settings directly under `.data` of this configmap!
+    # _default is a special key that denotes the _key_ of the network policy in this
+    # config map that should be applied for pipeline runs that do _not_ explicitly
+    # choose one.
+    _default: policy1
 
-    # _default holds the name of the default networkPolicy which is applied if
-    # no networkPolicy is defined in the pipeline run.
-    _default: default
-
-    # <name>: <networkPolicy>
-    # You can define arbitrary network policies with different keys (except the reserved key '_default' ).
-    # The keys are used to select the corresponding network policy from a pipeline run.
-
-    # networkPolicy is the network policy to be created in every pipeline
-    # run namespace. The value must be a complete
-    # `networkpolicy.networking.k8s.io` resource manifest in YAML format.
-    # The `.metadata` section of the manifest can be omitted, as it will
-    # be replaced anyway.
+    # Any other key defines a network policy.
+    #
+    # Steward clients can select the network policy for individual pipeline runs via their
+    # keys, so keys should be chosen appropriately.
+    #
+    # The value must be a complete `networkpolicy.networking.k8s.io` resource manifest
+    # in YAML format.
+    # The `.metadata` section of the manifest can be omitted, as it will be replaced anyway.
     #
     # See https://kubernetes.io/docs/concepts/services-networking/network-policies/
     # for details about Kubernetes network policies.
     #
     # Note that Steward ensures that all pods in pipeline run namespaces are
-    # _isolated_ in terms of network policies. The policy defined here adds further
+    # _isolated_ in terms of network policies. The policies defined here _add_
     # egress and/or ingress rules.
-    #
-    networkPolicy: |
+
+    # Example policy 1 (for illustration purposes only)
+    policy1: |
       apiVersion: networking.k8s.io/v1
       kind: NetworkPolicy
       spec:
@@ -47,34 +46,32 @@ data:
         - # allow unrestricted outbound connections (may be insecure)
           to:
           - ipBlock:
-              cidr: 0.0.0.0/0 # any
+              cidr: 192.186.0.0/16 # internal
         ingress:
         - # allow access from all pods in the same namespace
           from:
           - podSelector: {}
 
-    limitRange: |
-      apiVersion: v1
-      kind: LimitRange
+    # Example policy 2 (for illustration purposes only)
+    policy2: |
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
       spec:
-        limits:
-          - type: "Container"
-            default:
-              cpu: 3
-              memory: 3Gi
-            defaultRequest:
-              cpu: "0.5"
-              memory: "0.5Gi"
+        podSelector: {} # any pod in namespace
+        policyTypes:
+        - Egress
+        - Ingress
+        egress:
+        - # allow unrestricted outbound connections (may be insecure)
+          to:
+          - ipBlock:
+              cidr: 192.186.0.0/16 # internal
+              cidr: 172.16.0.0/12 # internal
+        ingress:
+        - # allow access from all pods in the same namespace
+          from:
+          - podSelector: {}
 
-    resourceQuota: |
-      apiVersion: v1
-      kind: ResourceQuota # namespace level total allowed request and limits
-      spec:
-        hard:
-          requests.cpu: 6
-          requests.memory: 6Gi
-          limits.cpu: 10
-          limits.memory: 20Gi
 
   # _default holds the name of the default networkPolicy which is applied if
   # no networkPolicy is defined in the pipeline run.
