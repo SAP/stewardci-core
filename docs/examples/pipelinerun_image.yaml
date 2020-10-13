@@ -3,7 +3,9 @@ kind: PipelineRun
 metadata:
   generateName: image-
 spec:
-  image: stewardci/stewardci-jenkinsfile-runner:TEST_201006_b4e6c67
+  jenkinsfileRunner:
+    image: stewardci/stewardci-jenkinsfile-runner:TEST_201006_b4e6c67
+    imagePullPolicy: Always
   jenkinsFile:
     repoUrl: https://github.com/SAP-samples/stewardci-example-pipelines
     revision: master

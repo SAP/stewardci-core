@@ -1099,7 +1099,12 @@ func Test_RunManager_Start_CreatesTektonTaskRun(t *testing.T) {
 
 func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 	t.Parallel()
-
+	examinee := runManager{
+		pipelineRunsConfig: pipelineRunsConfigStruct{
+			Image:           "defaultImage1",
+			ImagePullPolicy: "defaultPolicy1",
+		},
+	}
 	for _, tc := range []struct {
 		name           string
 		spec           *stewardv1alpha1.PipelineSpec
@@ -1107,15 +1112,21 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 	}{
 		{"empty",
 			&stewardv1alpha1.PipelineSpec{},
-			[]tekton.Param{},
+			[]tekton.Param{
+				tektonStringParam("JFR_IMAGE", "defaultImage1"),
+				tektonStringParam("JFR_IMAGE_PULL_POLICY", "defaultPolicy1"),
+			},
 		}, {"no_image_no_policy",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunnerImage: &stewardv1alpha1.ImageSpec{},
+				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{},
 			},
-			[]tekton.Param{},
+			[]tekton.Param{
+				tektonStringParam("JFR_IMAGE", "defaultImage1"),
+				tektonStringParam("JFR_IMAGE_PULL_POLICY", "defaultPolicy1"),
+			},
 		}, {"image_only",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunnerImage: &stewardv1alpha1.ImageSpec{
+				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{
 					Image: "foo",
 				},
 			},
@@ -1125,18 +1136,19 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 			},
 		}, {"policy_only",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunnerImage: &stewardv1alpha1.ImageSpec{
-					PullPolicy: "bar",
+				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{
+					ImagePullPolicy: "bar",
 				},
 			},
 			[]tekton.Param{
+				tektonStringParam("JFR_IMAGE", "defaultImage1"),
 				tektonStringParam("JFR_IMAGE_PULL_POLICY", "bar"),
 			},
 		}, {"image_and_empty_policy",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunnerImage: &stewardv1alpha1.ImageSpec{
-					Image:      "foo",
-					PullPolicy: "",
+				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{
+					Image:           "foo",
+					ImagePullPolicy: "",
 				},
 			},
 			[]tekton.Param{
@@ -1145,28 +1157,35 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 			},
 		}, {"policy_and_empty_image",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunnerImage: &stewardv1alpha1.ImageSpec{
-					Image:      "",
-					PullPolicy: "bar",
+				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{
+					Image:           "",
+					ImagePullPolicy: "bar",
 				},
 			},
 			[]tekton.Param{
+				tektonStringParam("JFR_IMAGE", "defaultImage1"),
 				tektonStringParam("JFR_IMAGE_PULL_POLICY", "bar"),
 			},
 		}, {"empty_image_no_policy",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunnerImage: &stewardv1alpha1.ImageSpec{
+				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{
 					Image: "",
 				},
 			},
-			[]tekton.Param{},
+			[]tekton.Param{
+				tektonStringParam("JFR_IMAGE", "defaultImage1"),
+				tektonStringParam("JFR_IMAGE_PULL_POLICY", "defaultPolicy1"),
+			},
 		}, {"empty_policy_no_image",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunnerImage: &stewardv1alpha1.ImageSpec{
-					PullPolicy: "",
+				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{
+					ImagePullPolicy: "",
 				},
 			},
-			[]tekton.Param{},
+			[]tekton.Param{
+				tektonStringParam("JFR_IMAGE", "defaultImage1"),
+				tektonStringParam("JFR_IMAGE_PULL_POLICY", "defaultPolicy1"),
+			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1184,7 +1203,7 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 			}
 
 			// EXERCISE
-			addTektonTaskRunParamsForImage(mockPipelineRun, &tektonTaskRun)
+			examinee.addTektonTaskRunParamsForImage(mockPipelineRun, &tektonTaskRun)
 
 			// VERIFY
 			assert.DeepEqual(t, tc.expectedParams, tektonTaskRun.Spec.Params)

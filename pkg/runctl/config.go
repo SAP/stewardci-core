@@ -13,14 +13,16 @@ import (
 )
 
 const (
-	pipelineRunsConfigMapName          = "steward-pipelineruns"
-	pipelineRunsConfigKeyTimeout       = "timeout"
-	pipelineRunsConfigKeyNetworkPolicy = "networkPolicy"
-	pipelineRunsConfigKeyLimitRange    = "limitRange"
-	pipelineRunsConfigKeyResourceQuota = "resourceQuota"
-	pipelineRunsConfigKeyPSCRunAsUser  = "jenkinsfileRunner.podSecurityContext.runAsUser"
-	pipelineRunsConfigKeyPSCRunAsGroup = "jenkinsfileRunner.podSecurityContext.runAsGroup"
-	pipelineRunsConfigKeyPSCFSGroup    = "jenkinsfileRunner.podSecurityContext.fsGroup"
+	pipelineRunsConfigMapName            = "steward-pipelineruns"
+	pipelineRunsConfigKeyTimeout         = "timeout"
+	pipelineRunsConfigKeyNetworkPolicy   = "networkPolicy"
+	pipelineRunsConfigKeyLimitRange      = "limitRange"
+	pipelineRunsConfigKeyResourceQuota   = "resourceQuota"
+	pipelineRunsConfigKeyImage           = "jenkinsfileRunner.image"
+	pipelineRunsConfigKeyImagePullPolicy = "jenkinsfileRunner.imagePullPolicy"
+	pipelineRunsConfigKeyPSCRunAsUser    = "jenkinsfileRunner.podSecurityContext.runAsUser"
+	pipelineRunsConfigKeyPSCRunAsGroup   = "jenkinsfileRunner.podSecurityContext.runAsGroup"
+	pipelineRunsConfigKeyPSCFSGroup      = "jenkinsfileRunner.podSecurityContext.fsGroup"
 )
 
 type pipelineRunsConfigStruct struct {
@@ -28,6 +30,8 @@ type pipelineRunsConfigStruct struct {
 	NetworkPolicy                                 string
 	LimitRange                                    string
 	ResourceQuota                                 string
+	Image                                         string
+	ImagePullPolicy                               string
 	JenkinsfileRunnerPodSecurityContextRunAsUser  *int64
 	JenkinsfileRunnerPodSecurityContextRunAsGroup *int64
 	JenkinsfileRunnerPodSecurityContextFSGroup    *int64
@@ -44,9 +48,11 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 	}
 
 	config := &pipelineRunsConfigStruct{
-		NetworkPolicy: configMap.Data[pipelineRunsConfigKeyNetworkPolicy],
-		LimitRange:    configMap.Data[pipelineRunsConfigKeyLimitRange],
-		ResourceQuota: configMap.Data[pipelineRunsConfigKeyResourceQuota],
+		NetworkPolicy:   configMap.Data[pipelineRunsConfigKeyNetworkPolicy],
+		LimitRange:      configMap.Data[pipelineRunsConfigKeyLimitRange],
+		ResourceQuota:   configMap.Data[pipelineRunsConfigKeyResourceQuota],
+		Image:           configMap.Data[pipelineRunsConfigKeyImage],
+		ImagePullPolicy: configMap.Data[pipelineRunsConfigKeyImagePullPolicy],
 	}
 
 	parseInt64 := func(key string) (*int64, error) {

@@ -23,6 +23,13 @@
 
     description: >-
       Jenkins filerunner image is configurable in Steward-PipelineRun manifest at 'spec.image' now.
+    warning: ""
+    upgradeNotes: >-
+      Deprecation Notice:
+      Helm Chart Configuration changed.
+      `pipelineRuns.jenkinsfileRunner.image.repository` is deprecated: use pipelineRuns.jenkinsfileRunner.image` instead
+      `pipelineRuns.jenkinsfileRunner.image.tag` is deprecated: use pipelineRuns.jenkinsfileRunner.image` instead
+      `pipelineRuns.jenkinsfileRunner.image.pullPolicy` is deprecated: use pipelineRuns.jenkinsfileRunner.imagePullPolicy` instead
     pullRequestNumber: 162
     jiraIssueNumber: 983
 
