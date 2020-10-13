@@ -70,18 +70,14 @@ spec:
       A textual description of the cause of this pipeline run. Will be set as cause of the Jenkins job.
       If null or empty, no cause information will be available.
     default: ""
-   {{- with .Values.pipelineRuns.jenkinsfileRunner.image }}
   - name: JFR_IMAGE
     type: string
-    default: {{ printf "%s:%s" .repository .tag | quote }}
     description: >
       The jenkinsfile-runner image to be used.
   - name: JFR_IMAGE_PULL_POLICY
     type: string
-    default:  {{ .pullPolicy | quote }}
     description: >
       The pull policy to be used to pull an image defined in JFR_IMAGE. Defaults to 'IfNotPresent'
-  {{- end }}
   steps:
   - name: jenkinsfile-runner
     image: $(params.JFR_IMAGE)

@@ -96,7 +96,16 @@ data:
   limitRange: {{ default ( .Files.Get "data/pipelineruns-default-limitrange.yaml" ) .Values.pipelineRuns.limitRange | quote }}
   resourceQuota: {{ .Values.pipelineRuns.resourceQuota | quote }}
 
-{{- with .Values.pipelineRuns.jenkinsfileRunner.podSecurityContext }}
+{{- with .Values.pipelineRuns.jenkinsfileRunner }}
+ {{- if kindIs "string" .image }}
+  jenkinsfileRunner.image: {{ .image | quote }}
+  jenkinsfileRunner.imagePullPolicy: {{ .imagePullPolicy | quote }}
+{{- else }} 
+  jenkinsfileRunner.image: {{ printf "%s:%s" .image.repository .image.tag | quote }}
+  jenkinsfileRunner.imagePullPolicy: {{ .image.pullPolicy | quote }}
+{{- end -}}
+ 
+{{- with .podSecurityContext }}
 {{- if and ( ge ( .runAsUser | int64 ) 1 ) ( le ( .runAsUser | int64 ) 65535 ) }}
   jenkinsfileRunner.podSecurityContext.runAsUser: {{ .runAsUser | int64 | quote }}
 {{- else }}
@@ -111,5 +120,6 @@ data:
   jenkinsfileRunner.podSecurityContext.fsGroup: {{ .fsGroup | int64 | quote }}
 {{- else }}
 {{ fail "value 'pipelineRuns.jenkinsfileRunner.podSecurityContext.fsGroup' must be an integer in the range of [1,65535]" }}
+{{- end -}}
 {{- end -}}
 {{- end -}}
