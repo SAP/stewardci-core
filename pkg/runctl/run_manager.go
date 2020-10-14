@@ -373,7 +373,7 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		configStr = c.pipelineRunsConfig.NetworkPolicies[spec.Profiles.Network]
 		if configStr == "" {
 			ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorConfig)
-			return fmt.Errorf("Cannot find network policy with name %q in network config map", spec.Profiles.Network)
+			return fmt.Errorf("network profile %q does not exist", spec.Profiles.Network)
 		}
 	}
 

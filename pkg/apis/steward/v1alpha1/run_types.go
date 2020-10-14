@@ -73,8 +73,6 @@ type PipelineSpec struct {
 	// +optional
 	RunDetails *PipelineRunDetails `json:"runDetails,omitempty"`
 
-	// Profiles defines a set of aspects which are restricted to a named profile
-	// for this aspect.`
 	Profiles *Profiles `json:"profiles,omitempty"`
 }
 
@@ -182,7 +180,7 @@ const (
 	ResultErrorInfra Result = "error_infra"
 	// ResultErrorContent -  the pipeline run failed due to an content problem
 	ResultErrorContent Result = "error_content"
-	// ResultErrorConfig - the pipeline run failed due to a configuration problem
+	// ResultErrorConfig - the pipeline run failed due to a client-side configuration error
 	ResultErrorConfig Result = "error_config"
 	// ResultAborted - the pipeline run has been aborted
 	ResultAborted Result = "aborted"
@@ -226,10 +224,11 @@ type PipelineRunDetails struct {
 	Cause string `json:"cause,omitempty"`
 }
 
-// Profiles defines a set of aspects which are restricted to a named profile
-// for this aspect.
+// Profiles selects configuration profiles for different aspects.
 type Profiles struct {
 
-	// Network is the name of a network profile which is used during the run
+	// Network selects the network profile. It currently determines which network connections
+	// are allowed. The scope of the network profile might be extended in the future.
+	// If empty, a default profile will be used.
 	Network string `json:"network,omitempty"`
 }
