@@ -50,7 +50,7 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 	networkMap, err := configMapIfce.Get(networkPoliciesConfigMapName, metav1.GetOptions{})
 	// Do we need this only for testing?
 	if k8serrors.IsNotFound(err) {
-		return &pipelineRunsConfigStruct{}, nil
+		return nil, nil
 	}
 	if err != nil {
 		return nil, err

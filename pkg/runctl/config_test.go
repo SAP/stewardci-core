@@ -30,6 +30,7 @@ func Test_loadPipelineRunsConfig_NoConfigMap(t *testing.T) {
 	assert.NilError(t, err)
 	expectedConfig := &pipelineRunsConfigStruct{}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
+
 }
 
 func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
@@ -45,8 +46,7 @@ func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
 
 	// VERIFY
 	assert.NilError(t, err)
-	expectedConfig := &pipelineRunsConfigStruct{}
-	assert.DeepEqual(t, expectedConfig, resultConfig)
+	assert.Assert(t, resultConfig == nil)
 }
 
 func Test_loadPipelineRunsConfig_EmptyEntries(t *testing.T) {

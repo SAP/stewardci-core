@@ -527,13 +527,12 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 		expectError    bool
 		result         api.Result
 	}{
-		{"undefined", api.PipelineSpec{}, "default", false, api.ResultUndefined},
-		{"nil_profile", api.PipelineSpec{Profiles: nil}, "default", false, api.ResultUndefined},
-		{"empty_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: ""}}, "default", false, api.ResultUndefined},
+		{"undefined", api.PipelineSpec{}, "networkPolicySpecDefault1", false, api.ResultUndefined},
+		{"nil_profile", api.PipelineSpec{Profiles: nil}, "networkPolicySpecDefault1", false, api.ResultUndefined},
+		{"empty_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: ""}}, "networkPolicySpecDefault1", false, api.ResultUndefined},
 		{"unknown_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: "unknown"}}, "", true, api.ResultErrorConfig},
-		{"default", api.PipelineSpec{Profiles: &api.Profiles{Network: "default"}}, "default", false, api.ResultUndefined},
-		{"foo", api.PipelineSpec{Profiles: &api.Profiles{Network: "foo"}}, "foo", false, api.ResultUndefined},
-		{"bar", api.PipelineSpec{Profiles: &api.Profiles{Network: "bar"}}, "bar", false, api.ResultUndefined},
+		{"choose_network_policy1", api.PipelineSpec{Profiles: &api.Profiles{Network: "networkPolicyKey1"}}, "networkPolicySpec1", false, api.ResultUndefined},
+		{"choose_network_policy2", api.PipelineSpec{Profiles: &api.Profiles{Network: "networkPolicyKey2"}}, "networkPolicySpec2", false, api.ResultUndefined},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// SETUP
@@ -554,20 +553,16 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 					DefaultNetworkPolicy: fixIndent(`
 			            apiVersion: networking.k8s.io/v123
 			            kind: NetworkPolicy
-			            spec: default`),
+			            spec: networkPolicySpecDefault1`),
 					NetworkPolicies: map[string]string{
-						"default": fixIndent(`
-					      apiVersion: networking.k8s.io/v123
-					      kind: NetworkPolicy
-					      spec: default`),
-						"foo": fixIndent(`
+						"networkPolicyKey1": fixIndent(`
 						apiVersion: networking.k8s.io/v123
 						kind: NetworkPolicy
-						spec: foo`),
-						"bar": fixIndent(`
+						spec: networkPolicySpec1`),
+						"networkPolicyKey2": fixIndent(`
 						apiVersion: networking.k8s.io/v123
 						kind: NetworkPolicy
-						spec: bar`),
+						spec: networkPolicySpec2`),
 					},
 				},
 				testing: newRunManagerTestingWithAllNoopStubs(),
