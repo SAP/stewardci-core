@@ -127,7 +127,8 @@ type Elasticsearch struct {
 	// field `runid` to each log entry.
 	// It can by any JSON value (object, array, string,
 	// number, bool).
-	RunID *CustomJSON `json:"runID"`
+	IndexURL string      `json:"indexURL,omitempty"`
+	RunID    *CustomJSON `json:"runID"`
 }
 
 // PipelineStatus represents the status of the pipeline

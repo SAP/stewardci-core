@@ -143,6 +143,21 @@ func Logging(runID *api.CustomJSON) PipelineRunSpecOp {
 				RunID: runID,
 			},
 		}
+
+		return spec
+	}
+}
+
+// LoggingWithIndexURL creates a PipelineRunSpecOp which adds Logging to the PipelineRun with specific indexURL
+func LoggingWithIndexURL(runID *api.CustomJSON, indexURL string) PipelineRunSpecOp {
+	return func(spec api.PipelineSpec) api.PipelineSpec {
+		spec.Logging = &api.Logging{
+			Elasticsearch: &api.Elasticsearch{
+				RunID:    runID,
+				IndexURL: indexURL,
+			},
+		}
+
 		return spec
 	}
 }

@@ -668,15 +668,20 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 			tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_INDEX_URL", ""),
 		}
 	} else {
-		runIDJSON, err := toJSONString(&spec.Logging.Elasticsearch.RunID)
-		if err != nil {
-			return errors.WithMessage(err,
-				"could not serialize spec.logging.elasticsearch.runid to JSON",
-			)
+		if spec.Logging.Elasticsearch.RunID != nil {
+			runIDJSON, err := toJSONString(&spec.Logging.Elasticsearch.RunID)
+			if err != nil {
+				return errors.WithMessage(err,
+					"could not serialize spec.logging.elasticsearch.runid to JSON",
+				)
+			}
+
+			params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON", runIDJSON))
+			// use default values from build template for all other params
 		}
 
-		params = []tekton.Param{
-			tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON", runIDJSON),
+		if spec.Logging.Elasticsearch.IndexURL != "" {
+			params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_INDEX_URL", spec.Logging.Elasticsearch.IndexURL))
 			// use default values from build template for all other params
 		}
 	}
