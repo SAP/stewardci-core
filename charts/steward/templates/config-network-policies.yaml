@@ -84,7 +84,9 @@ data:
   _default: {{ $key }}
   {{- end }}
 {{- end }}
-
+{{ if ne 1 $policyCount }}
+  _default: {{ .Values.pipelineRuns.defaultNetworkPolicyName }}
+  {{- end }}
 {{- else }}
   _default: default
   

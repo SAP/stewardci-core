@@ -33,11 +33,14 @@ func Test_ConfigNetworkPolicies(t *testing.T) {
 				"key1": "np1"},
 		},
 		{"multi_policy",
-			map[string]string{"pipelineRuns.networkPolicies.key1": "np1",
-				"pipelineRuns.networkPolicies.key2": "np2"},
 			map[string]string{
-				"key1": "np1",
-				"key2": "np2"},
+				"pipelineRuns.defaultNetworkPolicyName": "key2",
+				"pipelineRuns.networkPolicies.key1":     "np1",
+				"pipelineRuns.networkPolicies.key2":     "np2"},
+			map[string]string{
+				"_default": "key2",
+				"key1":     "np1",
+				"key2":     "np2"},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
