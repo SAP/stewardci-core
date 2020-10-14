@@ -64,6 +64,9 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 			networkPolicies[key] = value
 		}
 	}
+	if len(networkPolicies) == 0 {
+		networkPolicies = nil
+	}
 
 	config := &pipelineRunsConfigStruct{
 		LimitRange:           configMap.Data[pipelineRunsConfigKeyLimitRange],

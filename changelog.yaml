@@ -23,8 +23,11 @@
     description: >-
       Networkpolicy can be selected on pipelinerun now. See <a href="https://github.com/SAP/stewardci-core/tree/PR_profiles/docs/backend-api#fields-2">PipelineRun Fields</a>.
     warning: ""
-    upgradeNotes: ""
+    upgradeNotes: >-
       No incompatible changes.
+      Deprecation notice:
+      Helm configuration value 'pipelineRuns.networkPolicy' is deprecated. 
+      Use 'pipelineRuns.networkPolicies' instead.
     pullRequestNumber: 160
     jiraIssueNumber: 1305
 

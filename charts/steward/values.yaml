@@ -108,7 +108,7 @@ pipelineRuns:
   # in the pipelineRun if none is defined. This is only required if more than one networkpolicy
   # is defined below.
   #defaultNetworkPolicyName: "policyName2"
-	#networkPolicies:
+  #networkPolicies:
   #  policyName1: <policy1>
   #  policyName2: <policy2>
   limitRange: ""
