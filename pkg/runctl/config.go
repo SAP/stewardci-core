@@ -2,6 +2,7 @@ package runctl
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
@@ -57,10 +58,17 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 	}
 
 	defaultNetworkPolicyKey := networkMap.Data[networkPoliciesConfigKeyDefault]
+	networkPolicies := map[string]string{}
+	for key, value := range networkMap.Data {
+		if key != defaultNetworkPolicyKey && !strings.HasPrefix(key, "_") {
+			networkPolicies[key] = value
+		}
+	}
+
 	config := &pipelineRunsConfigStruct{
 		LimitRange:           configMap.Data[pipelineRunsConfigKeyLimitRange],
 		ResourceQuota:        configMap.Data[pipelineRunsConfigKeyResourceQuota],
-		NetworkPolicies:      networkMap.Data,
+		NetworkPolicies:      networkPolicies,
 		DefaultNetworkPolicy: networkMap.Data[defaultNetworkPolicyKey],
 	}
 

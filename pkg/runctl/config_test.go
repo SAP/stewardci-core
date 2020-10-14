@@ -101,6 +101,8 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 			networkPoliciesConfigKeyDefault: "defaultKey",
 			"defaultKey":                    "defaultPolicy",
 			"foo":                           "fooPolicy",
+			"bar":                           "barPolicy",
+			"_other_special_key":            "baz",
 		}),
 	)
 
@@ -115,9 +117,8 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 		ResourceQuota:        "resourceQuota1",
 		DefaultNetworkPolicy: "defaultPolicy",
 		NetworkPolicies: map[string]string{
-			networkPoliciesConfigKeyDefault: "defaultKey",
-			"defaultKey":                    "defaultPolicy",
-			"foo":                           "fooPolicy",
+			"foo": "fooPolicy",
+			"bar": "barPolicy",
 		},
 		JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(1111),
 		JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
