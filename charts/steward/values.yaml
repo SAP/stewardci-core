@@ -103,7 +103,14 @@ pipelineRuns:
       runAsGroup: 1000
       fsGroup: 1000
   timeout: "60m"
-  networkPolicy: ""
+  networkPolicy: "" # DEPRECATED: Use 'networkPolicies' instead.
+  #defaultNetworkPolicyName: contains the name of the network policy which should be used
+  # in the pipelineRun if none is defined. This is only required if more than one networkpolicy
+  # is defined below.
+  #defaultNetworkPolicyName: "policyName2"
+	#networkPolicies:
+  #  policyName1: <policy1>
+  #  policyName2: <policy2>
   limitRange: ""
   resourceQuota: ""
 
