@@ -4,7 +4,6 @@ go 1.14
 
 require (
 	cloud.google.com/go v0.58.0 // indirect
-	github.com/Azure/azure-sdk-for-go v43.2.0+incompatible // indirect
 	github.com/aws/aws-sdk-go v1.32.1 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/ghodss/yaml v1.0.0
@@ -12,6 +11,7 @@ require (
 	github.com/google/go-containerregistry v0.1.1 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/googleapis/gnostic v0.4.0 // indirect
+	github.com/gruntwork-io/terratest v0.27.4
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/lithammer/dedent v1.1.0
 	github.com/pkg/errors v0.9.1
@@ -21,7 +21,6 @@ require (
 	github.com/tektoncd/pipeline v0.14.3
 	github.com/vdemeester/k8s-pkg-credentialprovider v1.18.0 // indirect
 	go.uber.org/zap v1.15.0 // indirect
-	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9 // indirect
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
 	golang.org/x/sys v0.0.0-20200610111108-226ff32320da // indirect
 	golang.org/x/text v0.3.3 // indirect

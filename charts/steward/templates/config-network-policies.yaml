@@ -75,7 +75,18 @@ data:
 
   # _default holds the name of the default networkPolicy which is applied if
   # no networkPolicy is defined in the pipeline run.
+{{- if hasKey .Values.pipelineRuns "networkPolicies" }}
+{{  $policyKeys:= keys .Values.pipelineRuns.networkPolicies }}
+{{ $policyCount := len $policyKeys }}
+{{- range $key, $value := .Values.pipelineRuns.networkPolicies }}
+  {{ printf "%s: %s" $key $value  }}
+{{ if eq 1 $policyCount }}
+  _default: {{ $key }}
+  {{- end }}
+{{- end }}
+
+{{- else }}
   _default: default
   
   default: {{ default ( .Files.Get "data/pipelineruns-default-networkpolicy.yaml" ) .Values.pipelineRuns.networkPolicy | quote }}
- 
+{{- end }}
