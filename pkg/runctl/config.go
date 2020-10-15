@@ -5,9 +5,10 @@ import (
 	"strings"
 	"time"
 
+	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/k8s"
-
 	"github.com/pkg/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/system"
 )
@@ -40,13 +41,19 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 	configMapIfce := clientFactory.CoreV1().ConfigMaps(system.Namespace())
 
 	configMap, err := configMapIfce.Get(pipelineRunsConfigMapName, metav1.GetOptions{})
-	if err != nil {
+	if k8serrors.IsNotFound(err) {
 		return nil, err
+	}
+	if err != nil {
+		return nil, serrors.Recoverable(err)
 	}
 
 	networkMap, err := configMapIfce.Get(networkPoliciesConfigMapName, metav1.GetOptions{})
-	if err != nil {
+	if k8serrors.IsNotFound(err) {
 		return nil, err
+	}
+	if err != nil {
+		return nil, serrors.Recoverable(err)
 	}
 
 	defaultNetworkPolicyKey := networkMap.Data[networkPoliciesConfigKeyDefault]

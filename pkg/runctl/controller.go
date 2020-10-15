@@ -250,17 +250,10 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
-	// the configuration should be loaded once per sync to avoid inconsistencies
-	// in case of concurrent configuration changes
-	pipelineRunsConfig, err := c.getPipelineRunsConfig()
-	if err != nil {
-		return errors.Wrap(err, "failed to load configuration for pipeline runs")
-	}
-
 	// Check if object has deletion timestamp
 	// If not, try to add finalizer if missing
 	if pipelineRun.HasDeletionTimestamp() {
-		runManager := c.createRunManager(pipelineRun, pipelineRunsConfig)
+		runManager := c.createRunManager(pipelineRun, nil)
 		err = runManager.Cleanup(pipelineRun)
 		if err == nil {
 			err = pipelineRun.DeleteFinalizerIfExists()
@@ -285,14 +278,32 @@ func (c *Controller) syncHandler(key string) error {
 		c.changeState(pipelineRun, api.StateCleaning)
 	}
 
-	runManager := c.createRunManager(pipelineRun, pipelineRunsConfig)
-
 	if pipelineRun.GetStatus().State == api.StateUndefined {
 		if err = c.changeState(pipelineRun, api.StatePreparing); err != nil {
 			return err
 		}
 		c.metrics.CountStart()
 	}
+
+	// the configuration should be loaded once per sync to avoid inconsistencies
+	// in case of concurrent configuration changes
+	pipelineRunsConfig, err := c.getPipelineRunsConfig()
+	if err != nil {
+		if serrors.IsRecoverable(err) {
+			return errors.Wrap(err, "failed to load configuration for pipeline runs")
+		}
+		if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
+			return err
+		}
+		pipelineRun.UpdateResult(api.ResultErrorConfig)
+		pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
+		c.metrics.CountResult(pipelineRun.GetStatus().Result)
+		return nil
+
+	}
+
+	runManager := c.createRunManager(pipelineRun, pipelineRunsConfig)
+
 	// Process pipeline run based on current state
 	switch state := pipelineRun.GetStatus().State; state {
 	case api.StatePreparing:

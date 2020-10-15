@@ -49,7 +49,7 @@ const (
 
 type runManager struct {
 	factory            k8s.ClientFactory
-	pipelineRunsConfig pipelineRunsConfigStruct
+	pipelineRunsConfig *pipelineRunsConfigStruct
 	namespaceManager   k8s.NamespaceManager
 	secretProvider     secrets.SecretProvider
 
@@ -81,7 +81,7 @@ type runContext struct {
 func NewRunManager(factory k8s.ClientFactory, pipelineRunsConfig *pipelineRunsConfigStruct, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) runi.Manager {
 	return &runManager{
 		factory:            factory,
-		pipelineRunsConfig: *pipelineRunsConfig,
+		pipelineRunsConfig: pipelineRunsConfig,
 		namespaceManager:   namespaceManager,
 		secretProvider:     secretProvider,
 	}

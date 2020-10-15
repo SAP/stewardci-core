@@ -353,7 +353,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_NoPolicyConfigured(t *testing.
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			DefaultNetworkPolicy: "", // no policy
 		},
 		testing: newRunManagerTestingWithAllNoopStubs(),
@@ -378,7 +378,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_SetsMetadataAndLeavesOtherThin
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			DefaultNetworkPolicy: fixIndent(`
 				apiVersion: networking.k8s.io/v123
 				kind: NetworkPolicy
@@ -460,7 +460,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ReplacesAllMetadata(t *testing
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			DefaultNetworkPolicy: fixIndent(`
 				apiVersion: networking.k8s.io/v123
 				kind: NetworkPolicy
@@ -549,7 +549,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 
 			examinee := runManager{
 				factory: cf,
-				pipelineRunsConfig: pipelineRunsConfigStruct{
+				pipelineRunsConfig: &pipelineRunsConfigStruct{
 					DefaultNetworkPolicy: fixIndent(`
 			            apiVersion: networking.k8s.io/v123
 			            kind: NetworkPolicy
@@ -609,7 +609,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_MalformedPolicy(t *testing.T) 
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			DefaultNetworkPolicy: ":", // malformed YAML
 		},
 		testing: newRunManagerTestingWithAllNoopStubs(),
@@ -637,7 +637,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedGroup(t *testing.T) 
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			DefaultNetworkPolicy: fixIndent(`
 				apiVersion: unexpected.group/v1
 				kind: NetworkPolicy
@@ -671,7 +671,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedKind(t *testing.T) {
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			DefaultNetworkPolicy: fixIndent(`
 				apiVersion: networking.k8s.io/v1
 				kind: UnexpectedKind
@@ -753,7 +753,7 @@ func Test_RunManager_setupLimitRangeFromConfig_NoLimitRangeConfigured(t *testing
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			LimitRange: "", // no policy
 		},
 		testing: newRunManagerTestingWithAllNoopStubs(),
@@ -782,7 +782,7 @@ func Test_RunManager_setupLimitRangeFromConfig_MalformedLimitRange(t *testing.T)
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			LimitRange: ":", // malformed YAML
 		},
 		testing: newRunManagerTestingWithAllNoopStubs(),
@@ -813,7 +813,7 @@ func Test_RunManager_setupLimitRangeFromConfig_UnexpectedGroup(t *testing.T) {
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			LimitRange: fixIndent(`
                                 apiVersion: unexpected.group/v1
                                 kind: LimitRange
@@ -850,7 +850,7 @@ func Test_RunManager_setupLimitRangeFromConfig_UnexpectedKind(t *testing.T) {
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			LimitRange: fixIndent(`
                                 apiVersion: v1
                                 kind: UnexpectedKind
@@ -932,7 +932,7 @@ func Test_RunManager_setupResourceQuotaFromConfig_NoQuotaConfigured(t *testing.T
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			LimitRange: "", // no policy
 		},
 		testing: newRunManagerTestingWithAllNoopStubs(),
@@ -961,7 +961,7 @@ func Test_RunManager_setupResourceQuotaFromConfig_MalformedResourceQuota(t *test
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			ResourceQuota: ":", // malformed YAML
 		},
 		testing: newRunManagerTestingWithAllNoopStubs(),
@@ -992,7 +992,7 @@ func Test_RunManager_setupResourceQuotaFromConfig_UnexpectedGroup(t *testing.T) 
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			ResourceQuota: fixIndent(`
                                 apiVersion: unexpected.group/v1
                                 kind: ResourceQuota
@@ -1029,7 +1029,7 @@ func Test_RunManager_setupResourceQuotaFromConfig_UnexpectedKind(t *testing.T) {
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			ResourceQuota: fixIndent(`
                                 apiVersion: v1
                                 kind: UnexpectedKind
@@ -1065,10 +1065,11 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_IsNotEmptyIfNoValuesToSet(t
 	}
 	mockPipelineRun.UpdateRunNamespace(runNamespaceName)
 	cf := fake.NewClientFactory()
-
+	runConfig, _ := emptyRunsConfig()
 	examinee := runManager{
-		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		factory:            cf,
+		pipelineRunsConfig: runConfig,
+		testing:            newRunManagerTestingWithAllNoopStubs(),
 	}
 
 	// EXERCISE
@@ -1108,7 +1109,7 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_AllValuesSet(t *testing.T) 
 
 	examinee := runManager{
 		factory: cf,
-		pipelineRunsConfig: pipelineRunsConfigStruct{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
 			Timeout: metav1Duration(4444),
 			JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(1111),
 			JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
@@ -1636,4 +1637,8 @@ func prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv1alpha1.Pipelin
 	namespaceManager := k8s.NewNamespaceManager(mockFactory, runNamespacePrefix, runNamespaceRandomLength)
 
 	return mockFactory, mockPipelineRun, mockSecretProvider, namespaceManager
+}
+
+func emptyRunsConfig() (*pipelineRunsConfigStruct, error) {
+	return &pipelineRunsConfigStruct{}, nil
 }

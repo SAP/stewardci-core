@@ -683,7 +683,3 @@ func getTektonTaskRun(namespace string, cf *fake.ClientFactory) (*tekton.TaskRun
 func updateTektonTaskRun(taskRun *tekton.TaskRun, namespace string, cf *fake.ClientFactory) (*tekton.TaskRun, error) {
 	return cf.TektonV1beta1().TaskRuns(namespace).Update(taskRun)
 }
-
-func emptyRunsConfig() (*pipelineRunsConfigStruct, error) {
-	return &pipelineRunsConfigStruct{}, nil
-}

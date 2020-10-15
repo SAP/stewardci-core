@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	corev1clientmocks "github.com/SAP/stewardci-core/pkg/k8s/mocks/client-go/corev1"
@@ -205,7 +206,8 @@ func Test_loadPipelineRunsConfig_ErrorOnGetConfigMap(t *testing.T) {
 	resultConfig, err := loadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.Assert(t, err == expectedError)
+	assert.Assert(t, serrors.IsRecoverable(err))
+	assert.Equal(t, err.Error(), expectedError.Error())
 	assert.Assert(t, resultConfig == nil)
 }
 
