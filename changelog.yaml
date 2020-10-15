@@ -11,9 +11,10 @@
 #      upgradeNotes: >-
 #        <optional upgrade guidelines>
 #      pullRequestNumber: <pull request number>
-
 #      jiraIssueNumber: <Internal Jira issue number>
 
+
+# Do not change the "NEXT" version block
 - version: "NEXT"
   date: TBD
   
