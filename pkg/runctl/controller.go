@@ -48,8 +48,9 @@ type Controller struct {
 }
 
 type controllerTesting struct {
-	runManagerStub    run.Manager
-	newRunManagerStub func(k8s.ClientFactory, *pipelineRunsConfigStruct, secrets.SecretProvider, k8s.NamespaceManager) run.Manager
+	runManagerStub            run.Manager
+	newRunManagerStub         func(k8s.ClientFactory, *pipelineRunsConfigStruct, secrets.SecretProvider, k8s.NamespaceManager) run.Manager
+	getPipelineRunsConfigStub func() (*pipelineRunsConfigStruct, error)
 }
 
 // NewController creates new Controller
@@ -213,6 +214,13 @@ func (c *Controller) newRunManager(workFactory k8s.ClientFactory, pipelineRunsCo
 	return NewRunManager(workFactory, pipelineRunsConfig, secretProvider, namespaceManager)
 }
 
+func (c *Controller) getPipelineRunsConfig() (*pipelineRunsConfigStruct, error) {
+	if c.testing != nil && c.testing.getPipelineRunsConfigStub != nil {
+		return c.testing.getPipelineRunsConfigStub()
+	}
+	return loadPipelineRunsConfig(c.factory)
+}
+
 // syncHandler compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Foo resource
 // with the current status of the resource.
@@ -244,7 +252,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
-	pipelineRunsConfig, err := loadPipelineRunsConfig(c.factory)
+	pipelineRunsConfig, err := c.getPipelineRunsConfig()
 	if err != nil {
 		return errors.Wrap(err, "failed to load configuration for pipeline runs")
 	}

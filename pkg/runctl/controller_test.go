@@ -209,7 +209,10 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 			defer mockCtrl.Finish()
 			runManager := runmocks.NewMockManager(mockCtrl)
 			test.runManagerExpectation(runManager)
-			controller.testing = &controllerTesting{runManagerStub: runManager}
+			controller.testing = &controllerTesting{
+				runManagerStub:            runManager,
+				getPipelineRunsConfigStub: emptyRunsConfig,
+			}
 			// EXERCISE
 			err := controller.syncHandler("ns1/foo")
 			// VERIFY
@@ -475,7 +478,10 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			runManager := runmocks.NewMockManager(mockCtrl)
 			runmock := runmocks.NewMockRun(mockCtrl)
 			test.runManagerExpectation(runManager, runmock)
-			controller.testing = &controllerTesting{runManagerStub: runManager}
+			controller.testing = &controllerTesting{
+				runManagerStub:            runManager,
+				getPipelineRunsConfigStub: emptyRunsConfig,
+			}
 			// EXERCISE
 			err := controller.syncHandler("ns1/foo")
 			// VERIFY
@@ -614,8 +620,12 @@ func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 	stopCh := make(chan struct{}, 0)
 	metrics := metrics.NewMetrics()
 	controller := NewController(cf, metrics)
-	controller.testing = &controllerTesting{newRunManagerStub: newTestRunManager}
+	controller.testing = &controllerTesting{
+		newRunManagerStub:         newTestRunManager,
+		getPipelineRunsConfigStub: emptyRunsConfig,
+	}
 	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(cf.StewardV1alpha1())
+
 	cf.StewardInformerFactory().Start(stopCh)
 	cf.TektonInformerFactory().Start(stopCh)
 	go start(t, controller, stopCh)
@@ -672,4 +682,8 @@ func getTektonTaskRun(namespace string, cf *fake.ClientFactory) (*tekton.TaskRun
 
 func updateTektonTaskRun(taskRun *tekton.TaskRun, namespace string, cf *fake.ClientFactory) (*tekton.TaskRun, error) {
 	return cf.TektonV1beta1().TaskRuns(namespace).Update(taskRun)
+}
+
+func emptyRunsConfig() (*pipelineRunsConfigStruct, error) {
+	return &pipelineRunsConfigStruct{}, nil
 }

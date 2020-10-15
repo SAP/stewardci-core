@@ -8,7 +8,6 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s"
 
 	"github.com/pkg/errors"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/system"
 )
@@ -41,18 +40,11 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 	configMapIfce := clientFactory.CoreV1().ConfigMaps(system.Namespace())
 
 	configMap, err := configMapIfce.Get(pipelineRunsConfigMapName, metav1.GetOptions{})
-	if k8serrors.IsNotFound(err) {
-		return &pipelineRunsConfigStruct{}, nil
-	}
 	if err != nil {
 		return nil, err
 	}
 
 	networkMap, err := configMapIfce.Get(networkPoliciesConfigMapName, metav1.GetOptions{})
-	// Do we need this only for testing?
-	if k8serrors.IsNotFound(err) {
-		return nil, nil
-	}
 	if err != nil {
 		return nil, err
 	}

@@ -24,16 +24,13 @@ func Test_loadPipelineRunsConfig_NoConfigMap(t *testing.T) {
 	cf := fake.NewClientFactory( /* no objects */ )
 
 	// EXERCISE
-	resultConfig, err := loadPipelineRunsConfig(cf)
+	_, err := loadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.NilError(t, err)
-	expectedConfig := &pipelineRunsConfigStruct{}
-	assert.DeepEqual(t, expectedConfig, resultConfig)
-
+	assert.ErrorContains(t, err, "configmaps \"steward-pipelineruns\" not found")
 }
 
-func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
+func Test_loadPipelineRunsConfig_NoNetworkConfigMap(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -42,11 +39,28 @@ func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
 	)
 
 	// EXERCISE
+	_, err := loadPipelineRunsConfig(cf)
+
+	// VERIFY
+	assert.ErrorContains(t, err, "configmaps \"steward-pipelineruns-network-policies\" not found")
+}
+
+func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	cf := fake.NewClientFactory(
+		newPipelineRunsConfigMap( /* no data here */ nil),
+		newNetworkPolicyConfigMap(nil),
+	)
+
+	// EXERCISE
 	resultConfig, err := loadPipelineRunsConfig(cf)
 
 	// VERIFY
 	assert.NilError(t, err)
-	assert.Assert(t, resultConfig == nil)
+	expectedConfig := &pipelineRunsConfigStruct{}
+	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
 
 func Test_loadPipelineRunsConfig_EmptyEntries(t *testing.T) {
