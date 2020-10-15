@@ -101,6 +101,8 @@ data:
   jenkinsfileRunner.image: {{ .image | quote }}
   jenkinsfileRunner.imagePullPolicy: {{ .imagePullPolicy | quote }}
 {{- else }} 
+{{/* This is for backwards compatibility only */}}
+{{/* TODO: Remove in one of the next releases and add corresponding incompatibility notice to the changelog */}
   jenkinsfileRunner.image: {{ printf "%s:%s" .image.repository .image.tag | quote }}
   jenkinsfileRunner.imagePullPolicy: {{ .image.pullPolicy | quote }}
 {{- end -}}

@@ -19,12 +19,13 @@
   changes:
   - type: enhancement
     impact: minor
-    title: Make Jenkinsfile Runner container image configurable in PipelineRun custom resource objects.
+    title: Make Jenkinsfile Runner properties configurable in PipelineRun custom resource objects.
 
     description: >-
-      Jenkins filerunner image is configurable in Steward-PipelineRun manifest at 'spec.image' now.
+      Jenkins filerunner properties are configurable in Steward-PipelineRun manifest at 'spec.jenkinsfileRunner' now.
     warning: ""
     upgradeNotes: >-
+      No incompatible changes.
       Deprecation Notice:
       Helm Chart Configuration changed.
       `pipelineRuns.jenkinsfileRunner.image.repository` is deprecated: use pipelineRuns.jenkinsfileRunner.image` instead

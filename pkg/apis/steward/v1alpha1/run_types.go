@@ -33,7 +33,7 @@ type PipelineRunList struct {
 // PipelineSpec is the spec of a PipelineRun
 type PipelineSpec struct {
 	// JenkinsfileRunner configures the jenkinsfilerunner
-	JenkinsfileRunner *JFRSpec `json:"jenkinsfileRunner"`
+	JenkinsfileRunner *JenkinsfileRunnerSpec `json:"jenkinsfileRunner"`
 
 	// JenkinsFile contains the configuration of the Jenkins pipeline definition
 	// to be executed.
@@ -76,8 +76,8 @@ type PipelineSpec struct {
 	RunDetails *PipelineRunDetails `json:"runDetails,omitempty"`
 }
 
-// JFRSpec is the definition of the jenkinsfilerunner
-type JFRSpec struct {
+// JenkinsfileRunnerSpec is the definition of the jenkinsfilerunner
+type JenkinsfileRunnerSpec struct {
 	// Image is the image name with the tag
 	Image string `json:"image,omitempty"`
 

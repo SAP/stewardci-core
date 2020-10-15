@@ -1118,7 +1118,7 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 			},
 		}, {"no_image_no_policy",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{},
+				JenkinsfileRunner: &stewardv1alpha1.JenkinsfileRunnerSpec{},
 			},
 			[]tekton.Param{
 				tektonStringParam("JFR_IMAGE", "defaultImage1"),
@@ -1126,7 +1126,7 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 			},
 		}, {"image_only",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{
+				JenkinsfileRunner: &stewardv1alpha1.JenkinsfileRunnerSpec{
 					Image: "foo",
 				},
 			},
@@ -1136,7 +1136,7 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 			},
 		}, {"policy_only",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{
+				JenkinsfileRunner: &stewardv1alpha1.JenkinsfileRunnerSpec{
 					ImagePullPolicy: "bar",
 				},
 			},
@@ -1146,7 +1146,7 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 			},
 		}, {"image_and_empty_policy",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{
+				JenkinsfileRunner: &stewardv1alpha1.JenkinsfileRunnerSpec{
 					Image:           "foo",
 					ImagePullPolicy: "",
 				},
@@ -1157,7 +1157,7 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 			},
 		}, {"policy_and_empty_image",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{
+				JenkinsfileRunner: &stewardv1alpha1.JenkinsfileRunnerSpec{
 					Image:           "",
 					ImagePullPolicy: "bar",
 				},
@@ -1168,7 +1168,7 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 			},
 		}, {"empty_image_no_policy",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{
+				JenkinsfileRunner: &stewardv1alpha1.JenkinsfileRunnerSpec{
 					Image: "",
 				},
 			},
@@ -1178,7 +1178,7 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 			},
 		}, {"empty_policy_no_image",
 			&stewardv1alpha1.PipelineSpec{
-				JenkinsfileRunner: &stewardv1alpha1.JFRSpec{
+				JenkinsfileRunner: &stewardv1alpha1.JenkinsfileRunnerSpec{
 					ImagePullPolicy: "",
 				},
 			},
