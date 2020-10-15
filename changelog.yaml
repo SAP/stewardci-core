@@ -14,7 +14,8 @@
 #      jiraIssueNumber: <Internal Jira issue number>
 
 
-# Do not change the "NEXT" version block
+# Do not modify the "NEXT" version block.
+# Do not change the order ("NEXT" needs to be on top).
 - version: "NEXT"
   date: TBD
   
