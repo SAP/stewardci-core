@@ -14,6 +14,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	"github.com/SAP/stewardci-core/pkg/runctl/secretmgr"
+	slabels "github.com/SAP/stewardci-core/pkg/stewardlabels"
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1api "k8s.io/api/core/v1"
@@ -264,9 +265,6 @@ func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(ctx *runContext) erro
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: steward.GroupName + "--isolate-all-",
 			Namespace:    ctx.runNamespace,
-			Labels: map[string]string{
-				v1alpha1.LabelSystemManaged: "",
-			},
 		},
 		Spec: networkingv1api.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{}, // select all pods from namespace
@@ -276,6 +274,8 @@ func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(ctx *runContext) erro
 			},
 		},
 	}
+
+	slabels.LabelAsSystemManaged(policy)
 
 	policyIfce := c.factory.NetworkingV1().NetworkPolicies(ctx.runNamespace)
 	if _, err := policyIfce.Create(policy); err != nil {
@@ -409,9 +409,8 @@ func (c *runManager) createResource(configStr string, resource string, resourceD
 
 		obj.SetGenerateName(steward.GroupName + "--configured-")
 		obj.SetNamespace(ctx.runNamespace)
-		obj.SetLabels(map[string]string{
-			v1alpha1.LabelSystemManaged: "",
-		})
+
+		slabels.LabelAsSystemManaged(obj)
 	}
 
 	// create resource object

@@ -12,6 +12,7 @@ import (
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	listers "github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
+	slabels "github.com/SAP/stewardci-core/pkg/stewardlabels"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -523,14 +524,11 @@ func (c *Controller) reconcileTenantRoleBinding(tenant *api.Tenant, namespace st
 func (c *Controller) generateTenantRoleBinding(
 	tenantNamespace string, clientNamespace string, config clientConfig,
 ) *rbacv1beta1.RoleBinding {
-	return &rbacv1beta1.RoleBinding{
+	roleBinding := &rbacv1beta1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			// let the server generate a unique name
 			GenerateName: tenantNamespaceRoleBindingNamePrefix,
 			Namespace:    tenantNamespace,
-			Labels: map[string]string{
-				api.LabelSystemManaged: "",
-			},
 		},
 		RoleRef: rbacv1beta1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
@@ -555,6 +553,10 @@ func (c *Controller) generateTenantRoleBinding(
 			},
 		},
 	}
+
+	slabels.LabelAsSystemManaged(roleBinding)
+
+	return roleBinding
 }
 
 func (c *Controller) isTenantRoleBindingUpToDate(current *rbacv1beta1.RoleBinding, expected *rbacv1beta1.RoleBinding) bool {
