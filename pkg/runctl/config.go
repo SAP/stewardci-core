@@ -22,7 +22,7 @@ const (
 	pipelineRunsConfigKeyPSCRunAsGroup = "jenkinsfileRunner.podSecurityContext.runAsGroup"
 	pipelineRunsConfigKeyPSCFSGroup    = "jenkinsfileRunner.podSecurityContext.fsGroup"
 
-	networkPoliciesConfigMapName    = "steward-network-policies"
+	networkPoliciesConfigMapName    = "steward-pipelineruns-network-policies"
 	networkPoliciesConfigKeyDefault = "_default"
 )
 
