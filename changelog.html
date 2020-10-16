@@ -1,33 +1,14 @@
 <html>
     <head>
-        <style>
-            body {
-                font-family: sans-serif;
-            }
-            .next {
-                background-color: palegoldenrod;
-                padding: 5px;
-                margin-bottom: 10px;
-            }
-            .release {
-                background-color: LightBlue;
-                padding: 5px;
-                margin-bottom: 10px;
-            }
-            .change {
-                background-color: #eee;
-                padding: 5px;
-                margin-bottom: 10px;
-            }
-            .categorization {
-                font-size: 0.9em;
-                color: royalblue;
-            }
-        </style>
+
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/3.14.0/js-yaml.min.js"></script>
         <script>
+
+            const repoUrl = "https://github.com/SAP/stewardci-core"
+            const changelogYamlUrl = "https://raw.githubusercontent.com/SAP/stewardci-core/master/changelog.yaml"
             var changelog;
+
             $(function(){
                 xmlhttp=new XMLHttpRequest();
                 xmlhttp.onreadystatechange = function()
@@ -38,7 +19,7 @@
                         renderChangelog(changelog);
                     }
                 }
-                xmlhttp.open("GET", "https://raw.githubusercontent.com/SAP/stewardci-core/master/changelog.yaml", true);
+                xmlhttp.open("GET", changelogYamlUrl, true);
                 xmlhttp.send();
             });
 
@@ -78,13 +59,39 @@
                 $(div).append("<p>Description: "+change.description+"</p>");
                 if(change.warning) $(div).append("<p>⚠ "+change.warning+"</p>");
                 if(change.upgradeNotes) $(div).append("<p>❕ "+change.upgradeNotes+"</p>");
-                $(div).append("<p class='categorization'><a href='https://github.com/SAP/stewardci-core/pull/"+change.pullRequestNumber+"'>#"+change.pullRequestNumber+"</a></p>");
+                $(div).append("<p class='categorization'><a href='"+repoUrl+"/pull/"+change.pullRequestNumber+"'>#"+change.pullRequestNumber+"</a></p>");
                 return div;
             }
-          </script>
+        </script>
+
+        <style>
+            body {
+                font-family: sans-serif;
+            }
+            .next {
+                background-color: palegoldenrod;
+                padding: 5px;
+                margin-bottom: 10px;
+            }
+            .release {
+                background-color: LightBlue;
+                padding: 5px;
+                margin-bottom: 10px;
+            }
+            .change {
+                background-color: #eee;
+                padding: 5px;
+                margin-bottom: 10px;
+            }
+            .categorization {
+                font-size: 0.9em;
+                color: royalblue;
+            }
+        </style>
+
     </head>
     <body>
-        <h1>stewardci-core changelog</h1>
+        <h1>Changelog</h1>
         <div id="content"></div>
     </body>
 </html>
