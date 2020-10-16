@@ -1,3 +1,5 @@
+// +build helm
+
 package test
 
 import (
