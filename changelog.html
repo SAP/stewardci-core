@@ -5,12 +5,12 @@
                 font-family: sans-serif;
             }
             .next {
-                background-color: #ffd;
+                background-color: palegoldenrod;
                 padding: 5px;
                 margin-bottom: 10px;
             }
             .release {
-                background-color: #ddd;
+                background-color: LightBlue;
                 padding: 5px;
                 margin-bottom: 10px;
             }
@@ -38,18 +38,14 @@
                         renderChangelog(changelog);
                     }
                 }
-                xmlhttp.open("GET", "changelog.yaml", false );
-                //For local development:
-                //xmlhttp.open("GET", "https://raw.githubusercontent.com/SAP/stewardci-core/master/changelog.yaml", false );
+                xmlhttp.open("GET", "https://raw.githubusercontent.com/SAP/stewardci-core/master/changelog.yaml", true);
                 xmlhttp.send();
             });
 
             function renderChangelog(changelog) {
                 for(var i = 0; i < changelog.length; i++) {
                     var release = changelog[i];
-                    if(release.changes && release.changes.length > 0) {
-                        $("#content").append(renderRelease(release))
-                    }
+                    $("#content").append(renderRelease(release))
                 }
             }
 
@@ -88,8 +84,7 @@
           </script>
     </head>
     <body>
-        <div id="content">
-
-        </div>
+        <h1>stewardci-core changelog</h1>
+        <div id="content"></div>
     </body>
 </html>
