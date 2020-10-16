@@ -1,0 +1,97 @@
+<html>
+    <head>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/3.14.0/js-yaml.min.js"></script>
+        <script>
+
+            const repoUrl = "https://github.com/SAP/stewardci-core"
+            const changelogYamlUrl = "https://raw.githubusercontent.com/SAP/stewardci-core/master/changelog.yaml"
+            var changelog;
+
+            $(function(){
+                xmlhttp=new XMLHttpRequest();
+                xmlhttp.onreadystatechange = function()
+                {
+                    if (xmlhttp.readyState==4 && xmlhttp.status==200)
+                    {
+                        changelog = jsyaml.load(xmlhttp.responseText);
+                        renderChangelog(changelog);
+                    }
+                }
+                xmlhttp.open("GET", changelogYamlUrl, true);
+                xmlhttp.send();
+            });
+
+            function renderChangelog(changelog) {
+                for(var i = 0; i < changelog.length; i++) {
+                    var release = changelog[i];
+                    $("#content").append(renderRelease(release))
+                }
+            }
+
+            function renderRelease(release) {
+                var div = document.createElement("div");
+                if(release.version == "NEXT") {
+                    div.setAttribute("class", "next")
+                     $(div).append("<h3>"+release.version+"</h3>");
+                     $(div).append("<p>Release Date: unknown </p>");
+                } else {
+                    div.setAttribute("class", "release")
+                     $(div).append("<h3>"+release.version+"</h3>");
+                     $(div).append("<p>Release Date: "+new Date(release.date).toDateString()+"</p>");
+                }
+               
+                if(release.changes) {
+                    for(var i = 0; i < release.changes.length; i++) {
+                    var change = release.changes[i];
+                    $(div).append(renderChange(change))
+                }
+                }
+                return div;
+            }
+
+            function renderChange(change) {
+                var div = document.createElement("div");
+                div.setAttribute("class", "change")
+                $(div).append("<h4>"+change.title+"</h4>");
+                $(div).append("<p class='categorization'>Type: "+change.type+" / Impact: "+change.impact+"</p>");
+                $(div).append("<p>Description: "+change.description+"</p>");
+                if(change.warning) $(div).append("<p>⚠ "+change.warning+"</p>");
+                if(change.upgradeNotes) $(div).append("<p>❕ "+change.upgradeNotes+"</p>");
+                $(div).append("<p class='categorization'><a href='"+repoUrl+"/pull/"+change.pullRequestNumber+"'>#"+change.pullRequestNumber+"</a></p>");
+                return div;
+            }
+        </script>
+
+        <style>
+            body {
+                font-family: sans-serif;
+            }
+            .next {
+                background-color: palegoldenrod;
+                padding: 5px;
+                margin-bottom: 10px;
+            }
+            .release {
+                background-color: LightBlue;
+                padding: 5px;
+                margin-bottom: 10px;
+            }
+            .change {
+                background-color: #eee;
+                padding: 5px;
+                margin-bottom: 10px;
+            }
+            .categorization {
+                font-size: 0.9em;
+                color: royalblue;
+            }
+        </style>
+
+    </head>
+    <body>
+        <h1>Changelog</h1>
+        <div id="content"></div>
+    </body>
+</html>
