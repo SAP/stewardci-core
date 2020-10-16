@@ -25,10 +25,12 @@ func Test_loadPipelineRunsConfig_NoConfigMap(t *testing.T) {
 	cf := fake.NewClientFactory( /* no objects */ )
 
 	// EXERCISE
-	_, err := loadPipelineRunsConfig(cf)
+	resultConfig, err := loadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.ErrorContains(t, err, "configmaps \"steward-pipelineruns\" not found")
+	assert.NilError(t, err)
+	expectedConfig := &pipelineRunsConfigStruct{}
+	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
 
 func Test_loadPipelineRunsConfig_NoNetworkConfigMap(t *testing.T) {
@@ -40,10 +42,12 @@ func Test_loadPipelineRunsConfig_NoNetworkConfigMap(t *testing.T) {
 	)
 
 	// EXERCISE
-	_, err := loadPipelineRunsConfig(cf)
+	resultConfig, err := loadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.ErrorContains(t, err, "configmaps \"steward-pipelineruns-network-policies\" not found")
+	assert.NilError(t, err)
+	expectedConfig := &pipelineRunsConfigStruct{}
+	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
 
 func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
@@ -52,51 +56,85 @@ func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
 	// SETUP
 	cf := fake.NewClientFactory(
 		newPipelineRunsConfigMap( /* no data here */ nil),
-		newNetworkPolicyConfigMap(nil),
+		newNetworkPolicyConfigMap( /* no data here */ nil),
 	)
 
 	// EXERCISE
 	resultConfig, err := loadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.NilError(t, err)
-	expectedConfig := &pipelineRunsConfigStruct{}
-	assert.DeepEqual(t, expectedConfig, resultConfig)
-}
-
-func Test_loadPipelineRunsConfig_EmptyEntries(t *testing.T) {
-	t.Parallel()
-
-	// SETUP
-	cf := fake.NewClientFactory(
-		newPipelineRunsConfigMap(map[string]string{
-			pipelineRunsConfigKeyPSCFSGroup:    "",
-			pipelineRunsConfigKeyPSCRunAsGroup: "",
-			pipelineRunsConfigKeyPSCRunAsUser:  "",
-			pipelineRunsConfigKeyLimitRange:    "",
-			pipelineRunsConfigKeyResourceQuota: "",
-			pipelineRunsConfigKeyTimeout:       "",
-		}),
-		newNetworkPolicyConfigMap(nil),
-	)
-
-	// EXERCISE
-	resultConfig, err := loadPipelineRunsConfig(cf)
-
-	// VERIFY
-	assert.NilError(t, err)
-	expectedConfig := &pipelineRunsConfigStruct{}
-	assert.DeepEqual(t, expectedConfig, resultConfig)
+	assert.Equal(t, "no entry for default network policy key found", err.Error())
+	assert.Assert(t, resultConfig == nil)
 }
 
 var metav1Duration = func(d time.Duration) *metav1.Duration {
 	return &metav1.Duration{Duration: d}
 }
 
-func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
+func Test_loadPipelineRunsConfig_ErrorOnGetConfigMap(t *testing.T) {
 	t.Parallel()
 
-	int64Ptr := func(val int64) *int64 { return &val }
+	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	cf := mocks.NewMockClientFactory(mockCtrl)
+	expectedError := errors.New("some error")
+	{
+		coreV1Ifce := corev1clientmocks.NewMockCoreV1Interface(mockCtrl)
+		cf.EXPECT().CoreV1().Return(coreV1Ifce).AnyTimes()
+		configMapIfce := corev1clientmocks.NewMockConfigMapInterface(mockCtrl)
+		coreV1Ifce.EXPECT().ConfigMaps(gomock.Any()).Return(configMapIfce).AnyTimes()
+		configMapIfce.EXPECT().
+			Get(pipelineRunsConfigMapName, gomock.Any()).
+			Return(nil, expectedError).
+			Times(1)
+	}
+
+	// EXERCISE
+	resultConfig, err := loadPipelineRunsConfig(cf)
+
+	// VERIFY
+	assert.Assert(t, serrors.IsRecoverable(err))
+	assert.Equal(t, err.Error(), expectedError.Error())
+	assert.Assert(t, resultConfig == nil)
+}
+
+func Test_loadPipelineRunsConfig_ErrorOnGetNetworkPoliciesMap(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	cf := mocks.NewMockClientFactory(mockCtrl)
+	expectedError := errors.New("some error")
+	{
+		coreV1Ifce := corev1clientmocks.NewMockCoreV1Interface(mockCtrl)
+		cf.EXPECT().CoreV1().Return(coreV1Ifce).AnyTimes()
+		configMapIfce := corev1clientmocks.NewMockConfigMapInterface(mockCtrl)
+		coreV1Ifce.EXPECT().ConfigMaps(gomock.Any()).Return(configMapIfce).AnyTimes()
+		configMapIfce.EXPECT().
+			Get(pipelineRunsConfigMapName, gomock.Any()).
+			Return(nil, nil).
+			Times(1)
+		configMapIfce.EXPECT().
+			Get(networkPoliciesConfigMapName, gomock.Any()).
+			Return(nil, expectedError).
+			Times(1)
+	}
+
+	// EXERCISE
+	resultConfig, err := loadPipelineRunsConfig(cf)
+
+	// VERIFY
+	assert.Assert(t, serrors.IsRecoverable(err))
+	assert.Equal(t, err.Error(), expectedError.Error())
+	assert.Assert(t, resultConfig == nil)
+}
+
+func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
+	t.Parallel()
 
 	// SETUP
 	cf := fake.NewClientFactory(
@@ -181,34 +219,124 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 	}
 }
 
-// TO BE DISCUSSED how errors occur if only one cm is existing.
-func Test_loadPipelineRunsConfig_ErrorOnGetConfigMap(t *testing.T) {
-	t.Parallel()
+func Test_processConfigMap(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		configMap map[string]string
+		expected  *pipelineRunsConfigStruct
+	}{
 
-	// SETUP
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+		{"all_set",
+			map[string]string{
+				"_example":                         "exampleString",
+				pipelineRunsConfigKeyLimitRange:    "limitRange1",
+				pipelineRunsConfigKeyResourceQuota: "resourceQuota1",
+				pipelineRunsConfigKeyPSCRunAsUser:  "1111",
+				pipelineRunsConfigKeyPSCRunAsGroup: "2222",
+				pipelineRunsConfigKeyPSCFSGroup:    "3333",
+				pipelineRunsConfigKeyTimeout:       "4444m",
+				"someKeyThatShouldBeIgnored":       "34957349",
+			},
+			&pipelineRunsConfigStruct{
+				Timeout:       metav1Duration(time.Minute * 4444),
+				LimitRange:    "limitRange1",
+				ResourceQuota: "resourceQuota1",
+				JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(1111),
+				JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
+				JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(3333),
+			},
+		},
+		{"all_empty",
+			map[string]string{
+				pipelineRunsConfigKeyPSCFSGroup:    "",
+				pipelineRunsConfigKeyPSCRunAsGroup: "",
+				pipelineRunsConfigKeyPSCRunAsUser:  "",
+				pipelineRunsConfigKeyLimitRange:    "",
+				pipelineRunsConfigKeyResourceQuota: "",
+				pipelineRunsConfigKeyTimeout:       "",
+			},
+			&pipelineRunsConfigStruct{},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			config := &pipelineRunsConfigStruct{}
 
-	cf := mocks.NewMockClientFactory(mockCtrl)
-	expectedError := errors.New("some error")
-	{
-		coreV1Ifce := corev1clientmocks.NewMockCoreV1Interface(mockCtrl)
-		cf.EXPECT().CoreV1().Return(coreV1Ifce).AnyTimes()
-		configMapIfce := corev1clientmocks.NewMockConfigMapInterface(mockCtrl)
-		coreV1Ifce.EXPECT().ConfigMaps(gomock.Any()).Return(configMapIfce).AnyTimes()
-		configMapIfce.EXPECT().
-			Get(pipelineRunsConfigMapName, gomock.Any()).
-			Return(nil, expectedError).
-			AnyTimes()
+			// EXERCISE
+			err := processConfigMap(tc.configMap, config)
+
+			// VERIFY
+			assert.NilError(t, err)
+			assert.DeepEqual(t, tc.expected, config)
+		},
+		)
 	}
+}
 
-	// EXERCISE
-	resultConfig, err := loadPipelineRunsConfig(cf)
+func Test_processNetworkMap(t *testing.T) {
 
-	// VERIFY
-	assert.Assert(t, serrors.IsRecoverable(err))
-	assert.Equal(t, err.Error(), expectedError.Error())
-	assert.Assert(t, resultConfig == nil)
+	for _, tc := range []struct {
+		name          string
+		networkMap    map[string]string
+		expected      *pipelineRunsConfigStruct
+		expectedError string
+	}{
+		{"empty",
+			map[string]string{},
+			&pipelineRunsConfigStruct{},
+			"no entry for default network policy key found",
+		},
+		{"only_default",
+			map[string]string{
+				"_default":    "default_key",
+				"default_key": "default_np",
+			},
+			&pipelineRunsConfigStruct{
+				DefaultNetworkPolicy: "default_np",
+			},
+			"",
+		},
+
+		{"wrong_default_key",
+			map[string]string{
+				"_default":    "wrong_key1",
+				"default_key": "default_np",
+			},
+			&pipelineRunsConfigStruct{},
+			`no network policy with key "wrong_key1" found`,
+		},
+		{"multiple_with_correct_default",
+			map[string]string{
+				networkPoliciesConfigKeyDefault: "defaultKey",
+				"defaultKey":                    "defaultPolicy",
+				"foo":                           "fooPolicy",
+				"bar":                           "barPolicy",
+				"_other_special_key":            "baz",
+			},
+			&pipelineRunsConfigStruct{
+				DefaultNetworkPolicy: "defaultPolicy",
+				NetworkPolicies: map[string]string{
+					"foo": "fooPolicy",
+					"bar": "barPolicy",
+				},
+			},
+			"",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// SETUP
+			config := &pipelineRunsConfigStruct{}
+			// EXERCISE
+			err := processNetworkMap(tc.networkMap, config)
+			// VALIDATE
+			if tc.expectedError == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.Equal(t, err.Error(), tc.expectedError)
+			}
+			assert.DeepEqual(t, tc.expected, config)
+
+		})
+	}
 }
 
 func newPipelineRunsConfigMap(data map[string]string) *corev1.ConfigMap {
@@ -230,3 +358,5 @@ func newNetworkPolicyConfigMap(data map[string]string) *corev1.ConfigMap {
 		Data: data,
 	}
 }
+
+func int64Ptr(val int64) *int64 { return &val }

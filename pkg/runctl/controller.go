@@ -16,7 +16,6 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	run "github.com/SAP/stewardci-core/pkg/run"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -290,12 +289,12 @@ func (c *Controller) syncHandler(key string) error {
 	pipelineRunsConfig, err := c.getPipelineRunsConfig()
 	if err != nil {
 		if serrors.IsRecoverable(err) {
-			return errors.Wrap(err, "failed to load configuration for pipeline runs")
+			return err
 		}
 		if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
 			return err
 		}
-		pipelineRun.UpdateResult(api.ResultErrorConfig)
+		pipelineRun.UpdateResult(api.ResultErrorInfra)
 		pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
 		c.metrics.CountResult(pipelineRun.GetStatus().Result)
 		return nil
