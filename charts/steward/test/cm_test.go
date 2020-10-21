@@ -13,7 +13,7 @@ import (
 
 func Test_ConfigNetworkPolicies(t *testing.T) {
 	t.Parallel()
-	template := "templates/config-network-policies.yaml"
+	template := "templates/config-pipelineruns-network-policies.yaml"
 
 	for _, tc := range []struct {
 		name               string
