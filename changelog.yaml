@@ -27,7 +27,7 @@
     warning:
     upgradeNotes: >-
       <p>No incompatible changes.</p>
-      <p><b>Deprecation Notice:</b></p>
+    deprecations: >-
       <p>Helm Chart Configuration changed:</p>
       <ul>
       <li><code>pipelineRuns.jenkinsfileRunner.image.repository</code> is deprecated: use <code>pipelineRuns.jenkinsfileRunner.image</code> instead</li>
