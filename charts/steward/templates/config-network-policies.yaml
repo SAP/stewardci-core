@@ -72,30 +72,39 @@ data:
           from:
           - podSelector: {}
 
+    # end of _example
 
-  # _default holds the name of the default networkPolicy which is applied if
-  # no networkPolicy is defined in the pipeline run.
-{{- if hasKey .Values.pipelineRuns "networkPolicies" }}
-{{- $policyKeys:= keys .Values.pipelineRuns.networkPolicies }}
-{{- $policyCount := len $policyKeys }}
-{{- if ne 1 $policyCount }}
-{{- if hasKey .Values.pipelineRuns "defaultNetworkPolicyName"}}
-{{- if hasKey .Values.pipelineRuns.networkPolicies .Values.pipelineRuns.defaultNetworkPolicyName}}
-  _default: {{ .Values.pipelineRuns.defaultNetworkPolicyName }}
-{{- else }}
-{{ fail "'entry for default key not found'"}}
-{{- end }}
-{{- else }}
-{{ fail "'pipelineRuns.defaultNetworkPolicyName' must be defined if 'pipelineRuns.networkPolicies' contains multiple entries" }}
-{{- end }}
-{{- end }}
-{{- range $key, $value := .Values.pipelineRuns.networkPolicies }}
-  {{ printf "%s: %s" $key $value  }}
-{{- if eq 1 $policyCount }}
-  _default: {{ $key }}
-{{- end }}
-{{- end }}
+{{/* keep preceding whitespace */}}
+
+{{- with .Values.pipelineRuns }}
+{{- if .networkPolicies }}
+
+  {{- if ( .defaultNetworkPolicyName | hasPrefix "_" ) }}
+    {{ fail "value 'pipelineRuns.defaultNetworkPolicyName' must not start with an underscore" }}
+  {{- end }}
+
+  {{- if and .defaultNetworkPolicyName ( not ( hasKey .networkPolicies .defaultNetworkPolicyName ) ) }}
+    {{ fail ( printf "value 'pipelineRuns.networkPolicies' does not have an entry %q as denoted by value 'pipelineRuns.defaultNetworkPolicyName'" .defaultNetworkPolicyName ) }}
+  {{- end }}
+
+  {{- if and ( gt ( len .networkPolicies ) 1 ) ( not .defaultNetworkPolicyName ) }}
+    {{ fail "value 'pipelineRuns.defaultNetworkPolicyName' is required if value 'pipelineRuns.networkPolicies' contains more than one entry" }}
+  {{- end }}
+
+  {{- printf "_default: %s" ( default ( mustFirst ( keys .networkPolicies ) ) .defaultNetworkPolicyName | quote ) | nindent 2 }}
+
+  {{- range $key, $value := .networkPolicies }}
+    {{- if ( $key | hasPrefix "_" ) }}
+      {{ fail ( printf "value 'pipelineRuns.networkPolicies': invalid key %q: keys must not start with an underscore" $key ) }}
+    {{- end }}
+
+    {{- printf "%s: |\n%s" ( $key | quote ) ( $value | indent 2 ) | nindent 2 }}
+  {{- end }}
+
 {{- else }}
   _default: default
-  default: {{ default ( .Files.Get "data/pipelineruns-default-networkpolicy.yaml" ) .Values.pipelineRuns.networkPolicy | quote }}
+  default: |
+    {{- default ( $.Files.Get "data/pipelineruns-default-networkpolicy.yaml" ) .networkPolicy | nindent 4 }}
+{{/* keep preceding whitespace */}}
+{{- end }}
 {{- end }}
