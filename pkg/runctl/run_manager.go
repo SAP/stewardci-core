@@ -235,6 +235,11 @@ func (c *runManager) copySecretsToRunNamespace(ctx *runContext) (string, []strin
 		return "", nil, errors.Wrap(err, "failed to copy pipeline clone secret")
 	}
 
+	_, err = c.copyElasticSearchCredentialToRunNamespace(ctx, secretHelper)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "failed to copy ElasticSearch credential")
+	}
+
 	_, err = c.copyPipelineSecretsToRunNamespace(ctx, secretHelper)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to copy pipeline secrets")
@@ -256,6 +261,35 @@ func (c *runManager) copyImagePullSecretsToRunNamespace(ctx *runContext, secretH
 
 func (c *runManager) copyPipelineCloneSecretToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) (string, error) {
 	secretName := ctx.pipelineRun.GetSpec().JenkinsFile.RepoAuthSecret
+	if secretName == "" {
+		return "", nil
+	}
+	repoServerURL, err := ctx.pipelineRun.GetPipelineRepoServerURL()
+	if err != nil {
+		// TODO: this method should not modify the pipeline run -> must be handled elsewhere
+		ctx.pipelineRun.UpdateMessage(err.Error())
+		ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
+		return "", err
+	}
+	transformers := []secrets.SecretTransformer{
+		secrets.StripAnnotationsTransformer("jenkins.io/"),
+		secrets.StripLabelsTransformer("jenkins.io/"),
+		secrets.UniqueNameTransformer(),
+		secrets.SetAnnotationTransformer("tekton.dev/git-0", repoServerURL),
+	}
+	names, err := c.copySecrets(ctx, secretHelper, []string{secretName}, nil, transformers...)
+	if err != nil {
+		return "", err
+	}
+	return names[0], nil
+}
+
+func (c *runManager) copyElasticSearchCredentialToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) (string, error) {
+	if ctx.pipelineRun.GetSpec().Logging.Elasticsearch.ElasticSearchCredential == "" {
+		return "", nil
+	}
+
+	secretName := ctx.pipelineRun.GetSpec().Logging.Elasticsearch.ElasticSearchCredential
 	if secretName == "" {
 		return "", nil
 	}
@@ -682,6 +716,13 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 
 		if spec.Logging.Elasticsearch.IndexURL != "" {
 			params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_INDEX_URL", spec.Logging.Elasticsearch.IndexURL))
+			// use default values from build template for all other params
+		}
+
+		if spec.Logging.Elasticsearch.ElasticSearchCredential != "" {
+			// Validate the credentil before adding it to tekton parameters
+
+			params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_CREDENTIAL", spec.Logging.Elasticsearch.ElasticSearchCredential))
 			// use default values from build template for all other params
 		}
 	}

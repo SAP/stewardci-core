@@ -30,6 +30,13 @@ spec:
       If null or empty, logging to Elasticsearch is disabled.
       # Example: http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc
     default: {{ default "" .Values.pipelineRuns.logging.elasticsearch.indexURL | quote }}
+  - name: PIPELINE_LOG_ELASTICSEARCH_CREDENTIAL
+    type: string
+    description: >
+      The name of the secret of type basic-auth to use to authenticate to Elasticsearch if and only if
+      PIPELINE_LOG_ELASTICSEARCH_INDEX_URL is set.
+      If null or empty, no authentication takes place.
+    default: ""
   - name: PIPELINE_LOG_ELASTICSEARCH_AUTH_SECRET
     type: string
     description: >
@@ -101,6 +108,8 @@ spec:
       value: '$(params.PIPELINE_PARAMS_JSON)'
     - name: PIPELINE_LOG_ELASTICSEARCH_INDEX_URL
       value: '$(params.PIPELINE_LOG_ELASTICSEARCH_INDEX_URL)'
+    - name: PIPELINE_LOG_ELASTICSEARCH_CREDENTIAL
+      value: '$(params.PIPELINE_LOG_ELASTICSEARCH_CREDENTIAL)'
     - name: PIPELINE_LOG_ELASTICSEARCH_AUTH_SECRET
       value: '$(params.PIPELINE_LOG_ELASTICSEARCH_AUTH_SECRET)'
     - name: PIPELINE_LOG_ELASTICSEARCH_TRUSTEDCERTS_SECRET

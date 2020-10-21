@@ -127,8 +127,20 @@ type Elasticsearch struct {
 	// field `runid` to each log entry.
 	// It can by any JSON value (object, array, string,
 	// number, bool).
-	IndexURL string      `json:"indexURL,omitempty"`
-	RunID    *CustomJSON `json:"runID"`
+	RunID *CustomJSON `json:"runID"`
+
+	// logs can be stored in different indeces in elasticSearch
+	// There is a indexURL defined at cluster level but This field allows
+	// entering different indexURL for each pipelineRun.
+	// It needs to be of type string
+	// +optional
+	IndexURL string `json:"indexURL,omitempty"`
+
+	// ElasticSearchCredential is the name of the Kubernetes `v1/Secret` resource object
+	// of type `kubernetes.io/basic-auth` that contains the username and
+	// password for authentication when accessing the indexURL
+	// +optional
+	ElasticSearchCredential string `json:"elasticSearchCredential,omitempty"`
 }
 
 // PipelineStatus represents the status of the pipeline
