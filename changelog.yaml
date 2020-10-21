@@ -19,15 +19,21 @@
   changes:
     type: enhancement
     impact: minor
-    title: Extend pipelinerun to be able to select networkpolicy
+    title: Introduce network profiles
+
     description: >-
-      Networkpolicy can be selected on pipelinerun now. See <a href="https://github.com/SAP/stewardci-core/tree/master/docs/backend-api#fields-2">PipelineRun Fields</a>.
+      <p>Allow Steward clients to select a network profile per pipeline run.</p>
+      <p>Network profiles are named network-related configurations defined by Steward operators.
+      Currently they define a Kubernetes network policy. Additional network-related settings may be
+      added in the future.</p>
+      <p>Clients can choose a network profile via <code>spec.profiles.network</code> of a PipelineRun
+      resource object.</p>
     warning: ""
     upgradeNotes: >-
-      No incompatible changes.
-      Deprecation notice:
-      Helm configuration value 'pipelineRuns.networkPolicy' is deprecated. 
-      Use 'pipelineRuns.networkPolicies' instead.
+      <p>No incompatible changes.</p>
+    deprecations: >-
+      <p>Helm configuration value <code>pipelineRuns.networkPolicy</code> is deprecated: 
+      use <code>pipelineRuns.networkPolicies</code> instead.</p>
     pullRequestNumber: 160
     jiraIssueNumber: 1305
 

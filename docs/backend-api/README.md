@@ -190,8 +190,8 @@ A simple PipelineRun resource example can be found in [docs/examples/pipelinerun
 | `spec.args` | (object,optional) The parameters to pass to the pipeline, as key-value pairs of type string. |
 | `spec.secrets` | (array of string,optional) The list of secrets to be made available to the pipeline execution. Each entry in the list is the name of a Kubernetes `v1/Secret` resource object in the same namespace as the PipelineRun object itself. See [docs/secrets/Secrets.md](../secrets/Secrets.md) for details. |
 | `spec.imagePullSecrets` | (array of string,optional) The list of image pull secrets required by the pipeline run to pull images of custom containers from private registries. Each entry in the list is the name of a Kubernetes `v1/Secret` resource object of type `kubernetes.io/dockerconfigjson` in the same namespace as the PipelineRun object itself. See [docs/secrets/Secrets.md](../secrets/Secrets.md) for details. |
-| `spec.profiles` | (object, optional) Profile settings for the pipeline run. |
-| `spec.profiles.network` | (string, optional) Select which network profile should be used. An entry with the network policy must be defined in `pipelineRuns.networkPolicies` in the [values.yaml](../../charts/steward/values.yaml). If this parameter is not set the default network policy defined in [pipelineruns-default-networkpolicy.yaml] will be used. |
+| `spec.profiles` | (object, optional) The selection of configuration profiles for various aspects that should be applied for the pipeline run (see below). |
+| `spec.profiles.network` | (string, optional) The name of the network profile to be used for the pipeline run.<br/><br/>Network profiles currently define the network policy for the pipeline run sandbox. In the future this might be extended to other network-related settings.<br/><br/>Network profiles are configured for each Steward installation individually. Ask the Steward administrator for possible values. For vanilla Steward installations there's one network profile called `default`.<br/><br/>If not set or empty, a default network profile will be used. |
 | `spec.runDetails` | (object,optional) Properties of the Jenkins build object. |
 | `spec.runDetails.jobName` | (string,optional) The name of the job this pipeline run belongs to. It is used as the name of the Jenkins job and therefore must be a valid Jenkins job name. If null or empty, `job` will be used. |
 | `spec.runDetails.sequenceNumber` | (string,optional) The sequence number of the pipeline run, which translates into the build number of the Jenkins job.  If null or empty, `1` is used. |
@@ -299,5 +299,3 @@ The sandbox namespace of a PipelineRun gets deleted immediately after the pipeli
 [k8s_api_conventions]: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md
 [k8s_api_conventions_conditions]: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
 [k8s_design_principles]: https://github.com/kubernetes/community/blob/master/contributors/design-proposals/architecture/principles.md
-
-[pipelineruns-default-networkpolicy.yaml]: ../../charts/steward/data/pipelineruns-default-networkpolicy.yaml
