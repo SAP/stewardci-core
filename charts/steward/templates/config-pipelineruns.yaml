@@ -97,7 +97,7 @@ data:
   resourceQuota: {{ .Values.pipelineRuns.resourceQuota | quote }}
 
 {{- with .Values.pipelineRuns.jenkinsfileRunner }}
- {{- if kindIs "string" .image }}
+{{- if kindIs "string" .image }}
   jenkinsfileRunner.image: {{ .image | quote }}
   jenkinsfileRunner.imagePullPolicy: {{ .imagePullPolicy | quote }}
 {{- else }} 

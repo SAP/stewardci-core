@@ -22,15 +22,18 @@
     title: Make Jenkinsfile Runner properties configurable in PipelineRun custom resource objects.
 
     description: >-
-      Jenkins filerunner properties are configurable in Steward-PipelineRun manifest at 'spec.jenkinsfileRunner' now.
-    warning: ""
+      Jenkinsfile Runner properties are configurable in Steward PipelineRun manifests at <code>spec.jenkinsfileRunner</code> now.
+
+    warning:
     upgradeNotes: >-
-      No incompatible changes.
-      Deprecation Notice:
-      Helm Chart Configuration changed.
-      `pipelineRuns.jenkinsfileRunner.image.repository` is deprecated: use pipelineRuns.jenkinsfileRunner.image` instead
-      `pipelineRuns.jenkinsfileRunner.image.tag` is deprecated: use pipelineRuns.jenkinsfileRunner.image` instead
-      `pipelineRuns.jenkinsfileRunner.image.pullPolicy` is deprecated: use pipelineRuns.jenkinsfileRunner.imagePullPolicy` instead
+      <p>No incompatible changes.</p>
+      <p><b>Deprecation Notice:</b></p>
+      <p>Helm Chart Configuration changed:</p>
+      <ul>
+      <li><code>pipelineRuns.jenkinsfileRunner.image.repository</code> is deprecated: use <code>pipelineRuns.jenkinsfileRunner.image</code> instead</li>
+      <li><code>pipelineRuns.jenkinsfileRunner.image.tag</code> is deprecated: use <code>pipelineRuns.jenkinsfileRunner.image</code> instead</li>
+      <li><code>pipelineRuns.jenkinsfileRunner.image.pullPolicy</code> is deprecated: use <code>pipelineRuns.jenkinsfileRunner.imagePullPolicy</code> instead</li>
+      </ul>
     pullRequestNumber: 162
     jiraIssueNumber: 983
 
