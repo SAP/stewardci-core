@@ -110,12 +110,12 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, err)
 	expectedConfig := &pipelineRunsConfigStruct{
-		Timeout:         metav1Duration(time.Minute * 4444),
-		NetworkPolicy:   "networkPolicy1",
-		LimitRange:      "limitRange1",
-		ResourceQuota:   "resourceQuota1",
-		Image:           "image1",
-		ImagePullPolicy: "policy1",
+		Timeout:                          metav1Duration(time.Minute * 4444),
+		NetworkPolicy:                    "networkPolicy1",
+		LimitRange:                       "limitRange1",
+		ResourceQuota:                    "resourceQuota1",
+		JenkinsfileRunnerImage:           "image1",
+		JenkinsfileRunnerImagePullPolicy: "policy1",
 		JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(1111),
 		JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
 		JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(3333),

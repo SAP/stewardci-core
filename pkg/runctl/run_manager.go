@@ -574,8 +574,8 @@ func (c *runManager) addTektonTaskRunParamsForJenkinsfileRunnerImage(
 ) {
 	spec := pipelineRun.GetSpec()
 	jfrSpec := spec.JenkinsfileRunner
-	image := c.pipelineRunsConfig.Image
-	imagePullPolicy := c.pipelineRunsConfig.ImagePullPolicy
+	image := c.pipelineRunsConfig.JenkinsfileRunnerImage
+	imagePullPolicy := c.pipelineRunsConfig.JenkinsfileRunnerImagePullPolicy
 
 	if jfrSpec != nil {
 		if jfrSpec.Image != "" {

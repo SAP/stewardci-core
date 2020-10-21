@@ -1105,8 +1105,8 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 	)
 	examinee := runManager{
 		pipelineRunsConfig: pipelineRunsConfigStruct{
-			Image:           pipelineRunsConfigDefaultImage,
-			ImagePullPolicy: pipelineRunsConfigDefaultPolicy,
+			JenkinsfileRunnerImage:           pipelineRunsConfigDefaultImage,
+			JenkinsfileRunnerImagePullPolicy: pipelineRunsConfigDefaultPolicy,
 		},
 	}
 	for _, tc := range []struct {
