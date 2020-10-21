@@ -43,7 +43,7 @@ func Test_ConfigNetworkPolicies(t *testing.T) {
 				"pipelineRuns.defaultNetworkPolicyName": "wrongKey1"},
 			map[string]string{"_default": "key1",
 				"key1": "np1"},
-			"",
+			"exit status 1",
 		},
 		{"multi_policy",
 			map[string]string{
@@ -52,7 +52,7 @@ func Test_ConfigNetworkPolicies(t *testing.T) {
 				"pipelineRuns.networkPolicies.key2":     "np2"},
 			map[string]string{
 				"_default": "key2",
-				"key1":     "np1",
+				"key1":     "np1\n",
 				"key2":     "np2"},
 			"",
 		},
@@ -71,12 +71,27 @@ func Test_ConfigNetworkPolicies(t *testing.T) {
 			map[string]string{},
 			"exit status 1",
 		},
+		{"illegal_default_key",
+			map[string]string{
+				"pipelineRuns.defaultNetworkPolicyName": "_key3",
+				// Without any key old behaviour would be used
+				"pipelineRuns.networkPolicies.key1": "np1"},
+			map[string]string{},
+			"exit status 1",
+		},
+		{"illegal_key",
+			map[string]string{
+				"pipelineRuns.networkPolicies._illegal_key": "foo"},
+			map[string]string{},
+			"exit status 1",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 
 			// EXERCISE
 			rendered, err := render(t, template, tc.values)
 			if tc.expectedError != "" {
+				assert.Assert(t, err != nil)
 				log.Printf("Error: %s", err.Error())
 				assert.ErrorContains(t, err, tc.expectedError)
 			} else {
