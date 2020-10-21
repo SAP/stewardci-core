@@ -1176,7 +1176,7 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 			}
 
 			// EXERCISE
-			examinee.addTektonTaskRunParamsForImage(mockPipelineRun, &tektonTaskRun)
+			examinee.addTektonTaskRunParamsForJenkinsfileRunnerImage(mockPipelineRun, &tektonTaskRun)
 
 			// VERIFY
 			assert.DeepEqual(t, tc.expectedParams, tektonTaskRun.Spec.Params)

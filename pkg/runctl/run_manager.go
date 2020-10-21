@@ -559,7 +559,7 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 			},
 		},
 	}
-	c.addTektonTaskRunParamsForImage(ctx.pipelineRun, &tektonTaskRun)
+	c.addTektonTaskRunParamsForJenkinsfileRunnerImage(ctx.pipelineRun, &tektonTaskRun)
 	c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForRunDetails(ctx, &tektonTaskRun)
@@ -568,7 +568,7 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 	return err
 }
 
-func (c *runManager) addTektonTaskRunParamsForImage(
+func (c *runManager) addTektonTaskRunParamsForJenkinsfileRunnerImage(
 	pipelineRun k8s.PipelineRun,
 	tektonTaskRun *tekton.TaskRun,
 ) {
