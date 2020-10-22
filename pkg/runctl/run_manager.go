@@ -582,10 +582,9 @@ func (c *runManager) addTektonTaskRunParamsForJenkinsfileRunnerImage(
 			image = jfrSpec.Image
 			if jfrSpec.ImagePullPolicy == "" {
 				imagePullPolicy = "IfNotPresent"
+			} else {
+				imagePullPolicy = jfrSpec.ImagePullPolicy
 			}
-		}
-		if jfrSpec.ImagePullPolicy != "" {
-			imagePullPolicy = jfrSpec.ImagePullPolicy
 		}
 	}
 	params := []tekton.Param{

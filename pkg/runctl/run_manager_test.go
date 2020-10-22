@@ -1146,7 +1146,7 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 			},
 			[]tekton.Param{
 				tektonStringParam("JFR_IMAGE", pipelineRunsConfigDefaultImage),
-				tektonStringParam("JFR_IMAGE_PULL_POLICY", "bar"),
+				tektonStringParam("JFR_IMAGE_PULL_POLICY", pipelineRunsConfigDefaultPolicy),
 			},
 		}, {"image_and_policy",
 			&stewardv1alpha1.PipelineSpec{
