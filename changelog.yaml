@@ -18,7 +18,15 @@
 # Do not change the order ("NEXT" needs to be on top).
 - version: "NEXT"
   date: TBD
-  
+  changes:
+  - type: internal
+    impact: patch
+    title: Fix clustertask
+    description: >-
+      Fix variables in clustertask to changed structure.
+    warning:
+    upgradeNotes: See upgrade notes of version 0.5.0
+    pullRequestNumber: 173  
 - version: "0.5.1"
   date: 2020-10-05
   changes:
