@@ -76,9 +76,9 @@ type PipelineSpec struct {
 	RunDetails *PipelineRunDetails `json:"runDetails,omitempty"`
 }
 
-// JenkinsfileRunnerSpec is has configuration options for the Jenkinsfile Runner container.
+// JenkinsfileRunnerSpec carries configuration options for the Jenkinsfile Runner container.
 type JenkinsfileRunnerSpec struct {
-	// Image is the image name with the tag
+	// Image is the image name including the tag or digest
 	Image string `json:"image,omitempty"`
 
 	// ImagePullPolicy is the pull policy for the image

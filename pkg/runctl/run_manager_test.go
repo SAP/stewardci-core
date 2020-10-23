@@ -1097,7 +1097,7 @@ func Test_RunManager_Start_CreatesTektonTaskRun(t *testing.T) {
 	assert.Assert(t, result != nil)
 }
 
-func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
+func Test_RunManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing.T) {
 	t.Parallel()
 	const (
 		pipelineRunsConfigDefaultImage  = "defaultImage1"
@@ -1162,6 +1162,8 @@ func Test_RunManager_addTektonTaskRunParamsForImage(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
 
 			// SETUP
 			mockCtrl := gomock.NewController(t)
