@@ -1110,9 +1110,9 @@ func Test_RunManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing.
 		},
 	}
 	for _, tc := range []struct {
-		name           string
-		spec           *stewardv1alpha1.PipelineSpec
-		expectedParams []tekton.Param
+		name                string
+		spec                *stewardv1alpha1.PipelineSpec
+		expectedAddedParams []tekton.Param
 	}{
 		{"empty",
 			&stewardv1alpha1.PipelineSpec{},
@@ -1170,18 +1170,21 @@ func Test_RunManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing.
 			defer mockCtrl.Finish()
 			mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
 			mockPipelineRun.EXPECT().GetSpec().Return(tc.spec).AnyTimes()
-
+			existingParams := []tekton.Param{
+				tektonStringParam("AlreadyExistingParam1", "foo"),
+			}
 			tektonTaskRun := tekton.TaskRun{
 				Spec: tekton.TaskRunSpec{
-					Params: []tekton.Param{},
+					Params: existingParams,
 				},
 			}
 
 			// EXERCISE
 			examinee.addTektonTaskRunParamsForJenkinsfileRunnerImage(mockPipelineRun, &tektonTaskRun)
 
-			// VERIFY
-			assert.DeepEqual(t, tc.expectedParams, tektonTaskRun.Spec.Params)
+			// VERIFYr
+			expectedParams := append(existingParams, tc.expectedAddedParams...)
+			assert.DeepEqual(t, expectedParams, tektonTaskRun.Spec.Params)
 		})
 	}
 }
