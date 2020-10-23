@@ -1170,20 +1170,19 @@ func Test_RunManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing.
 			defer mockCtrl.Finish()
 			mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
 			mockPipelineRun.EXPECT().GetSpec().Return(tc.spec).AnyTimes()
-			existingParams := []tekton.Param{
-				tektonStringParam("AlreadyExistingParam1", "foo"),
-			}
+			existingParam := tektonStringParam("AlreadyExistingParam1", "foo")
 			tektonTaskRun := tekton.TaskRun{
 				Spec: tekton.TaskRunSpec{
-					Params: existingParams,
+					Params: []tekton.Param{*existingParam.DeepCopy()},
 				},
 			}
 
 			// EXERCISE
 			examinee.addTektonTaskRunParamsForJenkinsfileRunnerImage(mockPipelineRun, &tektonTaskRun)
 
-			// VERIFYr
-			expectedParams := append(existingParams, tc.expectedAddedParams...)
+			// VERIFY
+			expectedParams := []tekton.Param{existingParam}
+			expectedParams = append(expectedParams, tc.expectedAddedParams...)
 			assert.DeepEqual(t, expectedParams, tektonTaskRun.Spec.Params)
 		})
 	}
