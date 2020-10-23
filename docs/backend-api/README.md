@@ -181,9 +181,6 @@ A simple PipelineRun resource example can be found in [docs/examples/pipelinerun
 | --------- | ----------- |
 | `apiVersion` | `steward.sap.com/v1alpha1` |
 | `kind` | `PipelineRun` |
-| `spec.jenkinsfileRunner` | (object, optional) Configuration of the Jenkinsfile Runner container (see below). |
-| `spec.jenkinsfileRunner.image` | (string, optional) The Jenkinsfile Runner container image to be used for this pipeline run. If not specified, a default image configured for the Steward installation will be used.<br/><br/>Example: `my-org/my-jenkinsfile-runner:latest` |
-| `spec.jenkinsfileRunner.imagePullPolicy` | (string, optional) The image pull policy for `spec.jenkinsfileRunner.image`. It applies only if `spec.jenkinsfileRunner.image` is set, i.e. it does _not_ overwrite the image pull policy of the _default_ Jenkinsfile Runner image. Defaults to 'IfNotPresent'. |
 | `spec.intent` | (string,optional) The intention of the client regarding the way this pipeline run should be processed. The value `run` indicates that the pipeline should run to completion, while the value `abort` indicates that the pipeline processing should be stopped as soon as possible. Omitting the field  or specifying an empty string value is equivalent to value `run`. |
 | `spec.jenkinsFile` | (object,mandatory) The configuration of the Jenkins pipeline definition to be executed. |
 | `spec.jenkinsFile.repoUrl` | (string,mandatory) The URL of the Git repository containing the pipeline definition (aka `Jenkinsfile`). |
@@ -193,6 +190,9 @@ A simple PipelineRun resource example can be found in [docs/examples/pipelinerun
 | `spec.args` | (object,optional) The parameters to pass to the pipeline, as key-value pairs of type string. |
 | `spec.secrets` | (array of string,optional) The list of secrets to be made available to the pipeline execution. Each entry in the list is the name of a Kubernetes `v1/Secret` resource object in the same namespace as the PipelineRun object itself. See [docs/secrets/Secrets.md](../secrets/Secrets.md) for details. |
 | `spec.imagePullSecrets` | (array of string,optional) The list of image pull secrets required by the pipeline run to pull images of custom containers from private registries. Each entry in the list is the name of a Kubernetes `v1/Secret` resource object of type `kubernetes.io/dockerconfigjson` in the same namespace as the PipelineRun object itself. See [docs/secrets/Secrets.md](../secrets/Secrets.md) for details. |
+| `spec.jenkinsfileRunner` | (object, optional) Configuration of the Jenkinsfile Runner container (see below). |
+| `spec.jenkinsfileRunner.image` | (string, optional) The Jenkinsfile Runner container image to be used for this pipeline run. If not specified, a default image configured for the Steward installation will be used.<br/><br/>Example: `my-org/my-jenkinsfile-runner:latest` |
+| `spec.jenkinsfileRunner.imagePullPolicy` | (string, optional) The image pull policy for `spec.jenkinsfileRunner.image`. It applies only if `spec.jenkinsfileRunner.image` is set, i.e. it does _not_ overwrite the image pull policy of the _default_ Jenkinsfile Runner image. Defaults to 'IfNotPresent'. |
 | `spec.runDetails` | (object,optional) Properties of the Jenkins build object. |
 | `spec.runDetails.jobName` | (string,optional) The name of the job this pipeline run belongs to. It is used as the name of the Jenkins job and therefore must be a valid Jenkins job name. If null or empty, `job` will be used. |
 | `spec.runDetails.sequenceNumber` | (string,optional) The sequence number of the pipeline run, which translates into the build number of the Jenkins job.  If null or empty, `1` is used. |
