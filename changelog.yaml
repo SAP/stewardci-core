@@ -26,14 +26,13 @@
 
     warning:
     upgradeNotes: >-
-      <p>No incompatible changes.</p>
-    deprecations: >-
       <p>Helm Chart Configuration changed:</p>
       <ul>
-      <li><code>pipelineRuns.jenkinsfileRunner.image.repository</code> is deprecated: use <code>pipelineRuns.jenkinsfileRunner.image</code> instead</li>
-      <li><code>pipelineRuns.jenkinsfileRunner.image.tag</code> is deprecated: use <code>pipelineRuns.jenkinsfileRunner.image</code> instead</li>
-      <li><code>pipelineRuns.jenkinsfileRunner.image.pullPolicy</code> is deprecated: use <code>pipelineRuns.jenkinsfileRunner.imagePullPolicy</code> instead</li>
+      <li><code>pipelineRuns.jenkinsfileRunner.image.repository</code> is outdated: use <code>pipelineRuns.jenkinsfileRunner.image</code> instead</li>
+      <li><code>pipelineRuns.jenkinsfileRunner.image.tag</code> is outdated: use <code>pipelineRuns.jenkinsfileRunner.image</code> instead</li>
+      <li><code>pipelineRuns.jenkinsfileRunner.image.pullPolicy</code> is outdated: use <code>pipelineRuns.jenkinsfileRunner.imagePullPolicy</code> instead</li>
       </ul>
+    deprecations: 
     pullRequestNumber: 162
     jiraIssueNumber: 983
 

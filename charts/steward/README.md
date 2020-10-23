@@ -145,9 +145,9 @@ Common parameters:
 | Parameter | Description | Default |
 |---|---|---|
 | <code>pipelineRuns.<wbr/>logging.<wbr/>elasticsearch.<wbr/>indexURL</code> | (string)<br/> The URL of the Elasticsearch index to send logs to. If null or empty, logging to Elasticsearch is disabled. Example: `http://elasticsearch-master.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc` | empty |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>repository</code> | DEPRECATED (string)<br/> Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</code> instead. | |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>tag</code> | DEPRECATED (string)<br/> Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</code> instead.  | |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>pullPolicy</code> | DEPRECATED (string)<br/> Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>imagePullPolicy</code> instead. | |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>repository</code> | OUTDATED (string)<br/> Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</code> instead. | |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>tag</code> | OUTDATED (string)<br/> Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</code> instead.  | |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>pullPolicy</code> | OUTDATED (string)<br/> Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>imagePullPolicy</code> instead. | |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</code> | (string)<br/> The Jenkinsfile Runner image. | `stewardci/stewardci-jenkinsfile-runner:<versionTag>` |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>imagePullPolicy</code> | (string)<br/> The image pull policy for the Jenkinsfile Runner image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation. | `IfNotPresent` |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>javaOpts</code> | (string)<br/> The JAVA_OPTS for the Jenkinsfile Runner process. | (see `values.yaml`) |
