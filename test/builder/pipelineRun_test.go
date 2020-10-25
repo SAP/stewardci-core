@@ -1,8 +1,10 @@
 package builder
 
 import (
-	"gotest.tools/assert"
 	"testing"
+
+	"github.com/google/uuid"
+	"gotest.tools/assert"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 )
@@ -76,4 +78,156 @@ func Test_PipelineRunAbort(t *testing.T) {
 	)
 	assert.Equal(t, api.IntentAbort,
 		pipelineRun.Spec.Intent)
+}
+
+func Test_PipelineRunLoggingRunID(t *testing.T) {
+	buildID := uuid.New().String()
+	realmID := uuid.New().String()
+	pipelineRun := PipelineRun("prefix1", "namespace1",
+		PipelineRunSpec(
+			LoggingRunID(&api.CustomJSON{
+				map[string]string{
+					"jobId":   "1",
+					"buildId": buildID,
+					"realmId": realmID,
+				}}),
+		),
+	)
+	assert.DeepEqual(t, &api.Logging{
+		Elasticsearch: &api.Elasticsearch{
+			RunID: &api.CustomJSON{
+				map[string]string{
+					"jobId":   "1",
+					"buildId": buildID,
+					"realmId": realmID,
+				}},
+		},
+	}, pipelineRun.Spec.Logging)
+}
+
+func Test_PipelineRunLoggingIndexURL(t *testing.T) {
+	pipelineRun := PipelineRun("prefix1", "namespace1",
+		PipelineRunSpec(
+			LoggingWithIndexURL("testURL"),
+		),
+	)
+	assert.DeepEqual(t, &api.Logging{
+		Elasticsearch: &api.Elasticsearch{
+			IndexURL: "testURL",
+		},
+	}, pipelineRun.Spec.Logging)
+}
+
+func Test_PipelineRunLoggingRunIDWithIndexURL(t *testing.T) {
+	buildID := uuid.New().String()
+	realmID := uuid.New().String()
+	pipelineRun := PipelineRun("prefix1", "namespace1",
+		PipelineRunSpec(
+			LoggingWithIndexURL("testURL"),
+			LoggingRunID(&api.CustomJSON{
+				map[string]string{
+					"jobId":   "1",
+					"buildId": buildID,
+					"realmId": realmID,
+				}}),
+		),
+	)
+	assert.DeepEqual(t, &api.Logging{
+		Elasticsearch: &api.Elasticsearch{
+			IndexURL: "testURL",
+			RunID: &api.CustomJSON{
+				map[string]string{
+					"jobId":   "1",
+					"buildId": buildID,
+					"realmId": realmID,
+				}},
+		},
+	}, pipelineRun.Spec.Logging)
+}
+
+func Test_PipelineRunLoggingRunIDWithIndexURLAndCredential(t *testing.T) {
+	buildID := uuid.New().String()
+	realmID := uuid.New().String()
+	pipelineRun := PipelineRun("prefix1", "namespace1",
+		PipelineRunSpec(
+			LoggingWithIndexURL("testURL"),
+			LoggingRunID(&api.CustomJSON{
+				map[string]string{
+					"jobId":   "1",
+					"buildId": buildID,
+					"realmId": realmID,
+				}}),
+			LoggingWithIndexURLAndCredential("elasticSearchCredential"),
+		),
+	)
+	assert.DeepEqual(t, &api.Logging{
+		Elasticsearch: &api.Elasticsearch{
+			IndexURL: "testURL",
+			RunID: &api.CustomJSON{
+				map[string]string{
+					"jobId":   "1",
+					"buildId": buildID,
+					"realmId": realmID,
+				}},
+			ElasticSearchCredential: "elasticSearchCredential",
+		},
+	}, pipelineRun.Spec.Logging)
+}
+
+func Test_CheckConflictsBetweenIndexURLsOfTests(t *testing.T) {
+	buildID := uuid.New().String()
+	realmID := uuid.New().String()
+	testCases := []struct {
+		name           string
+		pipelineRun    *api.PipelineRun
+		expectedResult *api.Logging
+	}{
+		{
+			name: "pipelineRun with runID, indexURL and credential",
+			pipelineRun: PipelineRun("prefix1", "namespace1",
+				PipelineRunSpec(
+					LoggingWithIndexURL("foo"),
+					LoggingRunID(&api.CustomJSON{
+						map[string]string{
+							"jobId":   "1",
+							"buildId": buildID,
+							"realmId": realmID,
+						}}),
+					LoggingWithIndexURLAndCredential("elasticSearchCredential"),
+				),
+			),
+			expectedResult: &api.Logging{
+				Elasticsearch: &api.Elasticsearch{
+					IndexURL: "foo",
+					RunID: &api.CustomJSON{
+						map[string]string{
+							"jobId":   "1",
+							"buildId": buildID,
+							"realmId": realmID,
+						}},
+					ElasticSearchCredential: "elasticSearchCredential",
+				},
+			},
+		},
+		{
+			name: "pipelineRun with different indexURL than previous test",
+			pipelineRun: PipelineRun("prefix1", "namespace1",
+				PipelineRunSpec(
+					LoggingWithIndexURL("bar"),
+				),
+			),
+			expectedResult: &api.Logging{
+				Elasticsearch: &api.Elasticsearch{
+					IndexURL: "bar",
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assert.DeepEqual(t, tc.expectedResult, tc.pipelineRun.Spec.Logging)
+		})
+	}
 }

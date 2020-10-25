@@ -46,11 +46,11 @@ func Test_FrameworkTest(t *testing.T) {
 }
 
 // PipelineRunSleepTooLong is a PipelineRunTestBuilder to test if Timeout works correctly
-func PipelineRunSleepTooLong(Namespace string, logging *api.CustomJSON) PipelineRunTest {
+func PipelineRunSleepTooLong(Namespace string, runID *api.CustomJSON) PipelineRunTest {
 	return PipelineRunTest{
 		PipelineRun: builder.PipelineRun("sleeptoolong-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(logging),
+				builder.LoggingRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"sleep/Jenkinsfile"),
 				builder.ArgSpec("SLEEP_FOR_SECONDS", "10"),
@@ -62,11 +62,11 @@ func PipelineRunSleepTooLong(Namespace string, logging *api.CustomJSON) Pipeline
 }
 
 // PipelineRunWrongExpect is a PipelineRunTestBuilder to test Check returning error
-func PipelineRunWrongExpect(Namespace string, logging *api.CustomJSON) PipelineRunTest {
+func PipelineRunWrongExpect(Namespace string, runID *api.CustomJSON) PipelineRunTest {
 	return PipelineRunTest{
 		PipelineRun: builder.PipelineRun("wrongexpect-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(logging),
+				builder.LoggingRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"success/Jenkinsfile"),
 			)),
@@ -77,11 +77,11 @@ func PipelineRunWrongExpect(Namespace string, logging *api.CustomJSON) PipelineR
 }
 
 // PipelineRunWrongName is a PipelineRunTestBuilder to Check failed pipeline runpipeline run creation
-func PipelineRunWrongName(Namespace string, logging *api.CustomJSON) PipelineRunTest {
+func PipelineRunWrongName(Namespace string, runID *api.CustomJSON) PipelineRunTest {
 	return PipelineRunTest{
 		PipelineRun: builder.PipelineRun("wrong_Name", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(logging),
+				builder.LoggingRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"success/Jenkinsfile"),
 			)),
@@ -92,11 +92,11 @@ func PipelineRunWrongName(Namespace string, logging *api.CustomJSON) PipelineRun
 }
 
 // PipelineRunWithSecretNameConflict is a PipelineRunTestBuilder to test Name conflict with Secrets
-func PipelineRunWithSecretNameConflict(Namespace string, logging *api.CustomJSON) PipelineRunTest {
+func PipelineRunWithSecretNameConflict(Namespace string, runID *api.CustomJSON) PipelineRunTest {
 	return PipelineRunTest{
 		PipelineRun: builder.PipelineRun("with-secret-name-conflict", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(logging),
+				builder.LoggingRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"secret/Jenkinsfile"),
 			)),

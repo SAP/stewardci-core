@@ -135,28 +135,42 @@ func Abort() PipelineRunSpecOp {
 	}
 }
 
-// Logging creates a PipelineRunSpecOp which adds Logging to the PipelineRun
-func Logging(runID *api.CustomJSON) PipelineRunSpecOp {
+// LoggingRunID creates a PipelineRunSpecOp which adds Logging to the PipelineRun
+func LoggingRunID(runID *api.CustomJSON) PipelineRunSpecOp {
 	return func(spec api.PipelineSpec) api.PipelineSpec {
-		spec.Logging = &api.Logging{
-			Elasticsearch: &api.Elasticsearch{
-				RunID: runID,
-			},
+		logging := &api.Logging{
+			Elasticsearch: &api.Elasticsearch{},
 		}
+		if spec.Logging != nil {
+			logging = spec.Logging
+		}
+
+		if logging.Elasticsearch == nil {
+			logging.Elasticsearch = &api.Elasticsearch{}
+		}
+		logging.Elasticsearch.RunID = runID
+		spec.Logging = logging
 
 		return spec
 	}
 }
 
 // LoggingWithIndexURL creates a PipelineRunSpecOp which adds Logging to the PipelineRun with specific indexURL
-func LoggingWithIndexURL(runID *api.CustomJSON, indexURL string) PipelineRunSpecOp {
+func LoggingWithIndexURL(indexURL string) PipelineRunSpecOp {
 	return func(spec api.PipelineSpec) api.PipelineSpec {
-		spec.Logging = &api.Logging{
-			Elasticsearch: &api.Elasticsearch{
-				RunID:    runID,
-				IndexURL: indexURL,
-			},
+		logging := &api.Logging{
+			Elasticsearch: &api.Elasticsearch{},
 		}
+		if spec.Logging != nil {
+			logging = spec.Logging
+		}
+
+		if logging.Elasticsearch == nil {
+			logging.Elasticsearch = &api.Elasticsearch{}
+		}
+
+		logging.Elasticsearch.IndexURL = indexURL
+		spec.Logging = logging
 
 		return spec
 	}
@@ -164,15 +178,21 @@ func LoggingWithIndexURL(runID *api.CustomJSON, indexURL string) PipelineRunSpec
 
 // LoggingWithIndexURLAndCredential creates a PipelineRunSpecOp which adds Logging to the PipelineRun
 // with specific indexURL and its own credential
-func LoggingWithIndexURLAndCredential(runID *api.CustomJSON, indexURL string, credential string) PipelineRunSpecOp {
+func LoggingWithIndexURLAndCredential(credential string) PipelineRunSpecOp {
 	return func(spec api.PipelineSpec) api.PipelineSpec {
-		spec.Logging = &api.Logging{
-			Elasticsearch: &api.Elasticsearch{
-				RunID:                   runID,
-				IndexURL:                indexURL,
-				ElasticSearchCredential: credential,
-			},
+		logging := &api.Logging{
+			Elasticsearch: &api.Elasticsearch{},
 		}
+		if spec.Logging != nil {
+			logging = spec.Logging
+		}
+
+		if logging.Elasticsearch == nil {
+			logging.Elasticsearch = &api.Elasticsearch{}
+		}
+
+		logging.Elasticsearch.ElasticSearchCredential = credential
+		spec.Logging = logging
 
 		return spec
 	}

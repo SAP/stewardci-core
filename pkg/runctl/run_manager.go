@@ -3,6 +3,7 @@ package runctl
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -285,6 +286,14 @@ func (c *runManager) copyPipelineCloneSecretToRunNamespace(ctx *runContext, secr
 }
 
 func (c *runManager) copyElasticSearchCredentialToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) (string, error) {
+	if ctx.pipelineRun.GetSpec().Logging == nil {
+		return "", nil
+	}
+
+	if ctx.pipelineRun.GetSpec().Logging.Elasticsearch == nil {
+		return "", nil
+	}
+
 	if ctx.pipelineRun.GetSpec().Logging.Elasticsearch.ElasticSearchCredential == "" {
 		return "", nil
 	}
@@ -715,7 +724,13 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 		}
 
 		if spec.Logging.Elasticsearch.IndexURL != "" {
-			params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_INDEX_URL", spec.Logging.Elasticsearch.IndexURL))
+			elasticSearchURL, err := toValidURL(spec.Logging.Elasticsearch.IndexURL)
+			if err != nil {
+				return errors.WithMessage(err,
+					"spec.Logging.Elasticsearch.IndexURL is not a valid URL",
+				)
+			}
+			params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_INDEX_URL", elasticSearchURL))
 			// use default values from build template for all other params
 		}
 
@@ -792,4 +807,13 @@ func tektonStringParam(name string, value string) tekton.Param {
 			StringVal: value,
 		},
 	}
+}
+
+func toValidURL(indexURL string) (string, error) {
+	validURL, err := url.Parse(indexURL)
+	if err != nil || validURL.Scheme == "" || validURL.Host == "" {
+		return "", fmt.Errorf("error while validating elasticSearch IndexURL: %v", err)
+	}
+
+	return string(validURL.String()), nil
 }

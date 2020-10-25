@@ -1642,9 +1642,6 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 		runIDJSON          string
 		expectedParamValue string
 	}{
-		{"none", ``, `null`},
-		{"none2", `"___dummy___": 1`, `null`},
-		{"null", `"runID": null`, `null`},
 		{"true", `"runID": true`, `true`},
 		{"false", `"runID": false`, `false`},
 		{"int", `"runID": 123`, `123`},
@@ -1698,10 +1695,8 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			// exercise
 			err = examinee.createTektonTaskRun(runCtx)
 			assert.NilError(t, err)
-
 			// verify
 			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
-
 			param := findTaskRunParam(taskRun, TaskRunParamNameRunIDJSON)
 			assert.Assert(t, param != nil)
 			assert.Equal(t, tekton.ParamTypeString, param.Value.Type)
@@ -1709,6 +1704,60 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 
 			param = findTaskRunParam(taskRun, TaskRunParamNameIndexURL)
 			assert.Assert(t, is.Nil(param))
+		})
+	}
+
+	/**
+	 * Test: Various JSON values for spec.logging.elasticsearch.runID
+	 * are correctly passed as Tekton TaskRun input parameter.
+	 */
+	test = "SuppressRunID"
+	for _, tc := range []struct {
+		name               string
+		runIDJSON          string
+		expectedParamValue string
+	}{
+		{"none", ``, `null`},
+		{"null", `"runID": null`, `null`},
+		{"dummy", `"___dummy___": 1`, `null`},
+	} {
+		t.Run(test+"_"+tc.name, func(t *testing.T) {
+			var err error
+
+			// setup
+			pipelineRunJSON := fmt.Sprintf(fixIndent(`
+				{
+					"apiVersion": "steward.sap.com/v1alpha1",
+					"kind": "PipelineRun",
+					"metadata": {
+						"name": "dummy1",
+						"namespace": "namespace1"
+					},
+					"spec": {
+						"jenkinsFile": {
+							"repoUrl": "dummyRepoUrl",
+							"revision": "dummyRevision",
+							"relativePath": "dummyRelativePath"
+						},
+						"logging": {
+							"elasticsearch": {
+								%s
+							}
+						}
+					}
+				}`),
+				tc.runIDJSON,
+			)
+			t.Log("input:", pipelineRunJSON)
+			examinee, runCtx, cf := setupExaminee(t, pipelineRunJSON)
+
+			// exercise
+			err = examinee.createTektonTaskRun(runCtx)
+			assert.NilError(t, err)
+			// verify
+			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
+			param := findTaskRunParam(taskRun, TaskRunParamNameRunIDJSON)
+			assert.Assert(t, param == nil)
 		})
 	}
 
@@ -1765,6 +1814,54 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 
 			param = findTaskRunParam(taskRun, TaskRunParamNameRunIDJSON)
 			assert.Assert(t, is.Nil(param))
+		})
+	}
+
+	/**
+	 * Test: If there is no spec.logging.elasticsearch, the index URL
+	 * template parameter should be defined as empty string, effectively
+	 * disabling logging to Elasticsearch.
+	 */
+	test = "ErrorOnWrongFormattedIndexURL"
+	for _, tc := range []struct {
+		name     string
+		indexURL string
+	}{
+		{"NoValidURL", `"indexURL": "testURL"`},
+	} {
+		t.Run(test+"_"+tc.name, func(t *testing.T) {
+			var err error
+
+			// setup
+			pipelineRunJSON := fmt.Sprintf(fixIndent(`
+				{
+					"apiVersion": "steward.sap.com/v1alpha1",
+					"kind": "PipelineRun",
+					"metadata": {
+						"name": "dummy1",
+						"namespace": "namespace1"
+					},
+					"spec": {
+						"jenkinsFile": {
+							"repoUrl": "dummyRepoUrl",
+							"revision": "dummyRevision",
+							"relativePath": "dummyRelativePath"
+						},
+						"logging": {
+							"elasticsearch": {
+								%s
+							}
+						}
+					}
+				}`),
+				tc.indexURL,
+			)
+			t.Log("input:", pipelineRunJSON)
+			examinee, runCtx, cf := setupExaminee(t, pipelineRunJSON)
+			t.Log("cf:", cf)
+			// exercise
+			err = examinee.createTektonTaskRun(runCtx)
+			assert.NilError(t, err)
 		})
 	}
 }
