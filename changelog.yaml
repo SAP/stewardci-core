@@ -18,14 +18,27 @@
 # Do not change the order ("NEXT" needs to be on top).
 - version: "NEXT"
   date: TBD
-  
+  changes:
+
+  - type: internal
+    impact: patch
+    title: Updated Jenkinsfile Runner based on adoptjdk11 instead of openjdk8
+    description: >-
+      Besides plugin updates, Jenkins Core update and a Jenkinsfile Runner update the
+      Jenkinsfile Runner image has been switched to adoptjdk11, mainly to reduce the attack vector.
+    warning: ""
+    upgradeNotes: ""
+    deprecations:
+    pullRequestNumber: 175
+    jiraIssueNumber: 1348
+
 - version: "0.5.1"
   date: 2020-10-05
   changes:
+
   - type: bug
     impact: patch
     title: Fix clustertask
-
     description: >-
       Fix clustertask to match v1beta1 specification.
     pullRequestNumber: 163
@@ -33,17 +46,15 @@
 - version: "0.5.0"
   date: 2020-08-29
   changes:
+
   - type: enhancement
     impact: incompatible
     title: Upgrade dependency to Tekton v0.14.3
-
     description: >-
       Build and run against Tekton v0.14.3.
     warning: Requires Tekton v0.14.3.
-
     upgradeNotes: >-
       The target Kubernetes system must have Tekton v0.14.3 installed. Higher versions may also work.
       In addition, Steward Jenkinsfile Runner Image version <a href="https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/200921_6cc247f">200921_6cc247f</a> or later is required.
     pullRequestNumber: 151
-
     jiraIssueNumber: 1330
