@@ -135,8 +135,8 @@ func Abort() PipelineRunSpecOp {
 	}
 }
 
-// LoggingRunID creates a PipelineRunSpecOp which adds Logging to the PipelineRun
-func LoggingRunID(runID *api.CustomJSON) PipelineRunSpecOp {
+// LoggingWithRunID creates a PipelineRunSpecOp which adds Logging to the PipelineRun
+func LoggingWithRunID(runID *api.CustomJSON) PipelineRunSpecOp {
 	return func(spec api.PipelineSpec) api.PipelineSpec {
 		logging := &api.Logging{
 			Elasticsearch: &api.Elasticsearch{},
@@ -176,9 +176,9 @@ func LoggingWithIndexURL(indexURL string) PipelineRunSpecOp {
 	}
 }
 
-// LoggingWithIndexURLAndCredential creates a PipelineRunSpecOp which adds Logging to the PipelineRun
+// LoggingWithCredential creates a PipelineRunSpecOp which adds Logging to the PipelineRun
 // with specific indexURL and its own credential
-func LoggingWithIndexURLAndCredential(credential string) PipelineRunSpecOp {
+func LoggingWithCredential(credential string) PipelineRunSpecOp {
 	return func(spec api.PipelineSpec) api.PipelineSpec {
 		logging := &api.Logging{
 			Elasticsearch: &api.Elasticsearch{},
@@ -191,7 +191,7 @@ func LoggingWithIndexURLAndCredential(credential string) PipelineRunSpecOp {
 			logging.Elasticsearch = &api.Elasticsearch{}
 		}
 
-		logging.Elasticsearch.ElasticSearchCredential = credential
+		logging.Elasticsearch.ElasticsearchCredential = credential
 		spec.Logging = logging
 
 		return spec

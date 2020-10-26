@@ -136,11 +136,11 @@ type Elasticsearch struct {
 	// +optional
 	IndexURL string `json:"indexURL,omitempty"`
 
-	// ElasticSearchCredential is the name of the Kubernetes `v1/Secret` resource object
+	// ElasticsearchCredential is the name of the Kubernetes `v1/Secret` resource object
 	// of type `kubernetes.io/basic-auth` that contains the username and
 	// password for authentication when accessing the indexURL
 	// +optional
-	ElasticSearchCredential string `json:"elasticSearchCredential,omitempty"`
+	ElasticsearchCredential string `json:"elasticsearchCredential,omitempty"`
 }
 
 // PipelineStatus represents the status of the pipeline

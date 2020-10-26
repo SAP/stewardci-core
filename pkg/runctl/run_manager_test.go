@@ -1818,16 +1818,111 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	}
 
 	/**
-	 * Test: If there is no spec.logging.elasticsearch, the index URL
-	 * template parameter should be defined as empty string, effectively
-	 * disabling logging to Elasticsearch.
+	 * Test: If provided indexURL at spec.logging.elasticsearch.indexURL
+	 * does not have correct format test should fail.
 	 */
 	test = "ErrorOnWrongFormattedIndexURL"
 	for _, tc := range []struct {
-		name     string
-		indexURL string
+		name         string
+		indexURLJson string
 	}{
-		{"NoValidURL", `"indexURL": "testURL"`},
+		{"indexURLWithNoScheme", `"indexURL": "testURL"`},
+		{"indexURLWithWrongFormat2", `"indexURL": "http//testURL"`},
+	} {
+		t.Run(test+"_"+tc.name, func(t *testing.T) {
+			var err error
+
+			// setup
+			pipelineRunJSON := fmt.Sprintf(fixIndent(`
+				 {
+					 "apiVersion": "steward.sap.com/v1alpha1",
+					 "kind": "PipelineRun",
+					 "metadata": {
+						 "name": "dummy1",
+						 "namespace": "namespace1"
+					 },
+					 "spec": {
+						 "jenkinsFile": {
+							 "repoUrl": "dummyRepoUrl",
+							 "revision": "dummyRevision",
+							 "relativePath": "dummyRelativePath"
+						 },
+						 "logging": {
+							 "elasticsearch": {
+								 %s
+							 }
+						 }
+					 }
+				 }`),
+				tc.indexURLJson,
+			)
+			t.Log("input:", pipelineRunJSON)
+			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
+			// exercise
+			err = examinee.createTektonTaskRun(runCtx)
+			assert.ErrorContains(t, err, "field spec.logging.elasticSearch.indexURL is invalid: scheme not supported")
+		})
+	}
+
+	/**
+	 * Test: If provided indexURL at spec.logging.elasticsearch.indexURL
+	 * does not have correct scheme tests should fail.
+	 */
+	test = "ErrorOnWrongSchemeInIndexURL"
+	for _, tc := range []struct {
+		name         string
+		indexURLJson string
+	}{
+		{"indexURLWithIncorrectScheme", `"indexURL": "ftp://testURL"`},
+	} {
+		t.Run(test+"_"+tc.name, func(t *testing.T) {
+			var err error
+
+			// setup
+			pipelineRunJSON := fmt.Sprintf(fixIndent(`
+				  {
+					  "apiVersion": "steward.sap.com/v1alpha1",
+					  "kind": "PipelineRun",
+					  "metadata": {
+						  "name": "dummy1",
+						  "namespace": "namespace1"
+					  },
+					  "spec": {
+						  "jenkinsFile": {
+							  "repoUrl": "dummyRepoUrl",
+							  "revision": "dummyRevision",
+							  "relativePath": "dummyRelativePath"
+						  },
+						  "logging": {
+							  "elasticsearch": {
+								  %s
+							  }
+						  }
+					  }
+				  }`),
+				tc.indexURLJson,
+			)
+			t.Log("input:", pipelineRunJSON)
+			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
+			// exercise
+			err = examinee.createTektonTaskRun(runCtx)
+			assert.ErrorContains(t, err, "field spec.logging.elasticSearch.indexURL is invalid: scheme not supported")
+		})
+	}
+
+	/**
+	 * Test: Test should pass if indexURL of elasticSearch has correct format and scheme.
+	 */
+	test = "CorrectFormatForIndexURL"
+	for _, tc := range []struct {
+		name               string
+		indexURLJson       string
+		expectedParamValue string
+	}{
+		{"validhttpURL", `"indexURL": "http://host.domain"`, "http://host.domain"},
+		{"validhttpsURL", `"indexURL": "https://host.domain"`, "https://host.domain"},
+		{"validHTTPURL", `"indexURL": "HTTP://host.domain"`, "http://host.domain"},
+		{"validHTTPSURL", `"indexURL": "HTTPS://host.domain"`, "https://host.domain"},
 	} {
 		t.Run(test+"_"+tc.name, func(t *testing.T) {
 			var err error
@@ -1854,14 +1949,20 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 						}
 					}
 				}`),
-				tc.indexURL,
+				tc.indexURLJson,
 			)
 			t.Log("input:", pipelineRunJSON)
 			examinee, runCtx, cf := setupExaminee(t, pipelineRunJSON)
-			t.Log("cf:", cf)
+
 			// exercise
 			err = examinee.createTektonTaskRun(runCtx)
 			assert.NilError(t, err)
+			// verify
+			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
+			param := findTaskRunParam(taskRun, TaskRunParamNameIndexURL)
+			assert.Assert(t, param != nil)
+			assert.Equal(t, tekton.ParamTypeString, param.Value.Type)
+			assert.Equal(t, tc.expectedParamValue, param.Value.StringVal)
 		})
 	}
 }

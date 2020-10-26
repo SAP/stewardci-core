@@ -24,11 +24,11 @@
 
   - type: enhancement
     impact: minor
-    title: Make elasticSearch IndexURL configurable in PipelineRun custom resource objects.
+    title: Make Elasticsearch IndexURL configurable in PipelineRun custom resource objects.
     description: >-
       There exists a default elasticSearch IndexURL per cluster. It reduces flexibility to
-      push logs to different indeces in elasticSearch. This change allows developers to
-      make elasticSearch IndexURL configurable in Steward-PipelineRun object as a parameter.
+      push logs to different indices in Elasticsearch. This change allows developers to
+      make Elasticsearch IndexURL configurable in Steward PipelineRun objects as a parameter.
     warning: ""
     upgradeNotes: ""
     pullRequestNumber: 172

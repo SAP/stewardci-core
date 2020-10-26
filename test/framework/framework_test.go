@@ -50,7 +50,7 @@ func PipelineRunSleepTooLong(Namespace string, runID *api.CustomJSON) PipelineRu
 	return PipelineRunTest{
 		PipelineRun: builder.PipelineRun("sleeptoolong-", Namespace,
 			builder.PipelineRunSpec(
-				builder.LoggingRunID(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"sleep/Jenkinsfile"),
 				builder.ArgSpec("SLEEP_FOR_SECONDS", "10"),
@@ -66,7 +66,7 @@ func PipelineRunWrongExpect(Namespace string, runID *api.CustomJSON) PipelineRun
 	return PipelineRunTest{
 		PipelineRun: builder.PipelineRun("wrongexpect-", Namespace,
 			builder.PipelineRunSpec(
-				builder.LoggingRunID(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"success/Jenkinsfile"),
 			)),
@@ -81,7 +81,7 @@ func PipelineRunWrongName(Namespace string, runID *api.CustomJSON) PipelineRunTe
 	return PipelineRunTest{
 		PipelineRun: builder.PipelineRun("wrong_Name", Namespace,
 			builder.PipelineRunSpec(
-				builder.LoggingRunID(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"success/Jenkinsfile"),
 			)),
@@ -96,7 +96,7 @@ func PipelineRunWithSecretNameConflict(Namespace string, runID *api.CustomJSON) 
 	return PipelineRunTest{
 		PipelineRun: builder.PipelineRun("with-secret-name-conflict", Namespace,
 			builder.PipelineRunSpec(
-				builder.LoggingRunID(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"secret/Jenkinsfile"),
 			)),

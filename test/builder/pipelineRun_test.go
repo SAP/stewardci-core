@@ -80,12 +80,12 @@ func Test_PipelineRunAbort(t *testing.T) {
 		pipelineRun.Spec.Intent)
 }
 
-func Test_PipelineRunLoggingRunID(t *testing.T) {
+func Test_PipelineRunLoggingWithRunID(t *testing.T) {
 	buildID := uuid.New().String()
 	realmID := uuid.New().String()
 	pipelineRun := PipelineRun("prefix1", "namespace1",
 		PipelineRunSpec(
-			LoggingRunID(&api.CustomJSON{
+			LoggingWithRunID(&api.CustomJSON{
 				map[string]string{
 					"jobId":   "1",
 					"buildId": buildID,
@@ -118,13 +118,13 @@ func Test_PipelineRunLoggingIndexURL(t *testing.T) {
 	}, pipelineRun.Spec.Logging)
 }
 
-func Test_PipelineRunLoggingRunIDWithIndexURL(t *testing.T) {
+func Test_PipelineRunLoggingWithRunIDAndWithIndexURL(t *testing.T) {
 	buildID := uuid.New().String()
 	realmID := uuid.New().String()
 	pipelineRun := PipelineRun("prefix1", "namespace1",
 		PipelineRunSpec(
 			LoggingWithIndexURL("testURL"),
-			LoggingRunID(&api.CustomJSON{
+			LoggingWithRunID(&api.CustomJSON{
 				map[string]string{
 					"jobId":   "1",
 					"buildId": buildID,
@@ -145,19 +145,19 @@ func Test_PipelineRunLoggingRunIDWithIndexURL(t *testing.T) {
 	}, pipelineRun.Spec.Logging)
 }
 
-func Test_PipelineRunLoggingRunIDWithIndexURLAndCredential(t *testing.T) {
+func Test_PipelineRunLoggingWithAllParams(t *testing.T) {
 	buildID := uuid.New().String()
 	realmID := uuid.New().String()
 	pipelineRun := PipelineRun("prefix1", "namespace1",
 		PipelineRunSpec(
 			LoggingWithIndexURL("testURL"),
-			LoggingRunID(&api.CustomJSON{
+			LoggingWithRunID(&api.CustomJSON{
 				map[string]string{
 					"jobId":   "1",
 					"buildId": buildID,
 					"realmId": realmID,
 				}}),
-			LoggingWithIndexURLAndCredential("elasticSearchCredential"),
+			LoggingWithCredential("elasticsearchCredential"),
 		),
 	)
 	assert.DeepEqual(t, &api.Logging{
@@ -169,7 +169,7 @@ func Test_PipelineRunLoggingRunIDWithIndexURLAndCredential(t *testing.T) {
 					"buildId": buildID,
 					"realmId": realmID,
 				}},
-			ElasticSearchCredential: "elasticSearchCredential",
+			ElasticsearchCredential: "elasticsearchCredential",
 		},
 	}, pipelineRun.Spec.Logging)
 }
@@ -187,13 +187,13 @@ func Test_CheckConflictsBetweenIndexURLsOfTests(t *testing.T) {
 			pipelineRun: PipelineRun("prefix1", "namespace1",
 				PipelineRunSpec(
 					LoggingWithIndexURL("foo"),
-					LoggingRunID(&api.CustomJSON{
+					LoggingWithRunID(&api.CustomJSON{
 						map[string]string{
 							"jobId":   "1",
 							"buildId": buildID,
 							"realmId": realmID,
 						}}),
-					LoggingWithIndexURLAndCredential("elasticSearchCredential"),
+					LoggingWithCredential("elasticsearchCredential"),
 				),
 			),
 			expectedResult: &api.Logging{
@@ -205,7 +205,7 @@ func Test_CheckConflictsBetweenIndexURLsOfTests(t *testing.T) {
 							"buildId": buildID,
 							"realmId": realmID,
 						}},
-					ElasticSearchCredential: "elasticSearchCredential",
+					ElasticsearchCredential: "elasticsearchCredential",
 				},
 			},
 		},

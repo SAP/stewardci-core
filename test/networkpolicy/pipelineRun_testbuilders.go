@@ -15,7 +15,7 @@ func PipelineRunNetworkClosedPolicy(Namespace string, runID *api.CustomJSON) f.P
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("net-", Namespace,
 			builder.PipelineRunSpec(
-				builder.LoggingRunID(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"netcat/Jenkinsfile"),
 			)),
@@ -29,7 +29,7 @@ func PipelineRunNetworkOpenPolicy(Namespace string, runID *api.CustomJSON) f.Pip
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("net-", Namespace,
 			builder.PipelineRunSpec(
-				builder.LoggingRunID(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"netcat/Jenkinsfile"),
 			)),

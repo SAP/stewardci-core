@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -236,7 +237,7 @@ func (c *runManager) copySecretsToRunNamespace(ctx *runContext) (string, []strin
 		return "", nil, errors.Wrap(err, "failed to copy pipeline clone secret")
 	}
 
-	_, err = c.copyElasticSearchCredentialToRunNamespace(ctx, secretHelper)
+	_, err = c.copyElasticsearchCredentialToRunNamespace(ctx, secretHelper)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to copy ElasticSearch credential")
 	}
@@ -285,7 +286,7 @@ func (c *runManager) copyPipelineCloneSecretToRunNamespace(ctx *runContext, secr
 	return names[0], nil
 }
 
-func (c *runManager) copyElasticSearchCredentialToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) (string, error) {
+func (c *runManager) copyElasticsearchCredentialToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) (string, error) {
 	if ctx.pipelineRun.GetSpec().Logging == nil {
 		return "", nil
 	}
@@ -294,26 +295,18 @@ func (c *runManager) copyElasticSearchCredentialToRunNamespace(ctx *runContext, 
 		return "", nil
 	}
 
-	if ctx.pipelineRun.GetSpec().Logging.Elasticsearch.ElasticSearchCredential == "" {
+	if ctx.pipelineRun.GetSpec().Logging.Elasticsearch.ElasticsearchCredential == "" {
 		return "", nil
 	}
 
-	secretName := ctx.pipelineRun.GetSpec().Logging.Elasticsearch.ElasticSearchCredential
+	secretName := ctx.pipelineRun.GetSpec().Logging.Elasticsearch.ElasticsearchCredential
 	if secretName == "" {
 		return "", nil
 	}
-	repoServerURL, err := ctx.pipelineRun.GetPipelineRepoServerURL()
-	if err != nil {
-		// TODO: this method should not modify the pipeline run -> must be handled elsewhere
-		ctx.pipelineRun.UpdateMessage(err.Error())
-		ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
-		return "", err
-	}
+
 	transformers := []secrets.SecretTransformer{
 		secrets.StripAnnotationsTransformer("jenkins.io/"),
 		secrets.StripLabelsTransformer("jenkins.io/"),
-		secrets.UniqueNameTransformer(),
-		secrets.SetAnnotationTransformer("tekton.dev/git-0", repoServerURL),
 	}
 	names, err := c.copySecrets(ctx, secretHelper, []string{secretName}, nil, transformers...)
 	if err != nil {
@@ -615,7 +608,13 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 	}
 	c.addTektonTaskRunParamsForJenkinsfileRunnerImage(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
-	c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
+	err = c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
+	if err != nil {
+		ctx.pipelineRun.UpdateMessage(err.Error())
+		ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
+		return err
+	}
+
 	c.addTektonTaskRunParamsForRunDetails(ctx, &tektonTaskRun)
 	tektonClient := c.factory.TektonV1beta1()
 	_, err = tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(&tektonTaskRun)
@@ -724,7 +723,8 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 		}
 
 		if spec.Logging.Elasticsearch.IndexURL != "" {
-			elasticSearchURL, err := toValidURL(spec.Logging.Elasticsearch.IndexURL)
+
+			elasticSearchURL, err := ensureValidURL(spec.Logging.Elasticsearch.IndexURL)
 			if err != nil {
 				return errors.WithMessage(err,
 					"spec.Logging.Elasticsearch.IndexURL is not a valid URL",
@@ -733,16 +733,15 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 			params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_INDEX_URL", elasticSearchURL))
 			// use default values from build template for all other params
 		}
+		if spec.Logging.Elasticsearch.ElasticsearchCredential != "" {
+			// Validate the credential before adding it to tekton parameters
 
-		if spec.Logging.Elasticsearch.ElasticSearchCredential != "" {
-			// Validate the credentil before adding it to tekton parameters
-
-			params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_CREDENTIAL", spec.Logging.Elasticsearch.ElasticSearchCredential))
+			params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_CREDENTIAL", spec.Logging.Elasticsearch.ElasticsearchCredential))
 			// use default values from build template for all other params
 		}
 	}
-
 	tektonTaskRun.Spec.Params = append(tektonTaskRun.Spec.Params, params...)
+
 	return nil
 }
 
@@ -809,11 +808,14 @@ func tektonStringParam(name string, value string) tekton.Param {
 	}
 }
 
-func toValidURL(indexURL string) (string, error) {
+func ensureValidURL(indexURL string) (string, error) {
 	validURL, err := url.Parse(indexURL)
-	if err != nil || validURL.Scheme == "" || validURL.Host == "" {
-		return "", fmt.Errorf("error while validating elasticSearch IndexURL: %v", err)
+	if err != nil {
+		return "", fmt.Errorf("value %q of field spec.logging.elasticSearch.indexURL does not have a valid URL format", indexURL)
+	}
+	if !(strings.ToLower(validURL.Scheme) == "http") && !(strings.ToLower(validURL.Scheme) == "https") {
+		return "", fmt.Errorf("value %q of field spec.logging.elasticSearch.indexURL is invalid: scheme not supported: %q", validURL, validURL.Scheme)
 	}
 
-	return string(validURL.String()), nil
+	return validURL.String(), nil
 }
