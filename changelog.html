@@ -62,6 +62,7 @@
                 $(div).append("<p>Description: "+mdConverter.makeHtml(change.description)+"</p>");
                 if(change.warning) $(div).append("<p>⚠ "+mdConverter.makeHtml(change.warning)+"</p>");
                 if(change.upgradeNotes) $(div).append("<p>❕ "+mdConverter.makeHtml(change.upgradeNotes)+"</p>");
+                if(change.deprecations) $(div).append("<p>Deprecations: "+mdConverter.makeHtml(change.deprecations)+"</p>");
                 $(div).append("<p class='categorization'><a href='"+repoUrl+"/pull/"+change.pullRequestNumber+"'>#"+change.pullRequestNumber+"</a></p>");
                 return div;
             }
