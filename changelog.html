@@ -7,7 +7,8 @@
         <script>
 
             const repoUrl = "https://github.com/SAP/stewardci-core"
-            const changelogYamlUrl = "https://raw.githubusercontent.com/SAP/stewardci-core/master/changelog.yaml"
+            //The following URL has to point the the RAW (!) version of the changelog.yaml in the master branch
+            const changelogYamlUrl = "https://raw.githubusercontent.com/SAP/stewardci-core/master/changelog.yaml
             var changelog;
 
             $(function(){
@@ -94,6 +95,7 @@
     </head>
     <body>
         <h1>Changelog</h1>
+        This generated changelog is based on the <a href="https://github.com/SAP/stewardci-core/blob/master/changelog.yaml">changelog.yaml</a> in the repositories main branch.
         <div id="content"></div>
     </body>
 </html>
