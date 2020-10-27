@@ -5,13 +5,15 @@
 #      impact: [incompatible, minor, patch]
 #      title: <title>
 #      description: >-
-#        <description>
+#        <description (markdown syntax)>
 #      warning: >-
-#        <optional warning message>
+#        <optional warning message (markdown syntax)>
 #      upgradeNotes: >-
-#        <optional upgrade guidelines>
+#        <optional upgrade guidelines (markdown syntax)>
+#      deprecations: >-
+#        <optional deprecation notes (markdown syntax)>
 #      pullRequestNumber: <pull request number>
-#      jiraIssueNumber: <Internal Jira issue number>
+#      jiraIssueNumber: <Jira issue number>
 
 
 # Do not modify the "NEXT" version block.
@@ -19,6 +21,7 @@
 - version: "NEXT"
   date: TBD
   changes:
+
   - type: internal
     impact: patch
     title: Fix clustertask
@@ -26,14 +29,28 @@
       Fix variables in clustertask to changed structure.
     warning:
     upgradeNotes:
+    deprecations:
     pullRequestNumber: 173  
+
+  - type: internal
+    impact: patch
+    title: Updated Jenkinsfile Runner based on adoptopenjdk11 instead of openjdk8
+    description: >-
+      Besides plugin updates, Jenkins Core update and a Jenkinsfile Runner update the
+      Jenkinsfile Runner image has been switched to adoptopenjdk11, mainly to reduce the attack vector.
+    warning:
+    upgradeNotes:
+    deprecations:
+    pullRequestNumber: 175
+    jiraIssueNumber: 1348
+
 - version: "0.5.1"
   date: 2020-10-05
   changes:
+
   - type: bug
     impact: patch
     title: Fix clustertask
-
     description: >-
       Fix clustertask to match v1beta1 specification.
     pullRequestNumber: 163
@@ -41,17 +58,15 @@
 - version: "0.5.0"
   date: 2020-08-29
   changes:
+
   - type: enhancement
     impact: incompatible
     title: Upgrade dependency to Tekton v0.14.3
-
     description: >-
       Build and run against Tekton v0.14.3.
     warning: Requires Tekton v0.14.3.
-
     upgradeNotes: >-
       The target Kubernetes system must have Tekton v0.14.3 installed. Higher versions may also work.
-      In addition, Steward Jenkinsfile Runner Image version <a href="https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/200921_6cc247f">200921_6cc247f</a> or later is required.
+      In addition, Steward Jenkinsfile Runner Image version [200921_6cc247f](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/200921_6cc247f) or later is required.
     pullRequestNumber: 151
-
     jiraIssueNumber: 1330
