@@ -18,7 +18,7 @@
   date: TBD
   changes:
   - type: enhancement
-    impact: minor
+    impact: major
     title: Make Jenkinsfile Runner properties configurable in PipelineRun custom resource objects.
     description: >-
       Jenkinsfile Runner properties are configurable in Steward PipelineRun manifests at <code>spec.jenkinsfileRunner</code> now.
