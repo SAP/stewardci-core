@@ -59,10 +59,10 @@
                 div.setAttribute("class", "change")
                 $(div).append("<h4>"+change.title+"</h4>");
                 $(div).append("<p class='categorization'>Type: "+change.type+" / Impact: "+change.impact+"</p>");
-                $(div).append("<p>Description: "+mdConverter.makeHtml(change.description)+"</p>");
-                if(change.warning) $(div).append("<p>⚠ "+mdConverter.makeHtml(change.warning)+"</p>");
-                if(change.upgradeNotes) $(div).append("<p>❕ "+mdConverter.makeHtml(change.upgradeNotes)+"</p>");
-                if(change.deprecations) $(div).append("<p>Deprecations: "+mdConverter.makeHtml(change.deprecations)+"</p>");
+                $(div).append(mdConverter.makeHtml("Description: "+change.description));
+                if(change.warning) $(div).append(mdConverter.makeHtml("⚠ "+change.warning));
+                if(change.upgradeNotes) $(div).append(mdConverter.makeHtml("❕ "+change.upgradeNotes));
+                if(change.deprecations) $(div).append(mdConverter.makeHtml("Deprecations: "+change.deprecations));
                 $(div).append("<p class='categorization'><a href='"+repoUrl+"/pull/"+change.pullRequestNumber+"'>#"+change.pullRequestNumber+"</a></p>");
                 return div;
             }
@@ -96,7 +96,7 @@
     </head>
     <body>
         <h1>Changelog</h1>
-        This generated changelog is based on the <a href="https://github.com/SAP/stewardci-core/blob/master/changelog.yaml">changelog.yaml</a> in the repositories main branch.
+        <p><i>This generated changelog is based on the <a href="https://github.com/SAP/stewardci-core/blob/master/changelog.yaml">changelog.yaml</a> in the repositories main branch.</i></p>
         <div id="content"></div>
     </body>
 </html>
