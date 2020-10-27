@@ -24,7 +24,7 @@
 
   - type: internal
     impact: patch
-    title: Updated Jenkinsfile Runner based on adoptjdk11 instead of openjdk8
+    title: Updated Jenkinsfile Runner based on adoptopenjdk11 instead of openjdk8
     description: >-
       Besides plugin updates, Jenkins Core update and a Jenkinsfile Runner update the
       Jenkinsfile Runner image has been switched to adoptjdk11, mainly to reduce the attack vector.
