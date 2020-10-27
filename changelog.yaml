@@ -22,9 +22,22 @@
   date: TBD
   changes:
 
+  - type: internal
+    impact: patch
+    title: Updated Jenkinsfile Runner based on adoptopenjdk11 instead of openjdk8
+    description: >-
+      Besides plugin updates, Jenkins Core update and a Jenkinsfile Runner update the
+      Jenkinsfile Runner image has been switched to adoptopenjdk11, mainly to reduce the attack vector.
+    warning: ""
+    upgradeNotes: ""
+    deprecations:
+    pullRequestNumber: 175
+    jiraIssueNumber: 1348
+
 - version: "0.5.1"
   date: 2020-10-05
   changes:
+
   - type: bug
     impact: patch
     title: Fix clustertask
@@ -35,6 +48,7 @@
 - version: "0.5.0"
   date: 2020-08-29
   changes:
+
   - type: enhancement
     impact: incompatible
     title: Upgrade dependency to Tekton v0.14.3
