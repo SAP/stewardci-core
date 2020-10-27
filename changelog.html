@@ -3,6 +3,7 @@
 
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/3.14.0/js-yaml.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
         <script>
 
             const repoUrl = "https://github.com/SAP/stewardci-core"
@@ -52,13 +53,14 @@
             }
 
             function renderChange(change) {
+                var mdConverter = new showdown.Converter();
                 var div = document.createElement("div");
                 div.setAttribute("class", "change")
                 $(div).append("<h4>"+change.title+"</h4>");
                 $(div).append("<p class='categorization'>Type: "+change.type+" / Impact: "+change.impact+"</p>");
-                $(div).append("<p>Description: "+change.description+"</p>");
-                if(change.warning) $(div).append("<p>⚠ "+change.warning+"</p>");
-                if(change.upgradeNotes) $(div).append("<p>❕ "+change.upgradeNotes+"</p>");
+                $(div).append("<p>Description: "+mdConverter.makeHtml(change.description)+"</p>");
+                if(change.warning) $(div).append("<p>⚠ "+mdConverter.makeHtml(change.warning)+"</p>");
+                if(change.upgradeNotes) $(div).append("<p>❕ "+mdConverter.makeHtml(change.upgradeNotes)+"</p>");
                 $(div).append("<p class='categorization'><a href='"+repoUrl+"/pull/"+change.pullRequestNumber+"'>#"+change.pullRequestNumber+"</a></p>");
                 return div;
             }
