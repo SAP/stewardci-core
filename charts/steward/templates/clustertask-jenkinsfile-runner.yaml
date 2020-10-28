@@ -89,29 +89,29 @@ spec:
     - name: JAVA_OPTS
       value: {{ default "" .Values.pipelineRuns.jenkinsfileRunner.javaOpts | squote }}
     - name: PIPELINE_GIT_URL
-      value: '$(inputs.params.PIPELINE_GIT_URL)'
+      value: '$(params.PIPELINE_GIT_URL)'
     - name: PIPELINE_GIT_REVISION
-      value: '$(inputs.params.PIPELINE_GIT_REVISION)'
+      value: '$(params.PIPELINE_GIT_REVISION)'
     - name: PIPELINE_FILE
-      value: '$(inputs.params.PIPELINE_FILE)'
+      value: '$(params.PIPELINE_FILE)'
     - name: PIPELINE_PARAMS_JSON
-      value: '$(inputs.params.PIPELINE_PARAMS_JSON)'
+      value: '$(params.PIPELINE_PARAMS_JSON)'
     - name: PIPELINE_LOG_ELASTICSEARCH_INDEX_URL
-      value: '$(inputs.params.PIPELINE_LOG_ELASTICSEARCH_INDEX_URL)'
+      value: '$(params.PIPELINE_LOG_ELASTICSEARCH_INDEX_URL)'
     - name: PIPELINE_LOG_ELASTICSEARCH_AUTH_SECRET
-      value: '$(inputs.params.PIPELINE_LOG_ELASTICSEARCH_AUTH_SECRET)'
+      value: '$(params.PIPELINE_LOG_ELASTICSEARCH_AUTH_SECRET)'
     - name: PIPELINE_LOG_ELASTICSEARCH_TRUSTEDCERTS_SECRET
-      value: '$(inputs.params.PIPELINE_LOG_ELASTICSEARCH_TRUSTEDCERTS_SECRET)'
+      value: '$(params.PIPELINE_LOG_ELASTICSEARCH_TRUSTEDCERTS_SECRET)'
     - name: PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON
-      value: '$(inputs.params.PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON)'
+      value: '$(params.PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON)'
     - name: RUN_NAMESPACE
-      value: '$(inputs.params.RUN_NAMESPACE)'
+      value: '$(params.RUN_NAMESPACE)'
     - name: JOB_NAME
-      value: '$(inputs.params.JOB_NAME)'
+      value: '$(params.JOB_NAME)'
     - name: RUN_NUMBER
-      value: '$(inputs.params.RUN_NUMBER)'
+      value: '$(params.RUN_NUMBER)'
     - name: RUN_CAUSE
-      value: '$(inputs.params.RUN_CAUSE)'
+      value: '$(params.RUN_CAUSE)'
     - name: TERMINATION_LOG_PATH
       value: /tekton/results/jfr-termination-log
     resources:
