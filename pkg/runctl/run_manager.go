@@ -559,13 +559,39 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 			},
 		},
 	}
-
+	c.addTektonTaskRunParamsForJenkinsfileRunnerImage(ctx.pipelineRun, &tektonTaskRun)
 	c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForRunDetails(ctx, &tektonTaskRun)
 	tektonClient := c.factory.TektonV1beta1()
 	_, err = tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(&tektonTaskRun)
 	return err
+}
+
+func (c *runManager) addTektonTaskRunParamsForJenkinsfileRunnerImage(
+	pipelineRun k8s.PipelineRun,
+	tektonTaskRun *tekton.TaskRun,
+) {
+	spec := pipelineRun.GetSpec()
+	jfrSpec := spec.JenkinsfileRunner
+	image := c.pipelineRunsConfig.JenkinsfileRunnerImage
+	imagePullPolicy := c.pipelineRunsConfig.JenkinsfileRunnerImagePullPolicy
+
+	if jfrSpec != nil {
+		if jfrSpec.Image != "" {
+			image = jfrSpec.Image
+			if jfrSpec.ImagePullPolicy == "" {
+				imagePullPolicy = "IfNotPresent"
+			} else {
+				imagePullPolicy = jfrSpec.ImagePullPolicy
+			}
+		}
+	}
+	params := []tekton.Param{
+		tektonStringParam("JFR_IMAGE", image),
+		tektonStringParam("JFR_IMAGE_PULL_POLICY", imagePullPolicy),
+	}
+	tektonTaskRun.Spec.Params = append(tektonTaskRun.Spec.Params, params...)
 }
 
 func (c *runManager) addTektonTaskRunParamsForRunDetails(

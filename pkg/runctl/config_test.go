@@ -55,13 +55,15 @@ func Test_loadPipelineRunsConfig_EmptyEntries(t *testing.T) {
 	// SETUP
 	cf := fake.NewClientFactory(
 		newPipelineRunsConfigMap(map[string]string{
-			pipelineRunsConfigKeyNetworkPolicy: "",
-			pipelineRunsConfigKeyPSCFSGroup:    "",
-			pipelineRunsConfigKeyPSCRunAsGroup: "",
-			pipelineRunsConfigKeyPSCRunAsUser:  "",
-			pipelineRunsConfigKeyLimitRange:    "",
-			pipelineRunsConfigKeyResourceQuota: "",
-			pipelineRunsConfigKeyTimeout:       "",
+			pipelineRunsConfigKeyNetworkPolicy:   "",
+			pipelineRunsConfigKeyPSCFSGroup:      "",
+			pipelineRunsConfigKeyPSCRunAsGroup:   "",
+			pipelineRunsConfigKeyPSCRunAsUser:    "",
+			pipelineRunsConfigKeyLimitRange:      "",
+			pipelineRunsConfigKeyResourceQuota:   "",
+			pipelineRunsConfigKeyTimeout:         "",
+			pipelineRunsConfigKeyImage:           "",
+			pipelineRunsConfigKeyImagePullPolicy: "",
 		}),
 	)
 
@@ -87,15 +89,17 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	cf := fake.NewClientFactory(
 		newPipelineRunsConfigMap(
 			map[string]string{
-				"_example":                         "exampleString",
-				pipelineRunsConfigKeyNetworkPolicy: "networkPolicy1",
-				pipelineRunsConfigKeyLimitRange:    "limitRange1",
-				pipelineRunsConfigKeyResourceQuota: "resourceQuota1",
-				pipelineRunsConfigKeyPSCRunAsUser:  "1111",
-				pipelineRunsConfigKeyPSCRunAsGroup: "2222",
-				pipelineRunsConfigKeyPSCFSGroup:    "3333",
-				pipelineRunsConfigKeyTimeout:       "4444m",
-				"someKeyThatShouldBeIgnored":       "34957349",
+				"_example":                           "exampleString",
+				pipelineRunsConfigKeyNetworkPolicy:   "networkPolicy1",
+				pipelineRunsConfigKeyLimitRange:      "limitRange1",
+				pipelineRunsConfigKeyResourceQuota:   "resourceQuota1",
+				pipelineRunsConfigKeyPSCRunAsUser:    "1111",
+				pipelineRunsConfigKeyPSCRunAsGroup:   "2222",
+				pipelineRunsConfigKeyPSCFSGroup:      "3333",
+				pipelineRunsConfigKeyTimeout:         "4444m",
+				pipelineRunsConfigKeyImage:           "image1",
+				pipelineRunsConfigKeyImagePullPolicy: "policy1",
+				"someKeyThatShouldBeIgnored":         "34957349",
 			},
 		),
 	)
@@ -106,10 +110,12 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, err)
 	expectedConfig := &pipelineRunsConfigStruct{
-		Timeout:       metav1Duration(time.Minute * 4444),
-		NetworkPolicy: "networkPolicy1",
-		LimitRange:    "limitRange1",
-		ResourceQuota: "resourceQuota1",
+		Timeout:                          metav1Duration(time.Minute * 4444),
+		NetworkPolicy:                    "networkPolicy1",
+		LimitRange:                       "limitRange1",
+		ResourceQuota:                    "resourceQuota1",
+		JenkinsfileRunnerImage:           "image1",
+		JenkinsfileRunnerImagePullPolicy: "policy1",
 		JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(1111),
 		JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
 		JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(3333),
