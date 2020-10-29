@@ -26,7 +26,7 @@ In case dependencies have been updated:
 
 Before the changes are marked as `ready-for-merge`: 
 
-- [ ] There are at least 2 approvals for the pull request and no outstanding requests for change
+- [ ] There is at least one approval for the pull request and no outstanding requests for change
 - [ ] Conversations in the pull request are over OR it is explicit that a reviewer does not block the change
 - [ ] The Pull Request title is understandable and reflects the changes well
 - [ ] The Pull Request description is understandable and well documented
