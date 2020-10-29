@@ -21,7 +21,7 @@
 - version: "NEXT"
   date: TBD
   changes:
-    type: enhancement
+  - type: enhancement
     impact: minor
     title: Introduce network profiles
     description: >-
@@ -41,6 +41,23 @@
       use `pipelineRuns.networkPolicies` instead.
     pullRequestNumber: 160
     jiraIssueNumber: 1305
+
+  - type: enhancement
+    impact: incompatible
+    title: Make Jenkinsfile Runner properties configurable in PipelineRun custom resource objects.
+    description: >-
+      Jenkinsfile Runner properties are configurable in Steward PipelineRun manifests at `spec.jenkinsfileRunner` now.
+    warning: >-
+        Old configuration will not work anymore! See upgrade notes.
+    upgradeNotes: >-
+      ## Helm Chart Configuration changed:
+
+      - `pipelineRuns.jenkinsfileRunner.image.repository` is outdated: use `pipelineRuns.jenkinsfileRunner.image` instead
+      - `pipelineRuns.jenkinsfileRunner.image.tag` is outdated: use `pipelineRuns.jenkinsfileRunner.image` instead
+      - `pipelineRuns.jenkinsfileRunner.image.pullPolicy` is outdated: use `pipelineRuns.jenkinsfileRunner.imagePullPolicy` instead
+    deprecations: 
+    pullRequestNumber: 162
+    jiraIssueNumber: 983
 
 - version: "0.5.2"
   date: 2020-10-28

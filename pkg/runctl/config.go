@@ -15,13 +15,15 @@ import (
 )
 
 const (
-	pipelineRunsConfigMapName          = "steward-pipelineruns"
-	pipelineRunsConfigKeyTimeout       = "timeout"
-	pipelineRunsConfigKeyLimitRange    = "limitRange"
-	pipelineRunsConfigKeyResourceQuota = "resourceQuota"
-	pipelineRunsConfigKeyPSCRunAsUser  = "jenkinsfileRunner.podSecurityContext.runAsUser"
-	pipelineRunsConfigKeyPSCRunAsGroup = "jenkinsfileRunner.podSecurityContext.runAsGroup"
-	pipelineRunsConfigKeyPSCFSGroup    = "jenkinsfileRunner.podSecurityContext.fsGroup"
+	pipelineRunsConfigMapName            = "steward-pipelineruns"
+	pipelineRunsConfigKeyTimeout         = "timeout"
+	pipelineRunsConfigKeyLimitRange      = "limitRange"
+	pipelineRunsConfigKeyResourceQuota   = "resourceQuota"
+	pipelineRunsConfigKeyImage           = "jenkinsfileRunner.image"
+	pipelineRunsConfigKeyImagePullPolicy = "jenkinsfileRunner.imagePullPolicy"
+	pipelineRunsConfigKeyPSCRunAsUser    = "jenkinsfileRunner.podSecurityContext.runAsUser"
+	pipelineRunsConfigKeyPSCRunAsGroup   = "jenkinsfileRunner.podSecurityContext.runAsGroup"
+	pipelineRunsConfigKeyPSCFSGroup      = "jenkinsfileRunner.podSecurityContext.fsGroup"
 
 	networkPoliciesConfigMapName    = "steward-pipelineruns-network-policies"
 	networkPoliciesConfigKeyDefault = "_default"
@@ -33,6 +35,8 @@ type pipelineRunsConfigStruct struct {
 	DefaultNetworkPolicy                          string
 	LimitRange                                    string
 	ResourceQuota                                 string
+	JenkinsfileRunnerImage                        string
+	JenkinsfileRunnerImagePullPolicy              string
 	JenkinsfileRunnerPodSecurityContextRunAsUser  *int64
 	JenkinsfileRunnerPodSecurityContextRunAsGroup *int64
 	JenkinsfileRunnerPodSecurityContextFSGroup    *int64
@@ -52,10 +56,12 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 			return nil, err
 		}
 	}
+
 	networkMap, err := configMapIfce.Get(networkPoliciesConfigMapName, metav1.GetOptions{})
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return nil, serrors.Recoverable(err)
 	}
+
 	if networkMap != nil {
 		err = processNetworkMap(networkMap.Data, config)
 		if err != nil {
@@ -68,6 +74,8 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 func processConfigMap(configMap map[string]string, config *pipelineRunsConfigStruct) error {
 	config.LimitRange = configMap[pipelineRunsConfigKeyLimitRange]
 	config.ResourceQuota = configMap[pipelineRunsConfigKeyResourceQuota]
+	config.JenkinsfileRunnerImage = configMap[pipelineRunsConfigKeyImage]
+	config.JenkinsfileRunnerImagePullPolicy = configMap[pipelineRunsConfigKeyImagePullPolicy]
 
 	parseInt64 := func(key string) (*int64, error) {
 		if strVal, ok := configMap[key]; ok && strVal != "" {

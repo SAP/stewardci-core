@@ -140,14 +140,16 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	cf := fake.NewClientFactory(
 		newPipelineRunsConfigMap(
 			map[string]string{
-				"_example":                         "exampleString",
-				pipelineRunsConfigKeyLimitRange:    "limitRange1",
-				pipelineRunsConfigKeyResourceQuota: "resourceQuota1",
-				pipelineRunsConfigKeyPSCRunAsUser:  "1111",
-				pipelineRunsConfigKeyPSCRunAsGroup: "2222",
-				pipelineRunsConfigKeyPSCFSGroup:    "3333",
-				pipelineRunsConfigKeyTimeout:       "4444m",
-				"someKeyThatShouldBeIgnored":       "34957349",
+				"_example":                           "exampleString",
+				pipelineRunsConfigKeyLimitRange:      "limitRange1",
+				pipelineRunsConfigKeyResourceQuota:   "resourceQuota1",
+				pipelineRunsConfigKeyPSCRunAsUser:    "1111",
+				pipelineRunsConfigKeyPSCRunAsGroup:   "2222",
+				pipelineRunsConfigKeyPSCFSGroup:      "3333",
+				pipelineRunsConfigKeyTimeout:         "4444m",
+				pipelineRunsConfigKeyImage:           "image1",
+				pipelineRunsConfigKeyImagePullPolicy: "policy1",
+				"someKeyThatShouldBeIgnored":         "34957349",
 			},
 		),
 		newNetworkPolicyConfigMap(map[string]string{
@@ -165,10 +167,12 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, err)
 	expectedConfig := &pipelineRunsConfigStruct{
-		Timeout:              metav1Duration(time.Minute * 4444),
-		LimitRange:           "limitRange1",
-		ResourceQuota:        "resourceQuota1",
-		DefaultNetworkPolicy: "defaultPolicy",
+		Timeout:                          metav1Duration(time.Minute * 4444),
+		LimitRange:                       "limitRange1",
+		ResourceQuota:                    "resourceQuota1",
+		JenkinsfileRunnerImage:           "image1",
+		JenkinsfileRunnerImagePullPolicy: "policy1",
+		DefaultNetworkPolicy:             "defaultPolicy",
 		NetworkPolicies: map[string]string{
 			"foo": "fooPolicy",
 			"bar": "barPolicy",

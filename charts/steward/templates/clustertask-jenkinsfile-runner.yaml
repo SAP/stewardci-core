@@ -70,12 +70,21 @@ spec:
       A textual description of the cause of this pipeline run. Will be set as cause of the Jenkins job.
       If null or empty, no cause information will be available.
     default: ""
+  - name: JFR_IMAGE
+    type: string
+    description: >
+      The Jenkinsfile Runner image to be used.
+  - name: JFR_IMAGE_PULL_POLICY
+    type: string
+    default: "IfNotPresent"
+    description: >
+      The image pull policy for JFR_IMAGE. Defaults to 'IfNotPresent'.
   steps:
   - name: jenkinsfile-runner
-    {{- with .Values.pipelineRuns.jenkinsfileRunner.image }}
-    image: {{ printf "%s:%s" .repository .tag | quote }}
-    imagePullPolicy: {{ .pullPolicy | quote }}
-    {{- end }}
+    image: $(params.JFR_IMAGE)
+    {{/*  Currently broken, see https://github.com/tektoncd/pipeline/issues/3423 */}}
+    {{/*  imagePullPolicy: $(params.JFR_IMAGE_PULL_POLICY) */}}
+    imagePullPolicy: IfNotPresent
     args: []
     env:
     - name: XDG_CONFIG_HOME

@@ -1179,6 +1179,97 @@ func Test_RunManager_Start_CreatesTektonTaskRun(t *testing.T) {
 	assert.Assert(t, result != nil)
 }
 
+func Test_RunManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing.T) {
+	t.Parallel()
+	const (
+		pipelineRunsConfigDefaultImage  = "defaultImage1"
+		pipelineRunsConfigDefaultPolicy = "defaultPolicy1"
+	)
+	examinee := runManager{
+		pipelineRunsConfig: &pipelineRunsConfigStruct{
+			JenkinsfileRunnerImage:           pipelineRunsConfigDefaultImage,
+			JenkinsfileRunnerImagePullPolicy: pipelineRunsConfigDefaultPolicy,
+		},
+	}
+	for _, tc := range []struct {
+		name                string
+		spec                *stewardv1alpha1.PipelineSpec
+		expectedAddedParams []tekton.Param
+	}{
+		{"empty",
+			&stewardv1alpha1.PipelineSpec{},
+			[]tekton.Param{
+				tektonStringParam("JFR_IMAGE", pipelineRunsConfigDefaultImage),
+				tektonStringParam("JFR_IMAGE_PULL_POLICY", pipelineRunsConfigDefaultPolicy),
+			},
+		}, {"no_image_no_policy",
+			&stewardv1alpha1.PipelineSpec{
+				JenkinsfileRunner: &stewardv1alpha1.JenkinsfileRunnerSpec{},
+			},
+			[]tekton.Param{
+				tektonStringParam("JFR_IMAGE", pipelineRunsConfigDefaultImage),
+				tektonStringParam("JFR_IMAGE_PULL_POLICY", pipelineRunsConfigDefaultPolicy),
+			},
+		}, {"image_only",
+			&stewardv1alpha1.PipelineSpec{
+				JenkinsfileRunner: &stewardv1alpha1.JenkinsfileRunnerSpec{
+					Image: "foo",
+				},
+			},
+			[]tekton.Param{
+				tektonStringParam("JFR_IMAGE", "foo"),
+				tektonStringParam("JFR_IMAGE_PULL_POLICY", "IfNotPresent"),
+			},
+		}, {"policy_only",
+			&stewardv1alpha1.PipelineSpec{
+				JenkinsfileRunner: &stewardv1alpha1.JenkinsfileRunnerSpec{
+					ImagePullPolicy: "bar",
+				},
+			},
+			[]tekton.Param{
+				tektonStringParam("JFR_IMAGE", pipelineRunsConfigDefaultImage),
+				tektonStringParam("JFR_IMAGE_PULL_POLICY", pipelineRunsConfigDefaultPolicy),
+			},
+		}, {"image_and_policy",
+			&stewardv1alpha1.PipelineSpec{
+				JenkinsfileRunner: &stewardv1alpha1.JenkinsfileRunnerSpec{
+					Image:           "foo",
+					ImagePullPolicy: "bar",
+				},
+			},
+			[]tekton.Param{
+				tektonStringParam("JFR_IMAGE", "foo"),
+				tektonStringParam("JFR_IMAGE_PULL_POLICY", "bar"),
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
+
+			// SETUP
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
+			mockPipelineRun.EXPECT().GetSpec().Return(tc.spec).AnyTimes()
+			existingParam := tektonStringParam("AlreadyExistingParam1", "foo")
+			tektonTaskRun := tekton.TaskRun{
+				Spec: tekton.TaskRunSpec{
+					Params: []tekton.Param{*existingParam.DeepCopy()},
+				},
+			}
+
+			// EXERCISE
+			examinee.addTektonTaskRunParamsForJenkinsfileRunnerImage(mockPipelineRun, &tektonTaskRun)
+
+			// VERIFY
+			expectedParams := []tekton.Param{existingParam}
+			expectedParams = append(expectedParams, tc.expectedAddedParams...)
+			assert.DeepEqual(t, expectedParams, tektonTaskRun.Spec.Params)
+		})
+	}
+}
+
 func Test_RunManager_Start_DoesNotSetPipelineRunStatus(t *testing.T) {
 	t.Parallel()
 
