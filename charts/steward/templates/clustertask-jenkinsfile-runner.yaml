@@ -81,7 +81,9 @@ spec:
   steps:
   - name: jenkinsfile-runner
     image: $(params.JFR_IMAGE)
-    imagePullPolicy: $(params.JFR_IMAGE_PULL_POLICY)
+    {{/*  Currently broken, see https://github.com/tektoncd/pipeline/issues/3423 */}}
+    {{/*  imagePullPolicy: $(params.JFR_IMAGE_PULL_POLICY) */}}
+    imagePullPolicy: IfNotPresent
     args: []
     env:
     - name: XDG_CONFIG_HOME
