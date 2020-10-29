@@ -29,7 +29,7 @@ data:
             - 10.0.0.0/8 # address block for private networks
             - 100.64.0.0/10 # shared address space for carrier-grade NAT
             - 169.254.0.0/16 # address block for local links; used for metadata.google.internal
-            - 172.16.0.0/12 # address block for private networks; used for K8s masters
+            - 172.16.0.0/12 # address block for private networks; used for K8s instances
             - 192.168.0.0/16 # address block for private networks; used for nodes, pods, services
             - 198.18.0.0/15 # address block for benchmark testing in private networks
       - # rule: allow access to cluster DNS
@@ -50,7 +50,7 @@ data:
       - # rule: allow access to K8s apiserver (cluster-internal address)
         to:
         - ipBlock:
-            cidr: 172.16.0.0/28 # GKE master address range
+            cidr: 172.16.0.0/28 # GKE source address range
         ports:
         - port: 443
       - # rule: allow access to netcat server

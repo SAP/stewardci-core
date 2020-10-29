@@ -144,7 +144,7 @@ Common parameters:
 
 | Parameter | Description | Default |
 |---|---|---|
-| <code>pipelineRuns.<wbr/>logging.<wbr/>elasticsearch.<wbr/>indexURL</code> | (string)<br/> The URL of the Elasticsearch index to send logs to. If null or empty, logging to Elasticsearch is disabled. Example: `http://elasticsearch-master.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc` | empty |
+| <code>pipelineRuns.<wbr/>logging.<wbr/>elasticsearch.<wbr/>indexURL</code> | (string)<br/> The URL of the Elasticsearch index to send logs to. If null or empty, logging to Elasticsearch is disabled. Example: `http://elasticsearch-main.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc` | empty |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>repository</code> | OUTDATED (string)<br/> Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</code> instead. | |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>tag</code> | OUTDATED (string)<br/> Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</code> instead.  | |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>pullPolicy</code> | OUTDATED (string)<br/> Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>imagePullPolicy</code> instead. | |

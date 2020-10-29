@@ -77,7 +77,7 @@ pipelineRuns:
     elasticsearch:
       # indexURL is the URL of the Elasticsearch index to send logs to.
       # If null or empty, logging to Elasticsearch is disabled.
-      # Example: http://elasticsearch-master.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc
+      # Example: http://elasticsearch-main.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc
       indexURL: ""
   jenkinsfileRunner:
     image: "stewardci/stewardci-jenkinsfile-runner:201026_824e593"
