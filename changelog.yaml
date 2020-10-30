@@ -21,6 +21,15 @@
 - version: "NEXT"
   date: TBD
   changes:
+  - title: Introduce feature flags
+    type: internal
+    impact: patch
+    description: >-
+      There's a new Go package `pkg/featureflag` to deal
+      with feature flags in Steward controllers.
+      Feature flags can be configured via Helm Chart.
+    pullRequestNumber: 178
+
   - type: enhancement
     impact: incompatible
     title: Make Jenkinsfile Runner properties configurable in PipelineRun custom resource objects.
