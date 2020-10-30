@@ -64,6 +64,7 @@ func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
 
 	// VERIFY
 	assert.Equal(t, "no entry for default network policy key found", err.Error())
+	assert.Assert(t, !serrors.IsRecoverable(err))
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -218,6 +219,7 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 
 			// VERIFY
 			assert.Assert(t, err != nil)
+			assert.Assert(t, !serrors.IsRecoverable(err))
 			assert.Assert(t, resultConfig == nil)
 		})
 	}
@@ -334,6 +336,7 @@ func Test_processNetworkMap(t *testing.T) {
 			// VALIDATE
 			if tc.expectedError == "" {
 				assert.NilError(t, err)
+				assert.Assert(t, !serrors.IsRecoverable(err))
 			} else {
 				assert.Equal(t, err.Error(), tc.expectedError)
 			}
