@@ -1,11 +1,14 @@
 package runctl
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
 
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
+	featureflag "github.com/SAP/stewardci-core/pkg/featureflag"
+	featureflagtesting "github.com/SAP/stewardci-core/pkg/featureflag/testing"
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	corev1clientmocks "github.com/SAP/stewardci-core/pkg/k8s/mocks/client-go/corev1"
@@ -64,7 +67,6 @@ func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
 
 	// VERIFY
 	assert.Equal(t, "no entry for default network policy key found", err.Error())
-	assert.Assert(t, !serrors.IsRecoverable(err))
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -185,6 +187,28 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
 
+func Test_asRecoverable(t *testing.T) {
+	errFoo := fmt.Errorf("foo")
+	for _, tc := range []struct {
+		name                                  string
+		flag, infraError, expectedRecoverable bool
+	}{
+		{"retry_off_no_infra_error", false, false, false},
+		{"retry_off_infra_error", false, true, true},
+		{"retry_on_no_infra_error", true, false, true},
+		{"retry_on_infra_error", true, true, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// SETUP
+			defer featureflagtesting.WithFeatureFlag(featureflag.RetryOnInvalidPipelineRunsConfig, tc.flag)()
+			// EXERCISE
+			err := asRecoverable(errFoo, tc.infraError)
+			// VALIDATE
+			assert.Assert(t, serrors.IsRecoverable(err) == tc.expectedRecoverable)
+		})
+	}
+}
+
 func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 	for i, p := range []struct {
 		key, val string
@@ -219,7 +243,6 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 
 			// VERIFY
 			assert.Assert(t, err != nil)
-			assert.Assert(t, !serrors.IsRecoverable(err))
 			assert.Assert(t, resultConfig == nil)
 		})
 	}
@@ -336,7 +359,6 @@ func Test_processNetworkMap(t *testing.T) {
 			// VALIDATE
 			if tc.expectedError == "" {
 				assert.NilError(t, err)
-				assert.Assert(t, !serrors.IsRecoverable(err))
 			} else {
 				assert.Equal(t, err.Error(), tc.expectedError)
 			}

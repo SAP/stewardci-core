@@ -7,6 +7,7 @@ import (
 	"time"
 
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
+	"github.com/SAP/stewardci-core/pkg/featureflag"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -72,7 +73,7 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 }
 
 func asRecoverable(err error, isInfraError bool) error {
-	if isInfraError {
+	if isInfraError || featureflag.RetryOnInvalidPipelineRunsConfig.Enabled() {
 		return serrors.Recoverable(err)
 	}
 	return err
