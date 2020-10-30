@@ -53,7 +53,7 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 	if configMap != nil {
 		err = processConfigMap(configMap.Data, config)
 		if err != nil {
-			return nil, err
+			return nil, serrors.Recoverable(err)
 		}
 	}
 
@@ -65,7 +65,7 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 	if networkMap != nil {
 		err = processNetworkMap(networkMap.Data, config)
 		if err != nil {
-			return nil, err
+			return nil, serrors.Recoverable(err)
 		}
 	}
 	return config, nil
