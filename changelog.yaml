@@ -34,8 +34,9 @@
       Clients can choose a network profile via `spec.profiles.network` of a PipelineRun
       resource object.
     warning: ""
-    upgradeNotes: >-
-      No incompatible changes.
+    upgradeNotes: |-
+      - New Result `ResultErrorConfig` introduced.
+      - New feature flag `RetryOnInvalidPipelineRunsConfig` introduced.
     deprecations: >-
       Helm configuration value `pipelineRuns.networkPolicy` is deprecated:
       use `pipelineRuns.networkPolicies` instead.

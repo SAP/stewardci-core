@@ -162,6 +162,20 @@ Common parameters:
 | <code>pipelineRuns.<wbr/>limitRange</code> | (string)<br/> The limit range to be created in every pipeline run namespace. The value must be a string containing a complete `limitrange` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of limit ranges][k8s-limitranges] for details about Kubernetes limit ranges. | A limit range defining a default CPU request of 0.5 CPUs, a default CPU limit of 3 CPUs, a default memory request of 0.5 GiB and a default memory limit of 3 GiB.<br/><br/>This default limit range might change with newer releases of Steward. It is recommended to set an own limit range to avoid unexpected changes with Steward upgrades. |
 | <code>pipelineRuns.<wbr/>resourceQuota</code> | (string)<br/> The resource quota to be created in every pipeline run namespace. The value must be a string containing a complete `resourcequotas` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of resource quotas][k8s-resourcequotas] for details about Kubernetes resource quotas.| none |
 
+### Feature flags
+
+| Parameter | Description | Default |
+|---|---|---|
+| <code>featureFlags</code> | (string)<br/> Feature flag definition.  | empty |
+
+The feature flags definition is a string with one or more feature flags. Multiple feature flags are separated by komma `,` or space `' '`.
+A feature flag can be set to enabled with adding the name optionally prefixed with a plus `+`.
+A feature falg can be set to disabled by adding the name prefixed with a dash `-`.
+
+| Feature flag | Description | Default |
+| --- | --- | --- |
+| RetryOnInvalidPipelineRunsConfig | If enabled: Retries a pipeline run on a configuration error until the configuration error if fixed or the timeout is reached.</br>If disabled: The pipeline run is finished with an infrastructure error. | disabled |
+
 ## Custom Resource Definitions
 
 Steward extends Kubernetes by a set of _custom resources types_ like Tenant and PipelineRun.
