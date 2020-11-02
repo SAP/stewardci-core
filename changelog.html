@@ -10,11 +10,16 @@
             //The following URL has to point the the RAW (!) version of the changelog.yaml in the master branch
             const changelogYamlUrl = "https://raw.githubusercontent.com/SAP/stewardci-core/master/changelog.yaml"
             var changelog;
+            var renderVersion; //if set only show this version. Use query param ?version=<version> to set it.
 
             $(function(){
                 xmlhttp=new XMLHttpRequest();
                 xmlhttp.onreadystatechange = function()
                 {
+                    const queryString = window.location.search;
+                    const urlParams = new URLSearchParams(queryString);
+                    renderVersion = urlParams.get("version");
+
                     if (xmlhttp.readyState==4 && xmlhttp.status==200)
                     {
                         changelog = jsyaml.load(xmlhttp.responseText);
@@ -28,22 +33,25 @@
             function renderChangelog(changelog) {
                 for(var i = 0; i < changelog.length; i++) {
                     var release = changelog[i];
-                    $("#content").append(renderRelease(release))
+                    if( !renderVersion || renderVersion == release.version ) {
+                        $("#content").append(renderRelease(release))
+                    }
                 }
             }
 
             function renderRelease(release) {
                 var div = document.createElement("div");
+                var releaseDateString
                 if(release.version == "NEXT") {
                     div.setAttribute("class", "next")
-                     $(div).append("<h3>"+release.version+"</h3>");
-                     $(div).append("<p>Release Date: unknown </p>");
+                    releaseDateString = "soon"
                 } else {
                     div.setAttribute("class", "release")
-                     $(div).append("<h3>"+release.version+"</h3>");
-                     $(div).append("<p>Release Date: "+new Date(release.date).toDateString()+"</p>");
+                    releaseDateString = new Date(release.date).toDateString()
                 }
-               
+                $(div).append("<h3 id='"+release.version+"'>"+release.version+"</h3>");
+                $(div).append("<p>Release Date: "+releaseDateString+"</p>");
+
                 if(release.changes) {
                     for(var i = 0; i < release.changes.length; i++) {
                     var change = release.changes[i];
