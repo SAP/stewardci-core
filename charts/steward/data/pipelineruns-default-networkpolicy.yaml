@@ -42,7 +42,7 @@ spec:
   - # rule: allow access to K8s apiserver (cluster-internal address)
     to:
     - ipBlock:
-        cidr: 172.16.0.0/28 # GKE leading address range
+        cidr: 172.16.0.0/28 # GKE control plane address range
     ports:
     - port: 443
   ingress:
