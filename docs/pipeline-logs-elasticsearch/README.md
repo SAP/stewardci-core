@@ -73,7 +73,7 @@ Due to pod anti-affinity rules these nodes run on different Kubernetes nodes.
 Therefore your cluster will have multiple nodes running permanently.
 Choosing a higher number here may increase your infrastructure costs.
 
-With `replicas=1` we have seen that the status of the Elasticsearch source becomes yellow due to an unassigned shard.
+With `replicas=1` we have seen that the status of the Elasticsearch cluster becomes yellow due to an unassigned shard.
 As a consequence the Elasticsearch pod's readiness probe failed after a restart of the pod.
 
 See the [Elasticsearch Helm chart documentation][elastic-elasticsearch-helm-chart] for more configuration options.
