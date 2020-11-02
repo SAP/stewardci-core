@@ -41,7 +41,7 @@
     impact: minor
     title: Replace insensitive terms with inclusive language
     description: |-
-      Inclusive language should be replaced by insensitive terms in all SAP open source repositories.
+      Insensitive terms should be replaced by inclusive language in all SAP open source repositories.
     warning:
     upgradeNotes:
     deprecations:
