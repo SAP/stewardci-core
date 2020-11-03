@@ -83,7 +83,7 @@ __Install Kibana__ via the Helm chart from Elastic (not from `stable`):
 ```bash
 $ helm install --name kibana elastic/kibana --version 7.3.0 \
     --namespace kibana \
-    --set elasticsearchHosts=http://elasticsearch-main.elasticsearch.svc.cluster.local:9200
+    --set elasticsearchHosts=http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200
 ```
 
 See the [Kibana Helm chart documentation][elastic-kibana-helm-chart] for more configuration options.
