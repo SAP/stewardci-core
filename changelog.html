@@ -1,5 +1,15 @@
+<!-- TODO: Adjust the 'TODO_REPO_URL' occurrences with correct values -->
 <html>
     <head>
+        <!--
+            This dynamic HTML page loads the changelog.yaml from the specified repository
+            and renders a more readable, formatted HTML version of it. We recommend to push
+            this page to the GitHub pages to make it accessible as HTML.
+
+            This page supports direct links to specific versions by appending '#<version>' to the URL.
+
+            This page supports rendering of specific versions by appending query parameter '?version=<version>' to the URL.
+        -->
 
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/3.14.0/js-yaml.min.js"></script>
@@ -13,6 +23,7 @@
             var renderVersion; //if set only show this version. Use query param ?version=<version> to set it.
 
             $(function(){
+                $('#yamlLink').attr('href', changelogYamlUrl);
                 xmlhttp=new XMLHttpRequest();
                 xmlhttp.onreadystatechange = function()
                 {
@@ -34,7 +45,9 @@
                 for(var i = 0; i < changelog.length; i++) {
                     var release = changelog[i];
                     if( !renderVersion || renderVersion == release.version ) {
-                        $("#content").append(renderRelease(release))
+                        if(release.changes && release.changes.length > 0) {
+                            $("#content").append(renderRelease(release));
+                        }
                     }
                 }
             }
@@ -43,27 +56,27 @@
                 var div = document.createElement("div");
                 var releaseDateString
                 if(release.version == "NEXT") {
-                    div.setAttribute("class", "next")
-                    releaseDateString = "soon"
+                    div.setAttribute("class", "next");
+                    releaseDateString = "soon";
                 } else {
-                    div.setAttribute("class", "release")
-                    releaseDateString = new Date(release.date).toDateString()
+                    div.setAttribute("class", "release");
+                    releaseDateString = new Date(release.date).toDateString();
                 }
-                $(div).append("<h3 id='"+release.version+"'>"+release.version+"</h3>");
+                $(div).append("<h3 class='version' id='"+release.version+"'><a href='?version="+release.version+"'>"+release.version+"</a></h3>");
                 $(div).append("<p>Release Date: "+releaseDateString+"</p>");
-
+               
                 if(release.changes) {
                     for(var i = 0; i < release.changes.length; i++) {
-                    var change = release.changes[i];
-                    $(div).append(renderChange(change))
-                }
+                        var change = release.changes[i];
+                        $(div).append(renderChange(change));
+                    }
                 }
                 return div;
             }
 
             function renderChange(change) {
                 var div = document.createElement("div");
-                div.setAttribute("class", "change")
+                div.setAttribute("class", "change");
                 $(div).append("<h4>"+change.title+"</h4>");
                 $(div).append("<p class='categorization'>Type: "+change.type+" / Impact: "+change.impact+"</p>");
                 $(div).append(markdown2Html("Description: "+change.description));
@@ -76,8 +89,8 @@
 
             function markdown2Html(markdownText) {
                 var mdConverter = new showdown.Converter();
-                var html = mdConverter.makeHtml(markdownText)
-                return html
+                var html = mdConverter.makeHtml(markdownText);
+                return html;
             }
         </script>
 
@@ -104,12 +117,19 @@
                 font-size: 0.9em;
                 color: royalblue;
             }
+            .version a {
+                text-decoration: none;
+                color: black;
+            }
         </style>
 
     </head>
     <body>
         <h1>Changelog</h1>
-        <p><i>This generated changelog is based on the <a href="https://github.com/SAP/stewardci-core/blob/master/changelog.yaml">changelog.yaml</a> in the repositories main branch.</i></p>
+        <p>
+            This generated changelog is based on the <a id="yamlLink" href="#">changelog.yaml</a> in the repositories main branch.
+            Click here to <a href="?">list all versions</a>.
+        </p>
         <div id="content"></div>
     </body>
 </html>
