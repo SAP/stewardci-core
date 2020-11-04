@@ -271,7 +271,7 @@ status:
 | --------- | ----------- |
 | `status.startedAt` | (time,optional) The time the pipeline run has been started at. It gets set on start and remains unchanged for the object's remaining lifetime. |
 | `status.finishedAt` | (time,optional) The time the pipeline run has been finished at. It gets set when finished (`status.result` is also set) and remains unchanged for the object's remaining lifetime. |
-| `status.result` | (string,optional) The result code of the pipeline run as single-word string. Possible values are `success`, `error_infra`, `error_content`, `aborted` and `timeout`. |
+| `status.result` | (string,optional) The result code of the pipeline run as single-word string. </br>Possible values are: <li>`success`: The pipeline run was processed successfully</li><li>`error_infra`: The pipeline run failed due to an infrastructure problem including server-side configuration errors</li><li> `error_config`: The pipeline run failed due to a client-side configuration error</li><li>  `error_content`: The pipeline run failed due to an content problem</li><li> `aborted`: The pipeline run has been aborted</li><li> `timeout`: The pipeline run timed out</li></ul> |
 | `status.message` | (string,optional) A message describing the reason for the latest status. May not be set or an empty string in case no message is provided. |
 | `status.state` | (string,optional) The name of the current state in the pipeline run process as a single-word string. Possible values are `new`, `preparing`, `waiting`, `running`, `cleaning` and `finished`. An omitted field,`null` value or an empty string value is equivalent to `new`. |
 | `status.stateDetails` | (object,optional) Details of the current state (`status.state`). It is set if `status.state` is set. |
