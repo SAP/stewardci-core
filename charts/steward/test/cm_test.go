@@ -3,7 +3,6 @@
 package test
 
 import (
-	"log"
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
@@ -59,11 +58,11 @@ func Test_ConfigPipelineruns(t *testing.T) {
 			rendered, err := render(t, template, tc.values)
 			if tc.expectedError != "" {
 				assert.Assert(t, err != nil)
-				log.Printf("Error: %s", err.Error())
+				t.Logf("Error: %s", err.Error())
 				assert.ErrorContains(t, err, tc.expectedError)
 			} else {
 				assert.NilError(t, err)
-				log.Printf("Rendered: %+v", rendered)
+				t.Logf("Rendered: %+v", rendered)
 				var cm v1.ConfigMap
 				helm.UnmarshalK8SYaml(t, rendered, &cm)
 
@@ -95,7 +94,7 @@ func Test_ConfigNetworkPolicies(t *testing.T) {
 			map[string]string{"pipelineRuns.networkPolicy": "np1"},
 			map[string]string{
 				"_default": "default",
-				"default": "np1",
+				"default":  "np1",
 			},
 			"",
 		},
@@ -103,18 +102,18 @@ func Test_ConfigNetworkPolicies(t *testing.T) {
 			map[string]string{"pipelineRuns.networkPolicies.key1": "np1"},
 			map[string]string{
 				"_default": "key1",
-				"key1": "np1",
+				"key1":     "np1",
 			},
 			"",
 		},
 		{"single_policy_wrong_default",
 			map[string]string{
-				"pipelineRuns.networkPolicies.key1": "np1",
+				"pipelineRuns.networkPolicies.key1":     "np1",
 				"pipelineRuns.defaultNetworkPolicyName": "wrongKey1",
 			},
 			map[string]string{
 				"_default": "key1",
-				"key1": "np1",
+				"key1":     "np1",
 			},
 			"exit status 1",
 		},
@@ -163,15 +162,15 @@ func Test_ConfigNetworkPolicies(t *testing.T) {
 
 			// EXERCISE
 			rendered, err := render(t, template, tc.values)
-			
+
 			// VERIFY
 			if tc.expectedError != "" {
 				assert.Assert(t, err != nil)
-				log.Printf("Error: %s", err.Error())
+				t.Logf("Error: %s", err.Error())
 				assert.ErrorContains(t, err, tc.expectedError)
 			} else {
 				assert.NilError(t, err)
-				log.Printf("Rendered: %+v", rendered)
+				t.Logf("Rendered: %+v", rendered)
 				var cm v1.ConfigMap
 				helm.UnmarshalK8SYaml(t, rendered, &cm)
 
