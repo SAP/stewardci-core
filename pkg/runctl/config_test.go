@@ -66,7 +66,7 @@ func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
 	resultConfig, err := loadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.Equal(t, "no entry for default network policy key found", err.Error())
+	assert.Equal(t, `invalid configuration: ConfigMap ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`, err.Error())
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -161,6 +161,7 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 			"foo":                           "fooPolicy",
 			"bar":                           "barPolicy",
 			"_other_special_key":            "baz",
+			"":                              "emptyKeyWillBeSkipped",
 		}),
 	)
 
@@ -291,7 +292,7 @@ func Test_processConfigMap(t *testing.T) {
 			config := &pipelineRunsConfigStruct{}
 
 			// EXERCISE
-			err := processConfigMap(tc.configMap, config)
+			err := processMainConfig(tc.configMap, config)
 
 			// VERIFY
 			assert.NilError(t, err)
@@ -312,7 +313,7 @@ func Test_processNetworkMap(t *testing.T) {
 		{"empty",
 			map[string]string{},
 			&pipelineRunsConfigStruct{},
-			"no entry for default network policy key found",
+			`invalid configuration: ConfigMap ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`,
 		},
 		{"only_default",
 			map[string]string{
@@ -331,7 +332,7 @@ func Test_processNetworkMap(t *testing.T) {
 				"default_key": "default_np",
 			},
 			&pipelineRunsConfigStruct{},
-			`no network policy with key "wrong_key1" found`,
+			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default": no network policy with key "wrong_key1" found`,
 		},
 		{"multiple_with_correct_default",
 			map[string]string{
@@ -340,6 +341,7 @@ func Test_processNetworkMap(t *testing.T) {
 				"foo":                           "fooPolicy",
 				"bar":                           "barPolicy",
 				"_other_special_key":            "baz",
+				"":                              "emptyKeyWillBeSkipped",
 			},
 			&pipelineRunsConfigStruct{
 				DefaultNetworkPolicy: "defaultPolicy",

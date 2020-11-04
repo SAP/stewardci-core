@@ -52,7 +52,7 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 		return nil, asRecoverable(err, true)
 	}
 	if configMap != nil {
-		err = processConfigMap(configMap.Data, config)
+		err = processMainConfig(configMap.Data, config)
 		if err != nil {
 			return nil, asRecoverable(err, false)
 		}
@@ -79,14 +79,14 @@ func asRecoverable(err error, isInfraError bool) error {
 	return err
 }
 
-func processMainConfig(config map[string]string, config *pipelineRunsConfigStruct) error {
-	config.LimitRange = configMap[pipelineRunsConfigKeyLimitRange]
-	config.ResourceQuota = configMap[pipelineRunsConfigKeyResourceQuota]
-	config.JenkinsfileRunnerImage = configMap[pipelineRunsConfigKeyImage]
-	config.JenkinsfileRunnerImagePullPolicy = configMap[pipelineRunsConfigKeyImagePullPolicy]
+func processMainConfig(configData map[string]string, config *pipelineRunsConfigStruct) error {
+	config.LimitRange = configData[pipelineRunsConfigKeyLimitRange]
+	config.ResourceQuota = configData[pipelineRunsConfigKeyResourceQuota]
+	config.JenkinsfileRunnerImage = configData[pipelineRunsConfigKeyImage]
+	config.JenkinsfileRunnerImagePullPolicy = configData[pipelineRunsConfigKeyImagePullPolicy]
 
 	parseInt64 := func(key string) (*int64, error) {
-		if strVal, ok := configMap[key]; ok && strVal != "" {
+		if strVal, ok := configData[key]; ok && strVal != "" {
 			intVal, err := strconv.ParseInt(strVal, 10, 64)
 			if err != nil {
 				return nil, errors.Wrapf(err, "cannot parse configuration value %q at %q", strVal, key)
@@ -97,7 +97,7 @@ func processMainConfig(config map[string]string, config *pipelineRunsConfigStruc
 	}
 
 	parseDuration := func(key string) (*metav1.Duration, error) {
-		if strVal, ok := configMap[key]; ok && strVal != "" {
+		if strVal, ok := configData[key]; ok && strVal != "" {
 			d, err := time.ParseDuration(strVal)
 			if err != nil {
 				return nil, errors.Wrapf(err, "cannot parse configuration value %q at %q", strVal, key)
@@ -152,7 +152,7 @@ func processNetworkMap(networkMap map[string]string, config *pipelineRunsConfigS
 
 	networkPolicies := map[string]string{}
 	for key, value := range networkMap {
-		if key != defaultNetworkPolicyKey && !strings.HasPrefix(key, "_") {
+		if key != defaultNetworkPolicyKey && key != "" && !strings.HasPrefix(key, "_") {
 			networkPolicies[key] = value
 		}
 	}

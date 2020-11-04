@@ -177,6 +177,7 @@ func Test_ConfigNetworkPolicies(t *testing.T) {
 				for key, value := range tc.expectedMapEntries {
 					assert.Equal(t, cm.Data[key], value, key)
 				}
+				assert.DeepEqual(t, tc.expectedMapEntries, cm.Data)
 			}
 		})
 	}
