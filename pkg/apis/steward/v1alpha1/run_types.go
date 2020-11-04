@@ -187,7 +187,7 @@ const (
 	ResultUndefined Result = ""
 	// ResultSuccess - the pipeline run was processed successfully
 	ResultSuccess Result = "success"
-	// ResultErrorInfra - the pipeline run failed due to an infrastructure problem including server-side configuration errors
+	// ResultErrorInfra - the pipeline run failed due to an infrastructure problem
 	ResultErrorInfra Result = "error_infra"
 	// ResultErrorContent -  the pipeline run failed due to an content problem
 	ResultErrorContent Result = "error_content"
