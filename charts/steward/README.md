@@ -170,7 +170,7 @@ Common parameters:
 
 The feature flags definition is a string containing any number of feature flag names separated by any non-empty sequence of comma (`,`) and/or whitespace (space, horizontal tab, vertical tab, carriage return, newline, form feed). Separators at the beginning and the end of the string are allowed.
 
-A feature flag gets _enabled_ if the name is either prefixed with a plus sign (`+`) or not disabled.
+A feature flag gets _enabled_ if the name is either prefixed with a plus sign (`+`) or not prefixed with a minus sign (`-`).
 A feature flag gets _disabled_ if the name is prefixed with a minus sign (`-`).
 
 **Example 1: Typical format**
@@ -194,11 +194,15 @@ or alternatively using newline as separator:
     , Flag1 +Flag2, ,,,,
     Flag3,
 
-It has the same effect as in example 1. The definition string has leading and trailing separators, uses different separator sequences.
+It has the same effect as in example 1.
+The definition string has leading and trailing separators and uses different separator sequences.
+
+
+#### List of Defined Feature Flags
 
 | Feature Flag | Description | Default |
 | --- | --- | --- |
-| RetryOnInvalidPipelineRunsConfig | If enabled, the pipeline run controller retries reconciling PipelineRun objects in case the controller configuration (in ConfigMaps) is invalid or cannot be loaded. It is assumed that the condition can be detected by a monitoring tool, triggers an alert and operators fix the issue in a timely manner. By that operator errors do not immediately break user pipeline runs. However, processing of PipelineRun objects may be delayed significantly in case of invalid configuration.<br/><br/> If disabled, the current behavior is used: immediately set all unfinished PipelineRun objects to finished with result code `error_infra`.<br/><br/>  The new behavior is supposed to become the default in a future release of Steward. | disabled |
+| `RetryOnInvalidPipelineRunsConfig` | If enabled, the pipeline run controller retries reconciling PipelineRun objects in case the controller configuration (in ConfigMaps) is invalid or cannot be loaded. It is assumed that the condition can be detected by a monitoring tool, triggers an alert and operators fix the issue in a timely manner. By that operator errors do not immediately break user pipeline runs. However, processing of PipelineRun objects may be delayed significantly in case of invalid configuration.<br/><br/> If disabled, the current behavior is used: immediately set all unfinished PipelineRun objects to finished with result code `error_infra`.<br/><br/>  The new behavior is supposed to become the default in a future release of Steward. | disabled |
 
 ## Custom Resource Definitions
 
