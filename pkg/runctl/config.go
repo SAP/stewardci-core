@@ -79,7 +79,7 @@ func asRecoverable(err error, isInfraError bool) error {
 	return err
 }
 
-func processConfigMap(configMap map[string]string, config *pipelineRunsConfigStruct) error {
+func processMainConfig(config map[string]string, config *pipelineRunsConfigStruct) error {
 	config.LimitRange = configMap[pipelineRunsConfigKeyLimitRange]
 	config.ResourceQuota = configMap[pipelineRunsConfigKeyResourceQuota]
 	config.JenkinsfileRunnerImage = configMap[pipelineRunsConfigKeyImage]
@@ -132,10 +132,22 @@ func processConfigMap(configMap map[string]string, config *pipelineRunsConfigStr
 func processNetworkMap(networkMap map[string]string, config *pipelineRunsConfigStruct) error {
 	defaultNetworkPolicyKey := networkMap[networkPoliciesConfigKeyDefault]
 	if defaultNetworkPolicyKey == "" {
-		return fmt.Errorf("no entry for default network policy key found")
+		return fmt.Errorf(
+			"invalid configuration: ConfigMap ConfigMap %q in namespace %q: key %q is missing or empty",
+			pipelineRunsConfigMapName,
+			system.Namespace(),
+			networkPoliciesConfigKeyDefault,
+		)
 	}
 	if config.DefaultNetworkPolicy = networkMap[defaultNetworkPolicyKey]; config.DefaultNetworkPolicy == "" {
-		return fmt.Errorf("no network policy with key %q found", defaultNetworkPolicyKey)
+		return fmt.Errorf(
+			"invalid configuration: ConfigMap %q in namespace %q: key %q: "+
+				"no network policy with key %q found",
+			pipelineRunsConfigMapName,
+			system.Namespace(),
+			networkPoliciesConfigKeyDefault,
+			defaultNetworkPolicyKey,
+		)
 	}
 
 	networkPolicies := map[string]string{}
