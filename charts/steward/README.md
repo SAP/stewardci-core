@@ -156,7 +156,7 @@ Common parameters:
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>podSecurityPolicy.<wbr/>runAsGroup</code> | (integer)<br/> The group ID (GID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of [1,65535]. Corresponds to field `runAsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>podSecurityPolicy.<wbr/>fsGroup</code> | (integer)<br/> A special supplemental group ID of the container processes of the Jenkinsfile Runner pod, that defines the ownership of some volume types. The value must be an integer in the range of [1,65535]. Corresponds to field `fsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
 | <code>pipelineRuns.<wbr/>timeout</code> | (string)<br/> The maximum execution time of pipelines. Must be specified as a string understood by [Go's `time.parseDuration()`](https://godoc.org/time#ParseDuration): <blockquote>A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix, such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".</blockquote> | `60m` |
-| <code>pipelineRuns.<wbr/>networkPolicy</code> | DEPRECATED (string): Use <code>pipelineRuns.<wbr/>networkPolicies</code> instead. | |
+| <code>pipelineRuns.<wbr/>networkPolicy</code> | (string)<br/> DEPRECATED: Use <code>pipelineRuns.<wbr/>networkPolicies</code> instead. | |
 | <code>pipelineRuns.<wbr/>defaultNetworkPolicyName</code> | The name of the network policy which is used when no network profile is selected by a pipeline run spec. | `default` if <code>pipelineRuns.<wbr/>networkPolicies</code> is not set or empty. |
 | <code>pipelineRuns.<wbr/>networkPolicies</code> | (map[string]string)<br/> The network policies selectable as network profiles in pipeline run specs. The key can be any valid YAML key not starting with underscore (`_`). The value must be a string containing a complete `networkpolicy.networking.k8s.io` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of network policies][k8s-networkpolicies] for details about Kubernetes network policies.<br/><br/> Note that Steward ensures that all pods in pipeline run namespaces are _isolated_ in terms of network policies. The policy defined here _adds_ egress and/or ingress rules. | A single entry named `default` whose value is a network policy defining rules that allow ingress traffic from all pods in the same namespace and egress traffic to the internet, the cluster DNS resolver and the Kubernetes API server. |
 | <code>pipelineRuns.<wbr/>limitRange</code> | (string)<br/> The limit range to be created in every pipeline run namespace. The value must be a string containing a complete `limitrange` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of limit ranges][k8s-limitranges] for details about Kubernetes limit ranges. | A limit range defining a default CPU request of 0.5 CPUs, a default CPU limit of 3 CPUs, a default memory request of 0.5 GiB and a default memory limit of 3 GiB.<br/><br/>This default limit range might change with newer releases of Steward. It is recommended to set an own limit range to avoid unexpected changes with Steward upgrades. |
@@ -168,13 +168,37 @@ Common parameters:
 |---|---|---|
 | <code>featureFlags</code> | (string)<br/> Feature flag definition.  | empty |
 
-The feature flags definition is a string with one or more feature flags. Multiple feature flags are separated by komma `,` or space `' '`.
-A feature flag can be set to enabled with adding the name optionally prefixed with a plus `+`.
-A feature flag can be set to disabled by adding the name prefixed with a dash `-`.
+The feature flags definition is a string containing any number of feature flag names separated by any non-empty sequence of comma (`,`) and/or whitespace (space, horizontal tab, vertical tab, carriage return, newline, form feed). Separators at the beginning and the end of the string are allowed.
+
+A feature flag gets _enabled_ if the name is either prefixed with a plus sign (`+`) or not disabled.
+A feature flag gets _disabled_ if the name is prefixed with a minus sign (`-`).
+
+**Example 1: Typical format**
+
+    Flag1 +Flag2 -Flag3
+
+or alternatively using comma and space as separator:
+
+    Flag1, +Flag2, -Flag3
+
+or alternatively using newline as separator:
+
+    Flag1
+    +Flag2
+    -Flag3
+
+`Flag1` and `Flag2` get enabled, while `Flag3` gets disabled.
+
+**Example 2: Untypical but correct format**
+
+    , Flag1 +Flag2, ,,,,
+    Flag3,
+
+It has the same effect as in example 1. The definition string has leading and trailing separators, uses different separator sequences.
 
 | Feature Flag | Description | Default |
 | --- | --- | --- |
-| RetryOnInvalidPipelineRunsConfig | If enabled: Retries a pipeline run on a configuration error until the configuration error if fixed or the timeout is reached.</br>If disabled: The pipeline run is finished with an infrastructure error. | disabled |
+| RetryOnInvalidPipelineRunsConfig | If enabled, the pipeline run controller retries reconciling PipelineRun objects in case the controller configuration (in ConfigMaps) is invalid or cannot be loaded. It is assumed that the condition can be detected by a monitoring tool, triggers an alert and operators fix the issue in a timely manner. By that operator errors do not immediately break user pipeline runs. However, processing of PipelineRun objects may be delayed significantly in case of invalid configuration.<br/><br/> If disabled, the current behavior is used: immediately set all unfinished PipelineRun objects to finished with result code `error_infra`.<br/><br/>  The new behavior is supposed to become the default in a future release of Steward. | disabled |
 
 ## Custom Resource Definitions
 
