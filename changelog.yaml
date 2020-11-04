@@ -44,8 +44,8 @@
       resource object.
     warning: ""
     upgradeNotes: |-
-      - New Result `ResultErrorConfig` introduced.
-      - New feature flag `RetryOnInvalidPipelineRunsConfig` introduced.
+      - PiplineRun objects may now have a `status.result` value `error_config` (see Steward API docs).
+      - Activating the new feature flag `RetryOnInvalidPipelineRunsConfig` will let the pipeline run controller retry reconciling in case the controller configuration (in ConfigMaps) is invalid or cannot be loaded. Without the feature flag all PipelineRun objects will be set to finished with result code `error_infra`. The new behaviour will become the default in a future release of Steward.
     deprecations: |-
       Helm configuration value `pipelineRuns.networkPolicy` is deprecated:
       use `pipelineRuns.networkPolicies` instead.
