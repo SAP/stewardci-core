@@ -33,7 +33,7 @@
   - type: enhancement
     impact: minor
     title: Introduce network profiles
-    description: >-
+    description: |-
       Allow Steward clients to select a network profile per pipeline run.
 
       Network profiles are named network-related configurations defined by Steward operators.
@@ -46,7 +46,7 @@
     upgradeNotes: |-
       - New Result `ResultErrorConfig` introduced.
       - New feature flag `RetryOnInvalidPipelineRunsConfig` introduced.
-    deprecations: >-
+    deprecations: |-
       Helm configuration value `pipelineRuns.networkPolicy` is deprecated:
       use `pipelineRuns.networkPolicies` instead.
     pullRequestNumber: 160
