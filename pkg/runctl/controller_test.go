@@ -12,8 +12,9 @@ import (
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	metrics "github.com/SAP/stewardci-core/pkg/metrics"
-	run "github.com/SAP/stewardci-core/pkg/run"
-	runmocks "github.com/SAP/stewardci-core/pkg/run/mocks"
+	cfg "github.com/SAP/stewardci-core/pkg/runctl/cfg"
+	run "github.com/SAP/stewardci-core/pkg/runctl/run"
+	runmocks "github.com/SAP/stewardci-core/pkg/runctl/run/mocks"
 	gomock "github.com/golang/mock/gomock"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	assert "gotest.tools/assert"
@@ -243,7 +244,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 		pipelineSpec           api.PipelineSpec
 		currentStatus          api.PipelineStatus
 		runManagerExpectation  func(*runmocks.MockManager, *runmocks.MockRun)
-		pipelineRunsConfigStub func() (*pipelineRunsConfigStruct, error)
+		pipelineRunsConfigStub func() (*cfg.PipelineRunsConfigStruct, error)
 		expectedResult         api.Result
 		expectedState          api.State
 		expectedMessage        string
@@ -253,7 +254,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			pipelineSpec:  api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().Start(gomock.Any()).Return(nil)
+				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			pipelineRunsConfigStub: emptyRunsConfig,
 			expectedResult:         api.ResultUndefined,
@@ -264,7 +265,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			currentStatus: api.PipelineStatus{},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 			},
-			pipelineRunsConfigStub: func() (*pipelineRunsConfigStruct, error) {
+			pipelineRunsConfigStub: func() (*cfg.PipelineRunsConfigStruct, error) {
 				return nil, error1
 			},
 			expectedResult: api.ResultErrorInfra,
@@ -275,7 +276,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			currentStatus: api.PipelineStatus{},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 			},
-			pipelineRunsConfigStub: func() (*pipelineRunsConfigStruct, error) {
+			pipelineRunsConfigStub: func() (*cfg.PipelineRunsConfigStruct, error) {
 				return nil, errorRecover1
 			},
 			expectedResult: api.ResultUndefined,
@@ -288,7 +289,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				State: api.StatePreparing,
 			},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().Start(gomock.Any()).Return(nil)
+				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			pipelineRunsConfigStub: emptyRunsConfig,
 			expectedResult:         api.ResultUndefined,
@@ -300,7 +301,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				State: api.StatePreparing,
 			},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().Start(gomock.Any()).Return(error1)
+				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(error1)
 			},
 			pipelineRunsConfigStub: emptyRunsConfig,
 			expectedResult:         api.ResultUndefined,
@@ -317,7 +318,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 
-				rm.EXPECT().Start(gomock.Any()).Do(func(run k8s.PipelineRun) {
+				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Do(func(run k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) {
 					run.UpdateResult(api.ResultErrorContent)
 				}).Return(error1)
 			},
@@ -647,8 +648,8 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 	assert.Equal(t, "message from Succeeded condition", status.Message)
 }
 
-func newTestRunManager(workFactory k8s.ClientFactory, pipelineRunsConfig *pipelineRunsConfigStruct, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) run.Manager {
-	runManager := NewRunManager(workFactory, pipelineRunsConfig, secretProvider, namespaceManager).(*runManager)
+func newTestRunManager(workFactory k8s.ClientFactory, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) run.Manager {
+	runManager := NewRunManager(workFactory, secretProvider, namespaceManager).(*runManager)
 	runManager.testing = &runManagerTesting{
 		getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" },
 	}

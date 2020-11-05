@@ -1,4 +1,4 @@
-package runctl
+package cfg
 
 import (
 	"fmt"
@@ -30,7 +30,8 @@ const (
 	networkPoliciesConfigKeyDefault = "_default"
 )
 
-type pipelineRunsConfigStruct struct {
+// PipelineRunsConfigStruct is a struct holding the pipeline runs configuration
+type PipelineRunsConfigStruct struct {
 	Timeout                                       *metav1.Duration
 	NetworkPolicies                               map[string]string
 	DefaultNetworkPolicy                          string
@@ -43,9 +44,10 @@ type pipelineRunsConfigStruct struct {
 	JenkinsfileRunnerPodSecurityContextFSGroup    *int64
 }
 
-func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfigStruct, error) {
+// LoadPipelineRunsConfig loads the pipelineruns configuration and returns it.
+func LoadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*PipelineRunsConfigStruct, error) {
 	configMapIfce := clientFactory.CoreV1().ConfigMaps(system.Namespace())
-	config := &pipelineRunsConfigStruct{}
+	config := &PipelineRunsConfigStruct{}
 
 	configMap, err := configMapIfce.Get(pipelineRunsConfigMapName, metav1.GetOptions{})
 	if err != nil && !k8serrors.IsNotFound(err) {
@@ -76,7 +78,7 @@ func asRecoverable(err error, isInfraError bool) error {
 	return serrors.RecoverableIf(err, isInfraError || featureflag.RetryOnInvalidPipelineRunsConfig.Enabled())
 }
 
-func processMainConfig(configData map[string]string, config *pipelineRunsConfigStruct) error {
+func processMainConfig(configData map[string]string, config *PipelineRunsConfigStruct) error {
 	config.LimitRange = configData[pipelineRunsConfigKeyLimitRange]
 	config.ResourceQuota = configData[pipelineRunsConfigKeyResourceQuota]
 	config.JenkinsfileRunnerImage = configData[pipelineRunsConfigKeyImage]
@@ -126,7 +128,7 @@ func processMainConfig(configData map[string]string, config *pipelineRunsConfigS
 	return nil
 }
 
-func processNetworkMap(networkMap map[string]string, config *pipelineRunsConfigStruct) error {
+func processNetworkMap(networkMap map[string]string, config *PipelineRunsConfigStruct) error {
 	defaultNetworkPolicyKey := networkMap[networkPoliciesConfigKeyDefault]
 	if defaultNetworkPolicyKey == "" {
 		return fmt.Errorf(

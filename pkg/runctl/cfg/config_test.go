@@ -1,4 +1,4 @@
-package runctl
+package cfg
 
 import (
 	"fmt"
@@ -28,11 +28,11 @@ func Test_loadPipelineRunsConfig_NoConfigMap(t *testing.T) {
 	cf := fake.NewClientFactory( /* no objects */ )
 
 	// EXERCISE
-	resultConfig, err := loadPipelineRunsConfig(cf)
+	resultConfig, err := LoadPipelineRunsConfig(cf)
 
 	// VERIFY
 	assert.NilError(t, err)
-	expectedConfig := &pipelineRunsConfigStruct{}
+	expectedConfig := &PipelineRunsConfigStruct{}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
 
@@ -45,11 +45,11 @@ func Test_loadPipelineRunsConfig_NoNetworkConfigMap(t *testing.T) {
 	)
 
 	// EXERCISE
-	resultConfig, resultErr := loadPipelineRunsConfig(cf)
+	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
 
 	// VERIFY
 	assert.NilError(t, resultErr)
-	expectedConfig := &pipelineRunsConfigStruct{}
+	expectedConfig := &PipelineRunsConfigStruct{}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
 
@@ -63,7 +63,7 @@ func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
 	)
 
 	// EXERCISE
-	resultConfig, resultErr := loadPipelineRunsConfig(cf)
+	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
 
 	// VERIFY
 	assert.Equal(t, `invalid configuration: ConfigMap ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`, resultErr.Error())
@@ -95,7 +95,7 @@ func Test_loadPipelineRunsConfig_ErrorOnGetConfigMap(t *testing.T) {
 	}
 
 	// EXERCISE
-	resultConfig, resultErr := loadPipelineRunsConfig(cf)
+	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
 
 	// VERIFY
 	assert.Assert(t, serrors.IsRecoverable(resultErr))
@@ -128,7 +128,7 @@ func Test_loadPipelineRunsConfig_ErrorOnGetNetworkPoliciesMap(t *testing.T) {
 	}
 
 	// EXERCISE
-	resultConfig, resultErr := loadPipelineRunsConfig(cf)
+	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
 
 	// VERIFY
 	assert.Assert(t, serrors.IsRecoverable(resultErr))
@@ -166,11 +166,11 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	)
 
 	// EXERCISE
-	resultConfig, resultErr := loadPipelineRunsConfig(cf)
+	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
 
 	// VERIFY
 	assert.NilError(t, resultErr)
-	expectedConfig := &pipelineRunsConfigStruct{
+	expectedConfig := &PipelineRunsConfigStruct{
 		Timeout:                          metav1Duration(time.Minute * 4444),
 		LimitRange:                       "limitRange1",
 		ResourceQuota:                    "resourceQuota1",
@@ -240,7 +240,7 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 			)
 
 			// EXERCISE
-			resultConfig, resultErr := loadPipelineRunsConfig(cf)
+			resultConfig, resultErr := LoadPipelineRunsConfig(cf)
 
 			// VERIFY
 			assert.Assert(t, resultErr != nil)
@@ -253,7 +253,7 @@ func Test_processMainConfig(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
 		configMap map[string]string
-		expected  *pipelineRunsConfigStruct
+		expected  *PipelineRunsConfigStruct
 	}{
 
 		{"all_set",
@@ -267,7 +267,7 @@ func Test_processMainConfig(t *testing.T) {
 				pipelineRunsConfigKeyTimeout:       "4444m",
 				"someKeyThatShouldBeIgnored":       "34957349",
 			},
-			&pipelineRunsConfigStruct{
+			&PipelineRunsConfigStruct{
 				Timeout:       metav1Duration(time.Minute * 4444),
 				LimitRange:    "limitRange1",
 				ResourceQuota: "resourceQuota1",
@@ -285,11 +285,11 @@ func Test_processMainConfig(t *testing.T) {
 				pipelineRunsConfigKeyResourceQuota: "",
 				pipelineRunsConfigKeyTimeout:       "",
 			},
-			&pipelineRunsConfigStruct{},
+			&PipelineRunsConfigStruct{},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			config := &pipelineRunsConfigStruct{}
+			config := &PipelineRunsConfigStruct{}
 
 			// EXERCISE
 			resultErr := processMainConfig(tc.configMap, config)
@@ -307,12 +307,12 @@ func Test_processNetworkMap(t *testing.T) {
 	for _, tc := range []struct {
 		name          string
 		networkMap    map[string]string
-		expected      *pipelineRunsConfigStruct
+		expected      *PipelineRunsConfigStruct
 		expectedError string
 	}{
 		{"empty",
 			map[string]string{},
-			&pipelineRunsConfigStruct{},
+			&PipelineRunsConfigStruct{},
 			`invalid configuration: ConfigMap ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`,
 		},
 		{"only_default",
@@ -320,7 +320,7 @@ func Test_processNetworkMap(t *testing.T) {
 				"_default":    "default_key",
 				"default_key": "default_np",
 			},
-			&pipelineRunsConfigStruct{
+			&PipelineRunsConfigStruct{
 				DefaultNetworkPolicy: "default_np",
 			},
 			"",
@@ -331,7 +331,7 @@ func Test_processNetworkMap(t *testing.T) {
 				"_default":    "wrong_key1",
 				"default_key": "default_np",
 			},
-			&pipelineRunsConfigStruct{},
+			&PipelineRunsConfigStruct{},
 			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default": no network policy with key "wrong_key1" found`,
 		},
 		{"multiple_with_correct_default",
@@ -343,7 +343,7 @@ func Test_processNetworkMap(t *testing.T) {
 				"_other_special_key":            "baz",
 				"":                              "emptyKeyWillBeSkipped",
 			},
-			&pipelineRunsConfigStruct{
+			&PipelineRunsConfigStruct{
 				DefaultNetworkPolicy: "defaultPolicy",
 				NetworkPolicies: map[string]string{
 					"foo": "fooPolicy",
@@ -355,7 +355,7 @@ func Test_processNetworkMap(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// SETUP
-			config := &pipelineRunsConfigStruct{}
+			config := &PipelineRunsConfigStruct{}
 			// EXERCISE
 			resultErr := processNetworkMap(tc.networkMap, config)
 			// VERIFY

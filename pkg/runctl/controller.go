@@ -15,7 +15,8 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/metrics"
-	run "github.com/SAP/stewardci-core/pkg/run"
+	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
+	run "github.com/SAP/stewardci-core/pkg/runctl/run"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -48,8 +49,8 @@ type Controller struct {
 
 type controllerTesting struct {
 	runManagerStub             run.Manager
-	newRunManagerStub          func(k8s.ClientFactory, *pipelineRunsConfigStruct, secrets.SecretProvider, k8s.NamespaceManager) run.Manager
-	loadPipelineRunsConfigStub func() (*pipelineRunsConfigStruct, error)
+	newRunManagerStub          func(k8s.ClientFactory, secrets.SecretProvider, k8s.NamespaceManager) run.Manager
+	loadPipelineRunsConfigStub func() (*cfg.PipelineRunsConfigStruct, error)
 }
 
 // NewController creates new Controller
@@ -195,29 +196,29 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) e
 	return nil
 }
 
-func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun, pipelineRunsConfig *pipelineRunsConfigStruct) run.Manager {
+func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) run.Manager {
 	if c.testing != nil && c.testing.runManagerStub != nil {
 		return c.testing.runManagerStub
 	}
 	tenant := k8s.NewTenantNamespace(c.factory, pipelineRun.GetNamespace())
 	workFactory := tenant.TargetClientFactory()
 	namespaceManager := k8s.NewNamespaceManager(c.factory, runNamespacePrefix, runNamespaceRandomLength)
-	return c.newRunManager(workFactory, pipelineRunsConfig, tenant.GetSecretProvider(), namespaceManager)
+	return c.newRunManager(workFactory, tenant.GetSecretProvider(), namespaceManager)
 }
 
-func (c *Controller) newRunManager(workFactory k8s.ClientFactory, pipelineRunsConfig *pipelineRunsConfigStruct, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) run.Manager {
+func (c *Controller) newRunManager(workFactory k8s.ClientFactory, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) run.Manager {
 	if c.testing != nil && c.testing.newRunManagerStub != nil {
-		return c.testing.newRunManagerStub(workFactory, pipelineRunsConfig, secretProvider, namespaceManager)
+		return c.testing.newRunManagerStub(workFactory, secretProvider, namespaceManager)
 
 	}
-	return NewRunManager(workFactory, pipelineRunsConfig, secretProvider, namespaceManager)
+	return NewRunManager(workFactory, secretProvider, namespaceManager)
 }
 
-func (c *Controller) loadPipelineRunsConfig() (*pipelineRunsConfigStruct, error) {
+func (c *Controller) loadPipelineRunsConfig() (*cfg.PipelineRunsConfigStruct, error) {
 	if c.testing != nil && c.testing.loadPipelineRunsConfigStub != nil {
 		return c.testing.loadPipelineRunsConfigStub()
 	}
-	return loadPipelineRunsConfig(c.factory)
+	return cfg.LoadPipelineRunsConfig(c.factory)
 }
 
 // syncHandler compares the actual state with the desired, and attempts to
@@ -252,7 +253,7 @@ func (c *Controller) syncHandler(key string) error {
 	// Check if object has deletion timestamp
 	// If not, try to add finalizer if missing
 	if pipelineRun.HasDeletionTimestamp() {
-		runManager := c.createRunManager(pipelineRun, nil)
+		runManager := c.createRunManager(pipelineRun)
 		err = runManager.Cleanup(pipelineRun)
 		if err == nil {
 			err = pipelineRun.DeleteFinalizerIfExists()
@@ -300,12 +301,12 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
-	runManager := c.createRunManager(pipelineRun, pipelineRunsConfig)
+	runManager := c.createRunManager(pipelineRun)
 
 	// Process pipeline run based on current state
 	switch state := pipelineRun.GetStatus().State; state {
 	case api.StatePreparing:
-		err = runManager.Start(pipelineRun)
+		err = runManager.Start(pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			//In case we have a result we can cleanup. Otherwise we retry in the next iteration.
