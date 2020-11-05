@@ -46,6 +46,16 @@
     deprecations: 
     pullRequestNumber: 162
     jiraIssueNumber: 983
+  - type: enhancement
+    impact: minor
+    title: Replace insensitive terms with inclusive language
+    description: |-
+      Insensitive terms should be replaced by inclusive language in all SAP open source repositories.
+    warning:
+    upgradeNotes:
+    deprecations:
+    pullRequestNumber: 176
+    jiraIssueNumber: 20
 
 - version: "0.5.2"
   date: 2020-10-28

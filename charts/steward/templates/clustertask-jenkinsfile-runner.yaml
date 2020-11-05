@@ -28,7 +28,7 @@ spec:
     description: >
       The URL of the Elasticsearch index to send logs to.
       If null or empty, logging to Elasticsearch is disabled.
-      # Example: http://elasticsearch-master.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc
+      # Example: http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc
     default: {{ default "" .Values.pipelineRuns.logging.elasticsearch.indexURL | quote }}
   - name: PIPELINE_LOG_ELASTICSEARCH_AUTH_SECRET
     type: string

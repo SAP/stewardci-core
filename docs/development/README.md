@@ -40,7 +40,7 @@ Although the controller images and the Helm chart are independent they are alway
 - Push the controller images built and validated earlier in the pipeline with the new version tag.
 - Create a GitHub release tag based on the pushed commit with the chart version changes.
 - Prepare the next dev version in `prepare-<version>` by updating `version` and `appVersion` in Chart.yaml with an incremented patch version and `-dev` suffix.
-- Merge the `prepare-<version>` branch into the `master` branch and delete the `prepare-<version>` branch.
+- Merge the `prepare-<version>` branch into the main branch and delete the `prepare-<version>` branch.
 
 ## Contribution
 
