@@ -47,9 +47,9 @@ type Controller struct {
 }
 
 type controllerTesting struct {
-	runManagerStub            run.Manager
-	newRunManagerStub         func(k8s.ClientFactory, *pipelineRunsConfigStruct, secrets.SecretProvider, k8s.NamespaceManager) run.Manager
-	getPipelineRunsConfigStub func() (*pipelineRunsConfigStruct, error)
+	runManagerStub             run.Manager
+	newRunManagerStub          func(k8s.ClientFactory, *pipelineRunsConfigStruct, secrets.SecretProvider, k8s.NamespaceManager) run.Manager
+	loadPipelineRunsConfigStub func() (*pipelineRunsConfigStruct, error)
 }
 
 // NewController creates new Controller
@@ -213,9 +213,9 @@ func (c *Controller) newRunManager(workFactory k8s.ClientFactory, pipelineRunsCo
 	return NewRunManager(workFactory, pipelineRunsConfig, secretProvider, namespaceManager)
 }
 
-func (c *Controller) getPipelineRunsConfig() (*pipelineRunsConfigStruct, error) {
-	if c.testing != nil && c.testing.getPipelineRunsConfigStub != nil {
-		return c.testing.getPipelineRunsConfigStub()
+func (c *Controller) loadPipelineRunsConfig() (*pipelineRunsConfigStruct, error) {
+	if c.testing != nil && c.testing.loadPipelineRunsConfigStub != nil {
+		return c.testing.loadPipelineRunsConfigStub()
 	}
 	return loadPipelineRunsConfig(c.factory)
 }
@@ -286,7 +286,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
-	pipelineRunsConfig, err := c.getPipelineRunsConfig()
+	pipelineRunsConfig, err := c.loadPipelineRunsConfig()
 	if err != nil {
 		if serrors.IsRecoverable(err) {
 			return err

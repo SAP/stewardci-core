@@ -210,8 +210,8 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 			runManager := runmocks.NewMockManager(mockCtrl)
 			test.runManagerExpectation(runManager)
 			controller.testing = &controllerTesting{
-				runManagerStub:            runManager,
-				getPipelineRunsConfigStub: emptyRunsConfig,
+				runManagerStub:             runManager,
+				loadPipelineRunsConfigStub: emptyRunsConfig,
 			}
 			// EXERCISE
 			err := controller.syncHandler("ns1/foo")
@@ -520,8 +520,8 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			runmock := runmocks.NewMockRun(mockCtrl)
 			test.runManagerExpectation(runManager, runmock)
 			controller.testing = &controllerTesting{
-				runManagerStub:            runManager,
-				getPipelineRunsConfigStub: test.pipelineRunsConfigStub,
+				runManagerStub:             runManager,
+				loadPipelineRunsConfigStub: test.pipelineRunsConfigStub,
 			}
 			// EXERCISE
 			err := controller.syncHandler("ns1/foo")
@@ -662,8 +662,8 @@ func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 	metrics := metrics.NewMetrics()
 	controller := NewController(cf, metrics)
 	controller.testing = &controllerTesting{
-		newRunManagerStub:         newTestRunManager,
-		getPipelineRunsConfigStub: emptyRunsConfig,
+		newRunManagerStub:          newTestRunManager,
+		loadPipelineRunsConfigStub: emptyRunsConfig,
 	}
 	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(cf.StewardV1alpha1())
 
