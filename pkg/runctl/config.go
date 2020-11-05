@@ -73,7 +73,7 @@ func loadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*pipelineRunsConfi
 }
 
 func asRecoverable(err error, isInfraError bool) error {
-	return serrors.RecoverableIf(error, isInfraError || featureflag.RetryOnInvalidPipelineRunsConfig.Enabled())
+	return serrors.RecoverableIf(err, isInfraError || featureflag.RetryOnInvalidPipelineRunsConfig.Enabled())
 }
 
 func processMainConfig(configData map[string]string, config *pipelineRunsConfigStruct) error {

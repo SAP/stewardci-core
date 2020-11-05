@@ -45,10 +45,10 @@ func Test_loadPipelineRunsConfig_NoNetworkConfigMap(t *testing.T) {
 	)
 
 	// EXERCISE
-	resultConfig, err := loadPipelineRunsConfig(cf)
+	resultConfig, resultErr := loadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.NilError(t, err)
+	assert.NilError(t, resultErr)
 	expectedConfig := &pipelineRunsConfigStruct{}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
@@ -63,10 +63,10 @@ func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
 	)
 
 	// EXERCISE
-	resultConfig, err := loadPipelineRunsConfig(cf)
+	resultConfig, resultErr := loadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.Equal(t, `invalid configuration: ConfigMap ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`, err.Error())
+	assert.Equal(t, `invalid configuration: ConfigMap ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`, resultErr.Error())
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -95,11 +95,11 @@ func Test_loadPipelineRunsConfig_ErrorOnGetConfigMap(t *testing.T) {
 	}
 
 	// EXERCISE
-	resultConfig, err := loadPipelineRunsConfig(cf)
+	resultConfig, resultErr := loadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.Assert(t, serrors.IsRecoverable(err))
-	assert.Equal(t, err.Error(), expectedError.Error())
+	assert.Assert(t, serrors.IsRecoverable(resultErr))
+	assert.Equal(t, resultErr.Error(), expectedError.Error())
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -128,11 +128,11 @@ func Test_loadPipelineRunsConfig_ErrorOnGetNetworkPoliciesMap(t *testing.T) {
 	}
 
 	// EXERCISE
-	resultConfig, err := loadPipelineRunsConfig(cf)
+	resultConfig, resultErr := loadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.Assert(t, serrors.IsRecoverable(err))
-	assert.Equal(t, err.Error(), expectedError.Error())
+	assert.Assert(t, serrors.IsRecoverable(resultErr))
+	assert.Equal(t, resultErr.Error(), expectedError.Error())
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -166,10 +166,10 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	)
 
 	// EXERCISE
-	resultConfig, err := loadPipelineRunsConfig(cf)
+	resultConfig, resultErr := loadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.NilError(t, err)
+	assert.NilError(t, resultErr)
 	expectedConfig := &pipelineRunsConfigStruct{
 		Timeout:                          metav1Duration(time.Minute * 4444),
 		LimitRange:                       "limitRange1",
@@ -203,9 +203,9 @@ func Test_asRecoverable(t *testing.T) {
 			// SETUP
 			defer featureflagtesting.WithFeatureFlag(featureflag.RetryOnInvalidPipelineRunsConfig, tc.flag)()
 			// EXERCISE
-			err := asRecoverable(errFoo, tc.infraError)
+			resultErr := asRecoverable(errFoo, tc.infraError)
 			// VALIDATE
-			assert.Assert(t, serrors.IsRecoverable(err) == tc.expectedRecoverable)
+			assert.Assert(t, serrors.IsRecoverable(resultErr) == tc.expectedRecoverable)
 		})
 	}
 }
@@ -240,10 +240,10 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 			)
 
 			// EXERCISE
-			resultConfig, err := loadPipelineRunsConfig(cf)
+			resultConfig, resultErr := loadPipelineRunsConfig(cf)
 
 			// VERIFY
-			assert.Assert(t, err != nil)
+			assert.Assert(t, resultErr != nil)
 			assert.Assert(t, resultConfig == nil)
 		})
 	}
@@ -292,10 +292,10 @@ func Test_processMainConfig(t *testing.T) {
 			config := &pipelineRunsConfigStruct{}
 
 			// EXERCISE
-			err := processMainConfig(tc.configMap, config)
+			resultErr := processMainConfig(tc.configMap, config)
 
 			// VERIFY
-			assert.NilError(t, err)
+			assert.NilError(t, resultErr)
 			assert.DeepEqual(t, tc.expected, config)
 		},
 		)
@@ -357,12 +357,12 @@ func Test_processNetworkMap(t *testing.T) {
 			// SETUP
 			config := &pipelineRunsConfigStruct{}
 			// EXERCISE
-			err := processNetworkMap(tc.networkMap, config)
+			resultErr := processNetworkMap(tc.networkMap, config)
 			// VERIFY
 			if tc.expectedError == "" {
-				assert.NilError(t, err)
+				assert.NilError(t, resultErr)
 			} else {
-				assert.Equal(t, err.Error(), tc.expectedError)
+				assert.Equal(t, resultErr.Error(), tc.expectedError)
 			}
 			assert.DeepEqual(t, tc.expected, config)
 

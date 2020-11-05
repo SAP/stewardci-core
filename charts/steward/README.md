@@ -15,6 +15,8 @@ Install and configure [Steward][] on Kubernetes.
     - [Controllers](#controllers)
     - [Monitoring](#monitoring)
     - [Pipeline Runs](#pipeline-runs)
+    - [Feature Flags ](#feature-flags)
+      - [List of Defined Feature Flags](#list-of-defined-feature-flags)
   - [Custom Resource Definitions](#custom-resource-definitions)
 
 ## Prerequisites
