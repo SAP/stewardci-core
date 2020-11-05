@@ -249,7 +249,7 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 	}
 }
 
-func Test_processConfigMap(t *testing.T) {
+func Test_processMainConfig(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
 		configMap map[string]string
@@ -358,7 +358,7 @@ func Test_processNetworkMap(t *testing.T) {
 			config := &pipelineRunsConfigStruct{}
 			// EXERCISE
 			err := processNetworkMap(tc.networkMap, config)
-			// VALIDATE
+			// VERIFY
 			if tc.expectedError == "" {
 				assert.NilError(t, err)
 			} else {

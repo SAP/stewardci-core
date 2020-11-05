@@ -1,7 +1,7 @@
 apiVersion: steward.sap.com/v1alpha1
 kind: PipelineRun
 metadata:
-  generateName: ok-
+  generateName: network-profile-
 spec:
   profiles:
     network: restricted

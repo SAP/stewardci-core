@@ -298,7 +298,6 @@ func (c *Controller) syncHandler(key string) error {
 		pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
 		c.metrics.CountResult(pipelineRun.GetStatus().Result)
 		return nil
-
 	}
 
 	runManager := c.createRunManager(pipelineRun, pipelineRunsConfig)
