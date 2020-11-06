@@ -188,7 +188,7 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
 
-func Test_asRecoverable(t *testing.T) {
+func Test_withRecoverablility(t *testing.T) {
 	errFoo := fmt.Errorf("foo")
 	for _, tc := range []struct {
 		name                                  string
