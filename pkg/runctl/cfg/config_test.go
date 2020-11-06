@@ -352,6 +352,18 @@ func Test_processNetworkMap(t *testing.T) {
 			},
 			"",
 		},
+		{"skip_empty_values",
+			map[string]string{
+				networkPoliciesConfigKeyDefault: "defaultKey",
+				"defaultKey":                    "defaultPolicy",
+				"empty":                         "",
+				"onlySpaces": " 	",
+			},
+			&PipelineRunsConfigStruct{
+				DefaultNetworkPolicy: "defaultPolicy",
+			},
+			"",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// SETUP

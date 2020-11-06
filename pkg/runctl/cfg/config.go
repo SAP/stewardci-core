@@ -151,7 +151,7 @@ func processNetworkMap(networkMap map[string]string, config *PipelineRunsConfigS
 
 	networkPolicies := map[string]string{}
 	for key, value := range networkMap {
-		if key != defaultNetworkPolicyKey && key != "" && !strings.HasPrefix(key, "_") {
+		if key != defaultNetworkPolicyKey && key != "" && strings.TrimSpace(value) != "" && !strings.HasPrefix(key, "_") {
 			networkPolicies[key] = value
 		}
 	}
