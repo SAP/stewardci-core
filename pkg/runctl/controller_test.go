@@ -212,7 +212,7 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 			test.runManagerExpectation(runManager)
 			controller.testing = &controllerTesting{
 				runManagerStub:             runManager,
-				loadPipelineRunsConfigStub: emptyRunsConfig,
+				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 			}
 			// EXERCISE
 			err := controller.syncHandler("ns1/foo")
@@ -256,7 +256,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         api.ResultUndefined,
 			expectedState:          api.StateWaiting,
 		},
@@ -291,7 +291,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         api.ResultUndefined,
 			expectedState:          api.StateWaiting,
 		},
@@ -303,7 +303,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(error1)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         api.ResultUndefined,
 			expectedState:          api.StatePreparing,
 			expectedMessage:        "",
@@ -322,7 +322,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 					run.UpdateResult(api.ResultErrorContent)
 				}).Return(error1)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         api.ResultErrorContent,
 			expectedState:          api.StateCleaning,
 			expectedMessage:        "preparing failed .*error1",
@@ -335,7 +335,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 				rm.EXPECT().GetRun(gomock.Any()).Return(nil, error1)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         api.ResultErrorInfra,
 			expectedState:          api.StateCleaning,
 		},
@@ -347,7 +347,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 				rm.EXPECT().GetRun(gomock.Any()).Return(nil, errorRecover1)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         api.ResultUndefined,
 			expectedState:          api.StateWaiting,
 			expectedError:          errorRecover1,
@@ -361,7 +361,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				run.EXPECT().GetStartTime().Return(nil)
 				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         "",
 			expectedState:          api.StateWaiting,
 		},
@@ -375,7 +375,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				run.EXPECT().GetStartTime().Return(&now)
 				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         "",
 			expectedState:          api.StateRunning,
 		},
@@ -389,7 +389,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				run.EXPECT().IsFinished().Return(false, api.ResultUndefined)
 				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         "",
 			expectedState:          api.StateRunning,
 		},
@@ -401,7 +401,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 				rm.EXPECT().GetRun(gomock.Any()).Return(run, errorRecover1)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         "",
 			expectedState:          api.StateRunning,
 			expectedError:          errorRecover1,
@@ -414,7 +414,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 				rm.EXPECT().GetRun(gomock.Any()).Return(nil, error1)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         "",
 			expectedState:          api.StateCleaning,
 			expectedMessage:        "running failed .*error1",
@@ -433,7 +433,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				run.EXPECT().GetMessage()
 				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         api.ResultTimeout,
 			expectedState:          api.StateCleaning,
 		},
@@ -453,7 +453,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				run.EXPECT().GetMessage()
 				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         api.ResultSuccess,
 			expectedState:          api.StateCleaning,
 		},
@@ -464,7 +464,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         "",
 			expectedState:          api.StateNew,
 		},
@@ -475,7 +475,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         "",
 			expectedState:          api.StateFinished,
 		},
@@ -489,7 +489,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 				rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         api.ResultAborted,
 			expectedState:          api.StateFinished,
 		},
@@ -503,7 +503,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 				rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
 			},
-			pipelineRunsConfigStub: emptyRunsConfig,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
 			expectedResult:         api.ResultAborted,
 			expectedState:          api.StateFinished,
 		},
@@ -664,7 +664,7 @@ func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 	controller := NewController(cf, metrics)
 	controller.testing = &controllerTesting{
 		newRunManagerStub:          newTestRunManager,
-		loadPipelineRunsConfigStub: emptyRunsConfig,
+		loadPipelineRunsConfigStub: newEmptyRunsConfig,
 	}
 	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(cf.StewardV1alpha1())
 

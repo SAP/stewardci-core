@@ -539,12 +539,58 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 		expectError    bool
 		result         api.Result
 	}{
-		{"undefined", api.PipelineSpec{}, "networkPolicySpecDefault1", false, api.ResultUndefined},
-		{"nil_profile", api.PipelineSpec{Profiles: nil}, "networkPolicySpecDefault1", false, api.ResultUndefined},
-		{"empty_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: ""}}, "networkPolicySpecDefault1", false, api.ResultUndefined},
-		{"unknown_network_name", api.PipelineSpec{Profiles: &api.Profiles{Network: "unknown"}}, "", true, api.ResultErrorConfig},
-		{"choose_network_policy1", api.PipelineSpec{Profiles: &api.Profiles{Network: "networkPolicyKey1"}}, "networkPolicySpec1", false, api.ResultUndefined},
-		{"choose_network_policy2", api.PipelineSpec{Profiles: &api.Profiles{Network: "networkPolicyKey2"}}, "networkPolicySpec2", false, api.ResultUndefined},
+		{
+			name:           "undefined",
+			pipelineSpec:   api.PipelineSpec{},
+			expectedPolicy: "networkPolicySpecDefault1",
+			expectError:    false,
+			result:         api.ResultUndefined,
+		},
+		{
+			name: "nil_profile",
+			pipelineSpec: api.PipelineSpec{
+				Profiles: nil,
+			},
+			expectedPolicy: "networkPolicySpecDefault1",
+			expectError:    false,
+			result:         api.ResultUndefined,
+		},
+		{
+			name: "empty_network_name",
+			pipelineSpec: api.PipelineSpec{
+				Profiles: &api.Profiles{Network: ""},
+			},
+			expectedPolicy: "networkPolicySpecDefault1",
+			expectError:    false,
+			result:         api.ResultUndefined,
+		},
+		{
+			name: "unknown_network_name",
+			pipelineSpec: api.PipelineSpec{
+				Profiles: &api.Profiles{Network: "unknown"},
+			},
+			expectedPolicy: "",
+			expectError:    true,
+			result:         api.ResultErrorConfig,
+		},
+		{
+			name: "choose_network_policy1",
+			pipelineSpec: api.PipelineSpec{
+				Profiles: &api.Profiles{Network: "networkPolicyKey1"},
+			},
+			expectedPolicy: "networkPolicySpec1",
+			expectError:    false,
+			result:         api.ResultUndefined,
+		},
+		{
+			name: "choose_network_policy2",
+			pipelineSpec: api.PipelineSpec{
+				Profiles: &api.Profiles{Network: "networkPolicyKey2"},
+			},
+			expectedPolicy: "networkPolicySpec2",
+			expectError:    false,
+			result:         api.ResultUndefined,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// SETUP
@@ -1087,7 +1133,7 @@ func Test_RunManager_createTektonTaskRun_PodTemplate_IsNotEmptyIfNoValuesToSet(t
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	_, mockPipelineRun, _, _ := prepareMocks(mockCtrl)
-	runConfig, _ := emptyRunsConfig()
+	runConfig, _ := newEmptyRunsConfig()
 	runCtx := &runContext{
 		pipelineRun:        mockPipelineRun,
 		pipelineRunsConfig: runConfig,
@@ -1764,6 +1810,6 @@ func prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv1alpha1.Pipelin
 	return mockFactory, mockPipelineRun, mockSecretProvider, namespaceManager
 }
 
-func emptyRunsConfig() (*cfg.PipelineRunsConfigStruct, error) {
+func newEmptyRunsConfig() (*cfg.PipelineRunsConfigStruct, error) {
 	return &cfg.PipelineRunsConfigStruct{}, nil
 }
