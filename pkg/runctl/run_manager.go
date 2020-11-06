@@ -10,7 +10,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
-	runi "github.com/SAP/stewardci-core/pkg/runctl/run"
+	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1api "k8s.io/api/core/v1"
@@ -79,7 +79,7 @@ type runContext struct {
 }
 
 // NewRunManager creates a new RunManager.
-func NewRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) runi.Manager {
+func NewRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) runifc.Manager {
 	return &runManager{
 		factory:          factory,
 		namespaceManager: namespaceManager,
@@ -686,7 +686,7 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 }
 
 // GetRun based on a pipelineRun
-func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runi.Run, error) {
+func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runifc.Run, error) {
 	namespace := pipelineRun.GetRunNamespace()
 	run, err := c.factory.TektonV1beta1().TaskRuns(namespace).Get(tektonTaskRunName, metav1.GetOptions{})
 	if err != nil {
