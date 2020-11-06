@@ -55,11 +55,7 @@ func newRunManagerTestingWithRequiredStubs() *runManagerTesting {
 	}
 }
 
-const (
-	runNamespaceName = "runNamespace1"
-)
-
-func contextWithSpec(t *testing.T, spec api.PipelineSpec) *runContext {
+func contextWithSpec(t *testing.T, runNamespaceName string, spec api.PipelineSpec) *runContext {
 	pipelineRun := fake.PipelineRun("run1", "ns1", spec)
 	k8sPipelineRun, err := k8s.NewPipelineRun(pipelineRun, nil)
 	assert.NilError(t, err)
@@ -355,7 +351,10 @@ func Test_RunManager_setupNetworkPolicyFromConfig_NoPolicyConfigured(t *testing.
 	t.Parallel()
 
 	// SETUP
-	runCtx := contextWithSpec(t, api.PipelineSpec{})
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+	runCtx := contextWithSpec(t, runNamespaceName, api.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
 		DefaultNetworkPolicy: "", // no policy
 	}
@@ -383,8 +382,9 @@ func Test_RunManager_setupNetworkPolicyFromConfig_SetsMetadataAndLeavesOtherThin
 	// SETUP
 	const (
 		expectedNamePrefix = "steward.sap.com--configured-"
+		runNamespaceName   = "runNamespace1"
 	)
-	runCtx := contextWithSpec(t, api.PipelineSpec{})
+	runCtx := contextWithSpec(t, runNamespaceName, api.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
 		DefaultNetworkPolicy: fixIndent(`
 			apiVersion: networking.k8s.io/v123
@@ -464,9 +464,10 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ReplacesAllMetadata(t *testing
 
 	// SETUP
 	const (
+		runNamespaceName   = "runNamespace1"
 		expectedNamePrefix = "steward.sap.com--configured-"
 	)
-	runCtx := contextWithSpec(t, api.PipelineSpec{})
+	runCtx := contextWithSpec(t, runNamespaceName, api.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
 		DefaultNetworkPolicy: fixIndent(`
 			apiVersion: networking.k8s.io/v123
@@ -657,7 +658,10 @@ func Test_RunManager_setupNetworkPolicyFromConfig_MalformedPolicy(t *testing.T) 
 	t.Parallel()
 
 	// SETUP
-	runCtx := contextWithSpec(t, api.PipelineSpec{})
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+	runCtx := contextWithSpec(t, runNamespaceName, api.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
 		DefaultNetworkPolicy: ":", // malformed YAML
 	}
@@ -685,7 +689,10 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedGroup(t *testing.T) 
 	t.Parallel()
 
 	// SETUP
-	runCtx := contextWithSpec(t, api.PipelineSpec{})
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+	runCtx := contextWithSpec(t, runNamespaceName, api.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
 		DefaultNetworkPolicy: fixIndent(`
 			apiVersion: unexpected.group/v1
@@ -719,7 +726,10 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedKind(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
-	runCtx := contextWithSpec(t, api.PipelineSpec{})
+	const (
+		runNamespaceName = "runNamespace1"
+	)
+	runCtx := contextWithSpec(t, runNamespaceName, api.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
 		DefaultNetworkPolicy: fixIndent(`
 			apiVersion: networking.k8s.io/v1
