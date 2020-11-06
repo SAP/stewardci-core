@@ -129,7 +129,7 @@ func processMainConfig(configData map[string]string, config *PipelineRunsConfigS
 }
 
 func processNetworkMap(networkMap map[string]string, config *PipelineRunsConfigStruct) error {
-	defaultNetworkPolicyKey := networkMap[networkPoliciesConfigKeyDefault]
+	defaultNetworkPolicyKey := strings.TrimSpace(networkMap[networkPoliciesConfigKeyDefault])
 	if defaultNetworkPolicyKey == "" {
 		return fmt.Errorf(
 			"invalid configuration: ConfigMap %q in namespace %q: key %q is missing or empty",
@@ -138,7 +138,7 @@ func processNetworkMap(networkMap map[string]string, config *PipelineRunsConfigS
 			networkPoliciesConfigKeyDefault,
 		)
 	}
-	if config.DefaultNetworkPolicy = networkMap[defaultNetworkPolicyKey]; config.DefaultNetworkPolicy == "" {
+	if config.DefaultNetworkPolicy = strings.TrimSpace(networkMap[defaultNetworkPolicyKey]); config.DefaultNetworkPolicy == "" {
 		return fmt.Errorf(
 			"invalid configuration: ConfigMap %q in namespace %q: key %q: "+
 				"no network policy with key %q found",

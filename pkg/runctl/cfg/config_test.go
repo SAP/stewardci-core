@@ -364,6 +364,31 @@ func Test_processNetworkMap(t *testing.T) {
 			},
 			"",
 		},
+		{"skip_whitespaces_from_default_key_value",
+			map[string]string{
+				networkPoliciesConfigKeyDefault: " defaultKey ",
+				"defaultKey":                    "defaultPolicy",
+			},
+			&PipelineRunsConfigStruct{
+				DefaultNetworkPolicy: "defaultPolicy",
+			},
+			"",
+		},
+		{"skip_whitespaces_from_empty_default_key_value",
+			map[string]string{
+				networkPoliciesConfigKeyDefault: " 	",
+			},
+			&PipelineRunsConfigStruct{},
+			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`,
+		},
+		{"skip_whitespaces_from_empty_default_policy",
+			map[string]string{
+				networkPoliciesConfigKeyDefault: "defaultKey",
+				"defaultKey": " 	",
+			},
+			&PipelineRunsConfigStruct{},
+			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default": no network policy with key "defaultKey" found`,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// SETUP
