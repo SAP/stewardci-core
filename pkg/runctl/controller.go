@@ -290,6 +290,7 @@ func (c *Controller) syncHandler(key string) error {
 	pipelineRunsConfig, err := c.loadPipelineRunsConfig()
 	if err != nil {
 		if serrors.IsRecoverable(err) {
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonLoadPipelineRunsConfigFailed, err.Error())
 			return err
 		}
 		if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
