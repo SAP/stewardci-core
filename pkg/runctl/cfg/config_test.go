@@ -203,7 +203,7 @@ func Test_asRecoverable(t *testing.T) {
 			// SETUP
 			defer featureflagtesting.WithFeatureFlag(featureflag.RetryOnInvalidPipelineRunsConfig, tc.flag)()
 			// EXERCISE
-			resultErr := asRecoverable(errFoo, tc.infraError)
+			resultErr := withRecoverability(errFoo, tc.infraError)
 			// VALIDATE
 			assert.Assert(t, serrors.IsRecoverable(resultErr) == tc.expectedRecoverable)
 		})

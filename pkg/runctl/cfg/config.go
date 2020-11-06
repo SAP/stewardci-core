@@ -51,30 +51,30 @@ func LoadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*PipelineRunsConfi
 
 	configMap, err := configMapIfce.Get(pipelineRunsConfigMapName, metav1.GetOptions{})
 	if err != nil && !k8serrors.IsNotFound(err) {
-		return nil, asRecoverable(err, true)
+		return nil, withRecoverability(err, true)
 	}
 	if configMap != nil {
 		err = processMainConfig(configMap.Data, config)
 		if err != nil {
-			return nil, asRecoverable(err, false)
+			return nil, withRecoverability(err, false)
 		}
 	}
 
 	networkMap, err := configMapIfce.Get(networkPoliciesConfigMapName, metav1.GetOptions{})
 	if err != nil && !k8serrors.IsNotFound(err) {
-		return nil, asRecoverable(err, true)
+		return nil, withRecoverability(err, true)
 	}
 
 	if networkMap != nil {
 		err = processNetworkMap(networkMap.Data, config)
 		if err != nil {
-			return nil, asRecoverable(err, false)
+			return nil, withRecoverability(err, false)
 		}
 	}
 	return config, nil
 }
 
-func asRecoverable(err error, isInfraError bool) error {
+func withRecoverability(err error, isInfraError bool) error {
 	return serrors.RecoverableIf(err, isInfraError || featureflag.RetryOnInvalidPipelineRunsConfig.Enabled())
 }
 
