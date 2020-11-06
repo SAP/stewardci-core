@@ -371,8 +371,8 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 
 	spec := ctx.pipelineRun.GetSpec()
 	if spec.Profiles != nil && spec.Profiles.Network != "" {
-		configStr = ctx.pipelineRunsConfig.NetworkPolicies[spec.Profiles.Network]
-		if configStr == "" {
+		var exists bool
+		if configStr, exists = ctx.pipelineRunsConfig.NetworkPolicies[spec.Profiles.Network]; !exists {
 			ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorConfig)
 			return fmt.Errorf("network profile %q does not exist", spec.Profiles.Network)
 		}
