@@ -66,7 +66,7 @@ func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
 	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.Equal(t, `invalid configuration: ConfigMap ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`, resultErr.Error())
+	assert.Equal(t, `invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`, resultErr.Error())
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -313,7 +313,7 @@ func Test_processNetworkMap(t *testing.T) {
 		{"empty",
 			map[string]string{},
 			&PipelineRunsConfigStruct{},
-			`invalid configuration: ConfigMap ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`,
+			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`,
 		},
 		{"only_default",
 			map[string]string{
