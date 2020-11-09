@@ -18,8 +18,8 @@
 
 # Do not modify the "NEXT" version block.
 # Do not change the order ("NEXT" needs to be on top).
-- version: "NEXT"
-  date: TBD
+- version: "0.6.0"
+  date: 2020-11-09
   changes:
   - title: Introduce feature flags
     type: internal
