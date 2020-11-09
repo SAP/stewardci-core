@@ -21,6 +21,17 @@
 - version: "NEXT"
   date: TBD
   changes:
+
+  - type: internal
+    impact: patch
+    title: The release pipeline is now enabled for hotfix releases
+    description: See [developer documentation](https://github.com/SAP/stewardci-core/blob/master/docs/development/README.md#hotfix-releases) for more information.
+    warning: 
+    upgradeNotes: 
+    deprecations: 
+    pullRequestNumber: 179
+    jiraIssueNumber: 316
+
   - title: Introduce feature flags
     type: internal
     impact: patch
