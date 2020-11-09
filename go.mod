@@ -36,7 +36,7 @@ require (
 )
 
 replace (
-	k8s.io/api => k8s.io/api v0.17.6 // kubernetes-1.17.6
-	k8s.io/apimachinery => k8s.io/apimachinery v0.17.6 // kubernetes-1.17.6
-	k8s.io/client-go => k8s.io/client-go v0.17.6 // kubernetes-1.17.6
+	k8s.io/api => k8s.io/api v0.17.13 // kubernetes-1.17.13
+	k8s.io/apimachinery => k8s.io/apimachinery v0.17.13 // kubernetes-1.17.13
+	k8s.io/client-go => k8s.io/client-go v0.17.13 // kubernetes-1.17.13
 )
