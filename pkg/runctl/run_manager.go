@@ -9,7 +9,8 @@ import (
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
-	runi "github.com/SAP/stewardci-core/pkg/run"
+	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
+	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1api "k8s.io/api/core/v1"
@@ -48,10 +49,9 @@ const (
 )
 
 type runManager struct {
-	factory            k8s.ClientFactory
-	pipelineRunsConfig pipelineRunsConfigStruct
-	namespaceManager   k8s.NamespaceManager
-	secretProvider     secrets.SecretProvider
+	factory          k8s.ClientFactory
+	namespaceManager k8s.NamespaceManager
+	secretProvider   secrets.SecretProvider
 
 	testing *runManagerTesting
 }
@@ -72,27 +72,28 @@ type runManagerTesting struct {
 }
 
 type runContext struct {
-	pipelineRun    k8s.PipelineRun
-	runNamespace   string
-	serviceAccount *k8s.ServiceAccountWrap
+	pipelineRun        k8s.PipelineRun
+	pipelineRunsConfig *cfg.PipelineRunsConfigStruct
+	runNamespace       string
+	serviceAccount     *k8s.ServiceAccountWrap
 }
 
 // NewRunManager creates a new RunManager.
-func NewRunManager(factory k8s.ClientFactory, pipelineRunsConfig *pipelineRunsConfigStruct, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) runi.Manager {
+func NewRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) runifc.Manager {
 	return &runManager{
-		factory:            factory,
-		pipelineRunsConfig: *pipelineRunsConfig,
-		namespaceManager:   namespaceManager,
-		secretProvider:     secretProvider,
+		factory:          factory,
+		namespaceManager: namespaceManager,
+		secretProvider:   secretProvider,
 	}
 }
 
 // Start prepares the isolated environment for a new run and starts
 // the run in this environment.
-func (c *runManager) Start(pipelineRun k8s.PipelineRun) error {
+func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) error {
 	var err error
 	ctx := &runContext{
-		pipelineRun: pipelineRun,
+		pipelineRun:        pipelineRun,
+		pipelineRunsConfig: pipelineRunsConfig,
 	}
 	err = c.cleanupPreviousAttempt(ctx)
 	if err != nil {
@@ -366,7 +367,17 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		Kind:  "NetworkPolicy",
 	}
 
-	configStr := c.pipelineRunsConfig.NetworkPolicy
+	configStr := ctx.pipelineRunsConfig.DefaultNetworkPolicy
+
+	spec := ctx.pipelineRun.GetSpec()
+	if spec.Profiles != nil && spec.Profiles.Network != "" {
+		var exists bool
+		if configStr, exists = ctx.pipelineRunsConfig.NetworkPolicies[spec.Profiles.Network]; !exists {
+			ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorConfig)
+			return fmt.Errorf("network profile %q does not exist", spec.Profiles.Network)
+		}
+	}
+
 	if configStr == "" {
 		return nil
 	}
@@ -399,7 +410,7 @@ func (c *runManager) setupLimitRangeFromConfig(ctx *runContext) error {
 		Kind:  "LimitRange",
 	}
 
-	configStr := c.pipelineRunsConfig.LimitRange
+	configStr := ctx.pipelineRunsConfig.LimitRange
 	if configStr == "" {
 		return nil
 	}
@@ -432,7 +443,7 @@ func (c *runManager) setupResourceQuotaFromConfig(ctx *runContext) error {
 		Kind:  "ResourceQuota",
 	}
 
-	configStr := c.pipelineRunsConfig.ResourceQuota
+	configStr := ctx.pipelineRunsConfig.ResourceQuota
 	if configStr == "" {
 		return nil
 	}
@@ -543,7 +554,7 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 			Params: []tekton.Param{
 				tektonStringParam("RUN_NAMESPACE", namespace),
 			},
-			Timeout: c.pipelineRunsConfig.Timeout,
+			Timeout: ctx.pipelineRunsConfig.Timeout,
 
 			// Always set a non-empty pod template even if we don't have
 			// values to set. Otherwise the Tekton default pod template
@@ -551,15 +562,15 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 			// to set.
 			PodTemplate: &tekton.PodTemplate{
 				SecurityContext: &corev1api.PodSecurityContext{
-					RunAsUser:  copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsUser),
-					RunAsGroup: copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
-					FSGroup:    copyInt64Ptr(c.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup),
+					RunAsUser:  copyInt64Ptr(ctx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsUser),
+					RunAsGroup: copyInt64Ptr(ctx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
+					FSGroup:    copyInt64Ptr(ctx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup),
 				},
 				Volumes: c.volumesWithServiceAccountSecret(ctx),
 			},
 		},
 	}
-	c.addTektonTaskRunParamsForJenkinsfileRunnerImage(ctx.pipelineRun, &tektonTaskRun)
+	c.addTektonTaskRunParamsForJenkinsfileRunnerImage(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForRunDetails(ctx, &tektonTaskRun)
@@ -569,13 +580,13 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 }
 
 func (c *runManager) addTektonTaskRunParamsForJenkinsfileRunnerImage(
-	pipelineRun k8s.PipelineRun,
+	ctx *runContext,
 	tektonTaskRun *tekton.TaskRun,
 ) {
-	spec := pipelineRun.GetSpec()
+	spec := ctx.pipelineRun.GetSpec()
 	jfrSpec := spec.JenkinsfileRunner
-	image := c.pipelineRunsConfig.JenkinsfileRunnerImage
-	imagePullPolicy := c.pipelineRunsConfig.JenkinsfileRunnerImagePullPolicy
+	image := ctx.pipelineRunsConfig.JenkinsfileRunnerImage
+	imagePullPolicy := ctx.pipelineRunsConfig.JenkinsfileRunnerImagePullPolicy
 
 	if jfrSpec != nil {
 		if jfrSpec.Image != "" {
@@ -675,7 +686,7 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 }
 
 // GetRun based on a pipelineRun
-func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runi.Run, error) {
+func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runifc.Run, error) {
 	namespace := pipelineRun.GetRunNamespace()
 	run, err := c.factory.TektonV1beta1().TaskRuns(namespace).Get(tektonTaskRunName, metav1.GetOptions{})
 	if err != nil {

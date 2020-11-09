@@ -168,7 +168,7 @@ if ! is_verify_mode; then
         "${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go" \
         "${PROJECT_ROOT}/pkg/k8s/mocks/client-go/corev1/mocks.go" \
         "${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
-        "${PROJECT_ROOT}/pkg/run/mocks/mocks.go" \
+        "${PROJECT_ROOT}/pkg/runctl/run/mocks/mocks.go" \
         || die "Cleanup failed"
     { set +x; } 2>/dev/null
 fi
@@ -229,8 +229,8 @@ generate_mocks \
     "SecretHelper,SecretProvider" \
     "pkg/k8s/secrets/mocks/mocks.go"
 generate_mocks \
-    "github.com/SAP/stewardci-core/pkg/run" \
+    "github.com/SAP/stewardci-core/pkg/runctl/run" \
     "Run,Manager" \
-    "pkg/run/mocks/mocks.go"
+    "pkg/runctl/run/mocks/mocks.go"
 
 echo "${ACTION} successful"

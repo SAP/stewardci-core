@@ -101,7 +101,10 @@ pipelineRuns:
       runAsGroup: 1000
       fsGroup: 1000
   timeout: "60m"
-  networkPolicy: ""
+  # networkPolicy is DEPRECATED: use 'networkPolicies' instead.
+  # networkPolicy: ""
+  defaultNetworkPolicyName: ""
+  networkPolicies: {}
   limitRange: ""
   resourceQuota: ""
 

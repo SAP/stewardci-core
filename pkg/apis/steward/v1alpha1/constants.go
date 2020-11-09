@@ -37,4 +37,8 @@ const (
 	// EventReasonRunningFailed is the reason for a event occuring when the run controller
 	// faces an intermittent error during running phase.
 	EventReasonRunningFailed = "RunningFailed"
+
+	// EventReasonLoadPipelineRunsConfigFailed is the reason for a event occuring when the
+	// loading of the pipeline runs configuration fails.
+	EventReasonLoadPipelineRunsConfigFailed = "LoadPipelineRunsConfigFailed"
 )

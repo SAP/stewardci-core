@@ -2,7 +2,7 @@ package runctl
 
 import (
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	run "github.com/SAP/stewardci-core/pkg/run"
+	run "github.com/SAP/stewardci-core/pkg/runctl/run"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	termination "github.com/tektoncd/pipeline/pkg/termination"
 	corev1 "k8s.io/api/core/v1"

@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: steward-pipelineruns-network-policies
+  namespace: {{ .Values.targetNamespace.name | quote }}
+  labels:
+    {{- include "steward.labels" . | nindent 4 }}
+    {{- include "steward.runController.componentLabel" . | nindent 4 }}
+data:
+  _example: |
+    ########################
+    # Configuration examples
+    ########################
+
+    # _default is a special key that denotes the _key_ of the network policy in this
+    # config map that should be applied for pipeline runs that do _not_ explicitly
+    # choose one.
+    _default: policy1
+
+    # Any other key defines a network policy.
+    #
+    # Steward clients can select the network policy for individual pipeline runs via their
+    # keys, so keys should be chosen appropriately.
+    #
+    # The value must be a complete `networkpolicy.networking.k8s.io` resource manifest
+    # in YAML format.
+    # The `.metadata` section of the manifest can be omitted, as it will be replaced anyway.
+    #
+    # See https://kubernetes.io/docs/concepts/services-networking/network-policies/
+    # for details about Kubernetes network policies.
+    #
+    # Note that Steward ensures that all pods in pipeline run namespaces are
+    # _isolated_ in terms of network policies. The policies defined here _add_
+    # egress and/or ingress rules.
+
+    # Example policy 1 (for illustration purposes only)
+    policy1: |
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      spec:
+        podSelector: {} # any pod in namespace
+        policyTypes:
+        - Egress
+        - Ingress
+        egress:
+        - # allow unrestricted outbound connections (may be insecure)
+          to:
+          - ipBlock:
+              cidr: 192.186.0.0/16 # internal
+        ingress:
+        - # allow access from all pods in the same namespace
+          from:
+          - podSelector: {}
+
+    # Example policy 2 (for illustration purposes only)
+    policy2: |
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      spec:
+        podSelector: {} # any pod in namespace
+        policyTypes:
+        - Egress
+        - Ingress
+        egress:
+        - # allow unrestricted outbound connections (may be insecure)
+          to:
+          - ipBlock:
+              cidr: 192.186.0.0/16 # internal
+              cidr: 172.16.0.0/12 # internal
+        ingress:
+        - # allow access from all pods in the same namespace
+          from:
+          - podSelector: {}
+
+    # end of _example
+
+{{/* keep preceding whitespace */}}
+
+{{- with .Values.pipelineRuns }}
+{{- if .networkPolicies }}
+
+  {{- if ( .defaultNetworkPolicyName | hasPrefix "_" ) }}
+    {{ fail "value 'pipelineRuns.defaultNetworkPolicyName' must not start with an underscore" }}
+  {{- end }}
+
+  {{- if and .defaultNetworkPolicyName ( not ( hasKey .networkPolicies .defaultNetworkPolicyName ) ) }}
+    {{ fail ( printf "value 'pipelineRuns.networkPolicies' does not have an entry %q as denoted by value 'pipelineRuns.defaultNetworkPolicyName'" .defaultNetworkPolicyName ) }}
+  {{- end }}
+
+  {{- if and ( gt ( len .networkPolicies ) 1 ) ( not .defaultNetworkPolicyName ) }}
+    {{ fail "value 'pipelineRuns.defaultNetworkPolicyName' is required if value 'pipelineRuns.networkPolicies' contains more than one entry" }}
+  {{- end }}
+
+  {{- printf "_default: %s" ( default ( mustFirst ( keys .networkPolicies ) ) .defaultNetworkPolicyName | quote ) | nindent 2 }}
+
+  {{- range $key, $value := .networkPolicies }}
+    {{- if ( $key | hasPrefix "_" ) }}
+      {{ fail ( printf "value 'pipelineRuns.networkPolicies': invalid key %q: keys must not start with an underscore" $key ) }}
+    {{- end }}
+
+    {{- printf "%s: |\n%s" ( $key | quote ) ( $value | indent 2 ) | nindent 2 }}
+  {{- end }}
+
+{{- else }}
+  _default: default
+  default: |
+    {{- default ( $.Files.Get "data/pipelineruns-default-networkpolicy.yaml" ) .networkPolicy | nindent 4 }}
+{{/* keep preceding whitespace */}}
+{{- end }}
+{{- end }}

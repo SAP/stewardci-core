@@ -31,6 +31,28 @@
     pullRequestNumber: 178
 
   - type: enhancement
+    impact: minor
+    title: Introduce network profiles
+    description: |-
+      Allow Steward clients to select a network profile per pipeline run.
+
+      Network profiles are named network-related configurations defined by Steward operators.
+      Currently they define a Kubernetes network policy. Additional network-related settings may be
+      added in the future.
+
+      Clients can choose a network profile via `spec.profiles.network` of a PipelineRun
+      resource object.
+    warning: ""
+    upgradeNotes: |-
+      - PiplineRun objects may now have a `status.result` value `error_config` (see Steward API docs).
+      - Activating the new feature flag `RetryOnInvalidPipelineRunsConfig` will let the pipeline run controller retry reconciling in case the controller configuration (in ConfigMaps) is invalid or cannot be loaded. Without the feature flag all PipelineRun objects will be set to finished with result code `error_infra`. The new behaviour will become the default in a future release of Steward.
+    deprecations: |-
+      Helm configuration value `pipelineRuns.networkPolicy` is deprecated:
+      use `pipelineRuns.networkPolicies` instead.
+    pullRequestNumber: 160
+    jiraIssueNumber: 1305
+
+  - type: enhancement
     impact: incompatible
     title: Make Jenkinsfile Runner properties configurable in PipelineRun custom resource objects.
     description: |-
