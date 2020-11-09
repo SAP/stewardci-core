@@ -66,7 +66,7 @@ func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
 	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.Equal(t, `invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`, resultErr.Error())
+	assert.Equal(t, `invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or invalid`, resultErr.Error())
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -313,7 +313,7 @@ func Test_processNetworkMap(t *testing.T) {
 		{"empty",
 			map[string]string{},
 			&PipelineRunsConfigStruct{},
-			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`,
+			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or invalid`,
 		},
 		{"only_default",
 			map[string]string{
@@ -342,12 +342,16 @@ func Test_processNetworkMap(t *testing.T) {
 				"bar":                           "barPolicy",
 				"_other_special_key":            "baz",
 				"":                              "emptyKeyWillBeSkipped",
+				" leading_whitespace":           "will be skipped",
+				"trailing_whitespace ":          "will be skipped",
+				"infix whitespace":              "keep",
 			},
 			&PipelineRunsConfigStruct{
 				DefaultNetworkPolicy: "defaultPolicy",
 				NetworkPolicies: map[string]string{
-					"foo": "fooPolicy",
-					"bar": "barPolicy",
+					"foo":              "fooPolicy",
+					"bar":              "barPolicy",
+					"infix whitespace": "keep",
 				},
 			},
 			"",
@@ -364,22 +368,20 @@ func Test_processNetworkMap(t *testing.T) {
 			},
 			"",
 		},
-		{"skip_whitespaces_from_default_key_value",
+		{"default_key_with_whitespace_is_invalid",
 			map[string]string{
 				networkPoliciesConfigKeyDefault: " defaultKey ",
 				"defaultKey":                    "defaultPolicy",
 			},
-			&PipelineRunsConfigStruct{
-				DefaultNetworkPolicy: "defaultPolicy",
-			},
-			"",
+			&PipelineRunsConfigStruct{},
+			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or invalid`,
 		},
-		{"skip_whitespaces_from_empty_default_key_value",
+		{"default_key_with_leading_underscore_is_invalid",
 			map[string]string{
-				networkPoliciesConfigKeyDefault: " 	",
+				networkPoliciesConfigKeyDefault: "_defaultKey",
 			},
 			&PipelineRunsConfigStruct{},
-			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or empty`,
+			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or invalid`,
 		},
 		{"skip_whitespaces_from_empty_default_policy",
 			map[string]string{
