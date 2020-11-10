@@ -19,7 +19,7 @@
             const repoUrl = "https://github.com/SAP/stewardci-core";
             //The following URL has to point the the RAW (!) version of the changelog.yaml in the master branch
             const changelogYamlUrl = "https://raw.githubusercontent.com/SAP/stewardci-core/temp/changelog.yaml";
-            const jiraProjectBaseUrl = null;
+            const jiraUrl = "";
             const jiraProjectName = "";
             let changelog;
             let renderVersion; //if set only show this version. Use query param ?version=<version> to set it.
@@ -111,8 +111,8 @@
             function renderJiraIssues(html, jiraIssues) {
                 jiraIssues.forEach(function(issueNumber, index) {
                     if(index > 0) html += ", ";
-                    if(jiraProjectBaseUrl) {
-                        html += "<a href='"+jiraProjectBaseUrl+issueNumber+"'>"+jiraProjectName+issueNumber+"</a>";
+                    if(jiraUrl) {
+                        html += "<a href='"+jiraUrl+"/browse/"+jiraProjectName+"-"+issueNumber+"'>"+jiraProjectName+issueNumber+"</a>";
                     } else {
                         html += jiraProjectName+issueNumber;
                     }
