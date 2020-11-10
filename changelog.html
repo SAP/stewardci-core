@@ -1,5 +1,5 @@
-<!-- TODO: Adjust the 'TODO_REPO_URL' occurrences with correct values -->
-<html>
+<!-- TODO: Adjust the 'TODO_*' occurrences with correct values -->
+<html lang="en" ng-app="app">
     <head>
         <!--
             This dynamic HTML page loads the changelog.yaml from the specified repository
@@ -10,10 +10,13 @@
 
             This page supports rendering of specific versions by appending query parameter '?version=<version>' to the URL.
         -->
-
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/3.14.0/js-yaml.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.0/angular.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-sanitize/1.8.2/angular-sanitize.min.js"></script>
         <script>
 
             const repoUrl = "https://github.com/SAP/stewardci-core";
@@ -21,104 +24,51 @@
             const changelogYamlUrl = "https://raw.githubusercontent.com/SAP/stewardci-core/master/changelog.yaml";
             const jiraUrl = "";
             const jiraProjectName = "";
-            let changelog;
-            let renderVersion; //if set only show this version. Use query param ?version=<version> to set it.
 
-            $(function(){
-                $('#yamlLink').attr('href', changelogYamlUrl);
+
+            var app = angular.module('app', []);
+            angular.module('app', ['ngSanitize']).controller('MyController', ['$scope', function($scope){
+                $scope.changelog = [];
+                $scope.config = {
+                    repoUrl: repoUrl,
+                    changelogYamlUrl: changelogYamlUrl,
+                    jiraUrl: jiraUrl,
+                    jiraProjectName: jiraProjectName
+                };
+                let queryString = window.location.search;
+                let urlParams = new URLSearchParams(queryString);
+                let versionFilter = urlParams.get("version")
+                $scope.filter = {
+                    version: versionFilter ? versionFilter : ""
+                };
+
                 xmlhttp=new XMLHttpRequest();
                 xmlhttp.onreadystatechange = function()
                 {
-                    const queryString = window.location.search;
-                    const urlParams = new URLSearchParams(queryString);
-                    renderVersion = urlParams.get("version");
-
                     if (xmlhttp.readyState==4 && xmlhttp.status==200)
                     {
-                        changelog = jsyaml.load(xmlhttp.responseText);
-                        renderChangelog(changelog);
+                        let changelog = jsyaml.load(xmlhttp.responseText);
+                        for(let ci = 0; ci < (changelog ? changelog.length : 0); ci++) {
+                            let release = changelog[ci];
+                            release.dateString = release.version == "NEXT" ? "soon" : new Date(release.date).toDateString();
+                            release.renderClass = release.version == "NEXT" ? "next" : "release"
+                            for(let ri = 0; ri < (release.changes ? release.changes.length : 0); ri++) {
+                                let change = release.changes[ri];
+                                change.pullRequestNumbers = (typeof change.pullRequestNumber == "number") ? [change.pullRequestNumber] : change.pullRequestNumber;
+                                change.jiraIssueNumbers = (typeof change.jiraIssueNumber == "number") ? [change.jiraIssueNumber] : change.jiraIssueNumber;
+                                change.descriptionHtml = markdown2Html(change.description);
+                                change.warningHtml = markdown2Html(change.warning);
+                                change.upgradeNotesHtml = markdown2Html(change.upgradeNotes);
+                                change.deprecationsHtml = markdown2Html(change.deprecations);
+                            }
+                        }
+                        $scope.changelog = changelog;
+                        $scope.$apply();
                     }
                 }
                 xmlhttp.open("GET", changelogYamlUrl, true);
                 xmlhttp.send();
-            });
-
-            function renderChangelog(changelog) {
-                for(let i = 0; i < changelog.length; i++) {
-                    let release = changelog[i];
-                    if( !renderVersion || renderVersion == release.version ) {
-                        if(release.changes && release.changes.length > 0) {
-                            $("#content").append(renderRelease(release));
-                        }
-                    }
-                }
-            }
-
-            function renderRelease(release) {
-                let div = document.createElement("div");
-                let releaseDateString;
-                if(release.version == "NEXT") {
-                    div.setAttribute("class", "next");
-                    releaseDateString = "soon";
-                } else {
-                    div.setAttribute("class", "release");
-                    releaseDateString = new Date(release.date).toDateString();
-                }
-                $(div).append("<h3 class='version' id='"+release.version+"'><a href='?version="+release.version+"'>"+release.version+"</a></h3>");
-                $(div).append("<p>Release Date: "+releaseDateString+"</p>");
-               
-                if(release.changes) {
-                    for(let i = 0; i < release.changes.length; i++) {
-                        let change = release.changes[i];
-                        $(div).append(renderChange(change));
-                    }
-                }
-                return div;
-            }
-
-            function renderChange(change) {
-                let div = document.createElement("div");
-                div.setAttribute("class", "change");
-                $(div).append("<h4>"+change.title+"</h4>");
-                $(div).append("<p class='categorization'>Type: "+change.type+" / Impact: "+change.impact+"</p>");
-                $(div).append(markdown2Html("Description: "+change.description));
-                if(change.warning) $(div).append(markdown2Html("⚠ "+change.warning));
-                if(change.upgradeNotes) $(div).append(markdown2Html("❕ "+change.upgradeNotes));
-                if(change.deprecations) $(div).append(markdown2Html("Deprecations: "+change.deprecations));
-                let html = "<p class='categorization'>";
-                if(change.pullRequestNumber) {
-                    let pullRequests = (typeof change.pullRequestNumber == "number") ? [change.pullRequestNumber] : change.pullRequestNumber;
-                    html = renderPullRequests(html, pullRequests);
-                }
-                if(change.jiraIssueNumber) {
-                    if(change.pullRequestNumber) html += " | ";
-                    let jiraIssues = (typeof change.jiraIssueNumber == "number") ? [change.jiraIssueNumber] : change.jiraIssueNumber;
-                    html = renderJiraIssues(html, jiraIssues);
-                }
-                html += "</p>";
-                $(div).append(html);
-                return div;
-            }
-
-            function renderPullRequests(html, pullRequests) {
-                pullRequests.forEach(function(prNumber, index) {
-                    if(index > 0) html += ", ";
-                    html += "<a href='"+repoUrl+"/pull/"+prNumber+"'>#"+prNumber+"</a>";
-                });
-                return html;
-            }
-
-            function renderJiraIssues(html, jiraIssues) {
-                jiraIssues.forEach(function(issueNumber, index) {
-                    if(index > 0) html += ", ";
-                    if(jiraUrl) {
-                        html += "<a href='"+jiraUrl+"/browse/"+jiraProjectName+"-"+issueNumber+"'>"+jiraProjectName+issueNumber+"</a>";
-                    } else {
-                        html += jiraProjectName+issueNumber;
-                    }
-                });
-                return html;
-            }
+            }]);
 
             function markdown2Html(markdownText) {
                 let mdConverter = new showdown.Converter();
@@ -154,15 +104,55 @@
                 text-decoration: none;
                 color: black;
             }
+            .cell {
+                vertical-align: top;
+                background-color: #fff;
+                padding: 3px;
+                border-style: none;
+                border-width: 1px;
+                border-color: lightblue;
+            }
+            .right {
+                text-align: right;
+                width: 1px;
+            }
         </style>
 
     </head>
-    <body>
+    <body ng-controller="MyController"></body>
         <h1>Changelog</h1>
         <p>
-            This generated changelog is based on the <a id="yamlLink" href="#">changelog.yaml</a> in the repositories main branch.
+            This generated changelog is based on the <a href="{{config.changelogYamlUrl}}">changelog.yaml</a> in the repositories main branch.
             Click here to <a href="?">list all versions</a>.
         </p>
-        <div id="content"></div>
+        <div id="content">
+
+            <div ng-repeat="release in changelog | filter : {version: filter.version}" ng-if="release.changes.length > 0" class="{{release.renderClass}}">
+                <h3 class="version" id="{{release.version}}">{{release.version}}</h3>
+                <p>Release Date: {{release.dateString}}</p>
+                <div ng-repeat="change in release.changes" class="change">
+                    <h4>{{change.title}}</h4>
+                    <p class="categorization">Type: {{change.type}} / Impact: {{change.impact}}</p>
+                    <table width="100%">
+                    <tr ng-if="change.description"><td colspan="2"><span ng-bind-html="change.descriptionHtml"></span></td></tr>
+                    <tr ng-if="change.warning"><td class="cell right">⚠</td><td class="cell"><span ng-bind-html="change.warningHtml"></span></td></tr>
+                    <tr ng-if="change.upgradeNotes"><td class="cell right">❕</td><td class="cell"><span ng-bind-html="change.upgradeNotesHtml"></span></td></tr>
+                    <tr ng-if="change.deprecations"><td class="cell right">Deprecations:</td><td class="cell"><span ng-bind-html="change.deprecationsHtml"></span></td></tr>
+                    </table>
+                    <p>
+                        <span ng-repeat="prNumber in change.pullRequestNumbers">
+                            <span ng-if="$index > 0">, </span>
+                            <a href="{{config.repoUrl}}/pull/{{prNumber}}">#{{prNumber}}</a>
+                        </span>
+                        <span ng-if="change.pullRequestNumber && change.jiraIssueNumber"> | </span>
+                        <span ng-repeat="issueNumber in change.jiraIssueNumbers">
+                            <span ng-if="$index > 0">, </span>
+                            <a href="{{config.jiraUrl}}/browse/{{config.jiraProjectName}}-{{issueNumber}}">{{config.jiraProjectName}}<span ng-if="config.jiraProjectName">-</span>{{issueNumber}}</a>
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+        </div>
     </body>
 </html>
