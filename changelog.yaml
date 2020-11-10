@@ -21,6 +21,11 @@
 - version: "NEXT"
   date: TBD
   changes:
+  - title: Upgrade Go dependencies
+    type: internal
+    impact: patch
+    description: |-
+      - upgrade Kubernetes libs from v1.17.6 to v1.17.13 (see [K8s changelog](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.17.md))
 
 - version: "0.6.0"
   date: 2020-11-09
@@ -69,7 +74,7 @@
       - `pipelineRuns.jenkinsfileRunner.image.repository` is outdated: use `pipelineRuns.jenkinsfileRunner.image` instead
       - `pipelineRuns.jenkinsfileRunner.image.tag` is outdated: use `pipelineRuns.jenkinsfileRunner.image` instead
       - `pipelineRuns.jenkinsfileRunner.image.pullPolicy` is outdated: use `pipelineRuns.jenkinsfileRunner.imagePullPolicy` instead
-    deprecations: 
+    deprecations:
     pullRequestNumber: 162
     jiraIssueNumber: 983
   - type: enhancement
@@ -95,7 +100,7 @@
     warning:
     upgradeNotes:
     deprecations:
-    pullRequestNumber: 173  
+    pullRequestNumber: 173
 
   - type: internal
     impact: patch
