@@ -16,11 +16,13 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
         <script>
 
-            const repoUrl = "https://github.com/SAP/stewardci-core"
+            const repoUrl = "https://github.com/SAP/stewardci-core";
             //The following URL has to point the the RAW (!) version of the changelog.yaml in the master branch
-            const changelogYamlUrl = "https://raw.githubusercontent.com/SAP/stewardci-core/master/changelog.yaml"
-            var changelog;
-            var renderVersion; //if set only show this version. Use query param ?version=<version> to set it.
+            const changelogYamlUrl = "https://raw.githubusercontent.com/SAP/stewardci-core/temp/changelog.yaml";
+            const jiraProjectBaseUrl = null;
+            const jiraProjectName = "";
+            let changelog;
+            let renderVersion; //if set only show this version. Use query param ?version=<version> to set it.
 
             $(function(){
                 $('#yamlLink').attr('href', changelogYamlUrl);
@@ -42,8 +44,8 @@
             });
 
             function renderChangelog(changelog) {
-                for(var i = 0; i < changelog.length; i++) {
-                    var release = changelog[i];
+                for(let i = 0; i < changelog.length; i++) {
+                    let release = changelog[i];
                     if( !renderVersion || renderVersion == release.version ) {
                         if(release.changes && release.changes.length > 0) {
                             $("#content").append(renderRelease(release));
@@ -53,8 +55,8 @@
             }
 
             function renderRelease(release) {
-                var div = document.createElement("div");
-                var releaseDateString
+                let div = document.createElement("div");
+                let releaseDateString;
                 if(release.version == "NEXT") {
                     div.setAttribute("class", "next");
                     releaseDateString = "soon";
@@ -66,8 +68,8 @@
                 $(div).append("<p>Release Date: "+releaseDateString+"</p>");
                
                 if(release.changes) {
-                    for(var i = 0; i < release.changes.length; i++) {
-                        var change = release.changes[i];
+                    for(let i = 0; i < release.changes.length; i++) {
+                        let change = release.changes[i];
                         $(div).append(renderChange(change));
                     }
                 }
@@ -75,7 +77,7 @@
             }
 
             function renderChange(change) {
-                var div = document.createElement("div");
+                let div = document.createElement("div");
                 div.setAttribute("class", "change");
                 $(div).append("<h4>"+change.title+"</h4>");
                 $(div).append("<p class='categorization'>Type: "+change.type+" / Impact: "+change.impact+"</p>");
@@ -83,13 +85,44 @@
                 if(change.warning) $(div).append(markdown2Html("⚠ "+change.warning));
                 if(change.upgradeNotes) $(div).append(markdown2Html("❕ "+change.upgradeNotes));
                 if(change.deprecations) $(div).append(markdown2Html("Deprecations: "+change.deprecations));
-                $(div).append("<p class='categorization'><a href='"+repoUrl+"/pull/"+change.pullRequestNumber+"'>#"+change.pullRequestNumber+"</a></p>");
+                let html = "<p class='categorization'>";
+                if(change.pullRequestNumber) {
+                    let pullRequests = (typeof change.pullRequestNumber == "number") ? [change.pullRequestNumber] : change.pullRequestNumber;
+                    html = renderPullRequests(html, pullRequests);
+                }
+                if(change.jiraIssueNumber) {
+                    if(change.pullRequestNumber) html += " | ";
+                    let jiraIssues = (typeof change.jiraIssueNumber == "number") ? [change.jiraIssueNumber] : change.jiraIssueNumber;
+                    html = renderJiraIssues(html, jiraIssues);
+                }
+                html += "</p>";
+                $(div).append(html);
                 return div;
             }
 
+            function renderPullRequests(html, pullRequests) {
+                pullRequests.forEach(function(prNumber, index) {
+                    if(index > 0) html += ", ";
+                    html += "<a href='"+repoUrl+"/pull/"+prNumber+"'>#"+prNumber+"</a>";
+                });
+                return html;
+            }
+
+            function renderJiraIssues(html, jiraIssues) {
+                jiraIssues.forEach(function(issueNumber, index) {
+                    if(index > 0) html += ", ";
+                    if(jiraProjectBaseUrl) {
+                        html += "<a href='"+jiraProjectBaseUrl+issueNumber+"'>"+jiraProjectName+issueNumber+"</a>";
+                    } else {
+                        html += jiraProjectName+issueNumber;
+                    }
+                });
+                return html;
+            }
+
             function markdown2Html(markdownText) {
-                var mdConverter = new showdown.Converter();
-                var html = mdConverter.makeHtml(markdownText);
+                let mdConverter = new showdown.Converter();
+                let html = mdConverter.makeHtml(markdownText);
                 return html;
             }
         </script>
