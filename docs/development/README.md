@@ -42,6 +42,25 @@ Although the controller images and the Helm chart are independent they are alway
 - Prepare the next dev version in `prepare-<version>` by updating `version` and `appVersion` in Chart.yaml with an incremented patch version and `-dev` suffix.
 - Merge the `prepare-<version>` branch into the main branch and delete the `prepare-<version>` branch.
 
+## Hotfix Releases
+
+To release a hotfix based on a released version (assuming `v1.2.3` below) do the following.
+
+- Prepare a new commit, based on the "next dev" commit which follows the release tag `v1.2.3`
+- Adjust the `version` and `appVersion` in [/charts/steward/Chart.yaml](https://github.com/SAP/stewardci-core/blob/master/charts/steward/Chart.yaml) to `v1.2.3-hotfix1`
+- Add a hotfix changelog entry to the changelog.yamls version "NEXT"
+- Commit the changes via `git commit --amend` and rename the commit message (to get rid the "next dev" commit)
+- Push the changes to a **branch** `v1.2.3-hotfix1` (or work with a pull request targeting branch `v1.2.3-hotfix1`)
+- Trigger the release pipeline for branch `v1.2.3-hotfix1`
+- Approve the release stage
+
+The pipeline will now create a hotfix release.
+
+:warning: Manual post-release steps!
+
+- Merge the `v1.2.3-hotfix1` **tag** into the master branch. You will have to resolve conflicts - take the version from the master branch, make sure to keep all changelog entries.
+- Delete the `v1.2.3-hotfix1` **branch**.
+
 ## Contribution
 
 You are welcome to contribute to this project via Pull Requests.
