@@ -21,6 +21,12 @@
 - version: "NEXT"
   date: TBD
   changes:
+  - title: Upgrade github.com/aws/aws-sdk-go
+    type: internal
+    impact: patch
+    description: |-
+      - upgrade github.com/aws/aws-sdk-go from v1.32.1 to v1.34.1
+        (see [changelog](https://github.com/aws/aws-sdk-go/releases/tag/v1.34.1))
 
 - version: "0.6.1"
   date: 2020-11-11
