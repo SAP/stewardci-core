@@ -21,27 +21,16 @@ import (
 	_ "knative.dev/pkg/system/testing"
 )
 
-func Test_loadPipelineRunsConfig_NoConfigMap(t *testing.T) {
-	t.Parallel()
-
-	// SETUP
-	cf := fake.NewClientFactory( /* no objects */ )
-
-	// EXERCISE
-	resultConfig, err := LoadPipelineRunsConfig(cf)
-
-	// VERIFY
-	assert.NilError(t, err)
-	expectedConfig := &PipelineRunsConfigStruct{}
-	assert.DeepEqual(t, expectedConfig, resultConfig)
-}
-
-func Test_loadPipelineRunsConfig_NoNetworkConfigMap(t *testing.T) {
+func Test_loadPipelineRunsConfig_NoMainConfig(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	cf := fake.NewClientFactory(
-		newPipelineRunsConfigMap( /* no data here */ nil),
+		/* no main configmap defined here */
+		newNetworkPolicyConfigMap(map[string]string{
+			networkPoliciesConfigKeyDefault: "key1",
+			"key1":                          "policy1",
+		}),
 	)
 
 	// EXERCISE
@@ -49,16 +38,62 @@ func Test_loadPipelineRunsConfig_NoNetworkConfigMap(t *testing.T) {
 
 	// VERIFY
 	assert.NilError(t, resultErr)
-	expectedConfig := &PipelineRunsConfigStruct{}
+	expectedConfig := &PipelineRunsConfigStruct{
+		DefaultNetworkProfile: "key1",
+		NetworkPolicies: map[string]string{
+			"key1": "policy1",
+		},
+	}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
 
-func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
+func Test_loadPipelineRunsConfig_EmptyMainConfig(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	cf := fake.NewClientFactory(
-		newPipelineRunsConfigMap( /* no data here */ nil),
+		newMainConfigMap( /* no data here */ nil),
+		newNetworkPolicyConfigMap(map[string]string{
+			networkPoliciesConfigKeyDefault: "key1",
+			"key1":                          "policy1",
+		}),
+	)
+
+	// EXERCISE
+	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
+
+	// VERIFY
+	assert.NilError(t, resultErr)
+	expectedConfig := &PipelineRunsConfigStruct{
+		DefaultNetworkProfile: "key1",
+		NetworkPolicies: map[string]string{
+			"key1": "policy1",
+		},
+	}
+	assert.DeepEqual(t, expectedConfig, resultConfig)
+}
+
+func Test_loadPipelineRunsConfig_NoNetworkConfig(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	cf := fake.NewClientFactory(
+		newMainConfigMap(nil),
+	)
+
+	// EXERCISE
+	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
+
+	// VERIFY
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "knative-testing": is missing`)
+	assert.Assert(t, resultConfig == nil)
+}
+
+func Test_loadPipelineRunsConfig_EmptyNetworkConfig(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	cf := fake.NewClientFactory(
 		newNetworkPolicyConfigMap( /* no data here */ nil),
 	)
 
@@ -66,15 +101,11 @@ func Test_loadPipelineRunsConfig_EmptyConfigMap(t *testing.T) {
 	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
 
 	// VERIFY
-	assert.Equal(t, `invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or invalid`, resultErr.Error())
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "knative-testing": key "_default" is missing`)
 	assert.Assert(t, resultConfig == nil)
 }
 
-var metav1Duration = func(d time.Duration) *metav1.Duration {
-	return &metav1.Duration{Duration: d}
-}
-
-func Test_loadPipelineRunsConfig_ErrorOnGetConfigMap(t *testing.T) {
+func Test_loadPipelineRunsConfig_ErrorOnGetMainConfigMap(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -89,7 +120,7 @@ func Test_loadPipelineRunsConfig_ErrorOnGetConfigMap(t *testing.T) {
 		configMapIfce := corev1clientmocks.NewMockConfigMapInterface(mockCtrl)
 		coreV1Ifce.EXPECT().ConfigMaps(gomock.Any()).Return(configMapIfce).AnyTimes()
 		configMapIfce.EXPECT().
-			Get(pipelineRunsConfigMapName, gomock.Any()).
+			Get(mainConfigMapName, gomock.Any()).
 			Return(nil, expectedError).
 			Times(1)
 	}
@@ -99,11 +130,11 @@ func Test_loadPipelineRunsConfig_ErrorOnGetConfigMap(t *testing.T) {
 
 	// VERIFY
 	assert.Assert(t, serrors.IsRecoverable(resultErr))
-	assert.Equal(t, resultErr.Error(), expectedError.Error())
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": some error`)
 	assert.Assert(t, resultConfig == nil)
 }
 
-func Test_loadPipelineRunsConfig_ErrorOnGetNetworkPoliciesMap(t *testing.T) {
+func Test_loadPipelineRunsConfig_ErrorOnGetNetworkPoliciesConfigMap(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -118,7 +149,7 @@ func Test_loadPipelineRunsConfig_ErrorOnGetNetworkPoliciesMap(t *testing.T) {
 		configMapIfce := corev1clientmocks.NewMockConfigMapInterface(mockCtrl)
 		coreV1Ifce.EXPECT().ConfigMaps(gomock.Any()).Return(configMapIfce).AnyTimes()
 		configMapIfce.EXPECT().
-			Get(pipelineRunsConfigMapName, gomock.Any()).
+			Get(mainConfigMapName, gomock.Any()).
 			Return(nil, nil).
 			Times(1)
 		configMapIfce.EXPECT().
@@ -132,36 +163,35 @@ func Test_loadPipelineRunsConfig_ErrorOnGetNetworkPoliciesMap(t *testing.T) {
 
 	// VERIFY
 	assert.Assert(t, serrors.IsRecoverable(resultErr))
-	assert.Equal(t, resultErr.Error(), expectedError.Error())
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "knative-testing": some error`)
 	assert.Assert(t, resultConfig == nil)
 }
 
-func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
+func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	cf := fake.NewClientFactory(
-		newPipelineRunsConfigMap(
+		newMainConfigMap(
 			map[string]string{
-				"_example":                           "exampleString",
-				pipelineRunsConfigKeyLimitRange:      "limitRange1",
-				pipelineRunsConfigKeyResourceQuota:   "resourceQuota1",
-				pipelineRunsConfigKeyPSCRunAsUser:    "1111",
-				pipelineRunsConfigKeyPSCRunAsGroup:   "2222",
-				pipelineRunsConfigKeyPSCFSGroup:      "3333",
-				pipelineRunsConfigKeyTimeout:         "4444m",
-				pipelineRunsConfigKeyImage:           "image1",
-				pipelineRunsConfigKeyImagePullPolicy: "policy1",
-				"someKeyThatShouldBeIgnored":         "34957349",
+				"_example":                   "exampleString",
+				mainConfigKeyLimitRange:      "limitRange1",
+				mainConfigKeyResourceQuota:   "resourceQuota1",
+				mainConfigKeyPSCRunAsUser:    "1111",
+				mainConfigKeyPSCRunAsGroup:   "2222",
+				mainConfigKeyPSCFSGroup:      "3333",
+				mainConfigKeyTimeout:         "4444m",
+				mainConfigKeyImage:           "jfrImage1",
+				mainConfigKeyImagePullPolicy: "jfrImagePullPolicy1",
+				"someKeyThatShouldBeIgnored": "34957349",
 			},
 		),
 		newNetworkPolicyConfigMap(map[string]string{
-			networkPoliciesConfigKeyDefault: "defaultKey",
-			"defaultKey":                    "defaultPolicy",
-			"foo":                           "fooPolicy",
-			"bar":                           "barPolicy",
-			"_other_special_key":            "baz",
-			"":                              "emptyKeyWillBeSkipped",
+			networkPoliciesConfigKeyDefault: "networkPolicyKey2",
+
+			"networkPolicyKey1": "networkPolicy1",
+			"networkPolicyKey2": "networkPolicy2",
+			"networkPolicyKey3": "networkPolicy3",
 		}),
 	)
 
@@ -174,22 +204,27 @@ func Test_loadPipelineRunsConfig_CompleteConfigMap(t *testing.T) {
 		Timeout:                          metav1Duration(time.Minute * 4444),
 		LimitRange:                       "limitRange1",
 		ResourceQuota:                    "resourceQuota1",
-		JenkinsfileRunnerImage:           "image1",
-		JenkinsfileRunnerImagePullPolicy: "policy1",
-		DefaultNetworkPolicy:             "defaultPolicy",
-		NetworkPolicies: map[string]string{
-			"foo": "fooPolicy",
-			"bar": "barPolicy",
-		},
+		JenkinsfileRunnerImage:           "jfrImage1",
+		JenkinsfileRunnerImagePullPolicy: "jfrImagePullPolicy1",
 		JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(1111),
 		JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
 		JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(3333),
+
+		DefaultNetworkProfile: "networkPolicyKey2",
+		NetworkPolicies: map[string]string{
+			"networkPolicyKey1": "networkPolicy1",
+			"networkPolicyKey2": "networkPolicy2",
+			"networkPolicyKey3": "networkPolicy3",
+		},
 	}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
 
 func Test_withRecoverablility(t *testing.T) {
+	t.Parallel()
+
 	errFoo := fmt.Errorf("foo")
+
 	for _, tc := range []struct {
 		name                                  string
 		flag, infraError, expectedRecoverable bool
@@ -200,41 +235,47 @@ func Test_withRecoverablility(t *testing.T) {
 		{"retry_on_infra_error", true, true, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			tc := tc // capture current value before going parallel
+			t.Parallel()
+
 			// SETUP
 			defer featureflagtesting.WithFeatureFlag(featureflag.RetryOnInvalidPipelineRunsConfig, tc.flag)()
+
 			// EXERCISE
 			resultErr := withRecoverability(errFoo, tc.infraError)
-			// VALIDATE
+
+			// VERIFY
 			assert.Assert(t, serrors.IsRecoverable(resultErr) == tc.expectedRecoverable)
 		})
 	}
 }
 
 func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
-	for i, p := range []struct {
+	t.Parallel()
+
+	for i, tc := range []struct {
 		key, val string
 	}{
-		{pipelineRunsConfigKeyPSCRunAsUser, "a"},
-		{pipelineRunsConfigKeyPSCRunAsUser, "1a"},
+		{mainConfigKeyPSCRunAsUser, "a"},
+		{mainConfigKeyPSCRunAsUser, "1a"},
 
-		{pipelineRunsConfigKeyPSCRunAsGroup, "a"},
-		{pipelineRunsConfigKeyPSCRunAsGroup, "1a"},
+		{mainConfigKeyPSCRunAsGroup, "a"},
+		{mainConfigKeyPSCRunAsGroup, "1a"},
 
-		{pipelineRunsConfigKeyPSCFSGroup, "a"},
-		{pipelineRunsConfigKeyPSCFSGroup, "1a"},
+		{mainConfigKeyPSCFSGroup, "a"},
+		{mainConfigKeyPSCFSGroup, "1a"},
 
-		{pipelineRunsConfigKeyTimeout, "a"},
-		{pipelineRunsConfigKeyTimeout, "1a"},
+		{mainConfigKeyTimeout, "a"},
+		{mainConfigKeyTimeout, "1a"},
 	} {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			p := p // capture current value before going parallel
-
+			tc := tc // capture current value before going parallel
 			t.Parallel()
 
 			// SETUP
 			cf := fake.NewClientFactory(
-				newPipelineRunsConfigMap(
-					map[string]string{p.key: p.val},
+				newMainConfigMap(
+					map[string]string{tc.key: tc.val},
 				),
 				newNetworkPolicyConfigMap(nil),
 			)
@@ -250,169 +291,232 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 }
 
 func Test_processMainConfig(t *testing.T) {
-	for _, tc := range []struct {
-		name      string
-		configMap map[string]string
-		expected  *PipelineRunsConfigStruct
-	}{
+	t.Parallel()
 
-		{"all_set",
+	for _, tc := range []struct {
+		name       string
+		configData map[string]string
+		expected   *PipelineRunsConfigStruct
+	}{
+		{
+			"all_set",
 			map[string]string{
-				"_example":                         "exampleString",
-				pipelineRunsConfigKeyLimitRange:    "limitRange1",
-				pipelineRunsConfigKeyResourceQuota: "resourceQuota1",
-				pipelineRunsConfigKeyPSCRunAsUser:  "1111",
-				pipelineRunsConfigKeyPSCRunAsGroup: "2222",
-				pipelineRunsConfigKeyPSCFSGroup:    "3333",
-				pipelineRunsConfigKeyTimeout:       "4444m",
-				"someKeyThatShouldBeIgnored":       "34957349",
+				"_example": "exampleString",
+
+				mainConfigKeyTimeout:       "4444m",
+				mainConfigKeyLimitRange:    "limitRange1",
+				mainConfigKeyResourceQuota: "resourceQuota1",
+
+				mainConfigKeyImage:           "jfrImage1",
+				mainConfigKeyImagePullPolicy: "jfrImagePullPolicy1",
+				mainConfigKeyPSCRunAsUser:    "1111",
+				mainConfigKeyPSCRunAsGroup:   "2222",
+				mainConfigKeyPSCFSGroup:      "3333",
+
+				"someKeyThatShouldBeIgnored": "34957349",
 			},
 			&PipelineRunsConfigStruct{
 				Timeout:       metav1Duration(time.Minute * 4444),
 				LimitRange:    "limitRange1",
 				ResourceQuota: "resourceQuota1",
+
+				JenkinsfileRunnerImage:                        "jfrImage1",
+				JenkinsfileRunnerImagePullPolicy:              "jfrImagePullPolicy1",
 				JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(1111),
 				JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
 				JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(3333),
 			},
 		},
-		{"all_empty",
+		{
+			"all_empty",
 			map[string]string{
-				pipelineRunsConfigKeyPSCFSGroup:    "",
-				pipelineRunsConfigKeyPSCRunAsGroup: "",
-				pipelineRunsConfigKeyPSCRunAsUser:  "",
-				pipelineRunsConfigKeyLimitRange:    "",
-				pipelineRunsConfigKeyResourceQuota: "",
-				pipelineRunsConfigKeyTimeout:       "",
+				mainConfigKeyTimeout:       "",
+				mainConfigKeyLimitRange:    "",
+				mainConfigKeyResourceQuota: "",
+
+				mainConfigKeyImage:           "",
+				mainConfigKeyImagePullPolicy: "",
+				mainConfigKeyPSCRunAsUser:    "",
+				mainConfigKeyPSCRunAsGroup:   "",
+				mainConfigKeyPSCFSGroup:      "",
 			},
 			&PipelineRunsConfigStruct{},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			config := &PipelineRunsConfigStruct{}
+			tc := tc // capture current value before going parallel
+			t.Parallel()
+
+			// SETUP
+			dest := &PipelineRunsConfigStruct{}
 
 			// EXERCISE
-			resultErr := processMainConfig(tc.configMap, config)
+			resultErr := processMainConfig(tc.configData, dest)
 
 			// VERIFY
 			assert.NilError(t, resultErr)
-			assert.DeepEqual(t, tc.expected, config)
+			assert.DeepEqual(t, tc.expected, dest)
 		},
 		)
 	}
 }
 
-func Test_processNetworkMap(t *testing.T) {
+func Test_processNetworkPoliciesConfig(t *testing.T) {
+	t.Parallel()
 
 	for _, tc := range []struct {
 		name          string
-		networkMap    map[string]string
+		configData    map[string]string
 		expected      *PipelineRunsConfigStruct
 		expectedError string
 	}{
-		{"empty",
+		{
+			"empty",
 			map[string]string{},
 			&PipelineRunsConfigStruct{},
-			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or invalid`,
+			`key "_default" is missing`,
 		},
-		{"only_default",
+		{
+			"only_default",
 			map[string]string{
-				"_default":    "default_key",
-				"default_key": "default_np",
+				"_default": "key1",
+				"key1":     "\r\npolicy1\t",
 			},
 			&PipelineRunsConfigStruct{
-				DefaultNetworkPolicy: "default_np",
-			},
-			"",
-		},
-
-		{"wrong_default_key",
-			map[string]string{
-				"_default":    "wrong_key1",
-				"default_key": "default_np",
-			},
-			&PipelineRunsConfigStruct{},
-			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default": no network policy with key "wrong_key1" found`,
-		},
-		{"multiple_with_correct_default",
-			map[string]string{
-				networkPoliciesConfigKeyDefault: "defaultKey",
-				"defaultKey":                    "defaultPolicy",
-				"foo":                           "fooPolicy",
-				"bar":                           "barPolicy",
-				"_other_special_key":            "baz",
-				"":                              "emptyKeyWillBeSkipped",
-				" leading_whitespace":           "will be skipped",
-				"trailing_whitespace ":          "will be skipped",
-				"infix whitespace":              "keep",
-			},
-			&PipelineRunsConfigStruct{
-				DefaultNetworkPolicy: "defaultPolicy",
+				DefaultNetworkProfile: "key1",
 				NetworkPolicies: map[string]string{
-					"foo":              "fooPolicy",
-					"bar":              "barPolicy",
-					"infix whitespace": "keep",
+					"key1": "\r\npolicy1\t",
 				},
 			},
 			"",
 		},
-		{"skip_empty_values",
+		{
+			"default_key_invalid/empty",
 			map[string]string{
-				networkPoliciesConfigKeyDefault: "defaultKey",
-				"defaultKey":                    "defaultPolicy",
-				"empty":                         "",
-				"onlySpaces": " 	",
+				"_default": "",
+				"":         "policy1",
+			},
+			&PipelineRunsConfigStruct{},
+			`key "_default": value "" is not a valid network policy key`,
+		},
+		{
+			"default_key_invalid/leading_space",
+			map[string]string{
+				"_default": "\fkey1",
+				"key1":     "policy1",
+			},
+			&PipelineRunsConfigStruct{},
+			`key "_default": value "\fkey1" is not a valid network policy key`,
+		},
+		{
+			"default_key_invalid/trailing_space",
+			map[string]string{
+				"_default": "key1\v",
+				"key1":     "policy1",
+			},
+			&PipelineRunsConfigStruct{},
+			`key "_default": value "key1\v" is not a valid network policy key`,
+		},
+		{
+			"default_key_invalid/leading_underscore",
+			map[string]string{
+				"_default": "_key1",
+				"_key1":    "policy1",
+			},
+			&PipelineRunsConfigStruct{},
+			`key "_default": value "_key1" is not a valid network policy key`,
+		},
+		{
+			"default_key_missing/missing",
+			map[string]string{
+				"_default": "key1",
+			},
+			&PipelineRunsConfigStruct{},
+			`key "_default": value "key1" does not denote an existing network policy key`,
+		},
+		{
+			"default_key_missing/ignored",
+			map[string]string{
+				"_default": "key1",
+				"key1":     " \t\v\r\n\f", // ignored due to blank value
+			},
+			&PipelineRunsConfigStruct{},
+			`key "_default": value "key1" does not denote an existing network policy key`,
+		},
+		{
+			"multiple",
+			map[string]string{
+				networkPoliciesConfigKeyDefault: "infix whitespace",
+				"key1":                          "policy1",
+				"key2":                          "policy2",
+				"key3":                          "policy3",
+				"infix whitespace":              "policy4",
+				"leading_whitespace_value":      " \t\v\r\n\fpolicy5",
+				"trailing_whitespace_value":     "policy6 \t\v\r\n\f",
 			},
 			&PipelineRunsConfigStruct{
-				DefaultNetworkPolicy: "defaultPolicy",
+				DefaultNetworkProfile: "infix whitespace",
+				NetworkPolicies: map[string]string{
+					"key1":                      "policy1",
+					"key2":                      "policy2",
+					"key3":                      "policy3",
+					"infix whitespace":          "policy4",
+					"leading_whitespace_value":  " \t\v\r\n\fpolicy5",
+					"trailing_whitespace_value": "policy6 \t\v\r\n\f",
+				},
 			},
 			"",
 		},
-		{"default_key_with_whitespace_is_invalid",
-			map[string]string{
-				networkPoliciesConfigKeyDefault: " defaultKey ",
-				"defaultKey":                    "defaultPolicy",
-			},
-			&PipelineRunsConfigStruct{},
-			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or invalid`,
-		},
-		{"default_key_with_leading_underscore_is_invalid",
-			map[string]string{
-				networkPoliciesConfigKeyDefault: "_defaultKey",
-			},
-			&PipelineRunsConfigStruct{},
-			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default" is missing or invalid`,
-		},
-		{"skip_whitespaces_from_empty_default_policy",
+		{
+			"ignored",
 			map[string]string{
 				networkPoliciesConfigKeyDefault: "defaultKey",
-				"defaultKey": " 	",
+				"defaultKey":                    "a_policy",
+
+				// invalid keys
+				"_other_special_key":   "a_policy",
+				"":                     "a_policy",
+				" leading_whitespace":  "a_policy",
+				"trailing_whitespace ": "a_policy",
+
+				// invalid values
+				"empty":      "",
+				"onlySpaces": " \t\v\r\n\f",
 			},
-			&PipelineRunsConfigStruct{},
-			`invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": key "_default": no network policy with key "defaultKey" found`,
+			&PipelineRunsConfigStruct{
+				DefaultNetworkProfile: "defaultKey",
+				NetworkPolicies: map[string]string{
+					"defaultKey": "a_policy",
+				},
+			},
+			"",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			tc := tc // capture current value before going parallel
+			t.Parallel()
+
 			// SETUP
-			config := &PipelineRunsConfigStruct{}
+			dest := &PipelineRunsConfigStruct{}
+
 			// EXERCISE
-			resultErr := processNetworkMap(tc.networkMap, config)
+			resultErr := processNetworkPoliciesConfig(tc.configData, dest)
+
 			// VERIFY
 			if tc.expectedError == "" {
 				assert.NilError(t, resultErr)
 			} else {
 				assert.Equal(t, resultErr.Error(), tc.expectedError)
 			}
-			assert.DeepEqual(t, tc.expected, config)
-
+			assert.DeepEqual(t, tc.expected, dest)
 		})
 	}
 }
 
-func newPipelineRunsConfigMap(data map[string]string) *corev1.ConfigMap {
+func newMainConfigMap(data map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      pipelineRunsConfigMapName,
+			Name:      mainConfigMapName,
 			Namespace: system.Namespace(),
 		},
 		Data: data,
@@ -427,6 +531,10 @@ func newNetworkPolicyConfigMap(data map[string]string) *corev1.ConfigMap {
 		},
 		Data: data,
 	}
+}
+
+func metav1Duration(d time.Duration) *metav1.Duration {
+	return &metav1.Duration{Duration: d}
 }
 
 func int64Ptr(val int64) *int64 { return &val }

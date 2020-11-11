@@ -354,9 +354,10 @@ func Test_RunManager_setupNetworkPolicyFromConfig_NoPolicyConfigured(t *testing.
 	const (
 		runNamespaceName = "runNamespace1"
 	)
+
 	runCtx := contextWithSpec(t, runNamespaceName, api.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
-		DefaultNetworkPolicy: "", // no policy
+		// no network policy
 	}
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -373,6 +374,8 @@ func Test_RunManager_setupNetworkPolicyFromConfig_NoPolicyConfigured(t *testing.
 
 	// EXERCISE
 	resultError := examinee.setupNetworkPolicyFromConfig(runCtx)
+
+	// VERIFY
 	assert.NilError(t, resultError)
 }
 
@@ -386,25 +389,28 @@ func Test_RunManager_setupNetworkPolicyFromConfig_SetsMetadataAndLeavesOtherThin
 	)
 	runCtx := contextWithSpec(t, runNamespaceName, api.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
-		DefaultNetworkPolicy: fixIndent(`
-			apiVersion: networking.k8s.io/v123
-			kind: NetworkPolicy
-			# no metadata here
-			customStuffNotTouchedByController:
-				a: 1
-				b: true
-			spec:
-				# bogus spec to check if SUT modifies something
-				undefinedField: [42, 17]
-				podSelector: true
-				namespaceSelector: false
-				policyTypes:
-				-	undefinedKey
-				egress:
-					undefinedField: string1
-				ingress:
-					undefinedField: string1
-			`),
+		DefaultNetworkProfile: "key1",
+		NetworkPolicies: map[string]string{
+			"key1": fixIndent(`
+				apiVersion: networking.k8s.io/v123
+				kind: NetworkPolicy
+				# no metadata here
+				customStuffNotTouchedByController:
+					a: 1
+					b: true
+				spec:
+					# bogus spec to check if SUT modifies something
+					undefinedField: [42, 17]
+					podSelector: true
+					namespaceSelector: false
+					policyTypes:
+					-	undefinedKey
+					egress:
+						undefinedField: string1
+					ingress:
+						undefinedField: string1
+				`),
+		},
 	}
 	cf := fake.NewClientFactory()
 	cf.DynamicFake().PrependReactor("create", "*", fake.GenerateNameReactor(0))
@@ -469,27 +475,30 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ReplacesAllMetadata(t *testing
 	)
 	runCtx := contextWithSpec(t, runNamespaceName, api.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
-		DefaultNetworkPolicy: fixIndent(`
-			apiVersion: networking.k8s.io/v123
-			kind: NetworkPolicy
-			metadata:
-				name: name1
-				generateName: generateName1
-				labels:
-					label1: labelVal1
-					label2: labelVal2
-				annotations:
-					annotation1: annotationVal1
-					annotation2: annotationVal2
-				creationTimestamp: "2000-01-01T00:00:00Z"
-				generation: 99999
-				resourceVersion: "12345678"
-				selfLink: /foo/bar
-				uid: 00000000-0000-0000-0000-000000000000
-				finalizers:
-					- finalizer1
-				undefinedField: "abc"
-			`),
+		DefaultNetworkProfile: "key1",
+		NetworkPolicies: map[string]string{
+			"key1": fixIndent(`
+				apiVersion: networking.k8s.io/v123
+				kind: NetworkPolicy
+				metadata:
+					name: name1
+					generateName: generateName1
+					labels:
+						label1: labelVal1
+						label2: labelVal2
+					annotations:
+						annotation1: annotationVal1
+						annotation2: annotationVal2
+					creationTimestamp: "2000-01-01T00:00:00Z"
+					generation: 99999
+					resourceVersion: "12345678"
+					selfLink: /foo/bar
+					uid: 00000000-0000-0000-0000-000000000000
+					finalizers:
+						- finalizer1
+					undefinedField: "abc"
+				`),
+		},
 	}
 	cf := fake.NewClientFactory()
 	cf.DynamicFake().PrependReactor("create", "*", fake.GenerateNameReactor(0))
@@ -530,63 +539,48 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ReplacesAllMetadata(t *testing
 func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing.T) {
 	t.Parallel()
 
-	const (
-		expectedNamePrefix = "steward.sap.com--configured-"
-	)
 	for _, tc := range []struct {
 		name           string
-		pipelineSpec   api.PipelineSpec
+		profilesSpec   *api.Profiles
 		expectedPolicy string
 		expectError    bool
 		result         api.Result
 	}{
 		{
-			name:           "undefined",
-			pipelineSpec:   api.PipelineSpec{},
+			name:           "no_profile_spec",
+			profilesSpec:   nil,
 			expectedPolicy: "networkPolicySpecDefault1",
 			expectError:    false,
 			result:         api.ResultUndefined,
 		},
 		{
-			name: "nil_profile",
-			pipelineSpec: api.PipelineSpec{
-				Profiles: nil,
-			},
+			name:           "no_network_profile",
+			profilesSpec:   &api.Profiles{},
 			expectedPolicy: "networkPolicySpecDefault1",
 			expectError:    false,
 			result:         api.ResultUndefined,
 		},
 		{
-			name: "empty_network_name",
-			pipelineSpec: api.PipelineSpec{
-				Profiles: &api.Profiles{Network: ""},
+			name: "undefined_network_profile",
+			profilesSpec: &api.Profiles{
+				Network: "undefined1",
 			},
-			expectedPolicy: "networkPolicySpecDefault1",
-			expectError:    false,
-			result:         api.ResultUndefined,
+			expectError: true,
+			result:      api.ResultErrorConfig,
 		},
 		{
-			name: "unknown_network_name",
-			pipelineSpec: api.PipelineSpec{
-				Profiles: &api.Profiles{Network: "unknown"},
-			},
-			expectedPolicy: "",
-			expectError:    true,
-			result:         api.ResultErrorConfig,
-		},
-		{
-			name: "choose_network_policy1",
-			pipelineSpec: api.PipelineSpec{
-				Profiles: &api.Profiles{Network: "networkPolicyKey1"},
+			name: "network_profile_1",
+			profilesSpec: &api.Profiles{
+				Network: "networkPolicyKey1",
 			},
 			expectedPolicy: "networkPolicySpec1",
 			expectError:    false,
 			result:         api.ResultUndefined,
 		},
 		{
-			name: "choose_network_policy2",
-			pipelineSpec: api.PipelineSpec{
-				Profiles: &api.Profiles{Network: "networkPolicyKey2"},
+			name: "network_profile_2",
+			profilesSpec: &api.Profiles{
+				Network: "networkPolicyKey2",
 			},
 			expectedPolicy: "networkPolicySpec2",
 			expectError:    false,
@@ -594,33 +588,44 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
+
 			// SETUP
 			cf := fake.NewClientFactory()
+			cf.DynamicFake().PrependReactor("create", "*", fake.GenerateNameReactor(0))
+
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
+
 			mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
-			mockPipelineRun.EXPECT().GetSpec().Return(&tc.pipelineSpec).AnyTimes()
+			mockPipelineRun.EXPECT().
+				GetSpec().
+				Return(&api.PipelineSpec{Profiles: tc.profilesSpec}).
+				AnyTimes()
 			if tc.result != api.ResultUndefined {
 				mockPipelineRun.EXPECT().UpdateResult(tc.result)
 			}
+
 			runCtx := &runContext{pipelineRun: mockPipelineRun}
+
 			runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
-				DefaultNetworkPolicy: fixIndent(`
-					apiVersion: networking.k8s.io/v123
-					kind: NetworkPolicy
-					spec: networkPolicySpecDefault1`),
+				DefaultNetworkProfile: "networkPolicyKey0",
 				NetworkPolicies: map[string]string{
+					"networkPolicyKey0": fixIndent(`
+						apiVersion: networking.k8s.io/v123
+						kind: NetworkPolicy
+						spec: networkPolicySpecDefault1`),
 					"networkPolicyKey1": fixIndent(`
-					apiVersion: networking.k8s.io/v123
-					kind: NetworkPolicy
-					spec: networkPolicySpec1`),
+						apiVersion: networking.k8s.io/v123
+						kind: NetworkPolicy
+						spec: networkPolicySpec1`),
 					"networkPolicyKey2": fixIndent(`
-					apiVersion: networking.k8s.io/v123
-					kind: NetworkPolicy
-					spec: networkPolicySpec2`),
+						apiVersion: networking.k8s.io/v123
+						kind: NetworkPolicy
+						spec: networkPolicySpec2`),
 				},
 			}
-			cf.DynamicFake().PrependReactor("create", "*", fake.GenerateNameReactor(0))
 
 			examinee := runManager{
 				factory: cf,
@@ -661,9 +666,13 @@ func Test_RunManager_setupNetworkPolicyFromConfig_MalformedPolicy(t *testing.T) 
 	const (
 		runNamespaceName = "runNamespace1"
 	)
+
 	runCtx := contextWithSpec(t, runNamespaceName, api.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
-		DefaultNetworkPolicy: ":", // malformed YAML
+		DefaultNetworkProfile: "key1",
+		NetworkPolicies: map[string]string{
+			"key1": ":", // malformed YAML
+		},
 	}
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -694,10 +703,13 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedGroup(t *testing.T) 
 	)
 	runCtx := contextWithSpec(t, runNamespaceName, api.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
-		DefaultNetworkPolicy: fixIndent(`
-			apiVersion: unexpected.group/v1
-			kind: NetworkPolicy
-			`),
+		DefaultNetworkProfile: "key1",
+		NetworkPolicies: map[string]string{
+			"key1": fixIndent(`
+				apiVersion: unexpected.group/v1
+				kind: NetworkPolicy
+				`),
+		},
 	}
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -731,10 +743,13 @@ func Test_RunManager_setupNetworkPolicyFromConfig_UnexpectedKind(t *testing.T) {
 	)
 	runCtx := contextWithSpec(t, runNamespaceName, api.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
-		DefaultNetworkPolicy: fixIndent(`
-			apiVersion: networking.k8s.io/v1
-			kind: UnexpectedKind
-			`),
+		DefaultNetworkProfile: "key1",
+		NetworkPolicies: map[string]string{
+			"key1": fixIndent(`
+				apiVersion: networking.k8s.io/v1
+				kind: UnexpectedKind
+				`),
+		},
 	}
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
