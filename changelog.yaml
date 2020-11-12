@@ -26,9 +26,11 @@
     type: enhancement
     impact: minor
     description: >-
-      There exists a default elasticSearch IndexURL per cluster. It reduces flexibility to
-      push logs to different indices in Elasticsearch. This change allows developers to
-      make Elasticsearch IndexURL configurable in Steward PipelineRun objects as a parameter.
+      Enhance the `pipelineruns.steward.sap.com` CRD by fields to configure the
+      Elasticsearch index URL and credential to be used to store build logs.
+
+      However, these values are still ignored by Steward. Log destinations per
+      pipeline run will be enabled with a later change.
     pullRequestNumber: 172
     jiraIssueNumber: 984
 
