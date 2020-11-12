@@ -726,7 +726,7 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 
 		if spec.Logging.Elasticsearch.IndexURL != "" {
 
-			elasticSearchURL, err := ensureValidURL(spec.Logging.Elasticsearch.IndexURL)
+			elasticSearchURL, err := ensureValidElasticsearchIndexURL(spec.Logging.Elasticsearch.IndexURL)
 			if err != nil {
 				return errors.WithMessage(err,
 					"spec.Logging.Elasticsearch.IndexURL is not a valid URL",
