@@ -810,7 +810,7 @@ func tektonStringParam(name string, value string) tekton.Param {
 	}
 }
 
-func ensureValidURL(indexURL string) (string, error) {
+func ensureValidElasticsearchIndexURL(url string) (string, error) {
 	validURL, err := url.Parse(indexURL)
 	if err != nil {
 		return "", fmt.Errorf("value %q of field spec.logging.elasticSearch.indexURL does not have a valid URL format", indexURL)
