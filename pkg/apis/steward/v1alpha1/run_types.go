@@ -140,7 +140,7 @@ type Elasticsearch struct {
 	// of type `kubernetes.io/basic-auth` that contains the username and
 	// password for authentication when accessing the index URL.
 	// +optional
-	ElasticsearchCredential string `json:"elasticsearchCredential,omitempty"`
+	AuthSecret string `json:"authSecret,omitempty"`
 }
 
 // PipelineStatus represents the status of the pipeline
