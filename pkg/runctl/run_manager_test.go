@@ -80,10 +80,10 @@ func Test_RunManager_PrepareRunNamespace_Succeeds(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
 	// EXERCISE
-	err := examinee.prepareRunNamespace(runCtx)
+	resultError := examinee.prepareRunNamespace(runCtx)
 
 	// VERIFY
-	assert.NilError(t, err)
+	assert.NilError(t, resultError)
 }
 
 func Test_RunManager_PrepareRunNamespace_CreatesNamespace(t *testing.T) {
@@ -102,8 +102,8 @@ func Test_RunManager_PrepareRunNamespace_CreatesNamespace(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
 	// EXERCISE
-	err := examinee.prepareRunNamespace(runCtx)
-	assert.NilError(t, err)
+	resultError := examinee.prepareRunNamespace(runCtx)
+	assert.NilError(t, resultError)
 
 	// VERIFY
 	assert.Assert(t, strings.HasPrefix(mockPipelineRun.GetRunNamespace(), runNamespacePrefix))
@@ -1272,13 +1272,13 @@ func Test_RunManager_Start_CreatesTektonTaskRun(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	err := examinee.Start(mockPipelineRun, config)
-	assert.NilError(t, err)
+	resultError := examinee.Start(mockPipelineRun, config)
+	assert.NilError(t, resultError)
 
 	// VERIFY
-	result, err := mockFactory.TektonV1beta1().TaskRuns(mockPipelineRun.GetRunNamespace()).Get(
+	result, resultError := mockFactory.TektonV1beta1().TaskRuns(mockPipelineRun.GetRunNamespace()).Get(
 		tektonTaskRunName, metav1.GetOptions{})
-	assert.NilError(t, err)
+	assert.NilError(t, resultError)
 	assert.Assert(t, result != nil)
 }
 
@@ -1388,8 +1388,8 @@ func Test_RunManager_Start_DoesNotSetPipelineRunStatus(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	err := examinee.Start(mockPipelineRun, config)
-	assert.NilError(t, err)
+	resultError := examinee.Start(mockPipelineRun, config)
+	assert.NilError(t, resultError)
 
 	// VERIFY
 	// UpdateState should never be called
@@ -1446,8 +1446,8 @@ func Test_RunManager_Start_DoesCopySecret(t *testing.T) {
 		Return([]string{"imagePullSecret1", "imagePullSecret2"}, nil)
 
 	// EXERCISE
-	err := examinee.Start(mockPipelineRun, config)
-	assert.NilError(t, err)
+	resultError := examinee.Start(mockPipelineRun, config)
+	assert.NilError(t, resultError)
 }
 
 func Test_RunManager_Start_FailsWithContentErrorWhenPipelineCloneSecretNotFound(t *testing.T) {
@@ -1476,9 +1476,9 @@ func Test_RunManager_Start_FailsWithContentErrorWhenPipelineCloneSecretNotFound(
 	mockPipelineRun.EXPECT().String() //logging
 
 	// EXERCISE
-	err := examinee.Start(mockPipelineRun, config)
-	assert.Assert(t, err != nil)
-	assert.Assert(t, is.Regexp("failed to copy pipeline clone secret: .*", err.Error()))
+	resultError := examinee.Start(mockPipelineRun, config)
+	assert.Assert(t, resultError != nil)
+	assert.Assert(t, is.Regexp("failed to copy pipeline clone secret: .*", resultError.Error()))
 }
 
 func Test_RunManager_Start_FailsWithContentErrorWhenSecretNotFound(t *testing.T) {
@@ -1505,9 +1505,9 @@ func Test_RunManager_Start_FailsWithContentErrorWhenSecretNotFound(t *testing.T)
 	mockPipelineRun.EXPECT().String() //logging
 
 	// EXERCISE
-	err := examinee.Start(mockPipelineRun, config)
-	assert.Assert(t, err != nil)
-	assert.Assert(t, is.Regexp("failed to copy pipeline secrets: .*", err.Error()))
+	resultError := examinee.Start(mockPipelineRun, config)
+	assert.Assert(t, resultError != nil)
+	assert.Assert(t, is.Regexp("failed to copy pipeline secrets: .*", resultError.Error()))
 }
 
 func Test_RunManager_Start_FailsWithContentErrorWhenImagePullSecretNotFound(t *testing.T) {
@@ -1534,9 +1534,9 @@ func Test_RunManager_Start_FailsWithContentErrorWhenImagePullSecretNotFound(t *t
 	mockPipelineRun.EXPECT().String() //logging
 
 	// EXERCISE
-	err := examinee.Start(mockPipelineRun, config)
-	assert.Assert(t, err != nil)
-	assert.Assert(t, is.Regexp("failed to copy image pull secrets: .*", err.Error()))
+	resultError := examinee.Start(mockPipelineRun, config)
+	assert.Assert(t, resultError != nil)
+	assert.Assert(t, is.Regexp("failed to copy image pull secrets: .*", resultError.Error()))
 }
 
 func Test_RunManager_Start_FailsWithInfraErrorWhenForbidden(t *testing.T) {
@@ -1678,8 +1678,6 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			`{"key1":{"key2":{"key3_1":"value3","key3_2":null,"key3_3":[1,"2",true]}}}`},
 	} {
 		t.Run(test+"_"+tc.name, func(t *testing.T) {
-			var err error
-
 			// setup
 			pipelineRunJSON := fmt.Sprintf(fixIndent(`
 				{
@@ -1708,8 +1706,8 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			examinee, runCtx, cf := setupExaminee(t, pipelineRunJSON)
 
 			// exercise
-			err = examinee.createTektonTaskRun(runCtx)
-			assert.NilError(t, err)
+			resultError := examinee.createTektonTaskRun(runCtx)
+			assert.NilError(t, resultError)
 			// verify
 			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
 			param := findTaskRunParam(taskRun, TaskRunParamNameRunIDJSON)
@@ -1737,8 +1735,6 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 		{"dummy", `"___dummy___": 1`, `null`},
 	} {
 		t.Run(test+"_"+tc.name, func(t *testing.T) {
-			var err error
-
 			// setup
 			pipelineRunJSON := fmt.Sprintf(fixIndent(`
 				{
@@ -1767,8 +1763,8 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			examinee, runCtx, cf := setupExaminee(t, pipelineRunJSON)
 
 			// exercise
-			err = examinee.createTektonTaskRun(runCtx)
-			assert.NilError(t, err)
+			resultError := examinee.createTektonTaskRun(runCtx)
+			assert.NilError(t, resultError)
 			// verify
 			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
 			param := findTaskRunParam(taskRun, TaskRunParamNameRunIDJSON)
@@ -1790,8 +1786,6 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 		{"NoElasticsearch", `,"logging":{"___dummy___":1}`},
 	} {
 		t.Run(test+"_"+tc.name, func(t *testing.T) {
-			var err error
-
 			// setup
 			pipelineRunJSON := fmt.Sprintf(fixIndent(`
 				{
@@ -1816,8 +1810,8 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			examinee, runCtx, cf := setupExaminee(t, pipelineRunJSON)
 
 			// exercise
-			err = examinee.createTektonTaskRun(runCtx)
-			assert.NilError(t, err)
+			resultError := examinee.createTektonTaskRun(runCtx)
+			assert.NilError(t, resultError)
 
 			// verify
 			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
@@ -1838,112 +1832,13 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	 */
 	test = "ErrorOnWrongFormattedIndexURL"
 	for _, tc := range []struct {
-		name         string
-		indexURLJson string
+		name string
+		URL  string
 	}{
 		{"indexURLWithNoScheme", `"indexURL": "testURL"`},
 		{"indexURLWithWrongFormat2", `"indexURL": "http//testURL"`},
 	} {
 		t.Run(test+"_"+tc.name, func(t *testing.T) {
-			var err error
-
-			// setup
-			pipelineRunJSON := fmt.Sprintf(fixIndent(`
-				 {
-					 "apiVersion": "steward.sap.com/v1alpha1",
-					 "kind": "PipelineRun",
-					 "metadata": {
-						 "name": "dummy1",
-						 "namespace": "namespace1"
-					 },
-					 "spec": {
-						 "jenkinsFile": {
-							 "repoUrl": "dummyRepoUrl",
-							 "revision": "dummyRevision",
-							 "relativePath": "dummyRelativePath"
-						 },
-						 "logging": {
-							 "elasticsearch": {
-								 %s
-							 }
-						 }
-					 }
-				 }`),
-				tc.indexURLJson,
-			)
-			t.Log("input:", pipelineRunJSON)
-			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
-			// exercise
-			err = examinee.createTektonTaskRun(runCtx)
-
-			// VERIFY
-			assert.ErrorContains(t, err, "field spec.logging.elasticSearch.indexURL is invalid: scheme not supported")
-		})
-	}
-
-	/**
-	 * Test: If `spec.logging.elasticsearch.indexURL` has an unsupported
-	 * scheme, an error is returned.
-	 */
-	test = "ErrorOnWrongSchemeInIndexURL"
-	for _, tc := range []struct {
-		name         string
-		indexURLJson string
-	}{
-		{"indexURLWithIncorrectScheme", `"indexURL": "ftp://testURL"`},
-	} {
-		t.Run(test+"_"+tc.name, func(t *testing.T) {
-			var err error
-
-			// setup
-			pipelineRunJSON := fmt.Sprintf(fixIndent(`
-				  {
-					  "apiVersion": "steward.sap.com/v1alpha1",
-					  "kind": "PipelineRun",
-					  "metadata": {
-						  "name": "dummy1",
-						  "namespace": "namespace1"
-					  },
-					  "spec": {
-						  "jenkinsFile": {
-							  "repoUrl": "dummyRepoUrl",
-							  "revision": "dummyRevision",
-							  "relativePath": "dummyRelativePath"
-						  },
-						  "logging": {
-							  "elasticsearch": {
-								  %s
-							  }
-						  }
-					  }
-				  }`),
-				tc.indexURLJson,
-			)
-			t.Log("input:", pipelineRunJSON)
-			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
-			// exercise
-			err = examinee.createTektonTaskRun(runCtx)
-			assert.ErrorContains(t, err, "field spec.logging.elasticSearch.indexURL is invalid: scheme not supported")
-		})
-	}
-
-	/**
-	 * Test: `createTektonTaskRun` handles valid index URLs correctly.
-	 */
-	test = "CorrectFormatForIndexURL"
-	for _, tc := range []struct {
-		name               string
-		indexURLJson       string
-		expectedParamValue string
-	}{
-		{"validhttpURL", `"indexURL": "http://host.domain"`, "http://host.domain"},
-		{"validhttpsURL", `"indexURL": "https://host.domain"`, "https://host.domain"},
-		{"validHTTPURL", `"indexURL": "HTTP://host.domain"`, "http://host.domain"},
-		{"validHTTPSURL", `"indexURL": "HTTPS://host.domain"`, "https://host.domain"},
-	} {
-		t.Run(test+"_"+tc.name, func(t *testing.T) {
-			var err error
-
 			// setup
 			pipelineRunJSON := fmt.Sprintf(fixIndent(`
 				{
@@ -1966,14 +1861,107 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 						}
 					}
 				}`),
-				tc.indexURLJson,
+				tc.URL,
+			)
+			t.Log("input:", pipelineRunJSON)
+			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
+			// exercise
+			resultError := examinee.createTektonTaskRun(runCtx)
+
+			// VERIFY
+			assert.ErrorContains(t, resultError, "field spec.logging.elasticSearch.indexURL is invalid: scheme not supported")
+		})
+	}
+
+	/**
+	 * Test: If `spec.logging.elasticsearch.indexURL` has an unsupported
+	 * scheme, an error is returned.
+	 */
+	test = "ErrorOnWrongSchemeInIndexURL"
+	for _, tc := range []struct {
+		name string
+		URL  string
+	}{
+		{"indexURLWithIncorrectScheme", `"indexURL": "ftp://testURL"`},
+	} {
+		t.Run(test+"_"+tc.name, func(t *testing.T) {
+			// setup
+			pipelineRunJSON := fmt.Sprintf(fixIndent(`
+				{
+					"apiVersion": "steward.sap.com/v1alpha1",
+					"kind": "PipelineRun",
+					"metadata": {
+						"name": "dummy1",
+						"namespace": "namespace1"
+					},
+					"spec": {
+						"jenkinsFile": {
+							"repoUrl": "dummyRepoUrl",
+							"revision": "dummyRevision",
+							"relativePath": "dummyRelativePath"
+						},
+						"logging": {
+							"elasticsearch": {
+								%s
+							}
+						}
+					}
+				}`),
+				tc.URL,
+			)
+			t.Log("input:", pipelineRunJSON)
+			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
+			// exercise
+			resultError := examinee.createTektonTaskRun(runCtx)
+			assert.ErrorContains(t, resultError, "field spec.logging.elasticSearch.indexURL is invalid: scheme not supported")
+		})
+	}
+
+	/**
+	 * Test: `createTektonTaskRun` handles valid index URLs correctly.
+	 */
+	test = "CorrectFormatForIndexURL"
+	for _, tc := range []struct {
+		name               string
+		URL                string
+		expectedParamValue string
+	}{
+		{"validhttpURL", `"indexURL": "http://host.domain"`, "http://host.domain"},
+		{"validhttpsURL", `"indexURL": "https://host.domain"`, "https://host.domain"},
+		{"validHTTPURL", `"indexURL": "HTTP://host.domain"`, "http://host.domain"},
+		{"validHTTPSURL", `"indexURL": "HTTPS://host.domain"`, "https://host.domain"},
+	} {
+		t.Run(test+"_"+tc.name, func(t *testing.T) {
+			// setup
+			pipelineRunJSON := fmt.Sprintf(fixIndent(`
+				{
+					"apiVersion": "steward.sap.com/v1alpha1",
+					"kind": "PipelineRun",
+					"metadata": {
+						"name": "dummy1",
+						"namespace": "namespace1"
+					},
+					"spec": {
+						"jenkinsFile": {
+							"repoUrl": "dummyRepoUrl",
+							"revision": "dummyRevision",
+							"relativePath": "dummyRelativePath"
+						},
+						"logging": {
+							"elasticsearch": {
+								%s
+							}
+						}
+					}
+				}`),
+				tc.URL,
 			)
 			t.Log("input:", pipelineRunJSON)
 			examinee, runCtx, cf := setupExaminee(t, pipelineRunJSON)
 
 			// exercise
-			err = examinee.createTektonTaskRun(runCtx)
-			assert.NilError(t, err)
+			resultError := examinee.createTektonTaskRun(runCtx)
+			assert.NilError(t, resultError)
 			// verify
 			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
 			param := findTaskRunParam(taskRun, TaskRunParamNameIndexURL)

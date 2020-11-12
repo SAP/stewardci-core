@@ -157,7 +157,6 @@ func Test_PipelineRunLoggingWithAllParams(t *testing.T) {
 					"buildId": buildID,
 					"realmId": realmID,
 				}}),
-			LoggingWithCredential("elasticsearchCredential"),
 		),
 	)
 	assert.DeepEqual(t, &api.Logging{
@@ -169,7 +168,6 @@ func Test_PipelineRunLoggingWithAllParams(t *testing.T) {
 					"buildId": buildID,
 					"realmId": realmID,
 				}},
-			ElasticsearchCredential: "elasticsearchCredential",
 		},
 	}, pipelineRun.Spec.Logging)
 }
@@ -193,7 +191,6 @@ func Test_CheckConflictsBetweenIndexURLsOfTests(t *testing.T) {
 							"buildId": buildID,
 							"realmId": realmID,
 						}}),
-					LoggingWithCredential("elasticsearchCredential"),
 				),
 			),
 			expectedResult: &api.Logging{
@@ -205,7 +202,6 @@ func Test_CheckConflictsBetweenIndexURLsOfTests(t *testing.T) {
 							"buildId": buildID,
 							"realmId": realmID,
 						}},
-					ElasticsearchCredential: "elasticsearchCredential",
 				},
 			},
 		},

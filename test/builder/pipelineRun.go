@@ -175,25 +175,3 @@ func LoggingWithIndexURL(indexURL string) PipelineRunSpecOp {
 		return spec
 	}
 }
-
-// LoggingWithCredential creates a PipelineRunSpecOp which adds Logging to the PipelineRun
-// with specific indexURL and its own credential
-func LoggingWithCredential(credential string) PipelineRunSpecOp {
-	return func(spec api.PipelineSpec) api.PipelineSpec {
-		logging := &api.Logging{
-			Elasticsearch: &api.Elasticsearch{},
-		}
-		if spec.Logging != nil {
-			logging = spec.Logging
-		}
-
-		if logging.Elasticsearch == nil {
-			logging.Elasticsearch = &api.Elasticsearch{}
-		}
-
-		logging.Elasticsearch.ElasticsearchCredential = credential
-		spec.Logging = logging
-
-		return spec
-	}
-}
