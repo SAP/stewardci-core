@@ -1928,7 +1928,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	}
 
 	/**
-	 * Test: Test should pass if indexURL of elasticSearch has correct format and scheme.
+	 * Test: `createTektonTaskRun` handles valid index URLs correctly.
 	 */
 	test = "CorrectFormatForIndexURL"
 	for _, tc := range []struct {
