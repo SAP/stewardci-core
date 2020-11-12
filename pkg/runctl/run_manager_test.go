@@ -1875,6 +1875,8 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
 			// exercise
 			err = examinee.createTektonTaskRun(runCtx)
+
+			// VERIFY
 			assert.ErrorContains(t, err, "field spec.logging.elasticSearch.indexURL is invalid: scheme not supported")
 		})
 	}
