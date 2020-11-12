@@ -1882,8 +1882,8 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	}
 
 	/**
-	 * Test: If provided indexURL at spec.logging.elasticsearch.indexURL
-	 * does not have correct scheme tests should fail.
+	 * Test: If `spec.logging.elasticsearch.indexURL` has an unsupported
+	 * scheme, an error is returned.
 	 */
 	test = "ErrorOnWrongSchemeInIndexURL"
 	for _, tc := range []struct {
