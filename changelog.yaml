@@ -1,19 +1,19 @@
 ## -----------------------------------------
 ## Copy this template for new change entries
 ## -----------------------------------------
-#    - type: [bug, enhancement, internal]
-#      impact: [incompatible, minor, patch]
-#      title: <title>
-#      description: |-
-#        <description (markdown syntax)>
-#      warning: |-
-#        <optional warning message (markdown syntax)>
-#      upgradeNotes: |-
-#        <optional upgrade guidelines (markdown syntax)>
-#      deprecations: |-
-#        <optional deprecation notes (markdown syntax)>
-#      pullRequestNumber: <pull request number>
-#      jiraIssueNumber: <Jira issue number>
+#  - title: <title>
+#    type: [bug, enhancement, internal]
+#    impact: [incompatible, minor, patch]
+#    description: |-
+#      <description (markdown syntax)>
+#    warning: |-
+#      <optional warning message (markdown syntax)>
+#    upgradeNotes: |-
+#      <optional upgrade guidelines (markdown syntax)>
+#    deprecations: |-
+#      <optional deprecation notes (markdown syntax)>
+#    pullRequestNumber: <pull request number>
+#    jiraIssueNumber: <Jira issue number>
 
 
 # Do not modify the "NEXT" version block.
@@ -29,11 +29,12 @@
       There exists a default elasticSearch IndexURL per cluster. It reduces flexibility to
       push logs to different indices in Elasticsearch. This change allows developers to
       make Elasticsearch IndexURL configurable in Steward PipelineRun objects as a parameter.
-    warning: ""
-    upgradeNotes: ""
     pullRequestNumber: 172
     jiraIssueNumber: 984
 
+- version: "0.6.1"
+  date: 2020-11-11
+  changes:
   - type: internal
     impact: patch
     title: The release pipeline is now enabled for hotfix releases
@@ -49,6 +50,17 @@
     impact: patch
     description: |-
       - upgrade Kubernetes libs from v1.17.6 to v1.17.13 (see [K8s changelog](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.17.md))
+
+  - title: improve pkg/runctl/cfg
+    type: internal
+    impact: patch
+    description: |-
+      - fix: pipeline run fails with `error_config` if its `spec.profiles.network` is set to the name of the _default_ network profile
+      - do not trim whitespace from configured network policies, as it may destroy YAML wellformedness
+      - fail loading the pipeline runs configuration if the network policies config map does not exist
+      - give more precise error messages in case of erroneous pipeline runs configuration
+      - lots of refactoring in `pkg/runctl/cfg`
+    pullRequestNumber: 181
 
 - version: "0.6.0"
   date: 2020-11-09

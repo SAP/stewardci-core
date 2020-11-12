@@ -398,27 +398,29 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		return c.testing.setupNetworkPolicyFromConfigStub(ctx)
 	}
 
+	networkProfile := ctx.pipelineRunsConfig.DefaultNetworkProfile
+
+	spec := ctx.pipelineRun.GetSpec()
+	if spec.Profiles != nil && spec.Profiles.Network != "" {
+		networkProfile = spec.Profiles.Network
+
+		if _, exists := ctx.pipelineRunsConfig.NetworkPolicies[networkProfile]; !exists {
+			ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorConfig)
+			return fmt.Errorf("network profile %q does not exist", networkProfile)
+		}
+	}
+
+	if networkProfile == "" {
+		return nil
+	}
+
 	expectedGroupKind := schema.GroupKind{
 		Group: networkingv1api.GroupName,
 		Kind:  "NetworkPolicy",
 	}
+	manifestYAMLStr := ctx.pipelineRunsConfig.NetworkPolicies[networkProfile]
 
-	configStr := ctx.pipelineRunsConfig.DefaultNetworkPolicy
-
-	spec := ctx.pipelineRun.GetSpec()
-	if spec.Profiles != nil && spec.Profiles.Network != "" {
-		var exists bool
-		if configStr, exists = ctx.pipelineRunsConfig.NetworkPolicies[spec.Profiles.Network]; !exists {
-			ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorConfig)
-			return fmt.Errorf("network profile %q does not exist", spec.Profiles.Network)
-		}
-	}
-
-	if configStr == "" {
-		return nil
-	}
-
-	return c.createResource(configStr, "networkpolicies", "network policy", expectedGroupKind, ctx)
+	return c.createResource(manifestYAMLStr, "networkpolicies", "network policy", expectedGroupKind, ctx)
 }
 
 func (c *runManager) setupStaticLimitRange(ctx *runContext) error {
