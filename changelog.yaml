@@ -40,6 +40,7 @@
     impact: patch
     description: |-
       - upgrade Kubernetes libs from v1.17.6 to v1.17.13 (see [K8s changelog](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.17.md))
+    pullRequestNumber: 180
 
   - title: improve pkg/runctl/cfg
     type: internal
