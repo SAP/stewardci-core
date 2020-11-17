@@ -46,7 +46,8 @@ const (
 )
 
 func init() {
-	ParseFlags(os.Getenv(Name))
+	flags := os.Getenv(Name)
+	ParseFlags(flags)
 }
 
 var (
