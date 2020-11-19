@@ -84,7 +84,7 @@ type JenkinsfileRunnerSpec struct {
 	Image string `json:"image,omitempty"`
 
 	// ImagePullPolicy is the pull policy for the image
-	ImagePullPolicy string `json:imagePullPolicy,omitempty`
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
 }
 
 // JenkinsFile represents the location from where to get the pipeline
