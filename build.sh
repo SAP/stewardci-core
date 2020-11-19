@@ -2,6 +2,12 @@
 set -eu -o pipefail
 exec 1>&2 <&-
 
+declare -r -a GO_PACKAGES_ALL=(
+    "./cmd/..."
+    "./pkg/..."
+    "./test/..."
+)
+
 HERE=$(cd "$(dirname "$BASH_SOURCE")" && pwd) || {
     echo "error: could not determine script location" >&2
     exit 1
@@ -35,11 +41,16 @@ function main() {
         "GOLINT=$GOLINT_EXE"
 
     banner1 "go build"
-    go build ./... || die
+    go build "${GO_PACKAGES_ALL[@]}" || die "" "FAILED"
+
+    banner1 "go vet"
+    go vet "${GO_PACKAGES_ALL[@]}" || {
+        echo $'\n'"Check whether the issues above are real issues that must be fixed!"
+    }
 
     banner1 "go test"
-    go test -coverprofile coverage.txt ./... || die
-    go tool cover -html=coverage.txt -o coverage.html || die
+    go test -coverprofile coverage.txt "${GO_PACKAGES_ALL[@]}" || die "" "FAILED"
+    go tool cover -html=coverage.txt -o coverage.html || die "" "FAILED"
 
     if [[ $P_FULL ]]; then
         # compile tests in ./test/.. without running them
@@ -51,16 +62,16 @@ function main() {
                 err=1
             }
         done
-        [[ ! $err ]] || die
+        [[ ! $err ]] || die "" "FAILED"
     fi
 
     banner1 "golint"
-    "$GOLINT_EXE" -set_exit_status ./pkg/... ./cmd/... ./test/... || die
+    "$GOLINT_EXE" -set_exit_status "${GO_PACKAGES_ALL[@]}" || die "" "FAILED"
 
     banner1 "gofmt"
-    gofmt -l ./pkg/ ./cmd/ ./test/ || die
-    gofmt -d ./pkg/ ./cmd/ ./test/ > fmt_diff.txt || die
-    [[ -s fmt_diff.txt ]] && die "gofmt failed, see fmt_diff.txt"
+    gofmt -l -d "${GO_PACKAGES_ALL[@]%/...}" || die "" "FAILED"
+    gofmt -d "${GO_PACKAGES_ALL[@]%/...}" > fmt_diff.txt || die "" "FAILED"
+    [[ -s fmt_diff.txt ]] && die "" "FAILED"
 
     echo $'\n'"SUCCESS"
 }
