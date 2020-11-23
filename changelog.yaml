@@ -21,7 +21,15 @@
 - version: "NEXT"
   date: TBD
   changes:
-
+  - type: bug
+    impact: patch
+    title: Fix struct field tag syntax for "pkg/apis/steward/v1alpha1".JenkinsfileRunnerSpec
+    description:
+    warning:
+    upgradeNotes:
+    deprecations:
+    pullRequestNumber: 186
+    jiraIssueNumber:
 - version: "0.6.1"
   date: 2020-11-11
   changes:
