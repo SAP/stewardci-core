@@ -2,10 +2,19 @@
 set -eu -o pipefail
 exec 1>&2 <&-
 
+declare -r -a GO_PACKAGES_TEST=(
+    "./test/..."
+)
+
+declare -r -a GO_PACKAGES_HELM_TEST=(
+    "./charts/steward/test/..."
+)
+
 declare -r -a GO_PACKAGES_ALL=(
     "./cmd/..."
     "./pkg/..."
-    "./test/..."
+    "${GO_PACKAGES_TEST[@]}"
+    "${GO_PACKAGES_HELM_TEST[@]}"
 )
 
 HERE=$(cd "$(dirname "$BASH_SOURCE")" && pwd) || {
@@ -56,9 +65,16 @@ function main() {
         # compile tests in ./test/.. without running them
         local err=
         for tags in "frameworktest" "loadtest" "opennet" "closednet" "e2e"; do
-            info "" "compiling ./test/... with tags '$tags'"
-            test_compile_only "$(go list ./test/...)" -tags="$tags" || {
-                info "failed to compile ./test/... with tags '$tags'"
+            info "" "compiling '${GO_PACKAGES_TEST[@]}' with tags '$tags'"
+            test_compile_only "$(go list "${GO_PACKAGES_TEST[@]}")" -tags="$tags" || {
+                info "" "failed to compile '${GO_PACKAGES_TEST[@]}' with tags '$tags'"
+                err=1
+            }
+        done
+        for tags in "helm"; do
+            info "" "compiling '${GO_PACKAGES_HELM_TEST[@]}' with tags '$tags'"
+            test_compile_only "$(go list "${GO_PACKAGES_HELM_TEST[@]}")" -tags="$tags" || {
+                info "" "failed to compile '${GO_PACKAGES_HELM_TEST[@]}' with tags '$tags'"
                 err=1
             }
         done
