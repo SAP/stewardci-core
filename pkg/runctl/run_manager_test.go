@@ -1865,6 +1865,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			)
 			t.Log("input:", pipelineRunJSON)
 			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
+
 			// exercise
 			resultError := examinee.createTektonTaskRun(runCtx)
 
