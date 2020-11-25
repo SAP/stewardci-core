@@ -129,10 +129,9 @@ type Elasticsearch struct {
 	// number, bool).
 	RunID *CustomJSON `json:"runID"`
 
-	// logs can be stored in different indeces in elasticSearch
-	// There is a indexURL defined at cluster level but This field allows
-	// entering different indexURL for each pipelineRun.
-	// It needs to be of type string
+	// IndexURL is the HTTP(S) URL of the Elasticsearch index to write
+	// logs to.
+	// If not set, a default log destination will be used.
 	// +optional
 	IndexURL string `json:"indexURL,omitempty"`
 
