@@ -135,9 +135,10 @@ type Elasticsearch struct {
 	// +optional
 	IndexURL string `json:"indexURL,omitempty"`
 
-	// ElasticsearchCredential is the name of the Kubernetes `v1/Secret` resource object
+	// AuthSecret is the name of the Kubernetes `v1/Secret` resource object
 	// of type `kubernetes.io/basic-auth` that contains the username and
-	// password for authentication when accessing the index URL.
+	// password for authenticating requests to `IndexURL`.
+	// It is ignored when `IndexURL` is not set.
 	// +optional
 	AuthSecret string `json:"authSecret,omitempty"`
 }
