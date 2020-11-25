@@ -1768,7 +1768,9 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			// verify
 			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
 			param := findTaskRunParam(taskRun, TaskRunParamNameRunIDJSON)
-			assert.Assert(t, param == nil)
+			assert.Assert(t, param != nil)
+			assert.Equal(t, tekton.ParamTypeString, param.Value.Type)
+			assert.Equal(t, tc.expectedParamValue, param.Value.StringVal)
 		})
 	}
 
@@ -1884,6 +1886,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 		URL  string
 	}{
 		{"indexURLWithIncorrectScheme", `"indexURL": "ftp://testURL"`},
+		{"indexURLWithNonsenseScheme", `"indexURL": "nonsense://testURL"`},
 	} {
 		t.Run(test+"_"+tc.name, func(t *testing.T) {
 			// setup
@@ -1923,14 +1926,13 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	 */
 	test = "CorrectFormatForIndexURL"
 	for _, tc := range []struct {
-		name               string
-		URL                string
-		expectedParamValue string
+		name string
+		URL  string
 	}{
-		{"validhttpURL", `"indexURL": "http://host.domain"`, "http://host.domain"},
-		{"validhttpsURL", `"indexURL": "https://host.domain"`, "https://host.domain"},
-		{"validHTTPURL", `"indexURL": "HTTP://host.domain"`, "http://host.domain"},
-		{"validHTTPSURL", `"indexURL": "HTTPS://host.domain"`, "https://host.domain"},
+		{"validhttpURL", `"indexURL": "http://host.domain"`},
+		{"validhttpsURL", `"indexURL": "https://host.domain"`},
+		{"validHTTPURL", `"indexURL": "HTTP://host.domain"`},
+		{"validHTTPSURL", `"indexURL": "HTTPS://host.domain"`},
 	} {
 		t.Run(test+"_"+tc.name, func(t *testing.T) {
 			// setup
@@ -1958,18 +1960,13 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 				tc.URL,
 			)
 			t.Log("input:", pipelineRunJSON)
-			examinee, runCtx, cf := setupExaminee(t, pipelineRunJSON)
+			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
 
 			// exercise
 			resultError := examinee.createTektonTaskRun(runCtx)
 
 			// verify
 			assert.NilError(t, resultError)
-			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
-			param := findTaskRunParam(taskRun, TaskRunParamNameIndexURL)
-			assert.Assert(t, param != nil)
-			assert.Equal(t, tekton.ParamTypeString, param.Value.Type)
-			assert.Equal(t, tc.expectedParamValue, param.Value.StringVal)
 		})
 	}
 }

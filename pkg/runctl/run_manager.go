@@ -579,7 +579,7 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 	err = c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
 	if err != nil {
 		ctx.pipelineRun.UpdateMessage(err.Error())
-		ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
+		ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorConfig)
 		return err
 	}
 
@@ -678,21 +678,19 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 			tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_INDEX_URL", ""),
 		}
 	} else {
-		if spec.Logging.Elasticsearch.RunID != nil {
-			runIDJSON, err := toJSONString(&spec.Logging.Elasticsearch.RunID)
-			if err != nil {
-				return errors.WithMessage(err,
-					"could not serialize spec.logging.elasticsearch.runid to JSON",
-				)
-			}
-
-			params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON", runIDJSON))
-			// use default values from build template for all other params
+		runIDJSON, err := toJSONString(&spec.Logging.Elasticsearch.RunID)
+		if err != nil {
+			return errors.WithMessage(err,
+				"could not serialize spec.logging.elasticsearch.runid to JSON",
+			)
 		}
+
+		params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON", runIDJSON))
+		// use default values from build template for all other params
 
 		if spec.Logging.Elasticsearch.IndexURL != "" {
 
-			elasticSearchURL, err := ensureValidElasticsearchIndexURL(spec.Logging.Elasticsearch.IndexURL)
+			_, err := ensureValidElasticsearchIndexURL(spec.Logging.Elasticsearch.IndexURL)
 			if err != nil {
 				return errors.WithMessage(err,
 					"spec.Logging.Elasticsearch.IndexURL is not a valid URL",
