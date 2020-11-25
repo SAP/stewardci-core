@@ -1962,8 +1962,9 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 
 			// exercise
 			resultError := examinee.createTektonTaskRun(runCtx)
-			assert.NilError(t, resultError)
+
 			// verify
+			assert.NilError(t, resultError)
 			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
 			param := findTaskRunParam(taskRun, TaskRunParamNameIndexURL)
 			assert.Assert(t, param != nil)
