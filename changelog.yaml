@@ -21,6 +21,10 @@
 - version: "NEXT"
   date: TBD
   changes:
+  - type: doucmentation
+    impact: patch
+    title: Add network policy examples
+    description: Add examples for pipeline runs with configured network policy profiles.
   - type: bug
     impact: patch
     title: Fix struct field tag syntax for "pkg/apis/steward/v1alpha1".JenkinsfileRunnerSpec
