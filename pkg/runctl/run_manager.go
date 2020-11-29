@@ -771,10 +771,10 @@ func tektonStringParam(name string, value string) tekton.Param {
 func ensureValidElasticsearchIndexURL(indexURL string) (string, error) {
 	validURL, err := url.Parse(indexURL)
 	if err != nil {
-		return "", errors.Wrapf(err, "value %q of field spec.logging.elasticSearch.indexURL does not have a valid URL format", indexURL)
+		return "", err
 	}
 	if !(strings.ToLower(validURL.Scheme) == "http") && !(strings.ToLower(validURL.Scheme) == "https") {
-		return "", fmt.Errorf("value %q of field spec.logging.elasticSearch.indexURL is invalid: scheme not supported: %q", validURL, validURL.Scheme)
+		return "", fmt.Errorf("scheme not supported: %q", validURL, validURL.Scheme)
 	}
 
 	return validURL.String(), nil
