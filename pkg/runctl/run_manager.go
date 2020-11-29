@@ -692,8 +692,9 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 
 			_, err := ensureValidElasticsearchIndexURL(spec.Logging.Elasticsearch.IndexURL)
 			if err != nil {
-				return errors.WithMessage(err,
-					"spec.Logging.Elasticsearch.IndexURL is not a valid URL",
+				return errors.Wrapf(err,
+					"field \"spec.logging.elasticsearch.indexURL\" has invalid value %q",
+					spec.Logging.Elasticsearch.IndexURL,
 				)
 			}
 			// use default values from build template for now
