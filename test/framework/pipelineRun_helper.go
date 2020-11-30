@@ -41,7 +41,7 @@ func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...Tes
 				fmt.Sprintf("%s_%d", getTestPlanName(testPlan), i)
 			ctx = SetTestName(ctx, name)
 			runID := &api.CustomJSON{
-				map[string]string{
+				Value: map[string]string{
 					"jobId":   name,
 					"buildId": uuid.New().String(),
 					"realmId": GetRealmUUID(ctx),

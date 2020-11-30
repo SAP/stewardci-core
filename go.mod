@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	cloud.google.com/go v0.58.0 // indirect
-	github.com/aws/aws-sdk-go v1.32.1 // indirect
+	github.com/aws/aws-sdk-go v1.34.1 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/ghodss/yaml v1.0.0
