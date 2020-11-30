@@ -774,7 +774,7 @@ func ensureValidElasticsearchIndexURL(indexURL string) (string, error) {
 		return "", err
 	}
 	if !(strings.ToLower(validURL.Scheme) == "http") && !(strings.ToLower(validURL.Scheme) == "https") {
-		return "", fmt.Errorf("scheme not supported: %q", validURL, validURL.Scheme)
+		return "", fmt.Errorf("scheme not supported: %q", validURL.Scheme)
 	}
 
 	return validURL.String(), nil

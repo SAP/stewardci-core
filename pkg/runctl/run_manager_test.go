@@ -1657,6 +1657,9 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 		runIDJSON          string
 		expectedParamValue string
 	}{
+		{"none", ``, `null`},
+		{"dummy", `"___dummy___": 1`, `null`},
+		{"null", `"runID": null`, `null`},
 		{"true", `"runID": true`, `true`},
 		{"false", `"runID": false`, `false`},
 		{"int", `"runID": 123`, `123`},
@@ -1717,60 +1720,6 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 
 			param = findTaskRunParam(taskRun, TaskRunParamNameIndexURL)
 			assert.Assert(t, is.Nil(param))
-		})
-	}
-
-	/**
-	 * Test: Various JSON values for spec.logging.elasticsearch.runID
-	 * are correctly passed as Tekton TaskRun input parameter.
-	 */
-	test = "SuppressRunID"
-	for _, tc := range []struct {
-		name               string
-		runIDJSON          string
-		expectedParamValue string
-	}{
-		{"none", ``, `null`},
-		{"null", `"runID": null`, `null`},
-		{"dummy", `"___dummy___": 1`, `null`},
-	} {
-		t.Run(test+"_"+tc.name, func(t *testing.T) {
-			// setup
-			pipelineRunJSON := fmt.Sprintf(fixIndent(`
-				{
-					"apiVersion": "steward.sap.com/v1alpha1",
-					"kind": "PipelineRun",
-					"metadata": {
-						"name": "dummy1",
-						"namespace": "namespace1"
-					},
-					"spec": {
-						"jenkinsFile": {
-							"repoUrl": "dummyRepoUrl",
-							"revision": "dummyRevision",
-							"relativePath": "dummyRelativePath"
-						},
-						"logging": {
-							"elasticsearch": {
-								%s
-							}
-						}
-					}
-				}`),
-				tc.runIDJSON,
-			)
-			t.Log("input:", pipelineRunJSON)
-			examinee, runCtx, cf := setupExaminee(t, pipelineRunJSON)
-
-			// exercise
-			resultError := examinee.createTektonTaskRun(runCtx)
-			assert.NilError(t, resultError)
-			// verify
-			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
-			param := findTaskRunParam(taskRun, TaskRunParamNameRunIDJSON)
-			assert.Assert(t, param != nil)
-			assert.Equal(t, tekton.ParamTypeString, param.Value.Type)
-			assert.Equal(t, tc.expectedParamValue, param.Value.StringVal)
 		})
 	}
 
@@ -1872,7 +1821,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			resultError := examinee.createTektonTaskRun(runCtx)
 
 			// VERIFY
-			assert.ErrorContains(t, resultError, "field spec.logging.elasticSearch.indexURL is invalid: scheme not supported")
+			assert.ErrorContains(t, resultError, "scheme not supported")
 		})
 	}
 
@@ -1917,7 +1866,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
 			// exercise
 			resultError := examinee.createTektonTaskRun(runCtx)
-			assert.ErrorContains(t, resultError, "field spec.logging.elasticSearch.indexURL is invalid: scheme not supported")
+			assert.ErrorContains(t, resultError, "scheme not supported")
 		})
 	}
 
