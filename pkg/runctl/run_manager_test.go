@@ -1778,54 +1778,6 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 	}
 
 	/**
-	 * Test: If provided indexURL at spec.logging.elasticsearch.indexURL
-	 * does not have correct format test should fail.
-	 */
-	test = "ErrorOnWrongFormattedIndexURL"
-	for _, tc := range []struct {
-		name string
-		URL  string
-	}{
-		{"indexURLWithNoScheme", `"indexURL": "testURL"`},
-		{"indexURLWithWrongFormat2", `"indexURL": "http//testURL"`},
-	} {
-		t.Run(test+"_"+tc.name, func(t *testing.T) {
-			// setup
-			pipelineRunJSON := fmt.Sprintf(fixIndent(`
-				{
-					"apiVersion": "steward.sap.com/v1alpha1",
-					"kind": "PipelineRun",
-					"metadata": {
-						"name": "dummy1",
-						"namespace": "namespace1"
-					},
-					"spec": {
-						"jenkinsFile": {
-							"repoUrl": "dummyRepoUrl",
-							"revision": "dummyRevision",
-							"relativePath": "dummyRelativePath"
-						},
-						"logging": {
-							"elasticsearch": {
-								%s
-							}
-						}
-					}
-				}`),
-				tc.URL,
-			)
-			t.Log("input:", pipelineRunJSON)
-			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
-
-			// exercise
-			resultError := examinee.createTektonTaskRun(runCtx)
-
-			// VERIFY
-			assert.ErrorContains(t, resultError, "scheme not supported")
-		})
-	}
-
-	/**
 	 * Test: If `spec.logging.elasticsearch.indexURL` has an unsupported
 	 * scheme, an error is returned.
 	 */
@@ -1834,8 +1786,12 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 		name string
 		URL  string
 	}{
+		{"indexURLWithNoScheme", `"indexURL": "testURL"`},
 		{"indexURLWithIncorrectScheme", `"indexURL": "ftp://testURL"`},
 		{"indexURLWithNonsenseScheme", `"indexURL": "nonsense://testURL"`},
+		{"indexURLWithWrongFormat2", `"indexURL": "http//testURL"`},
+		{"indexURLWithWrongFormat3", `"indexURL": "foo///bar"`},
+		{"indexURLWithWrongFormat3", `"indexURL": "foo::bar"`},
 	} {
 		t.Run(test+"_"+tc.name, func(t *testing.T) {
 			// setup

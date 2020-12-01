@@ -118,33 +118,6 @@ func Test_PipelineRunLoggingIndexURL(t *testing.T) {
 	}, pipelineRun.Spec.Logging)
 }
 
-func Test_PipelineRunLoggingWithRunIDAndWithIndexURL(t *testing.T) {
-	buildID := uuid.New().String()
-	realmID := uuid.New().String()
-	pipelineRun := PipelineRun("prefix1", "namespace1",
-		PipelineRunSpec(
-			LoggingWithIndexURL("testURL"),
-			LoggingWithRunID(&api.CustomJSON{
-				map[string]string{
-					"jobId":   "1",
-					"buildId": buildID,
-					"realmId": realmID,
-				}}),
-		),
-	)
-	assert.DeepEqual(t, &api.Logging{
-		Elasticsearch: &api.Elasticsearch{
-			IndexURL: "testURL",
-			RunID: &api.CustomJSON{
-				map[string]string{
-					"jobId":   "1",
-					"buildId": buildID,
-					"realmId": realmID,
-				}},
-		},
-	}, pipelineRun.Spec.Logging)
-}
-
 func Test_PipelineRunLoggingWithAllParams(t *testing.T) {
 	buildID := uuid.New().String()
 	realmID := uuid.New().String()
@@ -222,6 +195,7 @@ func Test_CheckConflictsBetweenIndexURLsOfTests(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
 			t.Parallel()
 			assert.DeepEqual(t, tc.expectedResult, tc.pipelineRun.Spec.Logging)
 		})
