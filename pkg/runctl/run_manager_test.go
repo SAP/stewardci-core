@@ -1779,19 +1779,21 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 
 	/**
 	 * Test: If `spec.logging.elasticsearch.indexURL` has an unsupported
-	 * scheme, an error is returned.
+	 * scheme, or format of the URL is incorrect an error is returned.
 	 */
-	test = "ErrorOnWrongSchemeInIndexURL"
+	test = "ErrorOnWrongFormattedIndexURL"
 	for _, tc := range []struct {
-		name string
-		URL  string
+		name          string
+		URL           string
+		expectedError string
 	}{
-		{"indexURLWithNoScheme", `"indexURL": "testURL"`},
-		{"indexURLWithIncorrectScheme", `"indexURL": "ftp://testURL"`},
-		{"indexURLWithNonsenseScheme", `"indexURL": "nonsense://testURL"`},
-		{"indexURLWithWrongFormat2", `"indexURL": "http//testURL"`},
-		{"indexURLWithWrongFormat3", `"indexURL": "foo///bar"`},
-		{"indexURLWithWrongFormat3", `"indexURL": "foo::bar"`},
+		{"indexURLWithNoScheme", `"indexURL": "testURL"`, "scheme not supported"},
+		{"indexURLWithIncorrectScheme", `"indexURL": "ftp://testURL"`, "scheme not supported"},
+		{"indexURLWithNonsenseScheme", `"indexURL": "nonsense://testURL"`, "scheme not supported"},
+		{"indexURLWithWrongFormat2", `"indexURL": "http//testURL"`, "scheme not supported"},
+		{"indexURLWithWrongFormat3", `"indexURL": ":///bar"`, "missing protocol scheme"},
+		{"indexURLWithWrongFormat4", `"indexURL": "http://\bar"`, "invalid control character in URL"},
+		{"emptyIndexURL", `"indexURL": "http://testURL:wrongPort"`, "invalid port"},
 	} {
 		t.Run(test+"_"+tc.name, func(t *testing.T) {
 			// setup
@@ -1822,7 +1824,7 @@ func Test_RunManager_Log_Elasticsearch(t *testing.T) {
 			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
 			// exercise
 			resultError := examinee.createTektonTaskRun(runCtx)
-			assert.ErrorContains(t, resultError, "scheme not supported")
+			assert.ErrorContains(t, resultError, tc.expectedError)
 		})
 	}
 
