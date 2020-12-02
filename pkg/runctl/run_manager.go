@@ -3,6 +3,8 @@ package runctl
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strings"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -574,7 +576,13 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 	}
 	c.addTektonTaskRunParamsForJenkinsfileRunnerImage(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
-	c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
+	err = c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
+	if err != nil {
+		ctx.pipelineRun.UpdateMessage(err.Error())
+		ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorConfig)
+		return err
+	}
+
 	c.addTektonTaskRunParamsForRunDetails(ctx, &tektonTaskRun)
 	tektonClient := c.factory.TektonV1beta1()
 	_, err = tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(&tektonTaskRun)
@@ -677,13 +685,23 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 			)
 		}
 
-		params = []tekton.Param{
-			tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON", runIDJSON),
-			// use default values from build template for all other params
+		params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON", runIDJSON))
+		// use default values from build template for all other params
+
+		if spec.Logging.Elasticsearch.IndexURL != "" {
+
+			_, err := ensureValidElasticsearchIndexURL(spec.Logging.Elasticsearch.IndexURL)
+			if err != nil {
+				return errors.Wrapf(err,
+					"field \"spec.logging.elasticsearch.indexURL\" has invalid value %q",
+					spec.Logging.Elasticsearch.IndexURL,
+				)
+			}
+			// use default values from build template for now
 		}
 	}
-
 	tektonTaskRun.Spec.Params = append(tektonTaskRun.Spec.Params, params...)
+
 	return nil
 }
 
@@ -748,4 +766,16 @@ func tektonStringParam(name string, value string) tekton.Param {
 			StringVal: value,
 		},
 	}
+}
+
+func ensureValidElasticsearchIndexURL(indexURL string) (string, error) {
+	validURL, err := url.Parse(indexURL)
+	if err != nil {
+		return "", err
+	}
+	if !(strings.ToLower(validURL.Scheme) == "http") && !(strings.ToLower(validURL.Scheme) == "https") {
+		return "", fmt.Errorf("scheme not supported: %q", validURL.Scheme)
+	}
+
+	return validURL.String(), nil
 }
