@@ -14,7 +14,7 @@ N/A
 
 ### Submitter checklist
 
-- [ ] Change has been tested (on a back-end cluster)
+- [ ] Change has been tested (on a K8s cluster, manually and using the Steward integration tests)
 - [ ] (If applicable) Jira issue is linked in PR and [changelog.yaml]
 - [ ] [changelog.yaml] entry with upgrade notes is prepared and appropriate for the audience affected by the change (users or developer, depending on the change)<br/>
 - [ ] Semantic version diffed against [last release][releases] and updated accordingly. In this project the version has to be maintained here:
