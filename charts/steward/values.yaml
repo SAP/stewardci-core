@@ -12,7 +12,7 @@ runController:
     logVerbosity: 2
   image:
     repository: stewardci/stewardci-run-controller
-    tag: "0.5.1" #Do not modify this line! RunController tag updated automatically
+    tag: "0.6.1" #Do not modify this line! RunController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -39,7 +39,7 @@ tenantController:
     logVerbosity: 2
   image:
     repository: stewardci/stewardci-tenant-controller
-    tag: "0.5.1" #Do not modify this line! TenantController tag updated automatically
+    tag: "0.6.1" #Do not modify this line! TenantController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -77,13 +77,11 @@ pipelineRuns:
     elasticsearch:
       # indexURL is the URL of the Elasticsearch index to send logs to.
       # If null or empty, logging to Elasticsearch is disabled.
-      # Example: http://elasticsearch-master.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc
+      # Example: http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc
       indexURL: ""
   jenkinsfileRunner:
-    image:
-      repository: stewardci/stewardci-jenkinsfile-runner
-      tag: "200921_6cc247f"
-      pullPolicy: IfNotPresent
+    image: "stewardci/stewardci-jenkinsfile-runner:201026_824e593"
+    imagePullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0
       -Dhudson.slaves.NodeProvisioner.MARGIN=50
@@ -103,7 +101,10 @@ pipelineRuns:
       runAsGroup: 1000
       fsGroup: 1000
   timeout: "60m"
-  networkPolicy: ""
+  # networkPolicy is DEPRECATED: use 'networkPolicies' instead.
+  # networkPolicy: ""
+  defaultNetworkPolicyName: ""
+  networkPolicies: {}
   limitRange: ""
   resourceQuota: ""
 
@@ -113,3 +114,5 @@ hooks:
       repository: docker.io/bitnami/kubectl
       tag: "1.17"
       pullPolicy: IfNotPresent
+
+featureFlags: ""

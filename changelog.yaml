@@ -1,51 +1,203 @@
 ## -----------------------------------------
 ## Copy this template for new change entries
 ## -----------------------------------------
-#    - type: [bug, enhancement, internal]
-#      impact: [incompatible, minor, patch]
-#      title: <title>
-#      description: >-
-#        <description>
-#      warning: >-
-#        <optional warning message>
-#      upgradeNotes: >-
-#        <optional upgrade guidelines>
-#      pullRequestNumber: <pull request number>
+#  - title: <title>
+#    type: [bug, enhancement, internal]
+#    impact: [incompatible, minor, patch]
+#    description: |-
+#      <description (markdown syntax)>
+#    warning: |-
+#      <optional warning message (markdown syntax)>
+#    upgradeNotes: |-
+#      <optional upgrade guidelines (markdown syntax)>
+#    deprecations: |-
+#      <optional deprecation notes (markdown syntax)>
+#    pullRequestNumber: <pull request number>
+#    jiraIssueNumber: <Jira issue number>
 
-#      jiraIssueNumber: <Internal Jira issue number>
 
+# Do not modify the "NEXT" version block.
+# Do not change the order ("NEXT" needs to be on top).
 - version: "NEXT"
   date: TBD
   changes:
   - type: enhancement
     impact: minor
     title: Rename secrets for jfr if annotation is provided
+    pullRequestNumber: 165
+    jiraIssueNumber: 315
+
+  - type: bug
+    impact: patch
+    title: Fix struct field tag syntax for "pkg/apis/steward/v1alpha1".JenkinsfileRunnerSpec
+    description:
+    warning:
+    upgradeNotes:
+    deprecations:
+    pullRequestNumber: 186
+    jiraIssueNumber:
+
+  - title: Upgrade Go dependencies
+    type: internal
+    impact: patch
+    description: |-
+      - upgrade `github.com/aws/aws-sdk-go` from v1.32.1 to v1.34.1
+        (see [changelog](https://github.com/aws/aws-sdk-go/releases/tag/v1.34.1))
+
+  - title: Make Elasticsearch index URL configurable per pipeline run
+    type: enhancement
+    impact: minor
+    description: >-
+      Enhance the `pipelineruns.steward.sap.com` CRD by fields to configure the
+      Elasticsearch index URL and credential to be used to store build logs.
+
+      However, these values are still ignored by Steward. Log destinations per
+      pipeline run will be enabled with a later change.
+    pullRequestNumber: 172
+    jiraIssueNumber: 984
+
+- version: "0.6.1"
+  date: 2020-11-11
+  changes:
+  - type: internal
+    impact: patch
+    title: The release pipeline is now enabled for hotfix releases
+    description: See [developer documentation](https://github.com/SAP/stewardci-core/blob/master/docs/development/README.md#hotfix-releases) for more information.
+    warning:
+    upgradeNotes:
+    deprecations:
+    pullRequestNumber: 179
+    jiraIssueNumber: 316
+
+  - title: Upgrade Go dependencies
+    type: internal
+    impact: patch
+    description: |-
+      - upgrade Kubernetes libs from v1.17.6 to v1.17.13 (see [K8s changelog](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.17.md))
+    pullRequestNumber: 180
+
+  - title: improve pkg/runctl/cfg
+    type: internal
+    impact: patch
+    description: |-
+      - fix: pipeline run fails with `error_config` if its `spec.profiles.network` is set to the name of the _default_ network profile
+      - do not trim whitespace from configured network policies, as it may destroy YAML wellformedness
+      - fail loading the pipeline runs configuration if the network policies config map does not exist
+      - give more precise error messages in case of erroneous pipeline runs configuration
+      - lots of refactoring in `pkg/runctl/cfg`
+    pullRequestNumber: 181
+
+- version: "0.6.0"
+  date: 2020-11-09
+  changes:
+  - title: Introduce feature flags
+    type: internal
+    impact: patch
+    description: |-
+      There's a new Go package `pkg/featureflag` to deal
+      with feature flags in Steward controllers.
+      Feature flags can be configured via Helm Chart.
+    pullRequestNumber: 178
+
+  - type: enhancement
+    impact: minor
+    title: Introduce network profiles
+    description: |-
+      Allow Steward clients to select a network profile per pipeline run.
+
+      Network profiles are named network-related configurations defined by Steward operators.
+      Currently they define a Kubernetes network policy. Additional network-related settings may be
+      added in the future.
+
+      Clients can choose a network profile via `spec.profiles.network` of a PipelineRun
+      resource object.
+    warning: ""
+    upgradeNotes: |-
+      - PiplineRun objects may now have a `status.result` value `error_config` (see Steward API docs).
+      - Activating the new feature flag `RetryOnInvalidPipelineRunsConfig` will let the pipeline run controller retry reconciling in case the controller configuration (in ConfigMaps) is invalid or cannot be loaded. Without the feature flag all PipelineRun objects will be set to finished with result code `error_infra`. The new behaviour will become the default in a future release of Steward.
+    deprecations: |-
+      Helm configuration value `pipelineRuns.networkPolicy` is deprecated:
+      use `pipelineRuns.networkPolicies` instead.
+    pullRequestNumber: 160
+    jiraIssueNumber: 1305
+
+  - type: enhancement
+    impact: incompatible
+    title: Make Jenkinsfile Runner properties configurable in PipelineRun custom resource objects.
+    description: |-
+      Jenkinsfile Runner properties are configurable in Steward PipelineRun manifests at `spec.jenkinsfileRunner` now.
+    warning: |-
+        Old configuration will not work anymore! See upgrade notes.
+    upgradeNotes: |-
+      Helm Chart Configuration changed:
+
+      - `pipelineRuns.jenkinsfileRunner.image.repository` is outdated: use `pipelineRuns.jenkinsfileRunner.image` instead
+      - `pipelineRuns.jenkinsfileRunner.image.tag` is outdated: use `pipelineRuns.jenkinsfileRunner.image` instead
+      - `pipelineRuns.jenkinsfileRunner.image.pullPolicy` is outdated: use `pipelineRuns.jenkinsfileRunner.imagePullPolicy` instead
+    deprecations:
+    pullRequestNumber: 162
+    jiraIssueNumber: 983
+  - type: enhancement
+    impact: minor
+    title: Replace insensitive terms with inclusive language
+    description: |-
+      Insensitive terms should be replaced by inclusive language in all SAP open source repositories.
+    warning:
+    upgradeNotes:
+    deprecations:
+    pullRequestNumber: 176
+    jiraIssueNumber: 20
+
+- version: "0.5.2"
+  date: 2020-10-28
+  changes:
+
+  - type: internal
+    impact: patch
+    title: Fix clustertask
+    description: |-
+      Fix variables in clustertask to changed structure.
+    warning:
+    upgradeNotes:
+    deprecations:
+    pullRequestNumber: 173
+
+  - type: internal
+    impact: patch
+    title: Updated Jenkinsfile Runner based on adoptopenjdk11 instead of openjdk8
+    description: |-
+      Besides plugin updates, Jenkins Core update and a Jenkinsfile Runner update the
+      Jenkinsfile Runner image has been switched to adoptopenjdk11, mainly to reduce the attack vector.
+    warning:
+    upgradeNotes:
+    deprecations:
+    pullRequestNumber: 175
+    jiraIssueNumber: 1348
 
 - version: "0.5.1"
   date: 2020-10-05
   changes:
+
   - type: bug
     impact: patch
     title: Fix clustertask
-
-    description: >-
+    description: |-
       Fix clustertask to match v1beta1 specification.
     pullRequestNumber: 163
 
 - version: "0.5.0"
   date: 2020-08-29
   changes:
+
   - type: enhancement
     impact: incompatible
     title: Upgrade dependency to Tekton v0.14.3
-
-    description: >-
+    description: |-
       Build and run against Tekton v0.14.3.
     warning: Requires Tekton v0.14.3.
-
-    upgradeNotes: >-
+    upgradeNotes: |-
       The target Kubernetes system must have Tekton v0.14.3 installed. Higher versions may also work.
-      In addition, Steward Jenkinsfile Runner Image version <a href="https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/200921_6cc247f">200921_6cc247f</a> or later is required.
+      In addition, Steward Jenkinsfile Runner Image version [200921_6cc247f](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/200921_6cc247f) or later is required.
     pullRequestNumber: 151
-
     jiraIssueNumber: 1330
+

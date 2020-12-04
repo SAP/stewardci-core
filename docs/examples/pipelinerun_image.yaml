@@ -1,0 +1,15 @@
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+metadata:
+  generateName: image-
+spec:
+  jenkinsfileRunner:
+    image: stewardci/stewardci-jenkinsfile-runner:200921_6cc247f
+    imagePullPolicy: Always
+  jenkinsFile:
+    repoUrl: https://github.com/SAP-samples/stewardci-example-pipelines
+    revision: master
+    relativePath: success/Jenkinsfile
+  logging:
+    elasticsearch:
+      runID: {"build": 1}

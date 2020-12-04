@@ -3,11 +3,15 @@ Upstream-Name: github.com/SAP/stewardci-core
 Upstream-Contact: roman.isbrecht_at_sap.com
 Source: github.com/SAP/stewardci-core
 
-Files: **
+Files: *
 Copyright: 2019-2020 SAP SE or an SAP affiliate company and project "Steward" contributors
 License: Apache-2.0
 
-Files: pkg/runctl/controller.go pkg/tenantctl/controller.go
-Copyright: The Kubernetes Authors. 
-Modifications Copyright SAP SE 2020. All rights reserved.
+Files:
+ pkg/featureflag/types_test.go
+ pkg/featureflag/types.go
+ pkg/runctl/controller.go
+ pkg/tenantctl/controller.go
+Copyright: The Kubernetes Authors.
+ Modifications Copyright SAP SE 2020. All rights reserved.
 License: Apache-2.0

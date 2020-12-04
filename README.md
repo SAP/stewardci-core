@@ -11,11 +11,12 @@ To run your own project "Steward" instance you need a Kubernetes cluster.
 
 ## Download and Installation
 
-see [Installation Guide](docs/install/README.md)
+You find more information about the installation procedure in the [Installation Guide](docs/install/README.md).<br/>
+Here you find a readable version of the [changelog](https://sap.github.io/stewardci-core/changelog.html).
 
 ## Configuration
 
-see [Installation Guide](docs/install/README.md)
+You find more information about configuration in the [Installation Guide](docs/install/README.md).
 
 ## Limitations
 

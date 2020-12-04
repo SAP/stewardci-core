@@ -73,7 +73,7 @@ Due to pod anti-affinity rules these nodes run on different Kubernetes nodes.
 Therefore your cluster will have multiple nodes running permanently.
 Choosing a higher number here may increase your infrastructure costs.
 
-With `replicas=1` we have seen that the status of the Elasticsearch master becomes yellow due to an unassigned shard.
+With `replicas=1` we have seen that the status of the Elasticsearch cluster becomes yellow due to an unassigned shard.
 As a consequence the Elasticsearch pod's readiness probe failed after a restart of the pod.
 
 See the [Elasticsearch Helm chart documentation][elastic-elasticsearch-helm-chart] for more configuration options.
@@ -83,7 +83,7 @@ __Install Kibana__ via the Helm chart from Elastic (not from `stable`):
 ```bash
 $ helm install --name kibana elastic/kibana --version 7.3.0 \
     --namespace kibana \
-    --set elasticsearchHosts=http://elasticsearch-master.elasticsearch.svc.cluster.local:9200
+    --set elasticsearchHosts=http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200
 ```
 
 See the [Kibana Helm chart documentation][elastic-kibana-helm-chart] for more configuration options.

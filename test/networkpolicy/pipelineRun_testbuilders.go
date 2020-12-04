@@ -11,11 +11,11 @@ import (
 const pipelineRepoURL = "https://github.com/SAP-samples/stewardci-example-pipelines"
 
 // PipelineRunNetworkClosedPolicy is a PipelineRunTestBuilder to build a PipelineRunTest to check network policy
-func PipelineRunNetworkClosedPolicy(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
+func PipelineRunNetworkClosedPolicy(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("net-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(name),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"netcat/Jenkinsfile"),
 			)),
@@ -25,11 +25,11 @@ func PipelineRunNetworkClosedPolicy(Namespace string, name *api.CustomJSON) f.Pi
 }
 
 // PipelineRunNetworkOpenPolicy is a PipelineRunTestBuilder to build a PipelineRunTest to check network policy
-func PipelineRunNetworkOpenPolicy(Namespace string, name *api.CustomJSON) f.PipelineRunTest {
+func PipelineRunNetworkOpenPolicy(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("net-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(name),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"netcat/Jenkinsfile"),
 			)),

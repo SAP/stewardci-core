@@ -4,7 +4,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
-	runi "github.com/SAP/stewardci-core/pkg/run"
+	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	klog "k8s.io/klog/v2"
@@ -15,7 +15,7 @@ type secretManager struct {
 }
 
 // NewSecretManager creates secrets in the run namesapce
-func NewSecretManager(secretHelper secrets.SecretHelper) runi.SecretManager {
+func NewSecretManager(secretHelper secrets.SecretHelper) runifc.SecretManager {
 	return &secretManager{
 		secretHelper: secretHelper,
 	}
