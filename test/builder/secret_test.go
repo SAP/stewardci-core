@@ -36,7 +36,8 @@ func Test_SecretWithRename(t *testing.T) {
 			Annotations: map[string]string{api.AnnotationSecretRename: "newName1"},
 		},
 		Type: v1.SecretTypeOpaque,
-		StringData: map[string]string{"username": "baz",
+		StringData: map[string]string{
+			"username": "baz",
 			"password": "secret1",
 		},
 	}

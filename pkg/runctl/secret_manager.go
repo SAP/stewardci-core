@@ -21,7 +21,7 @@ func NewSecretManager(secretHelper secrets.SecretHelper) runifc.SecretManager {
 	}
 }
 
-// CopyAll copies the required secrets based on a pipelineRun to the run namespace
+// CopyAll copies the required secrets of a pipeline run to the respective run namespace.
 func (s *secretManager) CopyAll(pipelineRun k8s.PipelineRun) (string, []string, error) {
 	imagePullSecretNames, err := s.copyImagePullSecretsToRunNamespace(pipelineRun)
 	if err != nil {

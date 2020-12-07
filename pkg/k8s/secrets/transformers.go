@@ -22,15 +22,14 @@ func UniqueNameTransformer() SecretTransformer {
 }
 
 // RenameByAttributeTransformer returns a secret transformer function that sets
-// `metadata.name` to the name defined in `metadata.annotations` with the defined key
-// no rename is done if the annotation with the key does not exist
-// no rename is done if an empty key is provided
-// no rename is done if the value of the annotation with the defined key is the empty string
+// `metadata.name` to the value of an annotation with the given key.
+// If the annotation does not exist or has no non-empty value, `metadata.name`
+// is kept unchanged.
 func RenameByAttributeTransformer(key string) SecretTransformer {
 	return func(secret *v1.Secret) {
-		annotations := secret.GetAnnotations()
-		if annotations != nil && annotations[key] != "" {
-			secret.SetName(annotations[key])
+		newName := secret.GetAnnotations()[key]
+		if newName != "" {
+			secret.SetName(newName)
 		}
 	}
 }

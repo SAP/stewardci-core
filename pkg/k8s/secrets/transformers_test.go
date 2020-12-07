@@ -57,7 +57,7 @@ func Test_RenameByAttributeTransformer(t *testing.T) {
 		}, {
 			name:         "annotation_has_empty_new_name",
 			annotations:  map[string]string{"key1": ""},
-			key:          "",
+			key:          "key1",
 			expectedName: originalName,
 		},
 	} {

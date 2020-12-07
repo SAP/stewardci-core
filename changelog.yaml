@@ -23,7 +23,7 @@
   changes:
   - type: enhancement
     impact: minor
-    title: Rename secrets for jfr if annotation is provided
+    title: Allow renamed secrets in run namespaces if annotation is provided
     pullRequestNumber: 165
     jiraIssueNumber: 315
 
@@ -200,4 +200,3 @@
       In addition, Steward Jenkinsfile Runner Image version [200921_6cc247f](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/200921_6cc247f) or later is required.
     pullRequestNumber: 151
     jiraIssueNumber: 1330
-
