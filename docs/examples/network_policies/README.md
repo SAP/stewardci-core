@@ -1,5 +1,7 @@
 # Network policy examples
 
+To run this examples you need to [create a Tenant](../README.md#tenant) and [set the environment variable](../README.md#pipelinerun) `TENANT_NAMESPACE` accordingly.
+
 ## Valid policy configuration
 
 To run this examples apply the `policies.yaml` to your setward namespace.
@@ -13,7 +15,7 @@ kubectl -n steward-system apply -f policies.yaml
 This example pipeline run uses a network policy which allows internet access.
 
 ```
-kubectl -n steward-system apply -f pipelinerun_network_internet.yaml
+kubectl -n  $TENANT_NAMESPACE apply -f pipelinerun_network_internet.yaml
 ```
 
 The result is a successful run.
@@ -27,7 +29,7 @@ network-profile-internet-qgqvf   **        **         finished   success        
 This example pipeline run uses a network policy which allows no network access.
 
 ```
-kubectl -n steward-system apply -f pipelinerun_network_blocked.yaml
+kubectl -n  $TENANT_NAMESPACE apply -f pipelinerun_network_blocked.yaml
 ```
 
 The result is a run failing with a content error.
@@ -42,7 +44,7 @@ network-profile-blocked-qgjfp    **        **         finished   error_content  
 This exaple pipeline run tries to use a non existing network policy.
 
 ```
-kubectl -n steward-system apply -f pipelinerun_network_unknown.yaml
+kubectl -n  $TENANT_NAMESPACE apply -f pipelinerun_network_unknown.yaml
 ```
 
 The result is a run failing with a config error.
@@ -60,7 +62,7 @@ To run this example apply the `policies_inconsistent.yaml` to your setward names
 
 ```
 kubectl -n steward-system apply -f policies_inconsistent.yaml
-kubectl -n steward-system apply -f pipelinerun_network_internet.yaml
+kubectl -n  $TENANT_NAMESPACE apply -f pipelinerun_network_internet.yaml
 ```
 
 Result
