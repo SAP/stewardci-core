@@ -27,6 +27,7 @@ func Test_UniqueNameTransformer_WithNameSet(t *testing.T) {
 }
 
 func Test_RenameByAnnotationTransformer(t *testing.T) {
+	t.Parallel()
 	const originalName string = "orig1"
 	for _, tc := range []struct {
 		name         string

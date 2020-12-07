@@ -13,6 +13,7 @@ import (
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
+	"github.com/SAP/stewardci-core/pkg/runctl/secretmgr"
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1api "k8s.io/api/core/v1"
@@ -231,7 +232,7 @@ func (c *runManager) getSecretManager(ctx *runContext) runifc.SecretManager {
 	}
 	targetClient := c.factory.CoreV1().Secrets(ctx.runNamespace)
 	secretHelper := secrets.NewSecretHelper(c.secretProvider, ctx.runNamespace, targetClient)
-	return NewSecretManager(secretHelper)
+	return secretmgr.NewSecretManager(secretHelper)
 }
 
 func (c *runManager) setupStaticNetworkPolicies(ctx *runContext) error {

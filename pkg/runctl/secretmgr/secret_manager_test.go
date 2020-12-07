@@ -1,4 +1,4 @@
-package runctl
+package secretmgr
 
 import (
 	"fmt"
@@ -42,7 +42,7 @@ func Test_copyImagePullSecretsToRunNamespace(t *testing.T) {
 
 	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
 	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	examinee := NewSecretManager(mockSecretHelper).(*secretManager)
+	examinee := NewSecretManager(mockSecretHelper)
 
 	// EXPECT
 	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
@@ -69,7 +69,7 @@ func Test_copyPipelineCloneSecretToRunNamespace_Success(t *testing.T) {
 
 	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
 	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	examinee := NewSecretManager(mockSecretHelper).(*secretManager)
+	examinee := NewSecretManager(mockSecretHelper)
 
 	// VERIFY
 	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
@@ -91,7 +91,7 @@ func Test_copyPipelineCloneSecretToRunNamespace_FailsWithContentErrorOnGetPipeli
 
 	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
 	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	examinee := NewSecretManager(mockSecretHelper).(*secretManager)
+	examinee := NewSecretManager(mockSecretHelper)
 
 	// EXPECT
 	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
@@ -114,7 +114,7 @@ func Test_copyPipelineSecretsToRunNamespace(t *testing.T) {
 
 	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
 	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	examinee := NewSecretManager(mockSecretHelper).(*secretManager)
+	examinee := NewSecretManager(mockSecretHelper)
 
 	// VERIFY
 	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
@@ -136,7 +136,7 @@ func Test_copySecrets_FailsWithContentErrorOnNotFound(t *testing.T) {
 
 	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
 	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	examinee := NewSecretManager(mockSecretHelper).(*secretManager)
+	examinee := NewSecretManager(mockSecretHelper)
 	expectedError := fmt.Errorf("err1")
 	// EXPECT
 	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
@@ -165,7 +165,7 @@ func Test_copySecrets_FailsWithInfraErrorOnOtherError(t *testing.T) {
 
 	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
 	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	examinee := NewSecretManager(mockSecretHelper).(*secretManager)
+	examinee := NewSecretManager(mockSecretHelper)
 	expectedError := fmt.Errorf("err1")
 	// EXPECT
 	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
