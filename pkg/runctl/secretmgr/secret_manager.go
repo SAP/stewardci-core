@@ -2,6 +2,7 @@ package secretmgr
 
 import (
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/pkg/errors"
@@ -59,10 +60,7 @@ func (s SecretManager) copyPipelineCloneSecretToRunNamespace(pipelineRun k8s.Pip
 	}
 	repoServerURL, err := pipelineRun.GetPipelineRepoServerURL()
 	if err != nil {
-		// TODO: this method should not modify the pipeline run -> must be handled elsewhere
-		pipelineRun.UpdateMessage(err.Error())
-		pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
-		return "", err
+		return "", serrors.Classify(err, v1alpha1.ResultErrorContent)
 	}
 	transformers := []secrets.SecretTransformer{
 		secrets.StripAnnotationsTransformer("jenkins.io/"),
@@ -90,11 +88,10 @@ func (s SecretManager) copySecrets(pipelineRun k8s.PipelineRun, secretNames []st
 	storedSecretNames, err := s.secretHelper.CopySecrets(secretNames, filter, transformers...)
 	if err != nil {
 		klog.Errorf("Cannot copy secrets %s for [%s]. Error: %s", secretNames, pipelineRun.String(), err)
-		pipelineRun.UpdateMessage(err.Error())
 		if s.secretHelper.IsNotFound(err) || k8serrors.IsInvalid(err) || k8serrors.IsAlreadyExists(err) {
-			pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
+			err = serrors.Classify(err, v1alpha1.ResultErrorContent)
 		} else {
-			pipelineRun.UpdateResult(v1alpha1.ResultErrorInfra)
+			err = serrors.Classify(err, v1alpha1.ResultErrorInfra)
 		}
 		return storedSecretNames, err
 	}

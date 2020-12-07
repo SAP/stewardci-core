@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	secretMocks "github.com/SAP/stewardci-core/pkg/k8s/secrets/mocks"
 	gomock "github.com/golang/mock/gomock"
@@ -96,13 +97,12 @@ func Test_copyPipelineCloneSecretToRunNamespace_FailsWithContentErrorOnGetPipeli
 	// EXPECT
 	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
 	mockPipelineRun.EXPECT().GetPipelineRepoServerURL().Return("", fmt.Errorf("err1")).AnyTimes()
-	mockPipelineRun.EXPECT().UpdateMessage("err1")
-	mockPipelineRun.EXPECT().UpdateResult(stewardv1alpha1.ResultErrorContent)
 
 	// EXERCISE
 	_, err := examinee.copyPipelineCloneSecretToRunNamespace(mockPipelineRun)
 	assert.Assert(t, err != nil)
 	assert.Equal(t, "err1", err.Error())
+	assert.Equal(t, stewardv1alpha1.ResultErrorContent, serrors.GetClass(err))
 }
 
 func Test_copyPipelineSecretsToRunNamespace(t *testing.T) {
@@ -144,8 +144,6 @@ func Test_copySecrets_FailsWithContentErrorOnNotFound(t *testing.T) {
 		CopySecrets([]string{"foo"}, nil, nil).Return(nil, expectedError)
 	mockSecretHelper.EXPECT().
 		IsNotFound(expectedError).Return(true)
-	mockPipelineRun.EXPECT().UpdateMessage("err1")
-	mockPipelineRun.EXPECT().UpdateResult(stewardv1alpha1.ResultErrorContent)
 	mockPipelineRun.EXPECT().String() //logging
 
 	// EXERCISE
@@ -154,6 +152,7 @@ func Test_copySecrets_FailsWithContentErrorOnNotFound(t *testing.T) {
 	// VERIFY
 	assert.Assert(t, err != nil)
 	assert.Equal(t, "err1", err.Error())
+	assert.Equal(t, stewardv1alpha1.ResultErrorContent, serrors.GetClass(err))
 }
 
 func Test_copySecrets_FailsWithInfraErrorOnOtherError(t *testing.T) {
@@ -173,8 +172,6 @@ func Test_copySecrets_FailsWithInfraErrorOnOtherError(t *testing.T) {
 		CopySecrets([]string{"foo"}, nil, nil).Return(nil, expectedError)
 	mockSecretHelper.EXPECT().
 		IsNotFound(expectedError).Return(false)
-	mockPipelineRun.EXPECT().UpdateMessage("err1")
-	mockPipelineRun.EXPECT().UpdateResult(stewardv1alpha1.ResultErrorInfra)
 	mockPipelineRun.EXPECT().String() //logging
 
 	// EXERCISE
@@ -183,4 +180,5 @@ func Test_copySecrets_FailsWithInfraErrorOnOtherError(t *testing.T) {
 	// VERIFY
 	assert.Assert(t, err != nil)
 	assert.Equal(t, "err1", err.Error())
+	assert.Equal(t, stewardv1alpha1.ResultErrorInfra, serrors.GetClass(err))
 }

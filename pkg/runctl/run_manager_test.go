@@ -9,6 +9,7 @@ import (
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardfake "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/fake"
+	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	k8sfake "github.com/SAP/stewardci-core/pkg/k8s/fake"
@@ -603,9 +604,6 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 				GetSpec().
 				Return(&api.PipelineSpec{Profiles: tc.profilesSpec}).
 				AnyTimes()
-			if tc.result != api.ResultUndefined {
-				mockPipelineRun.EXPECT().UpdateResult(tc.result)
-			}
 
 			runCtx := &runContext{pipelineRun: mockPipelineRun}
 
@@ -637,8 +635,12 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 			resultError := examinee.setupNetworkPolicyFromConfig(runCtx)
 
 			// VERIFY
+
 			if tc.expectError {
 				assert.Assert(t, resultError != nil)
+				if tc.result != api.ResultUndefined {
+					assert.Equal(t, tc.result, serrors.GetClass(resultError))
+				}
 			} else {
 				assert.NilError(t, resultError)
 				gvr := schema.GroupVersionResource{

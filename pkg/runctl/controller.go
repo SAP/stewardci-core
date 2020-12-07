@@ -310,8 +310,11 @@ func (c *Controller) syncHandler(key string) error {
 		err = runManager.Start(pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
+			resultClass := serrors.GetClass(err)
 			//In case we have a result we can cleanup. Otherwise we retry in the next iteration.
-			if pipelineRun.GetStatus().Result != api.ResultUndefined {
+			if resultClass != api.ResultUndefined {
+				pipelineRun.UpdateMessage(err.Error())
+				pipelineRun.UpdateResult(resultClass)
 				if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
 					return errClean
 				}

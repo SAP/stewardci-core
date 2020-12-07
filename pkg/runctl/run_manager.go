@@ -297,8 +297,7 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		networkProfile = spec.Profiles.Network
 
 		if _, exists := ctx.pipelineRunsConfig.NetworkPolicies[networkProfile]; !exists {
-			ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorConfig)
-			return fmt.Errorf("network profile %q does not exist", networkProfile)
+			return serrors.Classify(fmt.Errorf("network profile %q does not exist", networkProfile), v1alpha1.ResultErrorConfig)
 		}
 	}
 
@@ -504,9 +503,7 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 	c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
 	err = c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
 	if err != nil {
-		ctx.pipelineRun.UpdateMessage(err.Error())
-		ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorConfig)
-		return err
+		return serrors.Classify(err, v1alpha1.ResultErrorConfig)
 	}
 
 	c.addTektonTaskRunParamsForRunDetails(ctx, &tektonTaskRun)
@@ -664,7 +661,6 @@ func (c *runManager) cleanup(ctx *runContext) error {
 
 	namespace := ctx.runNamespace
 	if namespace == "" {
-		//TODO: Don't store on resource as message. Add it as event.
 		ctx.pipelineRun.StoreErrorAsMessage(fmt.Errorf("Nothing to clean up as namespace not set"), "")
 	} else {
 		err := c.namespaceManager.Delete(namespace)
