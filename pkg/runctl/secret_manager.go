@@ -81,7 +81,7 @@ func (s *secretManager) copyPipelineSecretsToRunNamespace(pipelineRun k8s.Pipeli
 	secretNames := pipelineRun.GetSpec().Secrets
 	transformers := []secrets.SecretTransformer{
 		secrets.StripAnnotationsTransformer("tekton.dev/"),
-		secrets.RenameByAttributeTransformer(v1alpha1.AnnotationSecretRename),
+		secrets.RenameByAnnotationTransformer(v1alpha1.AnnotationSecretRename),
 	}
 	return s.copySecrets(pipelineRun, secretNames, nil, transformers...)
 }

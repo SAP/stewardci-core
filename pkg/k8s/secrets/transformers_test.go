@@ -26,7 +26,7 @@ func Test_UniqueNameTransformer_WithNameSet(t *testing.T) {
 	assert.DeepEqual(t, expected, transformed)
 }
 
-func Test_RenameByAttributeTransformer(t *testing.T) {
+func Test_RenameByAnnotationTransformer(t *testing.T) {
 	const originalName string = "orig1"
 	for _, tc := range []struct {
 		name         string
@@ -69,7 +69,7 @@ func Test_RenameByAttributeTransformer(t *testing.T) {
 			transformed := orig.DeepCopy()
 
 			// EXERCISE
-			RenameByAttributeTransformer(tc.key)(transformed)
+			RenameByAnnotationTransformer(tc.key)(transformed)
 
 			// VERIFY
 			expected := orig.DeepCopy()
