@@ -4,7 +4,7 @@ To run this examples you need to [create a Tenant](../README.md#tenant) and [set
 
 ## Valid policy configuration
 
-To run this examples apply the `policies.yaml` to your setward namespace.
+To run these examples apply `policies.yaml` to your Steward system namespace, e.g. `steward-system`:
 
 ```
 kubectl -n steward-system apply -f policies.yaml
@@ -41,13 +41,14 @@ network-profile-blocked-qgjfp    **        **         finished   error_content  
 
 ### Network policy with unknown policy
 
-This exaple pipeline run tries to use a non existing network policy.
+This example pipeline run tries to use a nonexistent network policy.
+
 
 ```
 kubectl -n  $TENANT_NAMESPACE apply -f pipelinerun_network_unknown.yaml
 ```
 
-The result is a run failing with a config error.
+The pipeline run result is `error_config`, which indicates that the pipeline run specification was erroneous.
 
 ```
 NAME                             STARTED   FINISHED   STATUS     RESULT          MESSAGE
@@ -56,9 +57,10 @@ network-profile-unknown-9p8v8    **        **         finished   error_config   
 
 ## Invalid policy configuration
 
-If the definition of the network policy config map is inconsistent (e.g. not existing default policy), you will get an infrastructure error.
+If the definition of the network policy config map is inconsistent (e.g. not existing default policy), all pipeline runs will fail with result `error_infra`.
 
-To run this example apply the `policies_inconsistent.yaml` to your setward namespace.
+
+To run this example apply `policies_inconsistent.yaml` to your Steward system namespace, e.g.:
 
 ```
 kubectl -n steward-system apply -f policies_inconsistent.yaml
