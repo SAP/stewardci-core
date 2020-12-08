@@ -48,6 +48,10 @@
 # ! Do NOT add change entries to already released versions! Only add to version 'NEXT'.
 # ! Do NOT change any 'version' or 'date' values manually! The pipeline will take care.
 # ! Do NOT change the order of version blocks! 'NEXT' needs to stay the first version block.
+- version: NEXT
+  date: TBD
+  changes:
+
 - version: "0.6.2"
   date: 2020-12-08
   changes:
