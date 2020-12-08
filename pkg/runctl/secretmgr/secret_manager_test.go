@@ -12,45 +12,66 @@ import (
 	"gotest.tools/assert"
 )
 
-// TODO: write better matcher to check correct filters and transformers
-var (
-	pipelineSecretTransormerMatcher  = gomock.Len(2)
-	imagePullSecretFilterMatcher     = gomock.Any()
-	imagePullSecretTransormerMatcher = gomock.Len(4)
-	cloneSecretTransormerMatcher     = gomock.Len(4)
+type testHelper struct {
+	t                                *testing.T
+	pipelineSecretTransormerMatcher  gomock.Matcher
+	imagePullSecretFilterMatcher     gomock.Matcher
+	imagePullSecretTransormerMatcher gomock.Matcher
+	cloneSecretTransormerMatcher     gomock.Matcher
+	spec                             *stewardv1alpha1.PipelineSpec
+}
 
-	spec = &stewardv1alpha1.PipelineSpec{
-		JenkinsFile: stewardv1alpha1.JenkinsFile{
-			RepoAuthSecret: "scm_secret1",
-		},
-		Secrets: []string{
-			"secret1",
-			"secret2",
-		},
-		ImagePullSecrets: []string{
-			"imagePullSecret1",
-			"imagePullSecret2",
+func newTestHelper(t *testing.T) *testHelper {
+	return &testHelper{
+		t:                                t,
+		pipelineSecretTransormerMatcher:  gomock.Len(2),
+		imagePullSecretFilterMatcher:     gomock.Any(),
+		imagePullSecretTransormerMatcher: gomock.Len(4),
+		cloneSecretTransormerMatcher:     gomock.Len(4),
+
+		spec: &stewardv1alpha1.PipelineSpec{
+			JenkinsFile: stewardv1alpha1.JenkinsFile{
+				RepoAuthSecret: "scm_secret1",
+			},
+			Secrets: []string{
+				"secret1",
+				"secret2",
+			},
+			ImagePullSecrets: []string{
+				"imagePullSecret1",
+				"imagePullSecret2",
+			},
 		},
 	}
-)
+}
 
-func Test_copyImagePullSecretsToRunNamespace(t *testing.T) {
-	t.Parallel()
-
-	// SETUP
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
+func mockPipelineRunWithSpec(th *testHelper) (*gomock.Controller, SecretManager, *mocks.MockPipelineRun, *secretMocks.MockSecretHelper) {
+	mockCtrl := gomock.NewController(th.t)
 
 	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
 	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
 	examinee := NewSecretManager(mockSecretHelper)
 
 	// EXPECT
-	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
+	mockPipelineRun.EXPECT().GetSpec().Return(th.spec).AnyTimes()
+	mockPipelineRun.EXPECT().String().AnyTimes() //logging
+	return mockCtrl, examinee, mockPipelineRun, mockSecretHelper
+
+}
+
+func Test_copyImagePullSecretsToRunNamespace(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	th := newTestHelper(t)
+	mockCtrl, examinee, mockPipelineRun, mockSecretHelper := mockPipelineRunWithSpec(th)
+	defer mockCtrl.Finish()
+
+	// EXPECT
 	mockSecretHelper.EXPECT().
 		CopySecrets([]string{"imagePullSecret1", "imagePullSecret2"},
-			imagePullSecretFilterMatcher,
-			imagePullSecretTransormerMatcher).
+			th.imagePullSecretFilterMatcher,
+			th.imagePullSecretTransormerMatcher).
 		Return([]string{"imagePullSecret1", "imagePullSecret2"}, nil)
 
 	// EXERCISE
@@ -65,18 +86,14 @@ func Test_copyPipelineCloneSecretToRunNamespace_Success(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
-	mockCtrl := gomock.NewController(t)
+	th := newTestHelper(t)
+	mockCtrl, examinee, mockPipelineRun, mockSecretHelper := mockPipelineRunWithSpec(th)
 	defer mockCtrl.Finish()
 
-	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
-	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	examinee := NewSecretManager(mockSecretHelper)
-
 	// VERIFY
-	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
 	mockPipelineRun.EXPECT().GetPipelineRepoServerURL().Return("server", nil).AnyTimes()
 	mockSecretHelper.EXPECT().
-		CopySecrets([]string{"scm_secret1"}, nil, cloneSecretTransormerMatcher).
+		CopySecrets([]string{"scm_secret1"}, nil, th.cloneSecretTransormerMatcher).
 		Return([]string{"scm_secret1"}, nil)
 
 	// EXERCISE
@@ -87,15 +104,11 @@ func Test_copyPipelineCloneSecretToRunNamespace_FailsWithContentErrorOnGetPipeli
 	t.Parallel()
 
 	// SETUP
-	mockCtrl := gomock.NewController(t)
+	th := newTestHelper(t)
+	mockCtrl, examinee, mockPipelineRun, _ := mockPipelineRunWithSpec(th)
 	defer mockCtrl.Finish()
 
-	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
-	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	examinee := NewSecretManager(mockSecretHelper)
-
 	// EXPECT
-	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
 	mockPipelineRun.EXPECT().GetPipelineRepoServerURL().Return("", fmt.Errorf("err1")).AnyTimes()
 
 	// EXERCISE
@@ -109,17 +122,13 @@ func Test_copyPipelineSecretsToRunNamespace(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
-	mockCtrl := gomock.NewController(t)
+	th := newTestHelper(t)
+	mockCtrl, examinee, mockPipelineRun, mockSecretHelper := mockPipelineRunWithSpec(th)
 	defer mockCtrl.Finish()
 
-	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
-	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	examinee := NewSecretManager(mockSecretHelper)
-
 	// VERIFY
-	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
 	mockSecretHelper.EXPECT().
-		CopySecrets([]string{"secret1", "secret2"}, nil, pipelineSecretTransormerMatcher).
+		CopySecrets([]string{"secret1", "secret2"}, nil, th.pipelineSecretTransormerMatcher).
 		Return([]string{"secret1", "secret2"}, nil)
 
 	// EXERCISE
@@ -131,20 +140,16 @@ func Test_copySecrets_FailsWithContentErrorOnNotFound(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
-	mockCtrl := gomock.NewController(t)
+	th := newTestHelper(t)
+	mockCtrl, examinee, mockPipelineRun, mockSecretHelper := mockPipelineRunWithSpec(th)
 	defer mockCtrl.Finish()
 
-	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
-	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	examinee := NewSecretManager(mockSecretHelper)
 	expectedError := fmt.Errorf("err1")
 	// EXPECT
-	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
 	mockSecretHelper.EXPECT().
 		CopySecrets([]string{"foo"}, nil, nil).Return(nil, expectedError)
 	mockSecretHelper.EXPECT().
 		IsNotFound(expectedError).Return(true)
-	mockPipelineRun.EXPECT().String() //logging
 
 	// EXERCISE
 	_, err := examinee.copySecrets(mockPipelineRun, []string{"foo"}, nil, nil)
@@ -159,20 +164,16 @@ func Test_copySecrets_FailsWithInfraErrorOnOtherError(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
-	mockCtrl := gomock.NewController(t)
+	th := newTestHelper(t)
+	mockCtrl, examinee, mockPipelineRun, mockSecretHelper := mockPipelineRunWithSpec(th)
 	defer mockCtrl.Finish()
 
-	mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
-	mockSecretHelper := secretMocks.NewMockSecretHelper(mockCtrl)
-	examinee := NewSecretManager(mockSecretHelper)
 	expectedError := fmt.Errorf("err1")
 	// EXPECT
-	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
 	mockSecretHelper.EXPECT().
 		CopySecrets([]string{"foo"}, nil, nil).Return(nil, expectedError)
 	mockSecretHelper.EXPECT().
 		IsNotFound(expectedError).Return(false)
-	mockPipelineRun.EXPECT().String() //logging
 
 	// EXERCISE
 	_, err := examinee.copySecrets(mockPipelineRun, []string{"foo"}, nil, nil)
