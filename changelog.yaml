@@ -1,36 +1,67 @@
-## -----------------------------------------
-## Copy this template for new change entries
-## -----------------------------------------
-#  - title: <title>
-#    type: [bug, enhancement, internal]
-#    impact: [incompatible, minor, patch]
-#    description: |-
-#      <description (markdown syntax)>
-#    warning: |-
-#      <optional warning message (markdown syntax)>
-#    upgradeNotes: |-
-#      <optional upgrade guidelines (markdown syntax)>
-#    deprecations: |-
-#      <optional deprecation notes (markdown syntax)>
-#    pullRequestNumber: <pull request number>
-#    jiraIssueNumber: <Jira issue number>
+## -------------------------------------------------------------------------------
+## Changelog Entry Documentation
+## -------------------------------------------------------------------------------
+#  type             The type of this change.
+#                     Possible values:
+#                     - 'bug'           Bug has been fixed
+#                     - 'documentation' Documentation change
+#                     - 'enhancement'   Feature has been implemented or some general improvements
+#                     - 'hotfix'        Emergency bug fix which needs to be rolled out immediately
+#                     - 'internal'      Internal change which does not affect consumers directly (e.g. refactorings)
+#                     - 'security'      A security relevant fix
+# impact            The impact this change has regarding consumption. The impact also affects the semantic version.
+#                     Possible values:
+#                     - 'incompatible'  An incompatible change requires more information in the warning
+#                                       and updateNotes sections. Affects major or minor SemVer digit.
+#                     - 'minor'         A compatible change which introduces a new feature or enhancement.
+#                     - 'patch'         A compatible change without new features.
+# title             The title of the change
+# description       The description of the change (markdown syntax possible)
+# warning           [optional] A warning for consumers if appropriate
+# upgradeNotes      [optional] Everything a consumer needs to know and adapt in order to consume this change.
+# deprecations      [optional] If this change deprecates something we need to inform consumers to adapt early,
+#                              before we remove it completely in the next months.
+# pullRequestNumber The number of this pull request.
+#                       A list is also possible in case more than one pull requests are involved in this change, e.g. [123, 456].
+# jiraIssueNumber   The number of the Jira issue.
+#                       A list is also possible in case more than one Jira issues are affected by this change, e.g. [123, 456].
+
+## --------------------------------------------------------------------------------------------------
+## For new change entries copy the template below to 'changes:' of the 'version: NEXT' array element.
+## --------------------------------------------------------------------------------------------------
+#    - type: [bug, enhancement, security, internal, hotfix, documentation]
+#      impact: [incompatible, minor, patch]
+#      title: <title>
+#      description: |-
+#        <description (markdown syntax)>
+#      warning: |-
+#        <optional warning message (markdown syntax)>
+#      upgradeNotes: |-
+#        <optional upgrade guidelines (markdown syntax)>
+#      deprecations: |-
+#        <optional deprecation notes (markdown syntax)>
+#      pullRequestNumber: <pull request number(s)>
+#      jiraIssueNumber: <Jira issue number(s)>
 
 
-# Do not modify the "NEXT" version block.
-# Do not change the order ("NEXT" needs to be on top).
-- version: "NEXT"
+# Paste new changelog entries below 'changes:' of the 'version: NEXT' array element.
+# ! Do NOT add change entries to already released versions! Only add to version 'NEXT'.
+# ! Do NOT change any 'version' or 'date' values manually! The pipeline will take care.
+# ! Do NOT change the order of version blocks! 'NEXT' needs to stay the first version block.
+- version: NEXT
   date: TBD
   changes:
   - type: enhancement
     impact: minor
     title: Allow renamed secrets in run namespaces if annotation is provided
+    description: Secrets can be renamed if you provide an annotation when they are copied to the run namespace.
     pullRequestNumber: 165
     jiraIssueNumber: 315
 
   - type: bug
     impact: patch
-    title: Fix struct field tag syntax for "pkg/apis/steward/v1alpha1".JenkinsfileRunnerSpec
-    description:
+    title: Fixed struct field tag syntax
+    description: Fixed struct field tag syntax for "pkg/apis/steward/v1alpha1".JenkinsfileRunnerSpec
     warning:
     upgradeNotes:
     deprecations:
@@ -41,8 +72,8 @@
     type: internal
     impact: patch
     description: |-
-      - upgrade `github.com/aws/aws-sdk-go` from v1.32.1 to v1.34.1
-        (see [changelog](https://github.com/aws/aws-sdk-go/releases/tag/v1.34.1))
+      Upgrade `github.com/aws/aws-sdk-go` from v1.32.1 to [v1.34.1](https://github.com/aws/aws-sdk-go/releases/tag/v1.34.1)
+    pullRequestNumber: 183
 
   - title: Make Elasticsearch index URL configurable per pipeline run
     type: enhancement
