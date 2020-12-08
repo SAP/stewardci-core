@@ -52,6 +52,12 @@
   date: TBD
   changes:
 
+    - type: internal
+      impact: patch
+      title: TEST ONLY
+      description: TEST ONLY
+      pullRequestNumber: 123
+
 - version: "0.6.2"
   date: 2020-12-08
   changes:
