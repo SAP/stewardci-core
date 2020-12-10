@@ -52,6 +52,14 @@
   date: TBD
   changes:
 
+  - type: security
+    impact: patch
+    title: "network: don't allow local subnet multicast traffic"
+    description: |-
+      Local subnet multicast addresses (224.0.0.0/24; see [Wikipedia](https://en.wikipedia.org/wiki/Multicast_address))
+      should not be allowed by rule "allow internet access" of the pipeline run network policy.
+    pullRequestNumber: 200
+
 - version: "0.6.2"
   date: 2020-12-08
   changes:
