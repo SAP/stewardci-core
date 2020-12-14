@@ -10,12 +10,16 @@ import (
 )
 
 func Test_GetClass_UnclassifiedError(t *testing.T) {
+	t.Parallel()
+
 	err1 := fmt.Errorf("err1")
 
 	assert.Equal(t, api.ResultUndefined, GetClass(err1))
 }
 
 func Test_Classify(t *testing.T) {
+	t.Parallel()
+
 	err1 := fmt.Errorf("err1")
 
 	for _, tc := range []struct {

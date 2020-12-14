@@ -1398,7 +1398,7 @@ func Test_RunManager_Start_DoesNotSetPipelineRunStatus(t *testing.T) {
 	mockPipelineRun.EXPECT().UpdateState(gomock.Any()).Times(0)
 }
 
-func Test_copySecretsToRunNamespace_DoesCopySecret(t *testing.T) {
+func Test_RunManager_copySecretsToRunNamespace_DoesCopySecret(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -1426,8 +1426,10 @@ func Test_copySecretsToRunNamespace_DoesCopySecret(t *testing.T) {
 
 	// EXERCISE
 
-	cloneSecret, imagePullSecrets, err := examinee.copySecretsToRunNamespace(runCtx)
-	assert.NilError(t, err)
+	cloneSecret, imagePullSecrets, resultError := examinee.copySecretsToRunNamespace(runCtx)
+
+	// VERFIY
+	assert.NilError(t, resultError)
 	assert.Equal(t, "cloneSecret1", cloneSecret)
 	assert.DeepEqual(t, []string{"foo", "bar"}, imagePullSecrets)
 }
