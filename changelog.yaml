@@ -51,6 +51,10 @@
 - version: NEXT
   date: TBD
   changes:
+
+- version: "0.6.3"
+  date: 2020-12-14
+  changes:
   - type: enhancement
     impact: minor
     title: Allow renamed secrets in run namespaces if annotation is provided
