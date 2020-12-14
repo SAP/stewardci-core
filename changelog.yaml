@@ -51,6 +51,12 @@
 - version: NEXT
   date: TBD
   changes:
+  - type: enhancement
+    impact: minor
+    title: Allow renamed secrets in run namespaces if annotation is provided
+    description: Secrets can be renamed if you provide an annotation when they are copied to the run namespace.
+    pullRequestNumber: 165
+    jiraIssueNumber: 315
 
 - version: "0.6.2"
   date: 2020-12-08
