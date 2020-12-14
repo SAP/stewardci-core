@@ -661,6 +661,7 @@ func (c *runManager) cleanup(ctx *runContext) error {
 
 	namespace := ctx.runNamespace
 	if namespace == "" {
+		//TODO: Don't store on resource as message. Add it as event.
 		ctx.pipelineRun.StoreErrorAsMessage(fmt.Errorf("Nothing to clean up as namespace not set"), "")
 	} else {
 		err := c.namespaceManager.Delete(namespace)

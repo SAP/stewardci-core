@@ -20,8 +20,6 @@ func Test_GetClass_UnclassifiedError(t *testing.T) {
 func Test_Classify(t *testing.T) {
 	t.Parallel()
 
-	err1 := fmt.Errorf("err1")
-
 	for _, tc := range []struct {
 		class api.Result
 	}{
@@ -30,6 +28,8 @@ func Test_Classify(t *testing.T) {
 		{api.ResultErrorConfig},
 	} {
 		t.Run(string(tc.class), func(t *testing.T) {
+			// SETUP
+			err1 := fmt.Errorf("err1")
 
 			//EXERCISE
 			classifiedErr := Classify(err1, tc.class)
