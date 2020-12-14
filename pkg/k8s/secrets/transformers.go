@@ -3,8 +3,9 @@ package secrets
 import (
 	"fmt"
 
-	v1 "k8s.io/api/core/v1"
 	"strings"
+
+	v1 "k8s.io/api/core/v1"
 )
 
 // SecretTransformer is a function that modifies the given secret.
@@ -17,6 +18,19 @@ func UniqueNameTransformer() SecretTransformer {
 	return func(secret *v1.Secret) {
 		secret.SetGenerateName(fmt.Sprintf("%s-", secret.GetName()))
 		secret.SetName("")
+	}
+}
+
+// RenameByAnnotationTransformer returns a secret transformer function that sets
+// `metadata.name` to the value of an annotation with the given key.
+// If the annotation does not exist or has no non-empty value, `metadata.name`
+// is kept unchanged.
+func RenameByAnnotationTransformer(key string) SecretTransformer {
+	return func(secret *v1.Secret) {
+		newName := secret.GetAnnotations()[key]
+		if newName != "" {
+			secret.SetName(newName)
+		}
 	}
 }
 
