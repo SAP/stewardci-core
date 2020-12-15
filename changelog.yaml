@@ -58,6 +58,7 @@
     description: |-
       Local subnet multicast addresses (224.0.0.0/24; see [Wikipedia](https://en.wikipedia.org/wiki/Multicast_address))
       should not be allowed by rule "allow internet access" of the pipeline run network policy.
+    warning: You should apply the network policy change from [#200](https://github.com/SAP/stewardci-core/pull/200) manually in case you override the default network policy from the Helm chart.
     pullRequestNumber: 200
 
 - version: "0.6.3"
