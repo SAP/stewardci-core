@@ -54,7 +54,7 @@
   - type: doucmentation
     impact: patch
     title: Add network policy examples
-    description: Add examples for pipeline runs with configured network policy profiles.
+    description: Add examples for pipeline runs with configured network profiles.
 
 - version: "0.6.3"
   date: 2020-12-14

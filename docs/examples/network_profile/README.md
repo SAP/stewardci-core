@@ -1,18 +1,18 @@
-# Network policy examples
+# Network profile examples
 
 To run this examples you need to [create a Tenant](../README.md#tenant) and [set the environment variable](../README.md#pipelinerun) `TENANT_NAMESPACE` accordingly.
 
-## Valid policy configuration
+## Valid profile configuration
 
-To run these examples apply `policies.yaml` to your Steward system namespace, e.g. `steward-system`:
+To run these examples apply `profiles.yaml` to your Steward system namespace, e.g. `steward-system`:
 
 ```
-kubectl -n steward-system apply -f policies.yaml
+kubectl -n steward-system apply -f profiles.yaml
 ```
 
-### Network policy with internet access
+### Network profile with internet access
 
-This example pipeline run uses a network policy which allows internet access.
+This example pipeline run uses a network profile which allows internet access.
 
 ```
 kubectl -n  $TENANT_NAMESPACE apply -f pipelinerun_network_internet.yaml
@@ -24,9 +24,9 @@ NAME                             STARTED   FINISHED   STATUS     RESULT         
 network-profile-internet-qgqvf   **        **         finished   success         Pipeline completed with result: SUCCESS
 ```
 
-### Network policy with no network access
+### Network profile with no network access
 
-This example pipeline run uses a network policy which allows no network access.
+This example pipeline run uses a network profile which allows no network access.
 
 ```
 kubectl -n  $TENANT_NAMESPACE apply -f pipelinerun_network_blocked.yaml
@@ -39,9 +39,9 @@ NAME                             STARTED   FINISHED   STATUS     RESULT         
 network-profile-blocked-qgjfp    **        **         finished   error_content   Command ['git' 'clone' 'https://github.com/SAP-samples/stewardci-example-pipelines' '.'] failed w...
 ```
 
-### Network policy with unknown policy
+### Network profile with unknown profile
 
-This example pipeline run tries to use a nonexistent network policy.
+This example pipeline run tries to use a nonexistent network profile.
 
 
 ```
@@ -55,15 +55,15 @@ NAME                             STARTED   FINISHED   STATUS     RESULT         
 network-profile-unknown-9p8v8    **        **         finished   error_config    ERROR: preparing failed ...
 ```
 
-## Invalid policy configuration
+## Invalid profile configuration
 
-If the definition of the network policy config map is inconsistent (e.g. not existing default policy), all pipeline runs will fail with result `error_infra`.
+If the definition of the network profile config map is inconsistent (e.g. not existing default profile), all pipeline runs will fail with result `error_infra`.
 
 
-To run this example apply `policies_inconsistent.yaml` to your Steward system namespace, e.g.:
+To run this example apply `profiles.yaml_inconsistent.yaml` to your Steward system namespace, e.g.:
 
 ```
-kubectl -n steward-system apply -f policies_inconsistent.yaml
+kubectl -n steward-system apply -f profiles.yaml_inconsistent.yaml
 kubectl -n  $TENANT_NAMESPACE apply -f pipelinerun_network_internet.yaml
 ```
 
