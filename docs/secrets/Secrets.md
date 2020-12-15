@@ -172,6 +172,7 @@ The Kubernetes Credentials Provider Plugin requires Secret resource objects to b
 Details can be found on the [Examples page][jenkins_k8s_credential_provider_plugin_examples] of the plugin.
 
 When a pipeline gets executed in a transient sandbox namespace, the secrets listed in `spec.secrets` of the corresponding PipelineRun resource object are copied to the sandbox namespace with the same name.
+It is also possible to rename the secret while it gets copied by providing the desired name as annotation `steward.sap.com/secret-rename-to` on the original secret. The desired name must be a valid Kubernetes Secret name and be unique within the sandbox namespace. In `spec.secrets` of pipeline runs the original secret name must be used to select secrets.
 The Jenkins Kubernetes Credentials Provider Plugin will use the secrets from the sandbox namespace only.
 Any secret that is not listed in `spec.secrets` will not be available as Jenkins credential.
 

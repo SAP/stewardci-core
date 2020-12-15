@@ -17,6 +17,9 @@ var AllTestBuilders = []f.PipelineRunTestBuilder{
 	PipelineRunOK,
 	PipelineRunK8SPlugin,
 	PipelineRunWithSecret,
+	PipelineRunWithSecretRename,
+	PipelineRunWithSecretInvalidRename,
+	PipelineRunWithSecretRenameDuplicate,
 	PipelineRunWrongJenkinsfileRepo,
 	PipelineRunWrongJenkinsfilePath,
 	PipelineRunWrongJenkinsfileRepoWithUser,
@@ -29,7 +32,7 @@ func PipelineRunAbort(Namespace string, runID *api.CustomJSON) f.PipelineRunTest
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("sleep-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(runID),
+				builder.LoggingWithRunID(runID),
 				builder.Abort(),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"sleep/Jenkinsfile"),
@@ -45,7 +48,7 @@ func PipelineRunSleep(Namespace string, runID *api.CustomJSON) f.PipelineRunTest
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("sleep-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"sleep/Jenkinsfile"),
 				builder.ArgSpec("SLEEP_FOR_SECONDS", "1"),
@@ -60,7 +63,7 @@ func PipelineRunFail(Namespace string, runID *api.CustomJSON) f.PipelineRunTest 
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("error-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"error/Jenkinsfile"),
 			)),
@@ -74,7 +77,7 @@ func PipelineRunOK(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("ok-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"success/Jenkinsfile"),
 
@@ -90,7 +93,7 @@ func PipelineRunK8SPlugin(Namespace string, runID *api.CustomJSON) f.PipelineRun
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("k8s-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"k8sPlugin/Jenkinsfile"),
 
@@ -106,7 +109,7 @@ func PipelineRunWithSecret(Namespace string, runID *api.CustomJSON) f.PipelineRu
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("with-secret-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"secret/Jenkinsfile"),
 				builder.ArgSpec("SECRETID", "with-secret-foo"),
@@ -120,12 +123,76 @@ func PipelineRunWithSecret(Namespace string, runID *api.CustomJSON) f.PipelineRu
 	}
 }
 
+// PipelineRunWithSecretRename is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets with rename annotation
+func PipelineRunWithSecretRename(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
+	return f.PipelineRunTest{
+		PipelineRun: builder.PipelineRun("with-secret-", Namespace,
+			builder.PipelineRunSpec(
+				builder.LoggingWithRunID(runID),
+				builder.JenkinsFileSpec(pipelineRepoURL,
+					"secret/Jenkinsfile"),
+				builder.ArgSpec("SECRETID", "renamed-secret-new-name"),
+				builder.ArgSpec("EXPECTEDUSER", "bar"),
+				builder.ArgSpec("EXPECTEDPWD", "baz"),
+				builder.Secret("renamed-secret-foo"),
+			)),
+		Check:   f.PipelineRunHasStateResult(api.ResultSuccess),
+		Timeout: 120 * time.Second,
+		Secrets: []*v1.Secret{builder.SecretBasicAuth("renamed-secret-foo", Namespace, "bar", "baz",
+			builder.SecretRename("renamed-secret-new-name"))},
+	}
+}
+
+// PipelineRunWithSecretInvalidRename is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets with an invalid rename annotation
+func PipelineRunWithSecretInvalidRename(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
+	return f.PipelineRunTest{
+		PipelineRun: builder.PipelineRun("with-secret-", Namespace,
+			builder.PipelineRunSpec(
+				builder.LoggingWithRunID(runID),
+				builder.JenkinsFileSpec(pipelineRepoURL,
+					"secret/Jenkinsfile"),
+				builder.ArgSpec("SECRETID", "InvalidName"),
+				builder.ArgSpec("EXPECTEDUSER", "bar"),
+				builder.ArgSpec("EXPECTEDPWD", "baz"),
+				builder.Secret("invalid-secret-foo"),
+			)),
+		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
+		Timeout: 120 * time.Second,
+		Secrets: []*v1.Secret{builder.SecretBasicAuth("invalid-secret-foo", Namespace, "bar", "baz",
+			builder.SecretRename("InvalidName"))},
+	}
+}
+
+// PipelineRunWithSecretRenameDuplicate is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets with an invalid rename annotation
+func PipelineRunWithSecretRenameDuplicate(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
+	return f.PipelineRunTest{
+		PipelineRun: builder.PipelineRun("with-secret-", Namespace,
+			builder.PipelineRunSpec(
+				builder.LoggingWithRunID(runID),
+				builder.JenkinsFileSpec(pipelineRepoURL,
+					"secret/Jenkinsfile"),
+				builder.ArgSpec("SECRETID", "duplicate"),
+				builder.ArgSpec("EXPECTEDUSER", "bar"),
+				builder.ArgSpec("EXPECTEDPWD", "baz"),
+				builder.Secret("duplicate-secret-foo"),
+				builder.Secret("duplicate-secret-bar"),
+			)),
+		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
+		Timeout: 120 * time.Second,
+		Secrets: []*v1.Secret{
+			builder.SecretBasicAuth("duplicate-secret-foo", Namespace, "bar", "baz",
+				builder.SecretRename("duplicate")),
+			builder.SecretBasicAuth("duplicate-secret-bar", Namespace, "bar", "baz",
+				builder.SecretRename("duplicate"))},
+	}
+}
+
 // PipelineRunMissingSecret is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets
 func PipelineRunMissingSecret(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("missing-secret-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"secret/Jenkinsfile"),
 				builder.ArgSpec("SECRETID", "foo"),
@@ -143,7 +210,7 @@ func PipelineRunWrongJenkinsfileRepo(Namespace string, runID *api.CustomJSON) f.
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("wrong-jenkinsfile-repo-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec("https://github.com/SAP/steward-foo",
 					"Jenkinsfile"),
 			)),
@@ -160,7 +227,7 @@ func PipelineRunWrongJenkinsfileRepoWithUser(Namespace string, runID *api.Custom
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("wrong-jenkinsfile-repo-user-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec("https://github.com/SAP/steward-foo",
 					"Jenkinsfile",
 					builder.RepoAuthSecret("repo-auth"),
@@ -180,7 +247,7 @@ func PipelineRunWrongJenkinsfilePath(Namespace string, runID *api.CustomJSON) f.
 	return f.PipelineRunTest{
 		PipelineRun: builder.PipelineRun("wrong-jenkinsfile-path-", Namespace,
 			builder.PipelineRunSpec(
-				builder.Logging(runID),
+				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
 					"not_existing_path/Jenkinsfile"),
 			)),

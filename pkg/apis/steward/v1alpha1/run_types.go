@@ -128,6 +128,19 @@ type Elasticsearch struct {
 	// It can by any JSON value (object, array, string,
 	// number, bool).
 	RunID *CustomJSON `json:"runID"`
+
+	// IndexURL is the HTTP(S) URL of the Elasticsearch index to write
+	// logs to.
+	// If not set, a default log destination will be used.
+	// +optional
+	IndexURL string `json:"indexURL,omitempty"`
+
+	// AuthSecret is the name of the Kubernetes `v1/Secret` resource object
+	// of type `kubernetes.io/basic-auth` that contains the username and
+	// password for authenticating requests to `IndexURL`.
+	// It is ignored when `IndexURL` is not set.
+	// +optional
+	AuthSecret string `json:"authSecret,omitempty"`
 }
 
 // PipelineStatus represents the status of the pipeline

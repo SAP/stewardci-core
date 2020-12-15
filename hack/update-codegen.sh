@@ -230,7 +230,7 @@ generate_mocks \
     "pkg/k8s/secrets/mocks/mocks.go"
 generate_mocks \
     "github.com/SAP/stewardci-core/pkg/runctl/run" \
-    "Run,Manager" \
+    "Run,Manager,SecretManager" \
     "pkg/runctl/run/mocks/mocks.go"
 
 echo "${ACTION} successful"

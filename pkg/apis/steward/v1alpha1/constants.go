@@ -20,6 +20,11 @@ const (
 	// default service account of a tenant namespace.
 	AnnotationTenantRole = steward.GroupName + "/tenant-role"
 
+	// AnnotationSecretRename is the key of the annotation used to rename a secret.
+	// If this annotation is set on a secret it will be created in the run namespace
+	// with this name if it is listed in the pipelineRuns spec.secrets list.
+	AnnotationSecretRename = steward.GroupName + "/secret-rename-to"
+
 	// LabelSystemManaged is the key of the label whose presence indicates
 	// that this resource is managed by the Steward system and should not be
 	// modified otherwise.

@@ -3,6 +3,8 @@ package runctl
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strings"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -11,6 +13,7 @@ import (
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
+	"github.com/SAP/stewardci-core/pkg/runctl/secretmgr"
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1api "k8s.io/api/core/v1"
@@ -21,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	yamlserial "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
-	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	klog "k8s.io/klog/v2"
 )
 
@@ -59,7 +61,7 @@ type runManager struct {
 type runManagerTesting struct {
 	cleanupStub                               func(*runContext) error
 	copySecretsToRunNamespaceStub             func(*runContext) (string, []string, error)
-	getSecretHelperStub                       func(string, corev1.SecretInterface) secrets.SecretHelper
+	getSecretManagerStub                      func(*runContext) runifc.SecretManager
 	getServiceAccountSecretNameStub           func(*runContext) string
 	setupLimitRangeFromConfigStub             func(*runContext) error
 	setupNetworkPolicyFromConfigStub          func(*runContext) error
@@ -221,90 +223,16 @@ func (c *runManager) copySecretsToRunNamespace(ctx *runContext) (string, []strin
 	if c.testing != nil && c.testing.copySecretsToRunNamespaceStub != nil {
 		return c.testing.copySecretsToRunNamespaceStub(ctx)
 	}
+	return c.getSecretManager(ctx).CopyAll(ctx.pipelineRun)
+}
 
+func (c *runManager) getSecretManager(ctx *runContext) runifc.SecretManager {
+	if c.testing != nil && c.testing.getSecretManagerStub != nil {
+		return c.testing.getSecretManagerStub(ctx)
+	}
 	targetClient := c.factory.CoreV1().Secrets(ctx.runNamespace)
-	secretHelper := c.getSecretHelper(ctx, targetClient)
-
-	imagePullSecretNames, err := c.copyImagePullSecretsToRunNamespace(ctx, secretHelper)
-	if err != nil {
-		return "", nil, errors.Wrap(err, "failed to copy image pull secrets")
-	}
-
-	pipelineCloneSecretName, err := c.copyPipelineCloneSecretToRunNamespace(ctx, secretHelper)
-	if err != nil {
-		return "", nil, errors.Wrap(err, "failed to copy pipeline clone secret")
-	}
-
-	_, err = c.copyPipelineSecretsToRunNamespace(ctx, secretHelper)
-	if err != nil {
-		return "", nil, errors.Wrap(err, "failed to copy pipeline secrets")
-	}
-
-	return pipelineCloneSecretName, imagePullSecretNames, nil
-}
-
-func (c *runManager) copyImagePullSecretsToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) ([]string, error) {
-	secretNames := ctx.pipelineRun.GetSpec().ImagePullSecrets
-	transformers := []secrets.SecretTransformer{
-		secrets.StripAnnotationsTransformer("tekton.dev/"),
-		secrets.StripAnnotationsTransformer("jenkins.io/"),
-		secrets.StripLabelsTransformer("jenkins.io/"),
-		secrets.UniqueNameTransformer(),
-	}
-	return c.copySecrets(ctx, secretHelper, secretNames, secrets.DockerOnly, transformers...)
-}
-
-func (c *runManager) copyPipelineCloneSecretToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) (string, error) {
-	secretName := ctx.pipelineRun.GetSpec().JenkinsFile.RepoAuthSecret
-	if secretName == "" {
-		return "", nil
-	}
-	repoServerURL, err := ctx.pipelineRun.GetPipelineRepoServerURL()
-	if err != nil {
-		// TODO: this method should not modify the pipeline run -> must be handled elsewhere
-		ctx.pipelineRun.UpdateMessage(err.Error())
-		ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
-		return "", err
-	}
-	transformers := []secrets.SecretTransformer{
-		secrets.StripAnnotationsTransformer("jenkins.io/"),
-		secrets.StripLabelsTransformer("jenkins.io/"),
-		secrets.UniqueNameTransformer(),
-		secrets.SetAnnotationTransformer("tekton.dev/git-0", repoServerURL),
-	}
-	names, err := c.copySecrets(ctx, secretHelper, []string{secretName}, nil, transformers...)
-	if err != nil {
-		return "", err
-	}
-	return names[0], nil
-}
-
-func (c *runManager) copyPipelineSecretsToRunNamespace(ctx *runContext, secretHelper secrets.SecretHelper) ([]string, error) {
-	secretNames := ctx.pipelineRun.GetSpec().Secrets
-	stripTektonAnnotationsTransformer := secrets.StripAnnotationsTransformer("tekton.dev/")
-	return c.copySecrets(ctx, secretHelper, secretNames, nil, stripTektonAnnotationsTransformer)
-}
-
-func (c *runManager) getSecretHelper(ctx *runContext, targetClient corev1.SecretInterface) secrets.SecretHelper {
-	if c.testing != nil && c.testing.getSecretHelperStub != nil {
-		return c.testing.getSecretHelperStub(ctx.runNamespace, targetClient)
-	}
-	return secrets.NewSecretHelper(c.secretProvider, ctx.runNamespace, targetClient)
-}
-
-func (c *runManager) copySecrets(ctx *runContext, secretHelper secrets.SecretHelper, secretNames []string, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
-	storedSecretNames, err := secretHelper.CopySecrets(secretNames, filter, transformers...)
-	if err != nil {
-		klog.Errorf("Cannot copy secrets %s for [%s]. Error: %s", secretNames, ctx.pipelineRun.String(), err)
-		ctx.pipelineRun.UpdateMessage(err.Error())
-		if secretHelper.IsNotFound(err) {
-			ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorContent)
-		} else {
-			ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorInfra)
-		}
-		return storedSecretNames, err
-	}
-	return storedSecretNames, nil
+	secretHelper := secrets.NewSecretHelper(c.secretProvider, ctx.runNamespace, targetClient)
+	return secretmgr.NewSecretManager(secretHelper)
 }
 
 func (c *runManager) setupStaticNetworkPolicies(ctx *runContext) error {
@@ -369,8 +297,7 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		networkProfile = spec.Profiles.Network
 
 		if _, exists := ctx.pipelineRunsConfig.NetworkPolicies[networkProfile]; !exists {
-			ctx.pipelineRun.UpdateResult(v1alpha1.ResultErrorConfig)
-			return fmt.Errorf("network profile %q does not exist", networkProfile)
+			return serrors.Classify(fmt.Errorf("network profile %q does not exist", networkProfile), v1alpha1.ResultErrorConfig)
 		}
 	}
 
@@ -574,7 +501,11 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 	}
 	c.addTektonTaskRunParamsForJenkinsfileRunnerImage(ctx, &tektonTaskRun)
 	c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
-	c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
+	err = c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
+	if err != nil {
+		return serrors.Classify(err, v1alpha1.ResultErrorConfig)
+	}
+
 	c.addTektonTaskRunParamsForRunDetails(ctx, &tektonTaskRun)
 	tektonClient := c.factory.TektonV1beta1()
 	_, err = tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(&tektonTaskRun)
@@ -677,13 +608,23 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 			)
 		}
 
-		params = []tekton.Param{
-			tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON", runIDJSON),
-			// use default values from build template for all other params
+		params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON", runIDJSON))
+		// use default values from build template for all other params
+
+		if spec.Logging.Elasticsearch.IndexURL != "" {
+
+			_, err := ensureValidElasticsearchIndexURL(spec.Logging.Elasticsearch.IndexURL)
+			if err != nil {
+				return errors.Wrapf(err,
+					"field \"spec.logging.elasticsearch.indexURL\" has invalid value %q",
+					spec.Logging.Elasticsearch.IndexURL,
+				)
+			}
+			// use default values from build template for now
 		}
 	}
-
 	tektonTaskRun.Spec.Params = append(tektonTaskRun.Spec.Params, params...)
+
 	return nil
 }
 
@@ -748,4 +689,16 @@ func tektonStringParam(name string, value string) tekton.Param {
 			StringVal: value,
 		},
 	}
+}
+
+func ensureValidElasticsearchIndexURL(indexURL string) (string, error) {
+	validURL, err := url.Parse(indexURL)
+	if err != nil {
+		return "", err
+	}
+	if !(strings.ToLower(validURL.Scheme) == "http") && !(strings.ToLower(validURL.Scheme) == "https") {
+		return "", fmt.Errorf("scheme not supported: %q", validURL.Scheme)
+	}
+
+	return validURL.String(), nil
 }

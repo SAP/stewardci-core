@@ -135,14 +135,43 @@ func Abort() PipelineRunSpecOp {
 	}
 }
 
-// Logging creates a PipelineRunSpecOp which adds Logging to the PipelineRun
-func Logging(runID *api.CustomJSON) PipelineRunSpecOp {
+// LoggingWithRunID creates a PipelineRunSpecOp which adds Logging to the PipelineRun
+func LoggingWithRunID(runID *api.CustomJSON) PipelineRunSpecOp {
 	return func(spec api.PipelineSpec) api.PipelineSpec {
-		spec.Logging = &api.Logging{
-			Elasticsearch: &api.Elasticsearch{
-				RunID: runID,
-			},
+		logging := &api.Logging{
+			Elasticsearch: &api.Elasticsearch{},
 		}
+		if spec.Logging != nil {
+			logging = spec.Logging
+		}
+
+		if logging.Elasticsearch == nil {
+			logging.Elasticsearch = &api.Elasticsearch{}
+		}
+		logging.Elasticsearch.RunID = runID
+		spec.Logging = logging
+
+		return spec
+	}
+}
+
+// LoggingWithIndexURL creates a PipelineRunSpecOp which adds Logging to the PipelineRun with specific indexURL
+func LoggingWithIndexURL(indexURL string) PipelineRunSpecOp {
+	return func(spec api.PipelineSpec) api.PipelineSpec {
+		logging := &api.Logging{
+			Elasticsearch: &api.Elasticsearch{},
+		}
+		if spec.Logging != nil {
+			logging = spec.Logging
+		}
+
+		if logging.Elasticsearch == nil {
+			logging.Elasticsearch = &api.Elasticsearch{}
+		}
+
+		logging.Elasticsearch.IndexURL = indexURL
+		spec.Logging = logging
+
 		return spec
 	}
 }
