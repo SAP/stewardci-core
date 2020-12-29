@@ -7,23 +7,18 @@
 &lt;Add detailed description for reviewers here.&gt;
 
 
-### Dependency release notes
-
-<!-- add links to release notes if important dependencies changed -->
-N/A
-
 ### Submitter checklist
 
-- [ ] Change has been tested (on a K8s cluster, manually and using the Steward integration tests)
-- [ ] (If applicable) Jira issue is linked in PR and [changelog.yaml]
-- [ ] [changelog.yaml] entry with upgrade notes is prepared and appropriate for the audience affected by the change (users or developer, depending on the change)<br/>
+- [ ] Change has been tested (on a back-end cluster)
+- [ ] (If applicable) Jira backlog item ID added to the PR title and the [changelog.yaml] entry
+- [ ] [changelog.yaml] entry with upgrade notes is prepared and appropriate for the audience affected by the change (users or developer, depending on the change)
 - [ ] Semantic version diffed against [last release][releases] and updated accordingly. In this project the version has to be maintained here:
     - [/charts/steward/Chart.yaml](https://github.com/SAP/stewardci-core/blob/master/charts/steward/Chart.yaml) (`version` and `appVersion`)
 
 In case dependencies have been updated:
-- [ ] Links to external changelogs added since the last release of our component
+- [ ] Links to external changelogs, since the last release of our component, added to the [changelog.yaml] entry (description).
 - [ ] Changelogs read thoroughly, potential impact described, upgrade notes prepared (if necessary)
-- [ ] Check if dependency update affects our semantic version increment.
+- [ ] Check if dependency updates affect our semantic version increment.
 
 ### Reviewer checklist
 

@@ -6,9 +6,9 @@
 #                     - 'bug'           Bug has been fixed
 #                     - 'documentation' Documentation change
 #                     - 'enhancement'   Feature has been implemented or some general improvements
-#                     - 'hotfix'        Emergency bug fix which needs to be rolled out immediately
 #                     - 'internal'      Internal change which does not affect consumers directly (e.g. refactorings)
 #                     - 'security'      A security relevant fix
+#                     - 'hotfix'        Emergency bug fix which needs to be rolled out immediately via hotfix process
 # impact            The impact this change has regarding consumption. The impact also affects the semantic version.
 #                     Possible values:
 #                     - 'incompatible'  An incompatible change requires more information in the warning
