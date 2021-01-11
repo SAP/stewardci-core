@@ -55,6 +55,7 @@
     impact: patch
     title: Add network policy examples
     description: Add examples for pipeline runs with configured network profiles.
+    pullRequestNumber: 188
 
   - type: security
     impact: patch
