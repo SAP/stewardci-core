@@ -51,7 +51,7 @@
 - version: NEXT
   date: TBD
   changes:
-  - type: doucmentation
+  - type: documentation
     impact: patch
     title: Add network policy examples
     description: Add examples for pipeline runs with configured network profiles.
