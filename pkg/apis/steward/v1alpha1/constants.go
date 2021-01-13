@@ -43,7 +43,11 @@ const (
 	// faces an intermittent error during running phase.
 	EventReasonRunningFailed = "RunningFailed"
 
-	// EventReasonLoadPipelineRunsConfigFailed is the reason for a event occuring when the
+	// EventReasonLoadPipelineRunsConfigFailed is the reason for an event occuring when the
 	// loading of the pipeline runs configuration fails.
 	EventReasonLoadPipelineRunsConfigFailed = "LoadPipelineRunsConfigFailed"
+
+	// EventReasonSkipOnMaintenanceMode is the reason for an event occuring when a pipeline
+	// run is not started due to maintenance mode
+	EventReasonSkipOnMaintenanceMode = "SkipOnMaintenanceMode"
 )

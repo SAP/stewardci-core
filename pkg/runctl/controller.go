@@ -51,6 +51,7 @@ type controllerTesting struct {
 	runManagerStub             run.Manager
 	newRunManagerStub          func(k8s.ClientFactory, secrets.SecretProvider, k8s.NamespaceManager) run.Manager
 	loadPipelineRunsConfigStub func() (*cfg.PipelineRunsConfigStruct, error)
+	loadControllerConfigStub   func() (*cfg.ControllerConfigStruct, error)
 }
 
 // NewController creates new Controller
@@ -221,6 +222,13 @@ func (c *Controller) loadPipelineRunsConfig() (*cfg.PipelineRunsConfigStruct, er
 	return cfg.LoadPipelineRunsConfig(c.factory)
 }
 
+func (c *Controller) loadControllerConfig() (*cfg.ControllerConfigStruct, error) {
+	if c.testing != nil && c.testing.loadControllerConfigStub != nil {
+		return c.testing.loadControllerConfigStub()
+	}
+	return cfg.LoadControllerConfig(c.factory)
+}
+
 // syncHandler compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Foo resource
 // with the current status of the resource.
@@ -279,6 +287,13 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	if pipelineRun.GetStatus().State == api.StateUndefined {
+		controllerConfig, _ := c.loadControllerConfig()
+		if controllerConfig.UpgradeMode {
+			err := fmt.Errorf("Maintenance mode skip")
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonSkipOnMaintenanceMode, err.Error())
+			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
+			return err
+		}
 		if err = c.changeState(pipelineRun, api.StatePreparing); err != nil {
 			return err
 		}
