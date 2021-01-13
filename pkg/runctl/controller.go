@@ -287,8 +287,8 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	if pipelineRun.GetStatus().State == api.StateUndefined {
-		controllerConfig, _ := c.loadControllerConfig()
-		if controllerConfig.UpgradeMode {
+		controllerConfig, err := c.loadControllerConfig()
+		if err == nil && controllerConfig.UpgradeMode {
 			err := fmt.Errorf("Maintenance mode skip")
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonSkipOnMaintenanceMode, err.Error())
 			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
