@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: steward-controller
+  namespace: {{ .Values.targetNamespace.name | quote }}
+  labels:
+    {{- include "steward.labels" . | nindent 4 }}
+    {{- include "steward.runController.componentLabel" . | nindent 4 }}
+data:
+  _example: |
+    ########################
+    # Configuration examples
+    ########################
+
+    # upgradeMode can be switched to true to avoid processing of new pipeline runs.
+    # Already running pipeline runs will continue.
+    upgradeMode: true
+
+  upgradeMode: {{ default false .Values.upgradeMode }}
