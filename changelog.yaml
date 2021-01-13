@@ -51,6 +51,15 @@
 - version: NEXT
   date: TBD
   changes:
+  - type: enhancement
+    impact: minor
+    title: "Add upgrade mode to run controller"
+    description: |- 
+      Run controller can be set to upgrade mode.
+      New Pipeline runs will not be processed in this mode.
+      Already running pipeline runs will continue processing.
+    pullRequestNumber: 204
+    jiraIssueNumber: 393
 
   - type: security
     impact: patch
