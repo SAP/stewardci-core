@@ -819,9 +819,6 @@ func updateTektonTaskRun(taskRun *tekton.TaskRun, namespace string, cf *fake.Cli
 
 func newIsUpgradeModeStub(upgradeMode bool, err error) func() (bool, error) {
 	return func() (bool, error) {
-		if err != nil {
-			return upgradeMode, err
-		}
-		return upgradeMode, nil
+		return upgradeMode, err
 	}
 }
