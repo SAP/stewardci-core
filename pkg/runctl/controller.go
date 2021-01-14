@@ -17,6 +17,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
+	"github.com/SAP/stewardci-core/pkg/upgrademode"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -51,7 +52,7 @@ type controllerTesting struct {
 	runManagerStub             run.Manager
 	newRunManagerStub          func(k8s.ClientFactory, secrets.SecretProvider, k8s.NamespaceManager) run.Manager
 	loadPipelineRunsConfigStub func() (*cfg.PipelineRunsConfigStruct, error)
-	loadControllerConfigStub   func() (*cfg.ControllerConfigStruct, error)
+	isUpgradeModeStub          func() (bool, error)
 }
 
 // NewController creates new Controller
@@ -222,11 +223,11 @@ func (c *Controller) loadPipelineRunsConfig() (*cfg.PipelineRunsConfigStruct, er
 	return cfg.LoadPipelineRunsConfig(c.factory)
 }
 
-func (c *Controller) loadControllerConfig() (*cfg.ControllerConfigStruct, error) {
-	if c.testing != nil && c.testing.loadControllerConfigStub != nil {
-		return c.testing.loadControllerConfigStub()
+func (c *Controller) isUpgradeMode() (bool, error) {
+	if c.testing != nil && c.testing.isUpgradeModeStub != nil {
+		return c.testing.isUpgradeModeStub()
 	}
-	return cfg.LoadControllerConfig(c.factory)
+	return upgrademode.IsUpgradeMode(c.factory)
 }
 
 // syncHandler compares the actual state with the desired, and attempts to
@@ -287,9 +288,13 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	if pipelineRun.GetStatus().State == api.StateUndefined {
-		controllerConfig, err := c.loadControllerConfig()
-		if err == nil && controllerConfig.UpgradeMode {
-			err := fmt.Errorf("Maintenance mode skip")
+		upgradeMode, err := c.isUpgradeMode()
+		if err != nil {
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonSkipOnMaintenanceMode, err.Error())
+			return err
+		}
+		if upgradeMode {
+			err := fmt.Errorf("maintenance mode set")
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonSkipOnMaintenanceMode, err.Error())
 			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
 			return err

@@ -240,16 +240,16 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 	errorRecover1 := serrors.Recoverable(error1)
 
 	for _, test := range []struct {
-		name                     string
-		pipelineSpec             api.PipelineSpec
-		currentStatus            api.PipelineStatus
-		runManagerExpectation    func(*runmocks.MockManager, *runmocks.MockRun)
-		pipelineRunsConfigStub   func() (*cfg.PipelineRunsConfigStruct, error)
-		loadControllerConfigStub func() (*cfg.ControllerConfigStruct, error)
-		expectedResult           api.Result
-		expectedState            api.State
-		expectedMessage          string
-		expectedError            error
+		name                   string
+		pipelineSpec           api.PipelineSpec
+		currentStatus          api.PipelineStatus
+		runManagerExpectation  func(*runmocks.MockManager, *runmocks.MockRun)
+		pipelineRunsConfigStub func() (*cfg.PipelineRunsConfigStruct, error)
+		isUpgradeModeStub      func() (bool, error)
+		expectedResult         api.Result
+		expectedState          api.State
+		expectedMessage        string
+		expectedError          error
 	}{
 		{name: "new_ok",
 			pipelineSpec:  api.PipelineSpec{},
@@ -257,32 +257,41 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
 			},
-			pipelineRunsConfigStub:   newEmptyRunsConfig,
-			loadControllerConfigStub: newControllerConfig(false, nil),
-			expectedResult:           api.ResultUndefined,
-			expectedState:            api.StateWaiting,
+			pipelineRunsConfigStub: newEmptyRunsConfig,
+			isUpgradeModeStub:      newIsUpgradeModeStub(false, nil),
+			expectedResult:         api.ResultUndefined,
+			expectedState:          api.StateWaiting,
 		},
-		{name: "new_config_error",
-			pipelineSpec:  api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
-			},
-			pipelineRunsConfigStub:   newEmptyRunsConfig,
-			loadControllerConfigStub: newControllerConfig(false, error1),
-			expectedResult:           api.ResultUndefined,
-			expectedState:            api.StateWaiting,
+		{name: "new_maintenance_error_a",
+			pipelineSpec:           api.PipelineSpec{},
+			currentStatus:          api.PipelineStatus{},
+			runManagerExpectation:  func(rm *runmocks.MockManager, run *runmocks.MockRun) {},
+			pipelineRunsConfigStub: newEmptyRunsConfig,
+			isUpgradeModeStub:      newIsUpgradeModeStub(false, error1),
+			expectedResult:         api.ResultUndefined,
+			expectedState:          api.StateUndefined,
+			expectedError:          error1,
+		},
+		{name: "new_maintenance_error_b",
+			pipelineSpec:           api.PipelineSpec{},
+			currentStatus:          api.PipelineStatus{},
+			runManagerExpectation:  func(rm *runmocks.MockManager, run *runmocks.MockRun) {},
+			pipelineRunsConfigStub: newEmptyRunsConfig,
+			isUpgradeModeStub:      newIsUpgradeModeStub(true, error1),
+			expectedResult:         api.ResultUndefined,
+			expectedState:          api.StateUndefined,
+			expectedError:          error1,
 		},
 		{name: "new_maintenance",
 			pipelineSpec:  api.PipelineSpec{},
 			currentStatus: api.PipelineStatus{},
 			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 			},
-			pipelineRunsConfigStub:   newEmptyRunsConfig,
-			loadControllerConfigStub: newControllerConfig(true, nil),
-			expectedResult:           api.ResultUndefined,
-			expectedState:            api.StateUndefined,
-			expectedError:            fmt.Errorf("Maintenance mode skip"),
+			pipelineRunsConfigStub: newEmptyRunsConfig,
+			isUpgradeModeStub:      newIsUpgradeModeStub(true, nil),
+			expectedResult:         api.ResultUndefined,
+			expectedState:          api.StateUndefined,
+			expectedError:          fmt.Errorf("maintenance mode set"),
 		},
 		{name: "new_get_cofig_fail_not_recoverable",
 			pipelineSpec:  api.PipelineSpec{},
@@ -292,9 +301,9 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 			pipelineRunsConfigStub: func() (*cfg.PipelineRunsConfigStruct, error) {
 				return nil, error1
 			},
-			loadControllerConfigStub: newControllerConfig(false, nil),
-			expectedResult:           api.ResultErrorInfra,
-			expectedState:            api.StateFinished,
+			isUpgradeModeStub: newIsUpgradeModeStub(false, nil),
+			expectedResult:    api.ResultErrorInfra,
+			expectedState:     api.StateFinished,
 		},
 		{name: "new_get_cofig_fail_recoverable",
 			pipelineSpec:  api.PipelineSpec{},
@@ -304,10 +313,10 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 			pipelineRunsConfigStub: func() (*cfg.PipelineRunsConfigStruct, error) {
 				return nil, errorRecover1
 			},
-			loadControllerConfigStub: newControllerConfig(false, nil),
-			expectedResult:           api.ResultUndefined,
-			expectedState:            api.StatePreparing,
-			expectedError:            errorRecover1,
+			isUpgradeModeStub: newIsUpgradeModeStub(false, nil),
+			expectedResult:    api.ResultUndefined,
+			expectedState:     api.StatePreparing,
+			expectedError:     errorRecover1,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -325,7 +334,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 			controller.testing = &controllerTesting{
 				runManagerStub:             runManager,
 				loadPipelineRunsConfigStub: test.pipelineRunsConfigStub,
-				loadControllerConfigStub:   test.loadControllerConfigStub,
+				isUpgradeModeStub:          test.isUpgradeModeStub,
 			}
 			// EXERCISE
 			resultErr := controller.syncHandler("ns1/foo")
@@ -351,7 +360,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 func Test_Controller_syncHandler_mock(t *testing.T) {
 	error1 := fmt.Errorf("error1")
 	errorRecover1 := serrors.Recoverable(error1)
-	for _, maintenance := range []bool{true, false} {
+	for _, upgradeMode := range []bool{true, false} {
 
 		for _, test := range []struct {
 			name                   string
@@ -587,7 +596,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedState:          api.StateFinished,
 			},
 		} {
-			t.Run(fmt.Sprintf("%+s_maintenance_%t", test.name, maintenance), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%+s_upgradeMode_%t", test.name, upgradeMode), func(t *testing.T) {
 				test := test
 				t.Parallel()
 				// SETUP
@@ -602,7 +611,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				controller.testing = &controllerTesting{
 					runManagerStub:             runManager,
 					loadPipelineRunsConfigStub: test.pipelineRunsConfigStub,
-					loadControllerConfigStub:   newControllerConfig(maintenance, nil),
+					isUpgradeModeStub:          newIsUpgradeModeStub(upgradeMode, nil),
 				}
 				// EXERCISE
 				err := controller.syncHandler("ns1/foo")
@@ -746,7 +755,7 @@ func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 	controller.testing = &controllerTesting{
 		newRunManagerStub:          newTestRunManager,
 		loadPipelineRunsConfigStub: newEmptyRunsConfig,
-		loadControllerConfigStub:   newControllerConfig(false, nil),
+		isUpgradeModeStub:          newIsUpgradeModeStub(false, nil),
 	}
 	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(cf.StewardV1alpha1())
 
@@ -808,11 +817,11 @@ func updateTektonTaskRun(taskRun *tekton.TaskRun, namespace string, cf *fake.Cli
 	return cf.TektonV1beta1().TaskRuns(namespace).Update(taskRun)
 }
 
-func newControllerConfig(upgradeMode bool, err error) func() (*cfg.ControllerConfigStruct, error) {
-	return func() (*cfg.ControllerConfigStruct, error) {
+func newIsUpgradeModeStub(upgradeMode bool, err error) func() (bool, error) {
+	return func() (bool, error) {
 		if err != nil {
-			return nil, err
+			return upgradeMode, err
 		}
-		return &cfg.ControllerConfigStruct{UpgradeMode: upgradeMode}, nil
+		return upgradeMode, nil
 	}
 }

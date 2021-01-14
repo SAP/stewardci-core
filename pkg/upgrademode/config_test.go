@@ -1,9 +1,9 @@
-package cfg
+package upgrademode
 
 import (
 	"testing"
 
-	serrors "github.com/SAP/stewardci-core/pkg/errors"
+	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	corev1clientmocks "github.com/SAP/stewardci-core/pkg/k8s/mocks/client-go/corev1"
@@ -11,56 +11,65 @@ import (
 	"github.com/pkg/errors"
 	"gotest.tools/assert"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/system"
 	_ "knative.dev/pkg/system/testing"
 )
 
-func Test_loadControllerConfig_config_not_found(t *testing.T) {
+func Test_IsUpgradeMode_getError_(t *testing.T) {
 	t.Parallel()
 	// SETUP
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	cf := newErrorFactory(mockCtrl, controllerConfigMapName)
+	cf := newErrorFactory(mockCtrl, upgradeModeConfigMapName, errors.New("some error"))
+
 	// EXERCISE
-	_, resultErr := LoadControllerConfig(cf)
+	_, resultErr := IsUpgradeMode(cf)
 
 	// VERIFY
-	assert.Assert(t, serrors.IsRecoverable(resultErr))
-	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-controller" in namespace "knative-testing": some error`)
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-upgrade-mode" in namespace "knative-testing": some error`)
+}
+
+func Test_IsUpgradeMode_get_NotFoundError(t *testing.T) {
+	t.Parallel()
+	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	cf := newErrorFactory(mockCtrl, upgradeModeConfigMapName, k8serrors.NewNotFound(api.Resource("pipelineruns"), ""))
+	// EXERCISE
+	result, resultErr := IsUpgradeMode(cf)
+
+	// VERIFY
+	assert.Assert(t, result == false)
+	assert.NilError(t, resultErr)
 }
 
 func Test_loadControllerConfig(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
-		name           string
-		configData     map[string]string
-		expectedConfig *ControllerConfigStruct
+		name       string
+		configData map[string]string
+		expected   bool
 	}{
 		{
 			"UpgradeModeEnabled",
 			map[string]string{
 				"upgradeMode": "true",
 			},
-			&ControllerConfigStruct{
-				UpgradeMode: true,
-			},
+			true,
 		},
 		{
 			"UpgradeModeDisabled",
 			map[string]string{
 				"upgradeMode": "false",
 			},
-			&ControllerConfigStruct{
-				UpgradeMode: false,
-			},
+			false,
 		},
 		{
 			"UpgradeModeMissing",
 			map[string]string{},
-			&ControllerConfigStruct{
-				UpgradeMode: false,
-			},
+			false,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -72,11 +81,11 @@ func Test_loadControllerConfig(t *testing.T) {
 			)
 
 			// EXERCISE
-			resultConfig, resultErr := LoadControllerConfig(cf)
+			result, resultErr := IsUpgradeMode(cf)
 
 			// VERIFY
 			assert.NilError(t, resultErr)
-			assert.DeepEqual(t, tc.expectedConfig, resultConfig)
+			assert.Equal(t, tc.expected, result)
 		})
 	}
 }
@@ -84,16 +93,15 @@ func Test_loadControllerConfig(t *testing.T) {
 func newControllerConfigMap(data map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      controllerConfigMapName,
+			Name:      upgradeModeConfigMapName,
 			Namespace: system.Namespace(),
 		},
 		Data: data,
 	}
 }
 
-func newErrorFactory(mockCtrl *gomock.Controller, configMapName string) *mocks.MockClientFactory {
+func newErrorFactory(mockCtrl *gomock.Controller, configMapName string, expectedError error) *mocks.MockClientFactory {
 	cf := mocks.NewMockClientFactory(mockCtrl)
-	expectedError := errors.New("some error")
 	{
 		coreV1Ifce := corev1clientmocks.NewMockCoreV1Interface(mockCtrl)
 		cf.EXPECT().CoreV1().Return(coreV1Ifce).AnyTimes()

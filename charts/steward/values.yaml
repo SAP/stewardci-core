@@ -116,5 +116,3 @@ hooks:
       pullPolicy: IfNotPresent
 
 featureFlags: ""
-
-upgradeMode: false
