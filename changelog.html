@@ -4,15 +4,15 @@
 <head>
     <!--
             This dynamic HTML page loads the changelog.yaml from the specified repository
-            and renders a more readable, formatted HTML version of it. We recommend to push
-            this page to the GitHub pages to make it accessible as HTML.
-
+            and renders a more readable, formatted HTML version of it.
+            
             This page supports direct links to specific versions by appending '#<version>' to the URL.
-
             This page supports rendering of specific versions by appending query parameter '?version=<version>' to the URL.
-        -->
+            This page supports rendering of specific version ranges by appending query parameters '?from=<version>&to=<version>' to the URL.
+    -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <base target="_top">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
         integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -21,18 +21,38 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.0/angular.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/angular-sanitize/1.8.2/angular-sanitize.min.js"></script>
     <script>
-
-            const repoUrl = "https://github.com/SAP/stewardci-core";
-            //The following URL has to point the the RAW (!) version of the changelog.yaml in the master branch
-            const changelogYamlUrl = "https://raw.githubusercontent.com/SAP/stewardci-core/master/changelog.yaml";
-            const jiraUrl = "";
-            const jiraProjectName = "";
-
+        const outerUrl = top.location.href.split("?")[0];
+        const innerUrl = document.location.href.split("?")[0];
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        if(outerUrl == innerUrl) {
+            //The parameters in this section only have to be maintained if this html file is used directly and not within the iframe of an outer html file.
+            /* --- Enter repo-specific values here --- */
+            repoOrg = "SAP"
+            repoName = "stewardci-core"
+            githubUrl = "https://github.com"
+            jiraUrl = ""
+            jiraProjectName = ""
+            changelogYamlUrl = "https://raw.githubusercontent.com/SAP/stewardci-core/master/changelog.yaml"
+            /* --------------------------------------- */
+        } else {
+            //If this html file is used within the iframe of the outer html file, the parameters are taken from the (iframe) query parameters.
+            repoOrg = urlParams.get("repoOrg");
+            repoName = urlParams.get("repoName")
+            githubUrl = urlParams.get("githubUrl")
+            jiraUrl = urlParams.get("jiraUrl")
+            jiraProjectName = urlParams.get("jiraProjectName")
+            changelogYamlUrl = urlParams.get("changelogYamlUrl")
+        }
+        const repoUrl = githubUrl+"/"+repoOrg+"/"+repoName;
 
         var app = angular.module('app', []);
         angular.module('app', ['ngSanitize']).controller('MyController', ['$scope', function ($scope) {
             $scope.changelog = [];
+            $scope.outerUrl = outerUrl;
             $scope.config = {
+                repoOrg: repoOrg,
+                repoName: repoName,
                 repoUrl: repoUrl,
                 changelogYamlUrl: changelogYamlUrl,
                 jiraUrl: jiraUrl,
@@ -41,6 +61,12 @@
             let queryString = window.location.search;
             let urlParams = new URLSearchParams(queryString);
             let versionFilter = urlParams.get("version")
+            let fromToFilter = {
+                from: urlParams.get("from"),
+                to: urlParams.get("to"),
+                toReached: false,
+                fromReached: false
+            }
             $scope.filter = {
                 version: versionFilter ? versionFilter : ""
             };
@@ -53,6 +79,10 @@
                         let release = changelog[ci];
                         release.dateString = release.version == "NEXT" ? "soon" : new Date(release.date).toDateString();
                         release.renderClass = release.version == "NEXT" ? "next" : "release"
+                        release.display = filterFromTo(release.version, fromToFilter);
+                        if(release.recall) {
+                            release.recall.messageHTML = markdown2Html(release.recall.message);
+                        }
                         for (let ri = 0; ri < (release.changes ? release.changes.length : 0); ri++) {
                             let change = release.changes[ri];
                             change.pullRequestNumbers = (typeof change.pullRequestNumber == "number") ? [change.pullRequestNumber] : change.pullRequestNumber;
@@ -71,16 +101,50 @@
             xmlhttp.send();
         }]);
 
+        function filterFromTo(version, filter) {
+            let result = true;
+            if(filter.to && version == filter.to) {
+                filter.toReached = true;
+            } else  if(filter.to && !filter.toReached) {
+                result = false;
+            }
+            if(filter.from && filter.fromReached) {
+                result = false;
+            } else if(filter.from && version == filter.from) {
+                filter.fromReached = true;
+            }
+            return result;
+        }
+
         function markdown2Html(markdownText) {
             let mdConverter = new showdown.Converter();
             let html = mdConverter.makeHtml(markdownText);
             return html;
         }
+
     </script>
 
     <style>
         .next {
             background-color: lightgoldenrodyellow;
+        }
+        .link {
+            color: black;
+        }
+        .link:hover {
+            text-decoration: none;
+        }
+        .hidden {
+            color: #e9ecef; /* .jumbotron background-color */
+        }
+        .icon {
+            vertical-align: middle;
+            position: relative;
+            top: -0.1em;
+        }
+        .recall-text {
+            font-weight: bolder;
+            color: #dc3545; /* .badge-danger background-color */
         }
     </style>
 </head>
@@ -89,14 +153,35 @@
     <div class="container-md">
         <h1>Changelog</h1>
         <p>
-            This generated changelog is based on the <a href="{{config.changelogYamlUrl}}">changelog.yaml</a> in the
-            repositories main branch.
-            Click here to <a href="?">list all versions</a>.
+            <a href="{{config.repoUrl}}">
+                <img src="https://github.githubassets.com/images/modules/logos_page/Octocat.png" width="30px">
+                <b>{{config.repoOrg}}/{{config.repoName}}</b>
+            </a>
         </p>
-        <div class="jumbotron shadow {{release.renderClass}}" ng-repeat="release in changelog | filter : {version: filter.version}"
+        <p>
+            This generated changelog is based on the latest released <a href="{{config.changelogYamlUrl}}">changelog.yaml</a>.
+            Click here to <a href="{{outerUrl}}?">list all versions</a>.
+        </p>
+        <div class="jumbotron shadow {{release.renderClass}}" ng-repeat="release in changelog | filter : {version: filter.version, display: true}"
             ng-if="release.changes.length > 0">
-            <h3 class="display-4" id="{{release.version}}">{{release.version}}</h3>
+            <h3 class="display-4" id="{{release.version}}">
+                <span ng-if="release.recall" class="icon badge badge-danger">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="0.7em" height="0.7em" fill="currentColor" class="bi bi-bug" viewBox="0 0 16 16">
+                        <path d="M4.355.522a.5.5 0 0 1 .623.333l.291.956A4.979 4.979 0 0 1 8 1c1.007 0 1.946.298 2.731.811l.29-.956a.5.5 0 1 1 .957.29l-.41 1.352A4.985 4.985 0 0 1 13 6h.5a.5.5 0 0 0 .5-.5V5a.5.5 0 0 1 1 0v.5A1.5 1.5 0 0 1 13.5 7H13v1h1.5a.5.5 0 0 1 0 1H13v1h.5a1.5 1.5 0 0 1 1.5 1.5v.5a.5.5 0 1 1-1 0v-.5a.5.5 0 0 0-.5-.5H13a5 5 0 0 1-10 0h-.5a.5.5 0 0 0-.5.5v.5a.5.5 0 1 1-1 0v-.5A1.5 1.5 0 0 1 2.5 10H3V9H1.5a.5.5 0 0 1 0-1H3V7h-.5A1.5 1.5 0 0 1 1 5.5V5a.5.5 0 0 1 1 0v.5a.5.5 0 0 0 .5.5H3c0-1.364.547-2.601 1.432-3.503l-.41-1.352a.5.5 0 0 1 .333-.623zM4 7v4a4 4 0 0 0 3.5 3.97V7H4zm4.5 0v7.97A4 4 0 0 0 12 11V7H8.5zM12 6a3.989 3.989 0 0 0-1.334-2.982A3.983 3.983 0 0 0 8 2a3.983 3.983 0 0 0-2.667 1.018A3.989 3.989 0 0 0 4 6h8z"/>
+                    </svg>
+                </span>
+                <a class="link" href="{{config.repoUrl}}/releases/tag/{{release.version}}">{{release.version}}</a>
+                <a class="link hidden" href="{{outerUrl}}?version={{release.version}}">
+                    <span class="icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="0.6em" height="0.6em" fill="currentColor" class="bi bi-link" viewBox="0 0 16 16">
+                            <path d="M6.354 5.5H4a3 3 0 0 0 0 6h3a3 3 0 0 0 2.83-4H9c-.086 0-.17.01-.25.031A2 2 0 0 1 7 10.5H4a2 2 0 1 1 0-4h1.535c.218-.376.495-.714.82-1z"/>
+                            <path d="M9 5.5a3 3 0 0 0-2.83 4h1.098A2 2 0 0 1 9 6.5h3a2 2 0 1 1 0 4h-1.535a4.02 4.02 0 0 1-.82 1H12a3 3 0 1 0 0-6H9z"/>
+                        </svg>
+                    </span>
+                </a>
+            </h3>
             <p>Release Date: {{release.dateString}}</p>
+            <p ng-if="release.recall" ng-bind-html="release.recall.messageHTML" class="recall-text"></p>
             <div>
                 <div ng-repeat="change in release.changes">
                     <hr class="my-4">
@@ -110,7 +195,7 @@
                             <div class="card">
                                 <div class="card-body">
                                     <h5 class="card-title">
-                                        <span class="badge badge-warning">
+                                        <span class="icon badge badge-warning">
                                             <svg width="1.0625em" height="1em" viewBox="0 0 17 16"
                                                 class="bi bi-exclamation-triangle" fill="currentColor"
                                                 xmlns="http://www.w3.org/2000/svg">
@@ -129,7 +214,7 @@
                             <div class="card">
                                 <div class="card-body">
                                     <h5 class="card-title">
-                                        <span class="badge badge-danger">
+                                        <span class="icon badge badge-danger">
                                             <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-lightning"
                                                 fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                                                 <path fill-rule="evenodd"
@@ -145,7 +230,7 @@
                             <div class="card">
                                 <div class="card-body">
                                     <h5 class="card-title">
-                                        <span class="badge badge-info">
+                                        <span class="icon badge badge-info">
                                             <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-trash"
                                                 fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                                                 <path
