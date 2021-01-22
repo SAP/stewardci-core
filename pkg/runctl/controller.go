@@ -17,7 +17,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
-	"github.com/SAP/stewardci-core/pkg/upgrademode"
+	"github.com/SAP/stewardci-core/pkg/maintenancemode"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -52,7 +52,7 @@ type controllerTesting struct {
 	runManagerStub             run.Manager
 	newRunManagerStub          func(k8s.ClientFactory, secrets.SecretProvider, k8s.NamespaceManager) run.Manager
 	loadPipelineRunsConfigStub func() (*cfg.PipelineRunsConfigStruct, error)
-	isUpgradeModeStub          func() (bool, error)
+	isMaintenanceModeStub      func() (bool, error)
 }
 
 // NewController creates new Controller
@@ -223,11 +223,11 @@ func (c *Controller) loadPipelineRunsConfig() (*cfg.PipelineRunsConfigStruct, er
 	return cfg.LoadPipelineRunsConfig(c.factory)
 }
 
-func (c *Controller) isUpgradeMode() (bool, error) {
-	if c.testing != nil && c.testing.isUpgradeModeStub != nil {
-		return c.testing.isUpgradeModeStub()
+func (c *Controller) isMaintenanceMode() (bool, error) {
+	if c.testing != nil && c.testing.isMaintenanceModeStub != nil {
+		return c.testing.isMaintenanceModeStub()
 	}
-	return upgrademode.IsUpgradeMode(c.factory)
+	return maintenancemode.IsMaintenanceMode(c.factory)
 }
 
 // syncHandler compares the actual state with the desired, and attempts to
@@ -288,12 +288,12 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	if pipelineRun.GetStatus().State == api.StateUndefined {
-		upgradeMode, err := c.isUpgradeMode()
+		maintenanceMode, err := c.isMaintenanceMode()
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonSkipOnMaintenanceMode, err.Error())
 			return err
 		}
-		if upgradeMode {
+		if maintenanceMode {
 			err := fmt.Errorf("maintenance mode set")
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonSkipOnMaintenanceMode, err.Error())
 			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.

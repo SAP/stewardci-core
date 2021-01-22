@@ -53,10 +53,11 @@
   changes:
   - type: enhancement
     impact: minor
-    title: "Add upgrade mode to run controller"
+    title: "Add maintenance mode to run controller"
     description: |- 
-      Steward can be put in _upgrade mode_.
+      Steward can be put in _maintenance mode_.
       It prevents _new_ pipeline runs to be processed, while pipeline runs that are in progress _already_ still run to completion.
+
     pullRequestNumber: 204
     jiraIssueNumber: 393
 

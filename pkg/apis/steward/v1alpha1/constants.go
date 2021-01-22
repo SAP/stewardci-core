@@ -50,4 +50,10 @@ const (
 	// EventReasonSkipOnMaintenanceMode is the reason for an event occuring when a pipeline
 	// run is not started due to maintenance mode
 	EventReasonSkipOnMaintenanceMode = "SkipOnMaintenanceMode"
+
+	// MaintenanceModeConfigMapName is the name of the config map to enable the maintenance mode
+	MaintenanceModeConfigMapName = "steward-maintenance-mode"
+
+	// MaintenanceModeKeyName is the name of the key to enable the maintenance mode
+	MaintenanceModeKeyName = "maintenanceMode"
 )

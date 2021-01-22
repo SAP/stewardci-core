@@ -1,4 +1,4 @@
-package upgrademode
+package maintenancemode
 
 import (
 	"testing"
@@ -17,28 +17,28 @@ import (
 	_ "knative.dev/pkg/system/testing"
 )
 
-func Test_IsUpgradeMode_getError_(t *testing.T) {
+func Test_IsMaintenanceMode_getError_(t *testing.T) {
 	t.Parallel()
 	// SETUP
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	cf := newErrorFactory(mockCtrl, upgradeModeConfigMapName, errors.New("some error"))
+	cf := newErrorFactory(mockCtrl, api.MaintenanceModeConfigMapName, errors.New("some error"))
 
 	// EXERCISE
-	_, resultErr := IsUpgradeMode(cf)
+	_, resultErr := IsMaintenanceMode(cf)
 
 	// VERIFY
-	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-upgrade-mode" in namespace "knative-testing": some error`)
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-maintenance-mode" in namespace "knative-testing": some error`)
 }
 
-func Test_IsUpgradeMode_get_NotFoundError(t *testing.T) {
+func Test_IsMaintenanceMode_get_NotFoundError(t *testing.T) {
 	t.Parallel()
 	// SETUP
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	cf := newErrorFactory(mockCtrl, upgradeModeConfigMapName, k8serrors.NewNotFound(api.Resource("pipelineruns"), ""))
+	cf := newErrorFactory(mockCtrl, api.MaintenanceModeConfigMapName, k8serrors.NewNotFound(api.Resource("pipelineruns"), ""))
 	// EXERCISE
-	result, resultErr := IsUpgradeMode(cf)
+	result, resultErr := IsMaintenanceMode(cf)
 
 	// VERIFY
 	assert.Assert(t, result == false)
@@ -53,21 +53,21 @@ func Test_loadControllerConfig(t *testing.T) {
 		expected   bool
 	}{
 		{
-			"UpgradeModeEnabled",
+			"MaintenanceModeEnabled",
 			map[string]string{
-				"upgradeMode": "true",
+				"maintenanceMode": "true",
 			},
 			true,
 		},
 		{
-			"UpgradeModeDisabled",
+			"MaintenanceModeDisabled",
 			map[string]string{
-				"upgradeMode": "false",
+				"maintenanceMode": "false",
 			},
 			false,
 		},
 		{
-			"UpgradeModeMissing",
+			"MaintenanceModeMissing",
 			map[string]string{},
 			false,
 		},
@@ -81,7 +81,7 @@ func Test_loadControllerConfig(t *testing.T) {
 			)
 
 			// EXERCISE
-			result, resultErr := IsUpgradeMode(cf)
+			result, resultErr := IsMaintenanceMode(cf)
 
 			// VERIFY
 			assert.NilError(t, resultErr)
@@ -93,7 +93,7 @@ func Test_loadControllerConfig(t *testing.T) {
 func newControllerConfigMap(data map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      upgradeModeConfigMapName,
+			Name:      api.MaintenanceModeConfigMapName,
 			Namespace: system.Namespace(),
 		},
 		Data: data,
