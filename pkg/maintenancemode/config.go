@@ -28,6 +28,9 @@ func IsMaintenanceMode(clientFactory k8s.ClientFactory) (bool, error) {
 	}
 
 	if configMap != nil {
+		if !configMap.ObjectMeta.DeletionTimestamp.IsZero() {
+			return false, nil
+		}
 		data := configMap.Data
 		return data[api.MaintenanceModeKeyName] == "true", nil
 	}

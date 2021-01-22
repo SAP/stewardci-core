@@ -2,6 +2,7 @@ package maintenancemode
 
 import (
 	"testing"
+	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
@@ -37,6 +38,24 @@ func Test_IsMaintenanceMode_get_NotFoundError(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	cf := newErrorFactory(mockCtrl, api.MaintenanceModeConfigMapName, k8serrors.NewNotFound(api.Resource("pipelineruns"), ""))
+	// EXERCISE
+	result, resultErr := IsMaintenanceMode(cf)
+
+	// VERIFY
+	assert.Assert(t, result == false)
+	assert.NilError(t, resultErr)
+}
+
+func Test_IsMaintenanceMode_configMapHasDeletionTimestamp(t *testing.T) {
+	t.Parallel()
+	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	cm := newControllerConfigMap(map[string]string{
+		"maintenanceMode": "true",
+	})
+	cm.ObjectMeta.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	cf := fake.NewClientFactory(cm)
 	// EXERCISE
 	result, resultErr := IsMaintenanceMode(cf)
 
