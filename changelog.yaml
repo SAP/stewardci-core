@@ -55,9 +55,8 @@
     impact: minor
     title: "Add upgrade mode to run controller"
     description: |- 
-      Run controller can be set to upgrade mode.
-      New Pipeline runs will not be processed in this mode.
-      Already running pipeline runs will continue processing.
+      Steward can be put in _upgrade mode_.
+      It prevents _new_ pipeline runs to be processed, while pipeline runs that are in progress _already_ still run to completion.
     pullRequestNumber: 204
     jiraIssueNumber: 393
 

@@ -6,8 +6,8 @@ Newly created pipeline runs will stay untouched.
 
 ## Steps
 
-- Set the system in the 'upgrade mode'
-- Wait until the already started pipeline runs are finished.
+- Put Steward in 'upgrade mode'
+- Wait until already started pipeline runs are finished.
 - Install the new version of steward
 - Switch off 'upgrade mode'
 
@@ -23,33 +23,37 @@ kubectl apply -n steward-system -f upgrade_mode_on.yaml
 
 ## Wait until the already started pipeline runs are finished.
 
-You can list all non-finished pipelines with the following command
+You can list all non-finished pipelines with the following command:
+
 ```bash
  kubectl get spr --all-namespaces | grep -v finished
  ```
 
 Installation can start when there are none or only pipeline runs with state unknown (empty string).
 
-For each pipeline run with unknown status you can also see an event with Reason 'SkipOnMaintenanceMode'
+For each pipeline run without state you can also see an event with reason 'SkipOnMaintenanceMode':
 
 ```bash
 TENANT_
-kubectl get event -n  $TENANT_NAMESPACE
+kubectl get event -n  "$TENANT_NAMESPACE"
 LAST SEEN   TYPE     REASON                  OBJECT                 MESSAGE
 12s         Normal   SkipOnMaintenanceMode   pipelinerun/ok-n9lcl   Maintenance mode skip
 ```
 
-### Install the new version of steward
+### Install the new version of Steward
+
 See [Installing Steward](../install/README.md)
 
 ### Switch off 'upgrade mode'
 
-To switch off the upgrade mode you can either delete the created config map or set `upgradeMode: "false"`
-
-```bash
-kubectl apply -n steward-system -f upgrade_mode_off.yaml
-```
+To switch off the upgrade mode you can either delete the created config map:
 
 ```bash
 kubectl delete -n steward-system -f upgrade_mode_on.yaml
+```
+
+or set `upgradeMode: "false"`:
+
+```bash
+kubectl apply -n steward-system -f upgrade_mode_off.yaml
 ```
