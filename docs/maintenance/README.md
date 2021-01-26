@@ -37,7 +37,6 @@ The installation can start when there are no pipeline runs at all or _all_ pipel
 For each pipeline run without state you can also see an event with reason 'SkipOnMaintenanceMode':
 
 ```bash
-TENANT_
 kubectl get event -n  "$TENANT_NAMESPACE"
 LAST SEEN   TYPE     REASON                  OBJECT                 MESSAGE
 12s         Normal   SkipOnMaintenanceMode   pipelinerun/ok-n9lcl   Maintenance mode skip
@@ -51,11 +50,11 @@ See [Installing Steward](../install/README.md)
 To switch off the maintenance mode you can either delete the created config map:
 
 ```bash
-kubectl delete -n steward-system -f maintenance_mode_off.yaml
+kubectl delete -n steward-system -f maintenance_mode_on.yaml
 ```
 
 or set `maintenanceMode: "false"`:
 
 ```bash
-kubectl apply -n steward-system -f maintenance_mode_on.yaml
+kubectl apply -n steward-system -f maintenance_mode_off.yaml
 ```

@@ -23,8 +23,8 @@ func Test_IsMaintenanceMode_getError_(t *testing.T) {
 	// SETUP
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	cf := newErrorFactory(mockCtrl, api.MaintenanceModeConfigMapName, errors.New("some error"))
-
+	cf, configMapIfce := newFactoryWithConfigMapIfce(mockCtrl)
+	expectErrorOnGetConfigMap(configMapIfce, api.MaintenanceModeConfigMapName, errors.New("some error"))
 	// EXERCISE
 	_, resultErr := IsMaintenanceMode(cf)
 
@@ -37,7 +37,9 @@ func Test_IsMaintenanceMode_get_NotFoundError(t *testing.T) {
 	// SETUP
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	cf := newErrorFactory(mockCtrl, api.MaintenanceModeConfigMapName, k8serrors.NewNotFound(api.Resource("pipelineruns"), ""))
+	cf, configMapIfce := newFactoryWithConfigMapIfce(mockCtrl)
+	expectErrorOnGetConfigMap(configMapIfce, api.MaintenanceModeConfigMapName, k8serrors.NewNotFound(api.Resource("pipelineruns"), ""))
+
 	// EXERCISE
 	result, resultErr := IsMaintenanceMode(cf)
 
@@ -51,7 +53,7 @@ func Test_IsMaintenanceMode_configMapHasDeletionTimestamp(t *testing.T) {
 	// SETUP
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
-	cm := newControllerConfigMap(map[string]string{
+	cm := newMaintenanceModeConfigMap(map[string]string{
 		"maintenanceMode": "true",
 	})
 	cm.ObjectMeta.DeletionTimestamp = &metav1.Time{Time: time.Now()}
@@ -96,7 +98,7 @@ func Test_loadControllerConfig(t *testing.T) {
 			t.Parallel()
 			// SETUP
 			cf := fake.NewClientFactory(
-				newControllerConfigMap(tc.configData),
+				newMaintenanceModeConfigMap(tc.configData),
 			)
 
 			// EXERCISE
@@ -119,17 +121,19 @@ func newMaintenanceModeConfigMap(data map[string]string) *corev1.ConfigMap {
 	}
 }
 
-func newErrorFactory(mockCtrl *gomock.Controller, configMapName string, expectedError error) *mocks.MockClientFactory {
+func newFactoryWithConfigMapIfce(mockCtrl *gomock.Controller) (*mocks.MockClientFactory, *corev1clientmocks.MockConfigMapInterface) {
 	cf := mocks.NewMockClientFactory(mockCtrl)
-	{
-		coreV1Ifce := corev1clientmocks.NewMockCoreV1Interface(mockCtrl)
-		cf.EXPECT().CoreV1().Return(coreV1Ifce).AnyTimes()
-		configMapIfce := corev1clientmocks.NewMockConfigMapInterface(mockCtrl)
-		coreV1Ifce.EXPECT().ConfigMaps(gomock.Any()).Return(configMapIfce).AnyTimes()
-		configMapIfce.EXPECT().
-			Get(configMapName, gomock.Any()).
-			Return(nil, expectedError).
-			Times(1)
-	}
-	return cf
+	coreV1Ifce := corev1clientmocks.NewMockCoreV1Interface(mockCtrl)
+	cf.EXPECT().CoreV1().Return(coreV1Ifce).AnyTimes()
+	configMapIfce := corev1clientmocks.NewMockConfigMapInterface(mockCtrl)
+	coreV1Ifce.EXPECT().ConfigMaps(gomock.Any()).Return(configMapIfce).AnyTimes()
+
+	return cf, configMapIfce
+}
+
+func expectErrorOnGetConfigMap(configMapIfce *corev1clientmocks.MockConfigMapInterface, configMapName string, expectedError error) {
+	configMapIfce.EXPECT().
+		Get(configMapName, gomock.Any()).
+		Return(nil, expectedError).
+		Times(1)
 }
