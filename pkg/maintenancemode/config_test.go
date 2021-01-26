@@ -109,7 +109,7 @@ func Test_loadControllerConfig(t *testing.T) {
 	}
 }
 
-func newControllerConfigMap(data map[string]string) *corev1.ConfigMap {
+func newMaintenanceModeConfigMap(data map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      api.MaintenanceModeConfigMapName,
