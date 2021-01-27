@@ -128,29 +128,29 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	r.ensureCopy()
 	klog.V(3).Infof("Update State to %s [%s]", state, r.String())
 	now := metav1.Now()
-	oldState := r.apiObj.Status.StateDetails
+	oldStateDetails := r.apiObj.Status.StateDetails
 
 	err := r.changeStatusAndUpdateSafely(func() error {
 
-		currentState := r.apiObj.Status.StateDetails
-		if currentState != oldState {
-			return fmt.Errorf("State cannot be updated as it was changed concurrently from %q to %q", oldState, currentState)
+		currentStateDetails := r.apiObj.Status.StateDetails
+		if currentStateDetails.State != oldStateDetails.State {
+			return fmt.Errorf("State cannot be updated as it was changed concurrently from %q to %q", oldStateDetails.State, currentStateDetails.State)
 		}
-		if currentState.State == api.StateUndefined {
-			currentState.State = api.StateNew
-			currentState.StartedAt = r.apiObj.ObjectMeta.CreationTimestamp
+		if currentStateDetails.State == api.StateUndefined {
+			currentStateDetails.State = api.StateNew
+			currentStateDetails.StartedAt = r.apiObj.ObjectMeta.CreationTimestamp
 			r.apiObj.Status.StartedAt = &now
 		}
-		currentState.FinishedAt = now
+		currentStateDetails.FinishedAt = now
 		his := r.apiObj.Status.StateHistory
-		his = append(his, currentState)
+		his = append(his, currentStateDetails)
 
-		newState := api.StateItem{State: state, StartedAt: now}
+		newStateDetails := api.StateItem{State: state, StartedAt: now}
 		if state == api.StateFinished {
-			newState.FinishedAt = now
+			newStateDetails.FinishedAt = now
 		}
 
-		r.apiObj.Status.StateDetails = newState
+		r.apiObj.Status.StateDetails = newStateDetails
 		r.apiObj.Status.StateHistory = his
 		r.apiObj.Status.State = state
 		return nil
@@ -159,9 +159,9 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	if err != nil {
 		return nil, err
 	}
-	oldState.State = api.StateNew
-	oldState.StartedAt = r.apiObj.ObjectMeta.CreationTimestamp
-	return &oldState, nil
+	his := r.apiObj.Status.StateHistory
+	hisLen := len(his)
+	return &his[hisLen-1], nil
 }
 
 // String returns the full qualified name of the pipeline run

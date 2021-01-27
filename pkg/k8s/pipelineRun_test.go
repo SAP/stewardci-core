@@ -215,9 +215,11 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	assert.NilError(t, err)
 
 	// EXERCISE
-	examinee.UpdateState(api.StatePreparing)
+	result, resultErr := examinee.UpdateState(api.StatePreparing)
 
 	// VERIFY
+	assert.NilError(t, resultErr)
+
 	assert.Equal(t, api.StatePreparing, examinee.GetStatus().State)
 	assert.Equal(t, 1, len(examinee.GetStatus().StateHistory))
 	assert.Equal(t, api.StateNew, examinee.GetStatus().StateHistory[0].State)
@@ -225,6 +227,10 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	startedAt := examinee.GetStatus().StartedAt
 	assert.Assert(t, !startedAt.IsZero())
 	assert.Equal(t, *startedAt, examinee.GetStatus().StateHistory[0].FinishedAt)
+
+	assert.Equal(t, api.StateNew, result.State)
+	assert.Equal(t, creationTimestamp, result.StartedAt)
+	assert.Equal(t, *startedAt, result.FinishedAt)
 }
 
 func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
@@ -239,9 +245,10 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	factory.Sleep("let time elapse to check timestamps afterwards")
 
 	// EXERCISE
-	examinee.UpdateState(api.StateRunning) // second call
+	result, resultErr := examinee.UpdateState(api.StateRunning) // second call
 
 	// VERIFY
+	assert.NilError(t, resultErr)
 	status := examinee.GetStatus()
 	assert.Equal(t, 2, len(status.StateHistory))
 	assert.Equal(t, api.StateNew, examinee.GetStatus().StateHistory[0].State)
@@ -249,7 +256,15 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 
 	start := status.StateHistory[1].StartedAt
 	end := status.StateHistory[1].FinishedAt
+	assert.Assert(t, !start.IsZero())
 	assert.Assert(t, factory.CheckTimeOrder(start, end))
+
+	assert.Equal(t, api.StatePreparing, result.State)
+	start = result.StartedAt
+	end = result.FinishedAt
+	assert.Assert(t, !start.IsZero())
+	assert.Assert(t, factory.CheckTimeOrder(start, end))
+
 }
 
 func Test_pipelineRun_UpdateStateToFinished_HistoryIfUpdateStateCalledBefore(t *testing.T) {
