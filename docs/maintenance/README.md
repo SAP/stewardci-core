@@ -43,6 +43,7 @@ LAST SEEN   TYPE     REASON                  OBJECT                 MESSAGE
 ```
 
 ### Install the new version of Steward
+
 See [Installing Steward](../install/README.md)
 
 ### Switch off maintenance mode
