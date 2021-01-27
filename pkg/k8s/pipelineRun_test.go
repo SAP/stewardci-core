@@ -489,7 +489,8 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfNoConflict(
 	assert.Equal(t, examinee.copied, false)
 	assert.Equal(t, changeCallCount, 1)
 }
-func Test_pipelineRun_changeStatusAndUpdateSafely_OnChangeError_DontUpdateAndNoRetry_RetunChangeError(t *testing.T) {
+
+func Test_pipelineRun_changeStatusAndUpdateSafely_NoUpdateOnChangeErrorInFirstAttempt(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
