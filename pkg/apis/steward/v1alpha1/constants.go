@@ -47,9 +47,9 @@ const (
 	// loading of the pipeline runs configuration fails.
 	EventReasonLoadPipelineRunsConfigFailed = "LoadPipelineRunsConfigFailed"
 
-	// EventReasonSkipOnMaintenanceMode is the reason for an event occuring when a pipeline
+	// EventReasonMaintenanceMode is the reason for an event occuring when a pipeline
 	// run is not started due to maintenance mode
-	EventReasonSkipOnMaintenanceMode = "SkipOnMaintenanceMode"
+	EventReasonMaintenanceMode = "MaintenanceMode"
 
 	// MaintenanceModeConfigMapName is the name of the config map to enable the maintenance mode
 	MaintenanceModeConfigMapName = "steward-maintenance-mode"

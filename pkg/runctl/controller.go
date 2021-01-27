@@ -290,12 +290,12 @@ func (c *Controller) syncHandler(key string) error {
 	if pipelineRun.GetStatus().State == api.StateUndefined {
 		maintenanceMode, err := c.isMaintenanceMode()
 		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonSkipOnMaintenanceMode, err.Error())
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
 			return err
 		}
 		if maintenanceMode {
 			err := fmt.Errorf("maintenance mode set")
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonSkipOnMaintenanceMode, err.Error())
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
 			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
 			return err
 		}
