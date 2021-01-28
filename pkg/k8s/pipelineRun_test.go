@@ -215,9 +215,11 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	assert.NilError(t, err)
 
 	// EXERCISE
-	examinee.UpdateState(api.StatePreparing)
+	result, resultErr := examinee.UpdateState(api.StatePreparing)
 
 	// VERIFY
+	assert.NilError(t, resultErr)
+
 	assert.Equal(t, api.StatePreparing, examinee.GetStatus().State)
 	assert.Equal(t, 1, len(examinee.GetStatus().StateHistory))
 	assert.Equal(t, api.StateNew, examinee.GetStatus().StateHistory[0].State)
@@ -225,6 +227,10 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	startedAt := examinee.GetStatus().StartedAt
 	assert.Assert(t, !startedAt.IsZero())
 	assert.Equal(t, *startedAt, examinee.GetStatus().StateHistory[0].FinishedAt)
+
+	assert.Equal(t, api.StateNew, result.State)
+	assert.Equal(t, creationTimestamp, result.StartedAt)
+	assert.Equal(t, *startedAt, result.FinishedAt)
 }
 
 func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
@@ -239,9 +245,10 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	factory.Sleep("let time elapse to check timestamps afterwards")
 
 	// EXERCISE
-	examinee.UpdateState(api.StateRunning) // second call
+	result, resultErr := examinee.UpdateState(api.StateRunning) // second call
 
 	// VERIFY
+	assert.NilError(t, resultErr)
 	status := examinee.GetStatus()
 	assert.Equal(t, 2, len(status.StateHistory))
 	assert.Equal(t, api.StateNew, examinee.GetStatus().StateHistory[0].State)
@@ -249,7 +256,15 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 
 	start := status.StateHistory[1].StartedAt
 	end := status.StateHistory[1].FinishedAt
+	assert.Assert(t, !start.IsZero())
 	assert.Assert(t, factory.CheckTimeOrder(start, end))
+
+	assert.Equal(t, api.StatePreparing, result.State)
+	start = result.StartedAt
+	end = result.FinishedAt
+	assert.Assert(t, !start.IsZero())
+	assert.Assert(t, factory.CheckTimeOrder(start, end))
+
 }
 
 func Test_pipelineRun_UpdateStateToFinished_HistoryIfUpdateStateCalledBefore(t *testing.T) {
@@ -429,7 +444,11 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_PanicsIfNoClientFactory(t *tes
 	// EXERCISE and VERIFY
 	assert.Assert(t, cmp.Panics(
 		func() {
-			examinee.(*pipelineRun).changeStatusAndUpdateSafely(func() {})
+			changeFunc := func() error {
+				return nil
+			}
+
+			examinee.(*pipelineRun).changeStatusAndUpdateSafely(changeFunc)
 		},
 	))
 }
@@ -456,7 +475,10 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfNoConflict(
 	}
 
 	changeCallCount := 0
-	changeFunc := func() { changeCallCount++ }
+	changeFunc := func() error {
+		changeCallCount++
+		return nil
+	}
 
 	// EXCERCISE
 	resultErr := examinee.changeStatusAndUpdateSafely(changeFunc)
@@ -465,6 +487,41 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfNoConflict(
 	assert.NilError(t, resultErr)
 	assert.Equal(t, examinee.apiObj, updateResultObj)
 	assert.Equal(t, examinee.copied, false)
+	assert.Equal(t, changeCallCount, 1)
+}
+
+func Test_pipelineRun_changeStatusAndUpdateSafely_NoUpdateOnChangeErrorInFirstAttempt(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	run := newPipelineRunWithEmptySpec(ns1, "foo")
+	factory := fake.NewClientFactory(run)
+
+	factory.StewardClientset().PrependReactor(
+		"update", "pipelineruns",
+		func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+			panic("No update expected")
+		},
+	)
+
+	changeError := fmt.Errorf("ChangeError1")
+	changeCallCount := 0
+	changeFunc := func() error {
+		changeCallCount++
+		return changeError
+	}
+
+	examinee := &pipelineRun{
+		apiObj: run,
+		copied: false,
+		client: factory.StewardV1alpha1().PipelineRuns(ns1),
+	}
+
+	// EXCERCISE
+	resultErr := examinee.changeStatusAndUpdateSafely(changeFunc)
+
+	// VERIFY
+	assert.Error(t, resultErr, changeError.Error())
 	assert.Equal(t, changeCallCount, 1)
 }
 
@@ -495,7 +552,10 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfConflict(t 
 	}
 
 	changeCallCount := 0
-	changeFunc := func() { changeCallCount++ }
+	changeFunc := func() error {
+		changeCallCount++
+		return nil
+	}
 
 	// EXCERCISE
 	resultErr := examinee.changeStatusAndUpdateSafely(changeFunc)
@@ -536,7 +596,10 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_FailsAfterTooManyConflicts(t *
 	}
 
 	changeCallCount := 0
-	changeFunc := func() { changeCallCount++ }
+	changeFunc := func() error {
+		changeCallCount++
+		return nil
+	}
 
 	// EXCERCISE
 	resultErr := examinee.changeStatusAndUpdateSafely(changeFunc)
@@ -578,7 +641,10 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_ReturnsErrorIfFetchFailed(t *t
 	}
 
 	changeCallCount := 0
-	changeFunc := func() { changeCallCount++ }
+	changeFunc := func() error {
+		changeCallCount++
+		return nil
+	}
 
 	// EXCERCISE
 	resultErr := examinee.changeStatusAndUpdateSafely(changeFunc)
