@@ -61,6 +61,14 @@
     pullRequestNumber: 204
     jiraIssueNumber: 393
 
+  - type: bug
+    impact: patch
+    title: "Fix update of state history"
+    description: |-
+      The state history of a pipeline run is not updated correctly if a concurrent change happens.
+      This change will fix this bug.
+    pullRequestNumber: 206
+  
   - type: security
     impact: patch
     title: "network: don't allow local subnet multicast traffic"
