@@ -142,7 +142,7 @@ func (r *pipelineRun) InitState() error {
 // It also creates a new current state (B) with start time.
 // Returns the state details of state A
 func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
-	if r.apiObj.Status.StateDetails.State == api.StateUndefined {
+	if r.apiObj.Status.State == api.StateUndefined {
 		return nil, fmt.Errorf("Cannot update uninitialize state")
 	}
 	r.ensureCopy()

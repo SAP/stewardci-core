@@ -279,15 +279,25 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
+	// Init state when undefined
+	if pipelineRun.GetStatus().State == api.StateUndefined {
+		err = pipelineRun.InitState()
+		if err != nil {
+			return err
+		}
+	}
+
 	// Check if pipeline run is aborted
-	c.handleAborted(pipelineRun)
+	if err := c.handleAborted(pipelineRun); err != nil {
+		return err
+	}
 
 	// As soon as we have a result we can cleanup
 	if pipelineRun.GetStatus().Result != api.ResultUndefined && pipelineRun.GetStatus().State != api.StateCleaning {
 		c.changeState(pipelineRun, api.StateCleaning)
 	}
 
-	if pipelineRun.GetStatus().State == api.StateUndefined {
+	if pipelineRun.GetStatus().State == api.StateNew {
 		maintenanceMode, err := c.isMaintenanceMode()
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
@@ -407,13 +417,14 @@ func (c *Controller) syncHandler(key string) error {
 // handleAborted checks if pipeline run should be aborted.
 // If the user requested abortion it updates message, result and state
 // to trigger a cleanup.
-func (c *Controller) handleAborted(pipelineRun k8s.PipelineRun) {
+func (c *Controller) handleAborted(pipelineRun k8s.PipelineRun) error {
 	intent := pipelineRun.GetSpec().Intent
 	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {
 		pipelineRun.UpdateMessage("Aborted")
 		pipelineRun.UpdateResult(api.ResultAborted)
-		c.changeState(pipelineRun, api.StateCleaning)
+		return c.changeState(pipelineRun, api.StateCleaning)
 	}
+	return nil
 }
 
 func (c *Controller) addPipelineRun(obj interface{}) {
