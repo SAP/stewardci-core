@@ -38,7 +38,7 @@ For each pipeline run without state you can also see an event with reason 'Maint
 
 ```bash
 kubectl get event -n  "$TENANT_NAMESPACE"
-LAST SEEN   TYPE     REASON                  OBJECT                 MESSAGE
+LAST SEEN   TYPE     REASON            OBJECT                 MESSAGE
 12s         Normal   MaintenanceMode   pipelinerun/ok-n9lcl   Maintenance mode skip
 ```
 

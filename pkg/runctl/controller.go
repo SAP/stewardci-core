@@ -304,7 +304,7 @@ func (c *Controller) syncHandler(key string) error {
 			return err
 		}
 		if maintenanceMode {
-			err := fmt.Errorf("maintenance mode set")
+			err := fmt.Errorf("pipeline execution is paused while the system is in maintenance mode")
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
 			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
 			return err
