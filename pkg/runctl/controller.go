@@ -300,7 +300,7 @@ func (c *Controller) syncHandler(key string) error {
 	if pipelineRun.GetStatus().State == api.StateNew {
 		maintenanceMode, err := c.isMaintenanceMode()
 		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonRecoverableError, err.Error())
 			return err
 		}
 		if maintenanceMode {
@@ -320,7 +320,7 @@ func (c *Controller) syncHandler(key string) error {
 	pipelineRunsConfig, err := c.loadPipelineRunsConfig()
 	if err != nil {
 		if serrors.IsRecoverable(err) {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonLoadPipelineRunsConfigFailed, err.Error())
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonRecoverableError, err.Error())
 			return err
 		}
 		if err := c.changeState(pipelineRun, api.StateFinished); err != nil {

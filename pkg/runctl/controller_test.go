@@ -292,7 +292,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				isMaintenanceModeStub:  newIsMaintenanceModeStub(true, nil),
 				expectedResult:         api.ResultUndefined,
 				expectedState:          api.StateNew,
-				expectedError:          fmt.Errorf("maintenance mode set"),
+				expectedError:          fmt.Errorf("pipeline execution is paused while the system is in maintenance mode"),
 			},
 			{name: "new_get_cofig_fail_not_recoverable",
 				pipelineSpec: api.PipelineSpec{},
