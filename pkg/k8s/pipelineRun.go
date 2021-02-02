@@ -121,7 +121,8 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 	return &r.apiObj.Spec
 }
 
-// InitState set the state to new and set the creation time to the start time
+// InitState initializes the state as 'new'. The state's start time will be set to the object's creation time.
+// Fails if a state is set already.
 func (r *pipelineRun) InitState() error {
 	r.ensureCopy()
 	klog.V(3).Infof("Init State")
