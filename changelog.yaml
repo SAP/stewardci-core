@@ -51,6 +51,17 @@
 - version: NEXT
   date: TBD
   changes:
+
+  - type: enhancement
+    impact: minor
+    title: Update Jenkinsfile-runner image version
+    description: |-
+      Update Jenkinsfile-runner image to a newer version.
+    warning:
+    deprecations:
+    pullRequestNumber: 207
+    jiraIssueNumber: [350, 441]
+
   - type: bug
     impact: patch
     title: "Fix update of state history"
