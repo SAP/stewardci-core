@@ -229,6 +229,39 @@ func Test_pipelineRun_InitState(t *testing.T) {
 
 }
 
+func Test_pipelineRun_InitState_StateUnchangedIfAlreadyInitialized(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
+	creationTimestamp := metav1.Now()
+	pipelineRun.ObjectMeta.CreationTimestamp = creationTimestamp
+	factory := fake.NewClientFactory(pipelineRun)
+	examinee, err := NewPipelineRun(pipelineRun, factory)
+	assert.NilError(t, err)
+	resultErr := examinee.InitState()
+	assert.NilError(t, resultErr)
+
+	for _, oldState := range []api.State{
+		api.StateNew,
+		api.StatePreparing,
+		api.StateWaiting,
+		api.StateRunning,
+		api.StateCleaning,
+		api.StateFinished,
+	} {
+		_, resultErr = examinee.UpdateState(oldState)
+		assert.NilError(t, resultErr)
+
+		// EXERCISE
+		resultErr = examinee.InitState()
+
+		// VERIFY
+		assert.NilError(t, resultErr)
+		assert.Equal(t, oldState, examinee.GetStatus().State)
+	}
+}
+
 func Test_pipelineRun_UpdateState_FailsWithoutInit(t *testing.T) {
 	t.Parallel()
 
