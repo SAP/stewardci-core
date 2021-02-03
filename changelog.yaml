@@ -56,6 +56,7 @@
     title: "Add update-mocks script"
     description: |-
       Add a script to regenerate the mocks without regeneration all clients.
+    pullRequestNumber: 208
 
   - type: bug
     impact: patch
