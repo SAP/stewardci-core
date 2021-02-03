@@ -229,7 +229,7 @@ func Test_pipelineRun_InitState(t *testing.T) {
 
 }
 
-func Test_pipelineRun_InitState_StateUnchangedIfAlreadyInitialized(t *testing.T) {
+func Test_pipelineRun_InitState_ReturnsErrorIfCalledMultipleTimes(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -257,7 +257,7 @@ func Test_pipelineRun_InitState_StateUnchangedIfAlreadyInitialized(t *testing.T)
 		resultErr = examinee.InitState()
 
 		// VERIFY
-		assert.NilError(t, resultErr)
+		assert.Error(t, resultErr, "Cannot initialize multiple times")
 		assert.Equal(t, oldState, examinee.GetStatus().State)
 	}
 }

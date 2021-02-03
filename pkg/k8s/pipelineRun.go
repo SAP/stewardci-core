@@ -123,14 +123,14 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 
 // InitState initializes the state as 'new' if state was undefined (empty) before.
 // The state's start time will be set to the object's creation time.
-// Does not do anything if state is not undefined.
+// Fails if a state is set already.
 func (r *pipelineRun) InitState() error {
 	r.ensureCopy()
 	klog.V(3).Infof("Init State [%s]", r.String())
 	return r.changeStatusAndUpdateSafely(func() error {
 
 		if r.apiObj.Status.State != api.StateUndefined {
-			return nil
+			return fmt.Errorf("Cannot initialize multiple times")
 		}
 
 		newStateDetails := api.StateItem{
