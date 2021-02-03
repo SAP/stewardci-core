@@ -51,6 +51,20 @@
 - version: NEXT
   date: TBD
   changes:
+
+  - type: enhancement
+    impact: minor
+    title: Make retry parameters for cloning the pipeline repo configurable
+    description: |-
+      Jenkinsfile Runner container entrypoint retries cloning the pipeline
+      repository. The retry parameters (retry interval and timeout) are now
+      configurable via Helm chart parameters.
+    warning:
+    upgradeNotes:
+    deprecations:
+    pullRequestNumber: 209
+    jiraIssueNumber: 350
+
   - type: bug
     impact: patch
     title: "Fix update of state history"
