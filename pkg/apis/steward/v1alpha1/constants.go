@@ -51,9 +51,6 @@ const (
 	// run is not started due to maintenance mode
 	EventReasonMaintenanceMode = "MaintenanceMode"
 
-	// EventReasonRecoverableError is the reason for an event occuring when a recoverable error occurs
-	EventReasonRecoverableError = "RecoverableError"
-
 	// MaintenanceModeConfigMapName is the name of the config map to enable the maintenance mode
 	MaintenanceModeConfigMapName = "steward-maintenance-mode"
 
