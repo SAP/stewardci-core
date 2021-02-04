@@ -1,6 +1,7 @@
 # Documentation
 
 -   [Installing Steward](install/README.md)
+-   [Steward Maintenance](maintenance/README.md)
 -   [Develop Steward](development/README.md)
 -   [Examples](examples/README.md)
 -   [Backend API](backend-api/README.md)

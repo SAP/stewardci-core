@@ -203,6 +203,81 @@ func Test_pipelineRun_UpdateMessage_GoodCase(t *testing.T) {
 	assert.Equal(t, message, examinee.GetStatus().Message)
 }
 
+func Test_pipelineRun_InitState(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
+	creationTimestamp := metav1.Now()
+	pipelineRun.ObjectMeta.CreationTimestamp = creationTimestamp
+	factory := fake.NewClientFactory(pipelineRun)
+	examinee, err := NewPipelineRun(pipelineRun, factory)
+	assert.NilError(t, err)
+
+	// EXERCISE
+	resultErr := examinee.InitState()
+
+	// VERIFY
+	assert.NilError(t, resultErr)
+
+	assert.Equal(t, api.StateNew, examinee.GetStatus().State)
+	assert.Equal(t, 0, len(examinee.GetStatus().StateHistory))
+
+	details := examinee.GetStatus().StateDetails
+	assert.Equal(t, creationTimestamp, details.StartedAt)
+	assert.Equal(t, api.StateNew, details.State)
+
+}
+
+func Test_pipelineRun_InitState_ReturnsErrorIfCalledMultipleTimes(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
+	creationTimestamp := metav1.Now()
+	pipelineRun.ObjectMeta.CreationTimestamp = creationTimestamp
+	factory := fake.NewClientFactory(pipelineRun)
+	examinee, err := NewPipelineRun(pipelineRun, factory)
+	assert.NilError(t, err)
+	resultErr := examinee.InitState()
+	assert.NilError(t, resultErr)
+
+	for _, oldState := range []api.State{
+		api.StateNew,
+		api.StatePreparing,
+		api.StateWaiting,
+		api.StateRunning,
+		api.StateCleaning,
+		api.StateFinished,
+	} {
+		_, resultErr = examinee.UpdateState(oldState)
+		assert.NilError(t, resultErr)
+
+		// EXERCISE
+		resultErr = examinee.InitState()
+
+		// VERIFY
+		assert.Error(t, resultErr, "Cannot initialize multiple times")
+		assert.Equal(t, oldState, examinee.GetStatus().State)
+	}
+}
+
+func Test_pipelineRun_UpdateState_FailsWithoutInit(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
+	factory := fake.NewClientFactory(pipelineRun)
+	examinee, err := NewPipelineRun(pipelineRun, factory)
+	assert.NilError(t, err)
+
+	// EXERCISE
+	_, resultErr := examinee.UpdateState(api.StatePreparing)
+
+	// VERIFY
+	assert.Error(t, resultErr, "Cannot update uninitialize state")
+}
+
 func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	t.Parallel()
 
@@ -212,6 +287,8 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	pipelineRun.ObjectMeta.CreationTimestamp = creationTimestamp
 	factory := fake.NewClientFactory(pipelineRun)
 	examinee, err := NewPipelineRun(pipelineRun, factory)
+	assert.NilError(t, err)
+	err = examinee.InitState()
 	assert.NilError(t, err)
 
 	// EXERCISE
@@ -241,7 +318,10 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	factory := fake.NewClientFactory(pipelineRun)
 	examinee, err := NewPipelineRun(pipelineRun, factory)
 	assert.NilError(t, err)
-	examinee.UpdateState(api.StatePreparing) // first call
+	err = examinee.InitState()
+	assert.NilError(t, err)
+	_, err = examinee.UpdateState(api.StatePreparing) // first call
+	assert.NilError(t, err)
 	factory.Sleep("let time elapse to check timestamps afterwards")
 
 	// EXERCISE
@@ -275,7 +355,10 @@ func Test_pipelineRun_UpdateStateToFinished_HistoryIfUpdateStateCalledBefore(t *
 	factory := fake.NewClientFactory(pipelineRun)
 	examinee, err := NewPipelineRun(pipelineRun, factory)
 	assert.NilError(t, err)
-	examinee.UpdateState(api.StatePreparing) // called before
+	err = examinee.InitState()
+	assert.NilError(t, err)
+	_, err = examinee.UpdateState(api.StatePreparing) // called before
+	assert.NilError(t, err)
 	factory.Sleep("let time elapse to check timestamps afterwards")
 
 	// EXERCISE
@@ -390,10 +473,13 @@ func Test_pipelineRun_UpdateState_PropagatesError(t *testing.T) {
 	// SETUP
 	run := newPipelineRunWithEmptySpec(ns1, "foo")
 	factory := fake.NewClientFactory(run)
-	expectedError := fmt.Errorf("expected")
-	factory.StewardClientset().PrependReactor("update", "*", fake.NewErrorReactor(expectedError))
 
 	examinee, err := NewPipelineRun(run, factory)
+	assert.NilError(t, err)
+	err = examinee.InitState()
+	assert.NilError(t, err)
+	expectedError := fmt.Errorf("expected")
+	factory.StewardClientset().PrependReactor("update", "*", fake.NewErrorReactor(expectedError))
 
 	// EXCERCISE
 	_, err = examinee.UpdateState(api.StateWaiting)
@@ -422,6 +508,8 @@ func Test_pipelineRun_UpdateState_RetriesOnConflict(t *testing.T) {
 	)
 
 	examinee, err := NewPipelineRun(run, factory)
+	assert.NilError(t, err)
+	err = examinee.InitState()
 	assert.NilError(t, err)
 
 	// EXCERCISE
