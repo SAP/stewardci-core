@@ -51,6 +51,18 @@
 - version: NEXT
   date: TBD
   changes:
+
+  - type: enhancement
+    impact: minor
+    title: Update Jenkinsfile-runner image version
+    description: |-
+      Update Jenkinsfile-runner image to a newer version.
+      All the changes on this version can be found [here](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/210202_42eb583)
+    warning:
+    deprecations:
+    pullRequestNumber: 207
+    jiraIssueNumber: [350, 441]
+
   - type: enhancement
     impact: minor
     title: "Add maintenance mode to run controller"
