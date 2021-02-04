@@ -15,6 +15,7 @@ import (
 )
 
 var kubeconfig string
+var burst, qps int
 
 // Time to wait until the next resync takes place.
 // Resync is only required if events got lost or if the controller restarted (and missed events).
@@ -23,6 +24,8 @@ const resyncPeriod = 1 * time.Minute
 func init() {
 	klog.InitFlags(nil)
 
+	flag.IntVar(&burst, "burst", 10, "burst for RESTClient")
+	flag.IntVar(&qps, "qps", 5, "QPS for RESTClient")
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to Kubernetes config file")
 	flag.Parse()
 }
@@ -50,7 +53,9 @@ func main() {
 
 	system.Namespace() // ensure that namespace is set in environment
 
-	klog.V(3).Infof("Create Factory (resync period: %s)", resyncPeriod.String())
+	klog.V(3).Infof("Create Factory (resync period: %s, QPS: %d, burst: %d)", resyncPeriod.String())
+	config.QPS = float32(qps)
+	config.Burst = burst
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
 	klog.V(2).Infof("Provide metrics")
