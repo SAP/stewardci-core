@@ -43,7 +43,17 @@ const (
 	// faces an intermittent error during running phase.
 	EventReasonRunningFailed = "RunningFailed"
 
-	// EventReasonLoadPipelineRunsConfigFailed is the reason for a event occuring when the
+	// EventReasonLoadPipelineRunsConfigFailed is the reason for an event occuring when the
 	// loading of the pipeline runs configuration fails.
 	EventReasonLoadPipelineRunsConfigFailed = "LoadPipelineRunsConfigFailed"
+
+	// EventReasonMaintenanceMode is the reason for an event occuring when a pipeline
+	// run is not started due to maintenance mode
+	EventReasonMaintenanceMode = "MaintenanceMode"
+
+	// MaintenanceModeConfigMapName is the name of the config map to enable the maintenance mode
+	MaintenanceModeConfigMapName = "steward-maintenance-mode"
+
+	// MaintenanceModeKeyName is the name of the key to enable the maintenance mode
+	MaintenanceModeKeyName = "maintenanceMode"
 )

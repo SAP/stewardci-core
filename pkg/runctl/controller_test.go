@@ -235,311 +235,392 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 	}
 }
 
+func Test_Controller_syncHandler_mock_start(t *testing.T) {
+	error1 := fmt.Errorf("error1")
+	errorRecover1 := serrors.Recoverable(error1)
+	for _, currentStatus := range []api.PipelineStatus{
+		api.PipelineStatus{},
+		api.PipelineStatus{
+			State: api.StateNew,
+		},
+	} {
+
+		for _, test := range []struct {
+			name                   string
+			pipelineSpec           api.PipelineSpec
+			runManagerExpectation  func(*runmocks.MockManager, *runmocks.MockRun)
+			pipelineRunsConfigStub func() (*cfg.PipelineRunsConfigStruct, error)
+			isMaintenanceModeStub  func() (bool, error)
+			expectedResult         api.Result
+			expectedState          api.State
+			expectedMessage        string
+			expectedError          error
+		}{
+			{name: "new_ok",
+				pipelineSpec: api.PipelineSpec{},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				isMaintenanceModeStub:  newIsMaintenanceModeStub(false, nil),
+				expectedResult:         api.ResultUndefined,
+				expectedState:          api.StateWaiting,
+			},
+			{name: "new_maintenance_error_a",
+				pipelineSpec:           api.PipelineSpec{},
+				runManagerExpectation:  func(rm *runmocks.MockManager, run *runmocks.MockRun) {},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				isMaintenanceModeStub:  newIsMaintenanceModeStub(false, error1),
+				expectedResult:         api.ResultUndefined,
+				expectedState:          api.StateNew,
+				expectedError:          error1,
+			},
+			{name: "new_maintenance_error_b",
+				pipelineSpec:           api.PipelineSpec{},
+				runManagerExpectation:  func(rm *runmocks.MockManager, run *runmocks.MockRun) {},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				isMaintenanceModeStub:  newIsMaintenanceModeStub(true, error1),
+				expectedResult:         api.ResultUndefined,
+				expectedState:          api.StateNew,
+				expectedError:          error1,
+			},
+			{name: "new_maintenance",
+				pipelineSpec: api.PipelineSpec{},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				isMaintenanceModeStub:  newIsMaintenanceModeStub(true, nil),
+				expectedResult:         api.ResultUndefined,
+				expectedState:          api.StateNew,
+				expectedError:          fmt.Errorf("pipeline execution is paused while the system is in maintenance mode"),
+			},
+			{name: "new_get_cofig_fail_not_recoverable",
+				pipelineSpec: api.PipelineSpec{},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+				},
+				pipelineRunsConfigStub: func() (*cfg.PipelineRunsConfigStruct, error) {
+					return nil, error1
+				},
+				isMaintenanceModeStub: newIsMaintenanceModeStub(false, nil),
+				expectedResult:        api.ResultErrorInfra,
+				expectedState:         api.StateFinished,
+			},
+			{name: "new_get_cofig_fail_recoverable",
+				pipelineSpec: api.PipelineSpec{},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+				},
+				pipelineRunsConfigStub: func() (*cfg.PipelineRunsConfigStruct, error) {
+					return nil, errorRecover1
+				},
+				isMaintenanceModeStub: newIsMaintenanceModeStub(false, nil),
+				expectedResult:        api.ResultUndefined,
+				expectedState:         api.StatePreparing,
+				expectedError:         errorRecover1,
+			},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				test := test
+				t.Parallel()
+				// SETUP
+				run := fake.PipelineRun("foo", "ns1", test.pipelineSpec)
+				run.Status = currentStatus
+				controller, cf := newController(run)
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				runManager := runmocks.NewMockManager(mockCtrl)
+				runmock := runmocks.NewMockRun(mockCtrl)
+				test.runManagerExpectation(runManager, runmock)
+				controller.testing = &controllerTesting{
+					runManagerStub:             runManager,
+					loadPipelineRunsConfigStub: test.pipelineRunsConfigStub,
+					isMaintenanceModeStub:      test.isMaintenanceModeStub,
+				}
+				// EXERCISE
+				resultErr := controller.syncHandler("ns1/foo")
+				// VERIFY
+				if test.expectedError != nil {
+					assert.Error(t, resultErr, test.expectedError.Error())
+				} else {
+					assert.NilError(t, resultErr)
+				}
+				result, err := getAPIPipelineRun(cf, "foo", "ns1")
+				assert.NilError(t, err)
+				klog.Infof("%+v", result.Status)
+				assert.Equal(t, test.expectedResult, result.Status.Result, test.name)
+				assert.Equal(t, test.expectedState, result.Status.State, test.name)
+
+				if test.expectedMessage != "" {
+					assert.Assert(t, is.Regexp(test.expectedMessage, result.Status.Message))
+				}
+			})
+		}
+	}
+}
+
 func Test_Controller_syncHandler_mock(t *testing.T) {
 	error1 := fmt.Errorf("error1")
 	errorRecover1 := serrors.Recoverable(error1)
+	for _, maintenanceMode := range []bool{true, false} {
 
-	for _, test := range []struct {
-		name                   string
-		pipelineSpec           api.PipelineSpec
-		currentStatus          api.PipelineStatus
-		runManagerExpectation  func(*runmocks.MockManager, *runmocks.MockRun)
-		pipelineRunsConfigStub func() (*cfg.PipelineRunsConfigStruct, error)
-		expectedResult         api.Result
-		expectedState          api.State
-		expectedMessage        string
-		expectedError          error
-	}{
-		{name: "new_ok",
-			pipelineSpec:  api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
+		for _, test := range []struct {
+			name                   string
+			pipelineSpec           api.PipelineSpec
+			currentStatus          api.PipelineStatus
+			runManagerExpectation  func(*runmocks.MockManager, *runmocks.MockRun)
+			pipelineRunsConfigStub func() (*cfg.PipelineRunsConfigStruct, error)
+			expectedResult         api.Result
+			expectedState          api.State
+			expectedMessage        string
+			expectedError          error
+		}{
+			{name: "preparing_ok",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StatePreparing,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         api.ResultUndefined,
+				expectedState:          api.StateWaiting,
 			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         api.ResultUndefined,
-			expectedState:          api.StateWaiting,
-		},
-		{name: "new_get_cofig_fail_not_recoverable",
-			pipelineSpec:  api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+			{name: "preparing_fail",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StatePreparing,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(error1)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         api.ResultUndefined,
+				expectedState:          api.StatePreparing,
+				expectedMessage:        "",
+				expectedError:          error1,
 			},
-			pipelineRunsConfigStub: func() (*cfg.PipelineRunsConfigStruct, error) {
-				return nil, error1
-			},
-			expectedResult: api.ResultErrorInfra,
-			expectedState:  api.StateFinished,
-		},
-		{name: "new_get_cofig_fail_recoverable",
-			pipelineSpec:  api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-			},
-			pipelineRunsConfigStub: func() (*cfg.PipelineRunsConfigStruct, error) {
-				return nil, errorRecover1
-			},
-			expectedResult: api.ResultUndefined,
-			expectedState:  api.StatePreparing,
-			expectedError:  errorRecover1,
-		},
-		{name: "preparing_ok",
-			pipelineSpec: api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{
-				State: api.StatePreparing,
-			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(nil)
-			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         api.ResultUndefined,
-			expectedState:          api.StateWaiting,
-		},
-		{name: "preparing_fail",
-			pipelineSpec: api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{
-				State: api.StatePreparing,
-			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(error1)
-			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         api.ResultUndefined,
-			expectedState:          api.StatePreparing,
-			expectedMessage:        "",
-			expectedError:          error1,
-		},
-		{name: "preparing_fail_on_content_error_during_start",
-			pipelineSpec: api.PipelineSpec{
-				Secrets: []string{"secret1"},
-			},
-			currentStatus: api.PipelineStatus{
-				State: api.StatePreparing,
-			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+			{name: "preparing_fail_on_content_error_during_start",
+				pipelineSpec: api.PipelineSpec{
+					Secrets: []string{"secret1"},
+				},
+				currentStatus: api.PipelineStatus{
+					State: api.StatePreparing,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 
-				rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(serrors.Classify(error1, api.ResultErrorContent))
+					rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return(serrors.Classify(error1, api.ResultErrorContent))
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         api.ResultErrorContent,
+				expectedState:          api.StateCleaning,
+				expectedMessage:        "preparing failed .*error1",
 			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         api.ResultErrorContent,
-			expectedState:          api.StateCleaning,
-			expectedMessage:        "preparing failed .*error1",
-		},
-		{name: "waiting_fail",
-			pipelineSpec: api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{
-				State: api.StateWaiting,
+			{name: "waiting_fail",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateWaiting,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().GetRun(gomock.Any()).Return(nil, error1)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         api.ResultErrorInfra,
+				expectedState:          api.StateCleaning,
 			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().GetRun(gomock.Any()).Return(nil, error1)
+			{name: "waiting_recover",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateWaiting,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().GetRun(gomock.Any()).Return(nil, errorRecover1)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         api.ResultUndefined,
+				expectedState:          api.StateWaiting,
+				expectedError:          errorRecover1,
 			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         api.ResultErrorInfra,
-			expectedState:          api.StateCleaning,
-		},
-		{name: "waiting_recover",
-			pipelineSpec: api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{
-				State: api.StateWaiting,
+			{name: "waiting_not_started",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateWaiting,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					run.EXPECT().GetStartTime().Return(nil)
+					rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         "",
+				expectedState:          api.StateWaiting,
 			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().GetRun(gomock.Any()).Return(nil, errorRecover1)
+			{name: "waiting_started",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateWaiting,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					now := metav1.Now()
+					run.EXPECT().GetStartTime().Return(&now)
+					rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         "",
+				expectedState:          api.StateRunning,
 			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         api.ResultUndefined,
-			expectedState:          api.StateWaiting,
-			expectedError:          errorRecover1,
-		},
-		{name: "waiting_not_started",
-			pipelineSpec: api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{
-				State: api.StateWaiting,
+			{name: "running_not_finished",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateRunning,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					run.EXPECT().GetContainerInfo().Return(nil)
+					run.EXPECT().IsFinished().Return(false, api.ResultUndefined)
+					rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         "",
+				expectedState:          api.StateRunning,
 			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				run.EXPECT().GetStartTime().Return(nil)
-				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
+			{name: "running_recover",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateRunning,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().GetRun(gomock.Any()).Return(run, errorRecover1)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         "",
+				expectedState:          api.StateRunning,
+				expectedError:          errorRecover1,
 			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         "",
-			expectedState:          api.StateWaiting,
-		},
-		{name: "waiting_started",
-			pipelineSpec: api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{
-				State: api.StateWaiting,
+			{name: "running_get_error",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateRunning,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().GetRun(gomock.Any()).Return(nil, error1)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         "",
+				expectedState:          api.StateCleaning,
+				expectedMessage:        "running failed .*error1",
 			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				now := metav1.Now()
-				run.EXPECT().GetStartTime().Return(&now)
-				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
+			{name: "running_finished_timeout",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateRunning,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					run.EXPECT().GetContainerInfo().Return(
+						&corev1.ContainerState{
+							Running: &corev1.ContainerStateRunning{},
+						})
+					run.EXPECT().IsFinished().Return(true, api.ResultTimeout)
+					run.EXPECT().GetMessage()
+					rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         api.ResultTimeout,
+				expectedState:          api.StateCleaning,
 			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         "",
-			expectedState:          api.StateRunning,
-		},
-		{name: "running_not_finished",
-			pipelineSpec: api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{
-				State: api.StateRunning,
+			{name: "running_finished_terminated",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateRunning,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					run.EXPECT().GetContainerInfo().Return(
+						&corev1.ContainerState{
+							Terminated: &corev1.ContainerStateTerminated{
+								Message: "message",
+							},
+						})
+					run.EXPECT().IsFinished().Return(true, api.ResultSuccess)
+					run.EXPECT().GetMessage()
+					rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         api.ResultSuccess,
+				expectedState:          api.StateCleaning,
 			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				run.EXPECT().GetContainerInfo().Return(nil)
-				run.EXPECT().IsFinished().Return(false, api.ResultUndefined)
-				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
+			{name: "skip_finished",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateFinished,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         "",
+				expectedState:          api.StateFinished,
 			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         "",
-			expectedState:          api.StateRunning,
-		},
-		{name: "running_recover",
-			pipelineSpec: api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{
-				State: api.StateRunning,
+			{name: "cleanup_abborted_new",
+				pipelineSpec: api.PipelineSpec{
+					Intent: api.IntentAbort,
+				},
+				currentStatus: api.PipelineStatus{
+					State: api.StateUndefined,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         api.ResultAborted,
+				expectedState:          api.StateFinished,
 			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().GetRun(gomock.Any()).Return(run, errorRecover1)
+			{name: "cleanup_abborted_running",
+				pipelineSpec: api.PipelineSpec{
+					Intent: api.IntentAbort,
+				},
+				currentStatus: api.PipelineStatus{
+					State: api.StateRunning,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
+				},
+				pipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:         api.ResultAborted,
+				expectedState:          api.StateFinished,
 			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         "",
-			expectedState:          api.StateRunning,
-			expectedError:          errorRecover1,
-		},
-		{name: "running_get_error",
-			pipelineSpec: api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{
-				State: api.StateRunning,
-			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().GetRun(gomock.Any()).Return(nil, error1)
-			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         "",
-			expectedState:          api.StateCleaning,
-			expectedMessage:        "running failed .*error1",
-		},
-		{name: "running_finished_timeout",
-			pipelineSpec: api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{
-				State: api.StateRunning,
-			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				run.EXPECT().GetContainerInfo().Return(
-					&corev1.ContainerState{
-						Running: &corev1.ContainerStateRunning{},
-					})
-				run.EXPECT().IsFinished().Return(true, api.ResultTimeout)
-				run.EXPECT().GetMessage()
-				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
-			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         api.ResultTimeout,
-			expectedState:          api.StateCleaning,
-		},
-		{name: "running_finished_terminated",
-			pipelineSpec: api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{
-				State: api.StateRunning,
-			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				run.EXPECT().GetContainerInfo().Return(
-					&corev1.ContainerState{
-						Terminated: &corev1.ContainerStateTerminated{
-							Message: "message",
-						},
-					})
-				run.EXPECT().IsFinished().Return(true, api.ResultSuccess)
-				run.EXPECT().GetMessage()
-				rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
-			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         api.ResultSuccess,
-			expectedState:          api.StateCleaning,
-		},
-		{name: "skip_new",
-			pipelineSpec: api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{
-				State: api.StateNew,
-			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         "",
-			expectedState:          api.StateNew,
-		},
-		{name: "skip_finished",
-			pipelineSpec: api.PipelineSpec{},
-			currentStatus: api.PipelineStatus{
-				State: api.StateFinished,
-			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         "",
-			expectedState:          api.StateFinished,
-		},
-		{name: "cleanup_abborted_new",
-			pipelineSpec: api.PipelineSpec{
-				Intent: api.IntentAbort,
-			},
-			currentStatus: api.PipelineStatus{
-				State: api.StateUndefined,
-			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
-			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         api.ResultAborted,
-			expectedState:          api.StateFinished,
-		},
-		{name: "cleanup_abborted_running",
-			pipelineSpec: api.PipelineSpec{
-				Intent: api.IntentAbort,
-			},
-			currentStatus: api.PipelineStatus{
-				State: api.StateRunning,
-			},
-			runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-				rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
-			},
-			pipelineRunsConfigStub: newEmptyRunsConfig,
-			expectedResult:         api.ResultAborted,
-			expectedState:          api.StateFinished,
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			test := test
-			t.Parallel()
-			// SETUP
-			run := fake.PipelineRun("foo", "ns1", test.pipelineSpec)
-			run.Status = test.currentStatus
-			controller, cf := newController(run)
-			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
-			runManager := runmocks.NewMockManager(mockCtrl)
-			runmock := runmocks.NewMockRun(mockCtrl)
-			test.runManagerExpectation(runManager, runmock)
-			controller.testing = &controllerTesting{
-				runManagerStub:             runManager,
-				loadPipelineRunsConfigStub: test.pipelineRunsConfigStub,
-			}
-			// EXERCISE
-			err := controller.syncHandler("ns1/foo")
-			// VERIFY
-			if test.expectedError != nil {
-				assert.Equal(t, test.expectedError, err)
-			} else {
+		} {
+			t.Run(fmt.Sprintf("%+s_maintenanceMode_%t", test.name, maintenanceMode), func(t *testing.T) {
+				test := test
+				t.Parallel()
+				// SETUP
+				run := fake.PipelineRun("foo", "ns1", test.pipelineSpec)
+				run.Status = test.currentStatus
+				controller, cf := newController(run)
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				runManager := runmocks.NewMockManager(mockCtrl)
+				runmock := runmocks.NewMockRun(mockCtrl)
+				test.runManagerExpectation(runManager, runmock)
+				controller.testing = &controllerTesting{
+					runManagerStub:             runManager,
+					loadPipelineRunsConfigStub: test.pipelineRunsConfigStub,
+					isMaintenanceModeStub:      newIsMaintenanceModeStub(maintenanceMode, nil),
+				}
+				// EXERCISE
+				err := controller.syncHandler("ns1/foo")
+				// VERIFY
+				if test.expectedError != nil {
+					assert.Equal(t, test.expectedError, err)
+				} else {
+					assert.NilError(t, err)
+				}
+				result, err := getAPIPipelineRun(cf, "foo", "ns1")
 				assert.NilError(t, err)
-			}
-			result, err := getAPIPipelineRun(cf, "foo", "ns1")
-			assert.NilError(t, err)
-			klog.Infof("%+v", result.Status)
-			assert.Equal(t, test.expectedResult, result.Status.Result, test.name)
-			assert.Equal(t, test.expectedState, result.Status.State, test.name)
+				klog.Infof("%+v", result.Status)
+				assert.Equal(t, test.expectedResult, result.Status.Result, test.name)
+				assert.Equal(t, test.expectedState, result.Status.State, test.name)
 
-			if test.expectedMessage != "" {
-				assert.Assert(t, is.Regexp(test.expectedMessage, result.Status.Message))
-			}
-		})
+				if test.expectedMessage != "" {
+					assert.Assert(t, is.Regexp(test.expectedMessage, result.Status.Message))
+				}
+			})
+		}
 	}
 }
 
@@ -663,6 +744,7 @@ func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 	controller.testing = &controllerTesting{
 		newRunManagerStub:          newTestRunManager,
 		loadPipelineRunsConfigStub: newEmptyRunsConfig,
+		isMaintenanceModeStub:      newIsMaintenanceModeStub(false, nil),
 	}
 	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(cf.StewardV1alpha1())
 
@@ -722,4 +804,10 @@ func getTektonTaskRun(namespace string, cf *fake.ClientFactory) (*tekton.TaskRun
 
 func updateTektonTaskRun(taskRun *tekton.TaskRun, namespace string, cf *fake.ClientFactory) (*tekton.TaskRun, error) {
 	return cf.TektonV1beta1().TaskRuns(namespace).Update(taskRun)
+}
+
+func newIsMaintenanceModeStub(maintenanceMode bool, err error) func() (bool, error) {
+	return func() (bool, error) {
+		return maintenanceMode, err
+	}
 }
