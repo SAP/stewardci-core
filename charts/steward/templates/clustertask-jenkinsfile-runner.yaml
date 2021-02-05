@@ -107,6 +107,10 @@ spec:
       value: '$(params.PIPELINE_LOG_ELASTICSEARCH_TRUSTEDCERTS_SECRET)'
     - name: PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON
       value: '$(params.PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON)'
+    - name: PIPELINE_CLONE_RETRY_INTERVAL_SEC
+      value: {{ default "" .Values.pipelineRuns.jenkinsfileRunner.pipelineCloneRetryIntervalSec | squote }}
+    - name: PIPELINE_CLONE_RETRY_TIMEOUT_SEC
+      value: {{ default "" .Values.pipelineRuns.jenkinsfileRunner.pipelineCloneRetryTimeoutSec | squote }}
     - name: RUN_NAMESPACE
       value: '$(params.RUN_NAMESPACE)'
     - name: JOB_NAME
