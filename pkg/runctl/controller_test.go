@@ -352,6 +352,12 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				if test.expectedMessage != "" {
 					assert.Assert(t, is.Regexp(test.expectedMessage, result.Status.Message))
 				}
+
+				if test.expectedState == api.StateFinished {
+					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 0)
+				} else {
+					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 1)
+				}
 			})
 		}
 	}
@@ -618,6 +624,12 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 
 				if test.expectedMessage != "" {
 					assert.Assert(t, is.Regexp(test.expectedMessage, result.Status.Message))
+				}
+
+				if test.expectedState == api.StateFinished {
+					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 0)
+				} else {
+					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 1)
 				}
 			})
 		}

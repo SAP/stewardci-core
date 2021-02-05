@@ -322,13 +322,11 @@ func (c *Controller) syncHandler(key string) error {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonLoadPipelineRunsConfigFailed, err.Error())
 			return err
 		}
-		if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
-			return err
-		}
 		pipelineRun.UpdateResult(api.ResultErrorInfra)
 		pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
 		c.metrics.CountResult(pipelineRun.GetStatus().Result)
-		return nil
+
+		return c.finish(pipelineRun)
 	}
 
 	runManager := c.createRunManager(pipelineRun)
@@ -403,14 +401,18 @@ func (c *Controller) syncHandler(key string) error {
 		}
 	case api.StateCleaning:
 		err = runManager.Cleanup(pipelineRun)
-		if err == nil {
-			err = c.changeState(pipelineRun, api.StateFinished)
-		}
-		return err
+		return c.finish(pipelineRun)
 	default:
 		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
 	return nil
+}
+
+func (c *Controller) finish(pipelineRun k8s.PipelineRun) error {
+	if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
+		return err
+	}
+	return pipelineRun.DeleteFinalizerIfExists()
 }
 
 // handleAborted checks if pipeline run should be aborted.
