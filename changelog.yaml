@@ -54,6 +54,7 @@
 
   - type: enhancement
     impact: minor
+
     title: Make retry parameters for cloning the pipeline repo configurable
     description: |-
       Jenkinsfile Runner container entrypoint retries cloning the pipeline
@@ -64,6 +65,25 @@
     deprecations:
     pullRequestNumber: 209
     jiraIssueNumber: 350
+
+    title: Update Jenkinsfile-runner image version
+    description: |-
+      Update Jenkinsfile-runner image to a newer version.
+      All the changes on this version can be found [here](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/210202_42eb583)
+    warning:
+    deprecations:
+    pullRequestNumber: 207
+    jiraIssueNumber: [350, 441]
+
+  - type: enhancement
+    impact: minor
+    title: "Add maintenance mode to run controller"
+    description: |- 
+      Steward can be put in _maintenance mode_.
+      It prevents _new_ pipeline runs to be processed, while pipeline runs that are in progress _already_ still run to completion.
+
+    pullRequestNumber: 204
+    jiraIssueNumber: 393
 
   - type: bug
     impact: patch
