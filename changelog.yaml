@@ -58,7 +58,6 @@
 
   - type: enhancement
     impact: minor
-
     title: Make retry parameters for cloning the pipeline repo configurable
     description: |-
       Jenkinsfile Runner container entrypoint retries cloning the pipeline
@@ -66,20 +65,16 @@
       configurable via Helm chart parameters.
       Jenkinsfile Runner image version which enables configuring retry 
       parameters is also updated in the same PR. Changes in the new 
-      release of JFR image can be found here:
-      https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/210205_1988c5e
-    warning:
-    upgradeNotes:
-    deprecations:
+      release of JFR image can be found [here](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/210205_1988c5e).
     pullRequestNumber: 209
     jiraIssueNumber: 350
 
+  - type: enhancement
+    impact: minor
     title: Update Jenkinsfile-runner image version
     description: |-
       Update Jenkinsfile-runner image to a newer version.
-      All the changes on this version can be found [here](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/210202_42eb583)
-    warning:
-    deprecations:
+      All the changes on this version can be found [here](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/210202_42eb583).
     pullRequestNumber: 207
     jiraIssueNumber: [350, 441]
 
@@ -89,7 +84,6 @@
     description: |- 
       Steward can be put in _maintenance mode_.
       It prevents _new_ pipeline runs to be processed, while pipeline runs that are in progress _already_ still run to completion.
-
     pullRequestNumber: 204
     jiraIssueNumber: 393
 
