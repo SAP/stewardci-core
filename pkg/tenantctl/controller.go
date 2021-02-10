@@ -207,15 +207,32 @@ func (c *Controller) syncHandler(key string) error {
 		if err != nil {
 			return err
 		}
-		tenant, err = c.removeFinalizerAndUpdate(tenant)
-		if err == nil {
-			c.syncCount++
+
+		isChanged, err := c.removeFinalizer(tenant)
+		if err != nil {
+			return err
 		}
+
+		if isChanged {
+			_, err = c.update(tenant)
+			if err == nil {
+				c.syncCount++
+			}
+		}
+
 		return err
 	}
 
-	tenant, err = c.addFinalizerAndUpdate(tenant)
+	isChanged, err := c.addFinalizer(tenant)
 	if err != nil {
+		return err
+	}
+
+	if isChanged {
+		_, err = c.update(tenant)
+		if err == nil {
+			c.syncCount++
+		}
 		return err
 	}
 
@@ -355,22 +372,20 @@ func (c *Controller) hasFinalizer(tenant *api.Tenant) bool {
 	return utils.StringSliceContains(tenant.GetFinalizers(), k8s.FinalizerName)
 }
 
-func (c *Controller) addFinalizerAndUpdate(tenant *api.Tenant) (*api.Tenant, error) {
+func (c *Controller) addFinalizer(tenant *api.Tenant) (bool, error) {
 	changed, finalizerList := utils.AddStringIfMissing(tenant.GetFinalizers(), k8s.FinalizerName)
 	if changed {
 		tenant.SetFinalizers(finalizerList)
-		return c.update(tenant)
 	}
-	return tenant, nil
+	return changed, nil
 }
 
-func (c *Controller) removeFinalizerAndUpdate(tenant *api.Tenant) (*api.Tenant, error) {
+func (c *Controller) removeFinalizer(tenant *api.Tenant) (bool, error) {
 	changed, finalizerList := utils.RemoveString(tenant.GetFinalizers(), k8s.FinalizerName)
 	if changed {
 		tenant.SetFinalizers(finalizerList)
-		return c.update(tenant)
 	}
-	return tenant, nil
+	return changed, nil
 }
 
 func (c *Controller) updateStatus(tenant *api.Tenant) (*api.Tenant, error) {

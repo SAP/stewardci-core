@@ -168,11 +168,14 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 	ctl := NewController(cf, NewMetrics())
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
-	// EXERCISE
+	// EXERCISE - Add Finalizer
 	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
-
-	// VERIFY
 	assert.NilError(t, resultErr)
+
+	// EXERCISE - Add Status.TenantNamespaceName
+	resultErr = ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
+	assert.NilError(t, resultErr)
+
 	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
 	assert.NilError(t, err)
 
@@ -257,8 +260,12 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnNamespaceClash(t *te
 	ctl := NewController(cf, NewMetrics())
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
-	// EXERCISE
+	// EXERCISE - Add Finalizer
 	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
+	assert.NilError(t, resultErr)
+
+	// EXERCISE - Add Status.TenantNamespaceName
+	resultErr = ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
 
 	// VERIFY
 	assert.Assert(t, resultErr != nil)
@@ -323,8 +330,12 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnErrorWhenSyncingRole
 		},
 	}
 
-	// EXERCISE
+	// EXERCISE - Add Finalizer
 	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
+	assert.NilError(t, resultErr)
+
+	// EXERCISE - Add Status.TenantNamespaceName
+	resultErr = ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
 
 	// VERIFY
 	assert.Assert(t, resultErr != nil)
@@ -379,8 +390,12 @@ func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *tes
 	ctl := NewController(cf, NewMetrics())
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
-	// EXERCISE
+	// EXERCISE - Add Finalizer
 	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
+	assert.NilError(t, resultErr)
+
+	// EXERCISE - Add Status.TenantNamespaceName
+	resultErr = ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -464,8 +479,12 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnMissingNamespace(t *te
 	ctl := NewController(cf, NewMetrics())
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
-	// EXERCISE
+	// EXERCISE - Add Finalizer
 	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
+	assert.NilError(t, resultErr)
+
+	// EXERCISE - Add Status.TenantNamespaceName
+	resultErr = ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
 
 	// VERIFY
 	assert.Assert(t, resultErr != nil)
@@ -534,8 +553,12 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnErrorWhenSyncingRoleBi
 		},
 	}
 
-	// EXERCISE
+	// EXERCISE - Add Finalizer
 	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
+	assert.NilError(t, resultErr)
+
+	// EXERCISE - Add Status.TenantNamespaceName
+	resultErr = ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
 
 	// VERIFY
 	assert.Assert(t, resultErr != nil)
@@ -595,8 +618,12 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfFinalizerIsSet(t *testing.T) 
 
 	// initialize tenant
 	{
+		// EXERCISE - Add Finalizer
 		err := ctl.syncHandler(tenantKey)
 		assert.NilError(t, err)
+
+		// EXERCISE - Add Status.TenantNamespaceName
+		err = ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
 
 		initializedTenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
@@ -662,8 +689,12 @@ func Test_Controller_syncHandler_CleanupOnDelete_SkippedIfFinalizerIsNotSet(t *t
 
 	// initialize tenant
 	{
+		// EXERCISE - Add Finalizer
 		err := ctl.syncHandler(tenantKey)
 		assert.NilError(t, err)
+
+		// EXERCISE - Add Status.TenantNamespaceName
+		err = ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
 
 		initializedTenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
@@ -731,8 +762,12 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfNamespaceDoesNotExistAnymore(
 
 	// initialize tenant
 	{
+		// EXERCISE - Add Finalizer
 		err := ctl.syncHandler(tenantKey)
 		assert.NilError(t, err)
+
+		// EXERCISE - Add Status.TenantNamespaceName
+		err = ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
 
 		initializedTenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
@@ -808,8 +843,12 @@ func Test_Controller_syncHandler_CleanupOnStatusUpdateFailure(t *testing.T) {
 		},
 	}
 
-	// EXERCISE
+	// EXERCISE - Add Finalizer
 	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
+	assert.NilError(t, resultErr)
+
+	// EXERCISE - Add Status.TenantNamespaceName
+	resultErr = ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
 
 	// VERIFY
 	assert.Assert(t, injectedError == resultErr)
