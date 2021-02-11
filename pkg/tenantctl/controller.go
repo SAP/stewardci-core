@@ -6,6 +6,7 @@ package tenantctl
 
 import (
 	"fmt"
+	v1 "k8s.io/client-go/listers/core/v1"
 	"time"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
@@ -36,19 +37,22 @@ const (
 
 // Controller for Steward Tenants
 type Controller struct {
-	factory      k8s.ClientFactory
-	fetcher      k8s.TenantFetcher
-	tenantSynced cache.InformerSynced
-	tenantLister listers.TenantLister
-	workqueue    workqueue.RateLimitingInterface
-	metrics      Metrics
-	syncCount    int64
-	testing      *controllerTesting
+	factory         k8s.ClientFactory
+	fetcher         k8s.TenantFetcher
+	tenantSynced    cache.InformerSynced
+	tenantLister    listers.TenantLister
+	namespaceSynced cache.InformerSynced
+	namespaceLister v1.NamespaceLister
+	workqueue       workqueue.RateLimitingInterface
+	metrics         Metrics
+	syncCount       int64
+	testing         *controllerTesting
+	clientConfig    *clientConfig
 }
 
 type controllerTesting struct {
 	createRoleBindingStub          func(roleBinding *rbacv1beta1.RoleBinding) (*rbacv1beta1.RoleBinding, error)
-	getClientConfigStub            func(factory k8s.ClientFactory, clientNamespace string) (clientConfig, error)
+	getClientConfigStub            func(clientNamespace string) (clientConfig, error)
 	listManagedRoleBindingsStub    func(namespace string) (*rbacv1beta1.RoleBindingList, error)
 	reconcileTenantRoleBindingStub func(tenant *api.Tenant, namespace string, config clientConfig) (bool, error)
 	updateStatusStub               func(tenant *api.Tenant) (*api.Tenant, error)
@@ -57,14 +61,17 @@ type controllerTesting struct {
 // NewController creates new Controller
 func NewController(factory k8s.ClientFactory, metrics Metrics) *Controller {
 	informer := factory.StewardInformerFactory().Steward().V1alpha1().Tenants()
+	namespaceInformer := factory.CoreV1InformerFactory().Core().V1().Namespaces()
 	fetcher := k8s.NewListerBasedTenantFetcher(informer.Lister())
 	controller := &Controller{
-		factory:      factory,
-		fetcher:      fetcher,
-		tenantSynced: informer.Informer().HasSynced,
-		tenantLister: informer.Lister(),
-		workqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
-		metrics:      metrics,
+		factory:         factory,
+		fetcher:         fetcher,
+		tenantSynced:    informer.Informer().HasSynced,
+		tenantLister:    informer.Lister(),
+		namespaceSynced: namespaceInformer.Informer().HasSynced,
+		namespaceLister: namespaceInformer.Lister(),
+		workqueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
+		metrics:         metrics,
 	}
 	informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.onTenantAdd,
@@ -91,7 +98,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
 	klog.V(2).Infof("Sync cache")
-	if ok := cache.WaitForCacheSync(stopCh, c.tenantSynced); !ok {
+	if ok := cache.WaitForCacheSync(stopCh, c.tenantSynced, c.namespaceSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 	klog.V(2).Infof("Start workers")
@@ -191,7 +198,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
-	config, err := c.getClientConfig(c.factory, tenant.GetNamespace())
+	config, err := c.getClientConfig(tenant.GetNamespace())
 	if err != nil {
 		klog.Infof(c.formatLog(tenant), err)
 		return err
@@ -344,11 +351,11 @@ func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenan
 	return nil
 }
 
-func (c *Controller) getClientConfig(factory k8s.ClientFactory, clientNamespace string) (clientConfig, error) {
+func (c *Controller) getClientConfig(clientNamespace string) (clientConfig, error) {
 	if c.testing != nil && c.testing.getClientConfigStub != nil {
-		return c.testing.getClientConfigStub(factory, clientNamespace)
+		return c.testing.getClientConfigStub(clientNamespace)
 	}
-	return getClientConfig(factory, clientNamespace)
+	return getClientConfig(c.namespaceLister, clientNamespace)
 }
 
 func (c *Controller) hasFinalizer(tenant *api.Tenant) bool {
