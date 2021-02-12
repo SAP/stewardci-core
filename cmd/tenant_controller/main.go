@@ -63,8 +63,9 @@ func main() {
 	klog.V(3).Infof("Create Signal Handler")
 	stopCh := signals.SetupSignalHandler()
 
-	klog.V(2).Infof("Start Informer")
+	klog.V(2).Infof("Start Informers")
 	factory.StewardInformerFactory().Start(stopCh)
+	factory.CoreV1InformerFactory().Start(stopCh)
 
 	klog.V(2).Infof("Run controller")
 	if err = controller.Run(2, stopCh); err != nil {
