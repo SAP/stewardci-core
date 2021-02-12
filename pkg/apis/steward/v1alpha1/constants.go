@@ -4,6 +4,8 @@ import (
 	"github.com/SAP/stewardci-core/pkg/apis/steward"
 )
 
+type LabelPurposeValue string
+
 const (
 	// AnnotationTenantNamespacePrefix is the key of the annotation
 	// of a Steward client namespace defining the prefix of tenant namespaces
@@ -30,6 +32,11 @@ const (
 	// modified otherwise.
 	// The value of the label is ignored and should be empty.
 	LabelSystemManaged = steward.GroupName + "/system-managed"
+
+	LabelPurpose = steward.GroupName + "/purpose"
+
+	PurposeValueClientNamespace LabelPurposeValue = "ClientNamespace"
+	PurposeValueTenantNamespace LabelPurposeValue = "TenantNamespace"
 
 	// EventReasonPreparingFailed is the reason for a event occuring when the run controller
 	// faces an intermittent error during preparing phase.
