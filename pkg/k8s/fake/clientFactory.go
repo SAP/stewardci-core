@@ -15,6 +15,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	dynamic "k8s.io/client-go/dynamic"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/informers"
 	kubernetes "k8s.io/client-go/kubernetes/fake"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	networkingv1 "k8s.io/client-go/kubernetes/typed/networking/v1"
@@ -24,13 +25,14 @@ import (
 
 // ClientFactory is a factory for fake clients.
 type ClientFactory struct {
-	kubernetesClientset    *kubernetes.Clientset
-	dynamicClient          *dynamicfake.FakeDynamicClient
-	stewardClientset       *steward.Clientset
-	stewardInformerFactory stewardinformer.SharedInformerFactory
-	tektonClientset        *tektonclientfake.Clientset
-	tektonInformerFactory  tektoninformers.SharedInformerFactory
-	sleepDuration          time.Duration
+	kubernetesClientset       *kubernetes.Clientset
+	kubernetesInformerFactory informers.SharedInformerFactory
+	dynamicClient             *dynamicfake.FakeDynamicClient
+	stewardClientset          *steward.Clientset
+	stewardInformerFactory    stewardinformer.SharedInformerFactory
+	tektonClientset           *tektonclientfake.Clientset
+	tektonInformerFactory     tektoninformers.SharedInformerFactory
+	sleepDuration             time.Duration
 }
 
 // NewClientFactory creates a new ClientFactory
@@ -40,15 +42,18 @@ func NewClientFactory(objects ...runtime.Object) *ClientFactory {
 	stewardInformerFactory := stewardinformer.NewSharedInformerFactory(stewardClientset, time.Minute*10)
 	tektonClientset := tektonclientfake.NewSimpleClientset(tektonObjects...)
 	tektonInformerFactory := tektoninformers.NewSharedInformerFactory(tektonClientset, time.Minute*10)
+	kubernetesClientset := kubernetes.NewSimpleClientset(kubernetesObjects...)
+	kubernetesInformerFactory := informers.NewSharedInformerFactory(kubernetesClientset, time.Minute*10)
 	sleepDuration, _ := time.ParseDuration("300ms")
 	return &ClientFactory{
-		kubernetesClientset:    kubernetes.NewSimpleClientset(kubernetesObjects...),
-		dynamicClient:          dynamicfake.NewSimpleDynamicClient(runtime.NewScheme()),
-		stewardClientset:       stewardClientset,
-		stewardInformerFactory: stewardInformerFactory,
-		tektonClientset:        tektonClientset,
-		tektonInformerFactory:  tektonInformerFactory,
-		sleepDuration:          sleepDuration,
+		kubernetesClientset:       kubernetesClientset,
+		kubernetesInformerFactory: kubernetesInformerFactory,
+		dynamicClient:             dynamicfake.NewSimpleDynamicClient(runtime.NewScheme()),
+		stewardClientset:          stewardClientset,
+		stewardInformerFactory:    stewardInformerFactory,
+		tektonClientset:           tektonClientset,
+		tektonInformerFactory:     tektonInformerFactory,
+		sleepDuration:             sleepDuration,
 	}
 }
 
@@ -96,6 +101,11 @@ func (f *ClientFactory) KubernetesClientset() *kubernetes.Clientset {
 // CoreV1 implements interface "github.com/SAP/stewardci-core/pkg/k8s".ClientFactory
 func (f *ClientFactory) CoreV1() corev1.CoreV1Interface {
 	return f.kubernetesClientset.CoreV1()
+}
+
+// CoreV1InformerFactory implements interface SharedInformerFactory
+func (f *ClientFactory) CoreV1InformerFactory() informers.SharedInformerFactory {
+	return f.kubernetesInformerFactory
 }
 
 // Dynamic implements interface "github.com/SAP/stewardci-core/pkg/k8s".ClientFactory

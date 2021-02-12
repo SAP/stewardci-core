@@ -5,12 +5,13 @@ import (
 	"strconv"
 	"testing"
 
-	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	assert "gotest.tools/assert"
 	cmp "gotest.tools/assert/cmp"
 	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
 )
 
 /*
@@ -56,7 +57,7 @@ func Test_getClientConfig_ReturnsValuesFromAnnotations(t *testing.T) {
 	// SETUP
 	const configuredRandomLength int64 = 10
 
-	cf := fake.NewClientFactory(
+	cf := createLister(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "Client1",
@@ -85,7 +86,7 @@ func Test_getClientConfig_NamespaceParameterIsZeroLengthString(t *testing.T) {
 	// SETUP
 	const emptyNameString = ""
 
-	cf := fake.NewClientFactory(
+	cf := createLister(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "Client1",
@@ -106,7 +107,7 @@ func Test_getClientConfig_NamespaceParameterIsZeroLengthString(t *testing.T) {
 
 func Test_getClientConfig_ClientNamespaceNotExisting(t *testing.T) {
 	// SETUP
-	cf := fake.NewClientFactory(
+	cf := createLister(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "Namespace1",
@@ -125,7 +126,7 @@ func Test_getClientConfig_ClientNamespaceNotExisting(t *testing.T) {
 
 func Test_getClientConfig_AnnotationTenantNamespacePrefix_Missing(t *testing.T) {
 	// SETUP
-	cf := fake.NewClientFactory(
+	cf := createLister(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "Client1",
@@ -152,7 +153,7 @@ func Test_getClientConfig_AnnotationTenantNamespacePrefix_Missing(t *testing.T) 
 
 func Test_getClientConfig_AnnotationTenantNamespacePrefix_EmptyValue(t *testing.T) {
 	// SETUP
-	cf := fake.NewClientFactory(
+	cf := createLister(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "Client1",
@@ -179,7 +180,7 @@ func Test_getClientConfig_AnnotationTenantNamespacePrefix_EmptyValue(t *testing.
 
 func Test_getClientConfig_AnnotationTenantRole_Missing(t *testing.T) {
 	// SETUP
-	cf := fake.NewClientFactory(
+	cf := createLister(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "Client1",
@@ -202,7 +203,7 @@ func Test_getClientConfig_AnnotationTenantRole_Missing(t *testing.T) {
 
 func Test_getClientConfig_AnnotationTenantRole_EmptyValue(t *testing.T) {
 	// SETUP
-	cf := fake.NewClientFactory(
+	cf := createLister(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "Client1",
@@ -229,7 +230,7 @@ func Test_getClientConfig_AnnotationTenantRole_EmptyValue(t *testing.T) {
 
 func Test_getClientConfig_AnnotationTenantNamespaceSuffixLength_Missing(t *testing.T) {
 	// SETUP
-	cf := fake.NewClientFactory(
+	cf := createLister(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "Client1",
@@ -264,7 +265,7 @@ func Test_getClientConfig_AnnotationTenantNamespaceSuffixLength_InvalidValue(t *
 	} {
 		t.Run(strconv.Itoa(num)+"_"+value, func(t *testing.T) {
 			// SETUP
-			cf := fake.NewClientFactory(
+			cf := createLister(
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "Client1",
@@ -308,7 +309,7 @@ func Test_getClientConfig_AnnotationTenantNamespaceSuffixLength_ValidValue(t *te
 	} {
 		t.Run(strconv.Itoa(num)+"_"+tc.value, func(t *testing.T) {
 			// SETUP
-			cf := fake.NewClientFactory(
+			cf := createLister(
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "Client1",
@@ -333,7 +334,7 @@ func Test_getClientConfig_AnnotationTenantNamespaceSuffixLength_ValidValue(t *te
 
 func Test_getClientConfig_TwoClients(t *testing.T) {
 	// SETUP
-	cf := fake.NewClientFactory(
+	cf := createLister(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "Client1",
@@ -376,4 +377,13 @@ func Test_getClientConfig_TwoClients(t *testing.T) {
 	assert.Equal(t, "r2", string(role2))
 	assert.Equal(t, uint8(6), rand1)
 	assert.Equal(t, uint8(4), rand2)
+}
+
+func createLister(runs ...*corev1.Namespace) listers.NamespaceLister {
+	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc,
+		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
+	for _, run := range runs {
+		indexer.Add(run)
+	}
+	return listers.NewNamespaceLister(indexer)
 }

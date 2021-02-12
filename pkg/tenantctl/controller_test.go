@@ -88,7 +88,7 @@ func Test_Controller_syncHandler_FailsIfClientConfigIsInvalid(t *testing.T) {
 
 	injectedError := errors.New("ERR1")
 	ctl.testing = &controllerTesting{
-		getClientConfigStub: func(k8s.ClientFactory, string) (clientConfig, error) {
+		getClientConfigStub: func(string) (clientConfig, error) {
 			return nil, injectedError
 		},
 	}
