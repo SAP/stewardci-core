@@ -53,7 +53,7 @@ func main() {
 
 	system.Namespace() // ensure that namespace is set in environment
 
-	klog.V(3).Infof("Create Factory (resync period: %s, QPS: %d, burst: %d)", resyncPeriod.String())
+	klog.V(3).Infof("Create Factory (resync period: %s, QPS: %d, burst: %d)", resyncPeriod.String(), qps, burst)
 	config.QPS = float32(qps)
 	config.Burst = burst
 	factory := k8s.NewClientFactory(config, resyncPeriod)
