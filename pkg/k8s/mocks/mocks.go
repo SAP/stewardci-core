@@ -393,6 +393,20 @@ func (mr *MockPipelineRunMockRecorder) HasDeletionTimestamp() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDeletionTimestamp", reflect.TypeOf((*MockPipelineRun)(nil).HasDeletionTimestamp))
 }
 
+// InitState mocks base method
+func (m *MockPipelineRun) InitState() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InitState")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InitState indicates an expected call of InitState
+func (mr *MockPipelineRunMockRecorder) InitState() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitState", reflect.TypeOf((*MockPipelineRun)(nil).InitState))
+}
+
 // StoreErrorAsMessage mocks base method
 func (m *MockPipelineRun) StoreErrorAsMessage(arg0 error, arg1 string) error {
 	m.ctrl.T.Helper()

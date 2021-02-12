@@ -30,6 +30,7 @@ type PipelineRun interface {
 	HasDeletionTimestamp() bool
 	AddFinalizer() error
 	DeleteFinalizerIfExists() error
+	InitState() error
 	UpdateState(api.State) (*api.StateItem, error)
 	UpdateResult(api.Result) error
 	UpdateContainer(*corev1.ContainerState) error
@@ -120,11 +121,36 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 	return &r.apiObj.Spec
 }
 
+// InitState initializes the state as 'new' if state was undefined (empty) before.
+// The state's start time will be set to the object's creation time.
+// Fails if a state is set already.
+func (r *pipelineRun) InitState() error {
+	r.ensureCopy()
+	klog.V(3).Infof("Init State [%s]", r.String())
+	return r.changeStatusAndUpdateSafely(func() error {
+
+		if r.apiObj.Status.State != api.StateUndefined {
+			return fmt.Errorf("Cannot initialize multiple times")
+		}
+
+		newStateDetails := api.StateItem{
+			State:     api.StateNew,
+			StartedAt: r.apiObj.ObjectMeta.CreationTimestamp,
+		}
+		r.apiObj.Status.StateDetails = newStateDetails
+		r.apiObj.Status.State = api.StateNew
+		return nil
+	})
+}
+
 // UpdateState set end time of current (defined) state (A) and store it to the history.
 // if no current state is defined a new state (A) with cretiontime of the pipelinerun as start time is created.
 // It also creates a new current state (B) with start time.
 // Returns the state details of state A
 func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
+	if r.apiObj.Status.State == api.StateUndefined {
+		return nil, fmt.Errorf("Cannot update uninitialize state")
+	}
 	r.ensureCopy()
 	klog.V(3).Infof("Update State to %s [%s]", state, r.String())
 	now := metav1.Now()
@@ -136,9 +162,7 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 		if currentStateDetails.State != oldStateDetails.State {
 			return fmt.Errorf("State cannot be updated as it was changed concurrently from %q to %q", oldStateDetails.State, currentStateDetails.State)
 		}
-		if currentStateDetails.State == api.StateUndefined {
-			currentStateDetails.State = api.StateNew
-			currentStateDetails.StartedAt = r.apiObj.ObjectMeta.CreationTimestamp
+		if state == api.StatePreparing {
 			r.apiObj.Status.StartedAt = &now
 		}
 		currentStateDetails.FinishedAt = now
