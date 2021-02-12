@@ -1229,12 +1229,6 @@ func stopController(t *testing.T, stopCh chan struct{}) {
 	stopCh <- struct{}{}
 }
 
-func runControllerForAWhile(t *testing.T, cf *fake.ClientFactory) *Controller {
-	stopCh, controller := startController(t, cf, false)
-	defer stopController(t, stopCh)
-	return controller
-}
-
 func start(t *testing.T, controller *Controller, stopCh chan struct{}) {
 	if err := controller.Run(1, stopCh); err != nil {
 		t.Logf("Error running controller %s", err.Error())
