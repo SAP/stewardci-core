@@ -3,6 +3,7 @@ set -u -o pipefail
 
 # set from args
 unset VERIFY
+unset ONLY_MOCKS
 
 HERE=$(cd "$(dirname "$BASH_SOURCE")" && pwd) || exit 1
 
@@ -24,6 +25,9 @@ function read_args() {
                 print_usage
                 exit 0
                 ;;
+	    "-m" | "--only-mocks" )
+	        ONLY_MOCKS=1
+		;;
             "--verify" )
                 VERIFY=1
                 ;;
@@ -51,10 +55,17 @@ function print_usage() {
     echo "      Verifies that the generated code is up-to-date. The existing generated"
     echo "      code will not be touched."
     echo ""
+    echo "  -m, --only-mocks"
+    echo "      Only regenerate mocks"
+    echo ""
 }
 
 function is_verify_mode() {
     [[ -n ${VERIFY:-} ]]
+}
+
+function is_only_mocks_mode() {
+    [[ -n ${ONLY_MOCKS:-} ]]
 }
 
 function generate_mocks() {
@@ -117,11 +128,13 @@ GOPATH_1=${GOPATH%%:*}  # the first entry of the GOPATH
 checkGoVersion
 
 # prepare code generator
-"$HERE/bootstrap-codegen.sh" || die "failed to bootstrap code generator"
-[[ -f $CODEGEN_PKG/generate-groups.sh ]] \
-    || die "\$CODEGEN_PKG ('$CODEGEN_PKG'): file 'generate-groups.sh' does not exist"
-[[ -x $CODEGEN_PKG/generate-groups.sh ]] \
-    || die "\$CODEGEN_PKG ('$CODEGEN_PKG'): file 'generate-groups.sh' is not executable"
+if ! is_only_mocks_mode; then
+  "$HERE/bootstrap-codegen.sh" || die "failed to bootstrap code generator"
+  [[ -f $CODEGEN_PKG/generate-groups.sh ]] \
+      || die "\$CODEGEN_PKG ('$CODEGEN_PKG'): file 'generate-groups.sh' does not exist"
+  [[ -x $CODEGEN_PKG/generate-groups.sh ]] \
+      || die "\$CODEGEN_PKG ('$CODEGEN_PKG'): file 'generate-groups.sh' is not executable"
+fi
 
 # prepare mockgen
 MOCKGEN_EXE="$GOPATH_1/bin/mockgen"
@@ -149,6 +162,7 @@ echo "MOCK_ROOT:    $MOCK_ROOT"
 echo "CODEGEN_PKG:  $CODEGEN_PKG"
 echo "GOPATH:       $GOPATH_1"
 echo "VERIFY:       $(if is_verify_mode; then echo "true"; else echo "false"; fi)"
+echo "ONLY_MOCKS:   $(if is_only_mocks_mode; then echo "true"; else echo "false"; fi)"
 echo "GO version:   $(go version)"
 
 echo
@@ -161,10 +175,14 @@ rm -rf \
 { set +x; } 2>/dev/null
 if ! is_verify_mode; then
     set -x
-    rm -rf \
+    if ! is_only_mocks_mode; then
+      rm -rf \
         "${PROJECT_ROOT}/pkg/client" \
         "${PROJECT_ROOT}/pkg/tektonclient" \
         "${PROJECT_ROOT}/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go" \
+        || die "Cleanup failed"
+    fi
+    rm -rf \
         "${PROJECT_ROOT}/pkg/k8s/mocks/mocks.go" \
         "${PROJECT_ROOT}/pkg/k8s/mocks/client-go/corev1/mocks.go" \
         "${PROJECT_ROOT}/pkg/k8s/secrets/mocks/mocks.go" \
@@ -177,42 +195,44 @@ echo
 echo "## Generate #######################################"
 set -x
 
-"${CODEGEN_PKG}/generate-groups.sh" \
-    all \
-    github.com/SAP/stewardci-core/pkg/client \
-    github.com/SAP/stewardci-core/pkg/apis \
-    steward:v1alpha1 \
-    --go-header-file "${PROJECT_ROOT}/hack/boilerplate.go.txt" \
-    --output-base "${GEN_DIR}" \
-    || die "Code generation failed"
-{ set +x; } 2>/dev/null
-set -x
-"${CODEGEN_PKG}/generate-groups.sh" \
-    "client,informer,lister" \
-    github.com/SAP/stewardci-core/pkg/tektonclient \
-    github.com/tektoncd/pipeline/pkg/apis \
-    pipeline:v1beta1 \
-    --go-header-file "${PROJECT_ROOT}/hack/boilerplate.go.txt" \
-    --output-base "${GEN_DIR}" \
-    || die "Code generation failed"
-{ set +x; } 2>/dev/null
+if ! is_only_mocks_mode; then
+  "${CODEGEN_PKG}/generate-groups.sh" \
+      all \
+      github.com/SAP/stewardci-core/pkg/client \
+      github.com/SAP/stewardci-core/pkg/apis \
+      steward:v1alpha1 \
+      --go-header-file "${PROJECT_ROOT}/hack/boilerplate.go.txt" \
+      --output-base "${GEN_DIR}" \
+      || die "Code generation failed"
+  { set +x; } 2>/dev/null
+  set -x
+  "${CODEGEN_PKG}/generate-groups.sh" \
+      "client,informer,lister" \
+      github.com/SAP/stewardci-core/pkg/tektonclient \
+      github.com/tektoncd/pipeline/pkg/apis \
+      pipeline:v1beta1 \
+      --go-header-file "${PROJECT_ROOT}/hack/boilerplate.go.txt" \
+      --output-base "${GEN_DIR}" \
+      || die "Code generation failed"
+  { set +x; } 2>/dev/null
 
-echo
-if is_verify_mode; then
-    echo "## Verifying generated sources ####################"
-    set -x
-    diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/client/ ${PROJECT_ROOT}/pkg/client/ || die "Regeneration required for clients"
-    diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/tektonclient/ ${PROJECT_ROOT}/pkg/tektonclient/ || die "Regeneration required for tektonclients"
-    diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go ${PROJECT_ROOT}/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go || die "Regeneration required for apis"
-    { set +x; } 2>/dev/null
-else
-    echo "## Move generated files ###########################"
-    set -x
-    mv "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/client" "${PROJECT_ROOT}/pkg/" || die "Moving generated clients failed"
-    mv "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/tektonclient" "${PROJECT_ROOT}/pkg/" || die "Moving generated tektonclients failed"
-    cp -r "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/apis" "${PROJECT_ROOT}/pkg/" || die "Copying generated apis failed"
-    rm -rf "${GEN_DIR}/github.com" || die "Cleanup gen dir failed"
-    { set +x; } 2>/dev/null
+  echo
+  if is_verify_mode; then
+      echo "## Verifying generated sources ####################"
+      set -x
+      diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/client/ ${PROJECT_ROOT}/pkg/client/ || die "Regeneration required for clients"
+      diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/tektonclient/ ${PROJECT_ROOT}/pkg/tektonclient/ || die "Regeneration required for tektonclients"
+      diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go ${PROJECT_ROOT}/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go || die "Regeneration required for apis"
+      { set +x; } 2>/dev/null
+  else
+      echo "## Move generated files ###########################"
+      set -x
+      mv "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/client" "${PROJECT_ROOT}/pkg/" || die "Moving generated clients failed"
+      mv "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/tektonclient" "${PROJECT_ROOT}/pkg/" || die "Moving generated tektonclients failed"
+      cp -r "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/apis" "${PROJECT_ROOT}/pkg/" || die "Copying generated apis failed"
+      rm -rf "${GEN_DIR}/github.com" || die "Cleanup gen dir failed"
+      { set +x; } 2>/dev/null
+  fi
 fi
 
 echo
