@@ -53,9 +53,9 @@
   changes:
   - type: internal
     impact: patch
-    title: "Add update-mocks script"
+    title: "Add only-mocks mode to the codegen script"
     description: |-
-      Add a script to regenerate the mocks without regeneration all clients.
+      Add a mode to only regenerate the mocks without regeneration all clients.
     pullRequestNumber: 208
 
   - type: bug
