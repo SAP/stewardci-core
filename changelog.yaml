@@ -51,6 +51,15 @@
 - version: NEXT
   date: TBD
   changes:
+  - type: bug
+    impact: patch
+    title: Delete finalizer after pipeline run is cleaned.
+    description: |-
+      Delete finalizer after pipeline run is cleaned.
+    warning:
+    deprecations:
+    pullRequestNumber: 210
+    jiraIssueNumber: 413
 
 - version: "0.7.0"
   date: 2021-02-08
