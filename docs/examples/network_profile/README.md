@@ -1,6 +1,7 @@
 # Network profile examples
 
-To run this examples you need to [create a Tenant](../README.md#tenant) and [set the environment variable](../README.md#pipelinerun) `TENANT_NAMESPACE` accordingly.
+To run these examples you need to [create a Tenant](../README.md#tenant) and [set the environment variable](../README.md#pipelinerun) `TENANT_NAMESPACE` accordingly.
+
 
 ## Valid profile configuration
 
@@ -24,9 +25,11 @@ NAME                             STARTED   FINISHED   STATUS     RESULT         
 network-profile-internet-qgqvf   **        **         finished   success         Pipeline completed with result: SUCCESS
 ```
 
-### Network profile with no network access
+### Network profile without network access
 
-This example pipeline run uses a network profile which allows no network access.
+
+This example pipeline run uses a network profile which blocks any network communication.
+
 
 ```
 kubectl -n  $TENANT_NAMESPACE apply -f pipelinerun_network_blocked.yaml
@@ -39,7 +42,8 @@ NAME                             STARTED   FINISHED   STATUS     RESULT         
 network-profile-blocked-qgjfp    **        **         finished   error_content   Command ['git' 'clone' 'https://github.com/SAP-samples/stewardci-example-pipelines' '.'] failed w...
 ```
 
-### Network profile with unknown profile
+### Unknown network profile
+
 
 This example pipeline run tries to use a nonexistent network profile.
 
@@ -60,12 +64,13 @@ network-profile-unknown-9p8v8    **        **         finished   error_config   
 If the definition of the network profile config map is inconsistent (e.g. not existing default profile), all pipeline runs will fail with result `error_infra`.
 
 
-To run this example apply `profiles.yaml_inconsistent.yaml` to your Steward system namespace, e.g.:
+To run this example apply `profiles_inconsistent.yaml` to your Steward system namespace, e.g.:
 
 ```
-kubectl -n steward-system apply -f profiles.yaml_inconsistent.yaml
-kubectl -n  $TENANT_NAMESPACE apply -f pipelinerun_network_internet.yaml
+kubectl -n steward-system apply -f profiles_inconsistent.yaml
+kubectl -n  "$TENANT_NAMESPACE" apply -f pipelinerun_network_internet.yaml
 ```
+
 
 Result
 
