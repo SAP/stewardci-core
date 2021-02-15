@@ -1,4 +1,8 @@
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+  name: steward-pipelineruns-network-policies
 data:
   _default: internet
   blocked: |
@@ -91,8 +95,3 @@ data:
       - # rule: allow access from all pods in the same namespace
         from:
         - podSelector: {}
-kind: ConfigMap
-metadata:
-  labels:
-  name: steward-pipelineruns-network-policies
-  namespace: steward-system

@@ -1,4 +1,4 @@
-# Network profile examples
+# Network Profile Examples
 
 To run these examples you need to [create a Tenant](../README.md#tenant) and [set the environment variable](../README.md#pipelinerun) `TENANT_NAMESPACE` accordingly.
 
@@ -61,7 +61,7 @@ network-profile-unknown-9p8v8    **        **         finished   error_config   
 
 ## Invalid profile configuration
 
-If the definition of the network profile config map is inconsistent (e.g. not existing default profile), all pipeline runs will fail with result `error_infra`.
+If the definition of the network profile config map is inconsistent (e.g. not existing default profile), all pipeline runs will fail with result `error_infra`. This behaviour could be changed by the [feature flag RetryOnInvalidPipelineRunsConfig](../../../charts/steward/README.md#list-of-defined-feature-flags).
 
 
 To run this example apply `profiles_inconsistent.yaml` to your Steward system namespace, e.g.:
