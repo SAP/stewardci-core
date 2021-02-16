@@ -60,6 +60,16 @@
       If many tenants exists, increasing the limit will make the processing of tenants faster e.g. creating a new tenant will take less time.
     pullRequestNumber: 214
 
+  - type: bug
+    impact: patch
+    title: Delete finalizer after pipeline run is cleaned.
+    description: |-
+      Delete finalizer after pipeline run is cleaned.
+    warning:
+    deprecations:
+    pullRequestNumber: 210
+    jiraIssueNumber: 413
+
 - version: "0.7.0"
   date: 2021-02-08
   changes:

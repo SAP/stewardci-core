@@ -18,6 +18,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
+	utils "github.com/SAP/stewardci-core/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -244,8 +245,14 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 	// fast exit
-	if pipelineRunAPIObj.Status.State == api.StateFinished && pipelineRunAPIObj.GetDeletionTimestamp().IsZero() {
-		return nil
+	if pipelineRunAPIObj.GetDeletionTimestamp().IsZero() {
+		if pipelineRunAPIObj.Status.State == api.StateFinished {
+			return nil
+		}
+	} else {
+		if !utils.StringSliceContains(pipelineRunAPIObj.ObjectMeta.Finalizers, k8s.FinalizerName) {
+			return nil
+		}
 	}
 
 	// Get real pipelineRun bypassing cache
@@ -322,13 +329,11 @@ func (c *Controller) syncHandler(key string) error {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonLoadPipelineRunsConfigFailed, err.Error())
 			return err
 		}
-		if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
-			return err
-		}
 		pipelineRun.UpdateResult(api.ResultErrorInfra)
 		pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
 		c.metrics.CountResult(pipelineRun.GetStatus().Result)
-		return nil
+
+		return c.finish(pipelineRun)
 	}
 
 	runManager := c.createRunManager(pipelineRun)
@@ -403,14 +408,18 @@ func (c *Controller) syncHandler(key string) error {
 		}
 	case api.StateCleaning:
 		err = runManager.Cleanup(pipelineRun)
-		if err == nil {
-			err = c.changeState(pipelineRun, api.StateFinished)
-		}
-		return err
+		return c.finish(pipelineRun)
 	default:
 		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
 	return nil
+}
+
+func (c *Controller) finish(pipelineRun k8s.PipelineRun) error {
+	if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
+		return err
+	}
+	return pipelineRun.DeleteFinalizerIfExists()
 }
 
 // handleAborted checks if pipeline run should be aborted.

@@ -169,14 +169,6 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 			expectedError:     false,
 			expectedFinalizer: false,
 		},
-		{name: "delete without finalizer ok",
-			runManagerExpectation: func(rm *runmocks.MockManager) {
-				rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
-			},
-			hasFinalizer:      false,
-			expectedError:     false,
-			expectedFinalizer: false,
-		},
 		{name: "delete with finalizer fail",
 			runManagerExpectation: func(rm *runmocks.MockManager) {
 				rm.EXPECT().Cleanup(gomock.Any()).Return(fmt.Errorf("expected"))
@@ -185,14 +177,11 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 			expectedError:     true,
 			expectedFinalizer: true,
 		},
-		{name: "delete without finalizer fail",
-			runManagerExpectation: func(rm *runmocks.MockManager) {
-				rm.EXPECT().Cleanup(gomock.Any()).Return(fmt.Errorf("expected"))
-			},
-			hasFinalizer:      false,
-			expectedError:     true,
-			expectedFinalizer: false, // TODO: is this the correct expect here?
-
+		{name: "delete without finalizer already done",
+			runManagerExpectation: func(rm *runmocks.MockManager) {},
+			hasFinalizer:          false,
+			expectedError:         false,
+			expectedFinalizer:     false,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -351,6 +340,12 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 
 				if test.expectedMessage != "" {
 					assert.Assert(t, is.Regexp(test.expectedMessage, result.Status.Message))
+				}
+
+				if test.expectedState == api.StateFinished {
+					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 0)
+				} else {
+					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 1)
 				}
 			})
 		}
@@ -618,6 +613,12 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 
 				if test.expectedMessage != "" {
 					assert.Assert(t, is.Regexp(test.expectedMessage, result.Status.Message))
+				}
+
+				if test.expectedState == api.StateFinished {
+					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 0)
+				} else {
+					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 1)
 				}
 			})
 		}
