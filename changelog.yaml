@@ -51,12 +51,21 @@
 - version: NEXT
   date: TBD
   changes:
+
   - type: internal
     impact: patch
     title: "Add only-mocks mode to the codegen script"
     description: |-
       Add a mode to only regenerate the mocks without regeneration all clients.
     pullRequestNumber: 208
+  
+  - type: enhancement
+    impact: minor
+    title: "Client-side rate limiting configurable for tenant controller"
+    description: |-
+      The default values of are equal to those of the rest api.
+      If many tenants exists, increasing the limit will make the processing of tenants faster e.g. creating a new tenant will take less time.
+    pullRequestNumber: 214
 
   - type: bug
     impact: patch
