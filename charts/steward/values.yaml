@@ -36,6 +36,8 @@ runController:
 
 tenantController:
   args:
+    qps: 5
+    burst: 10
     logVerbosity: 2
   image:
     repository: stewardci/stewardci-tenant-controller
