@@ -12,7 +12,7 @@ runController:
     logVerbosity: 2
   image:
     repository: stewardci/stewardci-run-controller
-    tag: "0.6.3" #Do not modify this line! RunController tag updated automatically
+    tag: "0.7.0" #Do not modify this line! RunController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -36,10 +36,12 @@ runController:
 
 tenantController:
   args:
+    qps: 5
+    burst: 10
     logVerbosity: 2
   image:
     repository: stewardci/stewardci-tenant-controller
-    tag: "0.6.3" #Do not modify this line! TenantController tag updated automatically
+    tag: "0.7.0" #Do not modify this line! TenantController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -80,7 +82,7 @@ pipelineRuns:
       # Example: http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc
       indexURL: ""
   jenkinsfileRunner:
-    image: "stewardci/stewardci-jenkinsfile-runner:201026_824e593"
+    image: "stewardci/stewardci-jenkinsfile-runner:210205_1988c5e"
     imagePullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0
@@ -100,6 +102,8 @@ pipelineRuns:
       runAsUser: 1000
       runAsGroup: 1000
       fsGroup: 1000
+    pipelineCloneRetryIntervalSec: ""
+    pipelineCloneRetryTimeoutSec: ""
   timeout: "60m"
   # networkPolicy is DEPRECATED: use 'networkPolicies' instead.
   # networkPolicy: ""

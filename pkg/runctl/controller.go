@@ -14,9 +14,11 @@ import (
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
+	"github.com/SAP/stewardci-core/pkg/maintenancemode"
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
+	utils "github.com/SAP/stewardci-core/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -51,6 +53,7 @@ type controllerTesting struct {
 	runManagerStub             run.Manager
 	newRunManagerStub          func(k8s.ClientFactory, secrets.SecretProvider, k8s.NamespaceManager) run.Manager
 	loadPipelineRunsConfigStub func() (*cfg.PipelineRunsConfigStruct, error)
+	isMaintenanceModeStub      func() (bool, error)
 }
 
 // NewController creates new Controller
@@ -221,6 +224,13 @@ func (c *Controller) loadPipelineRunsConfig() (*cfg.PipelineRunsConfigStruct, er
 	return cfg.LoadPipelineRunsConfig(c.factory)
 }
 
+func (c *Controller) isMaintenanceMode() (bool, error) {
+	if c.testing != nil && c.testing.isMaintenanceModeStub != nil {
+		return c.testing.isMaintenanceModeStub()
+	}
+	return maintenancemode.IsMaintenanceMode(c.factory)
+}
+
 // syncHandler compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Foo resource
 // with the current status of the resource.
@@ -235,8 +245,14 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 	// fast exit
-	if pipelineRunAPIObj.Status.State == api.StateFinished && pipelineRunAPIObj.GetDeletionTimestamp().IsZero() {
-		return nil
+	if pipelineRunAPIObj.GetDeletionTimestamp().IsZero() {
+		if pipelineRunAPIObj.Status.State == api.StateFinished {
+			return nil
+		}
+	} else {
+		if !utils.StringSliceContains(pipelineRunAPIObj.ObjectMeta.Finalizers, k8s.FinalizerName) {
+			return nil
+		}
 	}
 
 	// Get real pipelineRun bypassing cache
@@ -270,15 +286,35 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
+	// Init state when undefined
+	if pipelineRun.GetStatus().State == api.StateUndefined {
+		err = pipelineRun.InitState()
+		if err != nil {
+			return err
+		}
+	}
+
 	// Check if pipeline run is aborted
-	c.handleAborted(pipelineRun)
+	if err := c.handleAborted(pipelineRun); err != nil {
+		return err
+	}
 
 	// As soon as we have a result we can cleanup
 	if pipelineRun.GetStatus().Result != api.ResultUndefined && pipelineRun.GetStatus().State != api.StateCleaning {
 		c.changeState(pipelineRun, api.StateCleaning)
 	}
 
-	if pipelineRun.GetStatus().State == api.StateUndefined {
+	if pipelineRun.GetStatus().State == api.StateNew {
+		maintenanceMode, err := c.isMaintenanceMode()
+		if err != nil {
+			return err
+		}
+		if maintenanceMode {
+			err := fmt.Errorf("pipeline execution is paused while the system is in maintenance mode")
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
+			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
+			return err
+		}
 		if err = c.changeState(pipelineRun, api.StatePreparing); err != nil {
 			return err
 		}
@@ -293,13 +329,11 @@ func (c *Controller) syncHandler(key string) error {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonLoadPipelineRunsConfigFailed, err.Error())
 			return err
 		}
-		if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
-			return err
-		}
 		pipelineRun.UpdateResult(api.ResultErrorInfra)
 		pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
 		c.metrics.CountResult(pipelineRun.GetStatus().Result)
-		return nil
+
+		return c.finish(pipelineRun)
 	}
 
 	runManager := c.createRunManager(pipelineRun)
@@ -374,26 +408,31 @@ func (c *Controller) syncHandler(key string) error {
 		}
 	case api.StateCleaning:
 		err = runManager.Cleanup(pipelineRun)
-		if err == nil {
-			err = c.changeState(pipelineRun, api.StateFinished)
-		}
-		return err
+		return c.finish(pipelineRun)
 	default:
 		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
 	return nil
 }
 
+func (c *Controller) finish(pipelineRun k8s.PipelineRun) error {
+	if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
+		return err
+	}
+	return pipelineRun.DeleteFinalizerIfExists()
+}
+
 // handleAborted checks if pipeline run should be aborted.
 // If the user requested abortion it updates message, result and state
 // to trigger a cleanup.
-func (c *Controller) handleAborted(pipelineRun k8s.PipelineRun) {
+func (c *Controller) handleAborted(pipelineRun k8s.PipelineRun) error {
 	intent := pipelineRun.GetSpec().Intent
 	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {
 		pipelineRun.UpdateMessage("Aborted")
 		pipelineRun.UpdateResult(api.ResultAborted)
-		c.changeState(pipelineRun, api.StateCleaning)
+		return c.changeState(pipelineRun, api.StateCleaning)
 	}
+	return nil
 }
 
 func (c *Controller) addPipelineRun(obj interface{}) {

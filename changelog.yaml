@@ -51,12 +51,74 @@
 - version: NEXT
   date: TBD
   changes:
+
   - type: documentation
     impact: patch
     title: Add network policy examples
     description: Add examples for pipeline runs with configured network profiles.
     pullRequestNumber: 188
+  
+  - type: enhancement
+    impact: minor
+    title: "Client-side rate limiting configurable for tenant controller"
+    description: |-
+      The default values of are equal to those of the rest api.
+      If many tenants exists, increasing the limit will make the processing of tenants faster e.g. creating a new tenant will take less time.
+    pullRequestNumber: 214
 
+  - type: bug
+    impact: patch
+    title: Delete finalizer after pipeline run is cleaned.
+    description: |-
+      Delete finalizer after pipeline run is cleaned.
+    warning:
+    deprecations:
+    pullRequestNumber: 210
+    jiraIssueNumber: 413
+
+- version: "0.7.0"
+  date: 2021-02-08
+  changes:
+
+  - type: enhancement
+    impact: minor
+    title: Make retry parameters for cloning the pipeline repo configurable
+    description: |-
+      Jenkinsfile Runner container entrypoint retries cloning the pipeline
+      repository. The retry parameters (retry interval and timeout) are now
+      configurable via Helm chart parameters.
+      Jenkinsfile Runner image version which enables configuring retry 
+      parameters is also updated in the same PR. Changes in the new 
+      release of JFR image can be found [here](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/210205_1988c5e).
+    pullRequestNumber: 209
+    jiraIssueNumber: 350
+
+  - type: enhancement
+    impact: minor
+    title: Update Jenkinsfile-runner image version
+    description: |-
+      Update Jenkinsfile-runner image to a newer version.
+      All the changes on this version can be found [here](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/210202_42eb583).
+    pullRequestNumber: 207
+    jiraIssueNumber: [350, 441]
+
+  - type: enhancement
+    impact: minor
+    title: "Add maintenance mode to run controller"
+    description: |- 
+      Steward can be put in _maintenance mode_.
+      It prevents _new_ pipeline runs to be processed, while pipeline runs that are in progress _already_ still run to completion.
+    pullRequestNumber: 204
+    jiraIssueNumber: 393
+
+  - type: bug
+    impact: patch
+    title: "Fix update of state history"
+    description: |-
+      The state history of a pipeline run is not updated correctly if a concurrent change happens.
+      This change will fix this bug.
+    pullRequestNumber: 206
+  
   - type: security
     impact: patch
     title: "network: don't allow local subnet multicast traffic"
