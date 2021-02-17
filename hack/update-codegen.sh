@@ -3,7 +3,7 @@ set -u -o pipefail
 
 # set from args
 unset VERIFY
-unset ONLY_MOCKS
+unset GENERATE_MOCKS
 
 HERE=$(cd "$(dirname "$BASH_SOURCE")" && pwd) || exit 1
 
@@ -25,9 +25,9 @@ function read_args() {
                 print_usage
                 exit 0
                 ;;
-	    "-m" | "--only-mocks" )
-	        ONLY_MOCKS=1
-		;;
+            "-m" | "--mocks" )
+                GENERATE_MOCKS=1
+                ;;
             "--verify" )
                 VERIFY=1
                 ;;
@@ -56,7 +56,7 @@ function print_usage() {
     echo "      code will not be touched."
     echo ""
     echo "  -m, --mocks"
-    echo "      Only regenerate mocks."
+    echo "      Regenerate mocks."
     echo ""
 }
 
@@ -64,8 +64,8 @@ function is_verify_mode() {
     [[ -n ${VERIFY:-} ]]
 }
 
-function is_only_mocks_mode() {
-    [[ -n ${ONLY_MOCKS:-} ]]
+function generate_clients() {
+    [[ "${GENERATE_MOCKS:-}" != "1" ]]
 }
 
 function generate_mocks() {
@@ -128,7 +128,7 @@ GOPATH_1=${GOPATH%%:*}  # the first entry of the GOPATH
 checkGoVersion
 
 # prepare code generator
-if ! is_only_mocks_mode; then
+if generate_clients; then
   "$HERE/bootstrap-codegen.sh" || die "failed to bootstrap code generator"
   [[ -f $CODEGEN_PKG/generate-groups.sh ]] \
       || die "\$CODEGEN_PKG ('$CODEGEN_PKG'): file 'generate-groups.sh' does not exist"
@@ -162,7 +162,7 @@ echo "MOCK_ROOT:    $MOCK_ROOT"
 echo "CODEGEN_PKG:  $CODEGEN_PKG"
 echo "GOPATH:       $GOPATH_1"
 echo "VERIFY:       $(if is_verify_mode; then echo "true"; else echo "false"; fi)"
-echo "ONLY_MOCKS:   $(if is_only_mocks_mode; then echo "true"; else echo "false"; fi)"
+echo "Clients:      $(if generate_clients; then echo "true"; else echo "false"; fi)"
 echo "GO version:   $(go version)"
 
 echo
@@ -175,7 +175,7 @@ rm -rf \
 { set +x; } 2>/dev/null
 if ! is_verify_mode; then
     set -x
-    if ! is_only_mocks_mode; then
+    if generate_clients; then
       rm -rf \
         "${PROJECT_ROOT}/pkg/client" \
         "${PROJECT_ROOT}/pkg/tektonclient" \
@@ -195,7 +195,7 @@ echo
 echo "## Generate #######################################"
 set -x
 
-if ! is_only_mocks_mode; then
+if generate_clients; then
   "${CODEGEN_PKG}/generate-groups.sh" \
       all \
       github.com/SAP/stewardci-core/pkg/client \
