@@ -55,8 +55,8 @@ function print_usage() {
     echo "      Verifies that the generated code is up-to-date. The existing generated"
     echo "      code will not be touched."
     echo ""
-    echo "  -m, --only-mocks"
-    echo "      Only regenerate mocks"
+    echo "  -m, --mocks"
+    echo "      Only regenerate mocks."
     echo ""
 }
 
