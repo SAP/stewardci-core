@@ -27,7 +27,7 @@ func init() {
 
 	flag.IntVar(&burst, "burst", 10, "burst for RESTClient")
 	flag.IntVar(&qps, "qps", 5, "QPS for RESTClient")
-	flag.IntVar(&threadiness, "threadiness", 2, "threadiness for run-controller")
+	flag.IntVar(&threadiness, "threadiness", 2, "number of workers to be started each in a single thread")
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to Kubernetes config file")
 	flag.Parse()
 }
