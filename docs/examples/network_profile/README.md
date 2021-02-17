@@ -16,7 +16,7 @@ kubectl -n steward-system apply -f profiles.yaml
 This example pipeline run uses a network profile which allows internet access.
 
 ```
-kubectl -n  $TENANT_NAMESPACE apply -f pipelinerun_network_internet.yaml
+kubectl -n "$TENANT_NAMESPACE" apply -f pipelinerun_network_internet.yaml
 ```
 
 The result is a successful run.
@@ -32,7 +32,7 @@ This example pipeline run uses a network profile which blocks any network commun
 
 
 ```
-kubectl -n  $TENANT_NAMESPACE apply -f pipelinerun_network_blocked.yaml
+kubectl -n "$TENANT_NAMESPACE" apply -f pipelinerun_network_blocked.yaml
 ```
 
 The result is a run failing with a content error.
@@ -49,7 +49,7 @@ This example pipeline run tries to use a nonexistent network profile.
 
 
 ```
-kubectl -n  $TENANT_NAMESPACE apply -f pipelinerun_network_unknown.yaml
+kubectl -n "$TENANT_NAMESPACE" apply -f pipelinerun_network_unknown.yaml
 ```
 
 The pipeline run result is `error_config`, which indicates that the pipeline run specification was erroneous.
@@ -68,7 +68,7 @@ To run this example apply `profiles_inconsistent.yaml` to your Steward system na
 
 ```
 kubectl -n steward-system apply -f profiles_inconsistent.yaml
-kubectl -n  "$TENANT_NAMESPACE" apply -f pipelinerun_network_internet.yaml
+kubectl -n "$TENANT_NAMESPACE" apply -f pipelinerun_network_internet.yaml
 ```
 
 
