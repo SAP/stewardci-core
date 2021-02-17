@@ -51,6 +51,14 @@
 - version: NEXT
   date: TBD
   changes:
+
+  - type: enhancement
+    impact: minor
+    title: "Make threadiness configurable for controllers"
+    description: |-
+      threadiness value for both run- and tenant-controllers should be configurable so that it would be easier to give new values to both controllers if performance is affected and new better values are examined.
+    pullRequestNumber: 215
+    jiraIssueNumber: 502
   
   - type: enhancement
     impact: minor

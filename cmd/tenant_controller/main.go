@@ -15,7 +15,7 @@ import (
 )
 
 var kubeconfig string
-var burst, qps int
+var burst, qps, threadiness int
 
 // Time to wait until the next resync takes place.
 // Resync is only required if events got lost or if the controller restarted (and missed events).
@@ -26,6 +26,7 @@ func init() {
 
 	flag.IntVar(&burst, "burst", 10, "burst for RESTClient")
 	flag.IntVar(&qps, "qps", 5, "QPS for RESTClient")
+	flag.IntVar(&threadiness, "threadiness", 2, "threadiness for tenant-controller")
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to Kubernetes config file")
 	flag.Parse()
 }
@@ -72,7 +73,7 @@ func main() {
 	factory.StewardInformerFactory().Start(stopCh)
 
 	klog.V(2).Infof("Run controller")
-	if err = controller.Run(2, stopCh); err != nil {
+	if err = controller.Run(threadiness, stopCh); err != nil {
 		klog.Fatalf("Error running controller: %s", err.Error())
 	}
 }
