@@ -80,16 +80,6 @@ data:
           podSelector:
             matchLabels:
               app.kubernetes.io/name: steward-elasticsearch-proxy
-      - # rule: allow access to malware scan proxy
-        to:
-        - namespaceSelector: {}
-            # The namespace is 'malware-scan-proxy', but has no labels
-            # attached. Therefore we cannot select it here.
-            # If we can set labels on the namespace, make this selector more
-            # specific.
-          podSelector:
-            matchLabels:
-              app.kubernetes.io/instance: malware-scan-proxy
       ingress:
       - # rule: allow access from all pods in the same namespace
         from:
