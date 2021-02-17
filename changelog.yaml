@@ -54,9 +54,11 @@
 
   - type: internal
     impact: patch
-    title: "Add only-mocks mode to the codegen script"
+    title: [Developer] update-codegen.sh: make generators selectable
     description: |-
-      Add a mode to only regenerate the mocks without regeneration all clients.
+      The code generation script `hack/update-codegen.sh` got two new options `--gen-clients`
+      and `--gen-mocks` to select what should be generated.
+      If none of the `--gen-*` options is specified, _all_ generators are enabled.
     pullRequestNumber: 208
   
   - type: enhancement
