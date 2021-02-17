@@ -77,7 +77,7 @@ func main() {
 	factory.StewardInformerFactory().Start(stopCh)
 	factory.TektonInformerFactory().Start(stopCh)
 
-	klog.V(2).Infof("Run controller (%d threads)", threadiness)
+	klog.V(2).Infof("Run controller (threadiness=%d)", threadiness)
 	if err = controller.Run(threadiness, stopCh); err != nil {
 		klog.Fatalf("Error running controller: %s", err.Error())
 	}
