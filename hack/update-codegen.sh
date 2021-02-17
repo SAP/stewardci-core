@@ -150,11 +150,11 @@ checkGoVersion
 
 # prepare code generator
 if is_generate_clients; then
-  "$HERE/bootstrap-codegen.sh" || die "failed to bootstrap code generator"
-  [[ -f $CODEGEN_PKG/generate-groups.sh ]] \
-      || die "\$CODEGEN_PKG ('$CODEGEN_PKG'): file 'generate-groups.sh' does not exist"
-  [[ -x $CODEGEN_PKG/generate-groups.sh ]] \
-      || die "\$CODEGEN_PKG ('$CODEGEN_PKG'): file 'generate-groups.sh' is not executable"
+    "$HERE/bootstrap-codegen.sh" || die "failed to bootstrap code generator"
+    [[ -f $CODEGEN_PKG/generate-groups.sh ]] \
+        || die "\$CODEGEN_PKG ('$CODEGEN_PKG'): file 'generate-groups.sh' does not exist"
+    [[ -x $CODEGEN_PKG/generate-groups.sh ]] \
+        || die "\$CODEGEN_PKG ('$CODEGEN_PKG'): file 'generate-groups.sh' is not executable"
 fi
 
 # prepare mockgen
