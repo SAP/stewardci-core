@@ -6,6 +6,7 @@ package tenantctl
 
 import (
 	"fmt"
+	"k8s.io/client-go/informers"
 	v1 "k8s.io/client-go/listers/core/v1"
 	"time"
 
@@ -37,17 +38,18 @@ const (
 
 // Controller for Steward Tenants
 type Controller struct {
-	factory         k8s.ClientFactory
-	fetcher         k8s.TenantFetcher
-	tenantSynced    cache.InformerSynced
-	tenantLister    listers.TenantLister
-	namespaceSynced cache.InformerSynced
-	namespaceLister v1.NamespaceLister
-	workqueue       workqueue.RateLimitingInterface
-	metrics         Metrics
-	syncCount       int64
-	testing         *controllerTesting
-	clientConfig    *clientConfig
+	factory          k8s.ClientFactory
+	namespaceFactory informers.SharedInformerFactory
+	fetcher          k8s.TenantFetcher
+	tenantSynced     cache.InformerSynced
+	tenantLister     listers.TenantLister
+	namespaceSynced  cache.InformerSynced
+	namespaceLister  v1.NamespaceLister
+	workqueue        workqueue.RateLimitingInterface
+	metrics          Metrics
+	syncCount        int64
+	testing          *controllerTesting
+	clientConfig     *clientConfig
 }
 
 type controllerTesting struct {
@@ -61,17 +63,25 @@ type controllerTesting struct {
 // NewController creates new Controller
 func NewController(factory k8s.ClientFactory, metrics Metrics) *Controller {
 	informer := factory.StewardInformerFactory().Steward().V1alpha1().Tenants()
-	namespaceInformer := factory.CoreV1InformerFactory().Core().V1().Namespaces()
+
+	tweakListOptionsFunc := func(options *metav1.ListOptions) {
+		options.LabelSelector = fmt.Sprintf("%s=%s", api.LabelPurpose, api.PurposeValueClientNamespace)
+	}
+	k8sClientset := factory.KubernetesInterface()
+	namespaceFactory := informers.NewSharedInformerFactoryWithOptions(k8sClientset, time.Minute*10, informers.WithTweakListOptions(tweakListOptionsFunc))
+	namespaceInformer := namespaceFactory.Core().V1().Namespaces()
+
 	fetcher := k8s.NewListerBasedTenantFetcher(informer.Lister())
 	controller := &Controller{
-		factory:         factory,
-		fetcher:         fetcher,
-		tenantSynced:    informer.Informer().HasSynced,
-		tenantLister:    informer.Lister(),
-		namespaceSynced: namespaceInformer.Informer().HasSynced,
-		namespaceLister: namespaceInformer.Lister(),
-		workqueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
-		metrics:         metrics,
+		factory:          factory,
+		namespaceFactory: namespaceFactory,
+		fetcher:          fetcher,
+		tenantSynced:     informer.Informer().HasSynced,
+		tenantLister:     informer.Lister(),
+		namespaceSynced:  namespaceInformer.Informer().HasSynced,
+		namespaceLister:  namespaceInformer.Lister(),
+		workqueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
+		metrics:          metrics,
 	}
 	informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.onTenantAdd,
@@ -97,6 +107,7 @@ func (c *Controller) getNamespaceManager(config clientConfig) k8s.NamespaceManag
 func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
+	c.namespaceFactory.Start(stopCh)
 	klog.V(2).Infof("Sync cache")
 	if ok := cache.WaitForCacheSync(stopCh, c.tenantSynced, c.namespaceSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")

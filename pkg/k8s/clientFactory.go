@@ -10,7 +10,6 @@ import (
 	tektonclientv1beta1 "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/typed/pipeline/v1beta1"
 	tektoninformers "github.com/SAP/stewardci-core/pkg/tektonclient/informers/externalversions"
 	dynamic "k8s.io/client-go/dynamic"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	networkingv1 "k8s.io/client-go/kubernetes/typed/networking/v1"
@@ -24,8 +23,8 @@ type ClientFactory interface {
 	// CoreV1 returns the core/v1 Kubernetes client
 	CoreV1() corev1.CoreV1Interface
 
-	// CoreV1InformerFactory returns the informer factory for Kubernetes core/v1
-	CoreV1InformerFactory() informers.SharedInformerFactory
+	// KubernetesClientset returns Kubernetes clientset
+	KubernetesInterface() kubernetes.Interface
 
 	// NetworkingV1 returns the networking/v1 Kubernetes client
 	NetworkingV1() networkingv1.NetworkingV1Interface
@@ -50,13 +49,12 @@ type ClientFactory interface {
 }
 
 type clientFactory struct {
-	kubernetesClientset       *kubernetes.Clientset
-	kubernetesInformerFactory informers.SharedInformerFactory
-	dynamicClient             dynamic.Interface
-	stewardClientset          *steward.Clientset
-	stewardInformerFactory    stewardinformer.SharedInformerFactory
-	tektonClientset           *tektonclient.Clientset
-	tektonInformerFactory     tektoninformers.SharedInformerFactory
+	kubernetesClientset    *kubernetes.Clientset
+	dynamicClient          dynamic.Interface
+	stewardClientset       *steward.Clientset
+	stewardInformerFactory stewardinformer.SharedInformerFactory
+	tektonClientset        *tektonclient.Clientset
+	tektonInformerFactory  tektoninformers.SharedInformerFactory
 }
 
 // NewClientFactory creates new client factory based on rest config
@@ -74,8 +72,6 @@ func NewClientFactory(config *rest.Config, resyncPeriod time.Duration) ClientFac
 		return nil
 	}
 
-	kubernetesInformerFactory := informers.NewSharedInformerFactory(kubernetesClientset, resyncPeriod)
-
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		klog.ErrorS(err, "could not create dynamic Kubernetes clientset: %s")
@@ -90,13 +86,12 @@ func NewClientFactory(config *rest.Config, resyncPeriod time.Duration) ClientFac
 	tektonInformerFactory := tektoninformers.NewSharedInformerFactory(tektonClientset, resyncPeriod)
 
 	return &clientFactory{
-		kubernetesClientset:       kubernetesClientset,
-		kubernetesInformerFactory: kubernetesInformerFactory,
-		dynamicClient:             dynamicClient,
-		stewardClientset:          stewardClientset,
-		stewardInformerFactory:    stewardInformerFactory,
-		tektonClientset:           tektonClientset,
-		tektonInformerFactory:     tektonInformerFactory,
+		kubernetesClientset:    kubernetesClientset,
+		dynamicClient:          dynamicClient,
+		stewardClientset:       stewardClientset,
+		stewardInformerFactory: stewardInformerFactory,
+		tektonClientset:        tektonClientset,
+		tektonInformerFactory:  tektonInformerFactory,
 	}
 }
 
@@ -115,9 +110,12 @@ func (f *clientFactory) CoreV1() corev1.CoreV1Interface {
 	return f.kubernetesClientset.CoreV1()
 }
 
-// CoreV1InformerFactory implements interface SharedInformerFactory
-func (f *clientFactory) CoreV1InformerFactory() informers.SharedInformerFactory {
-	return f.kubernetesInformerFactory
+func (f *clientFactory) KubernetesClientset() *kubernetes.Clientset {
+	return f.kubernetesClientset
+}
+
+func (f *clientFactory) KubernetesInterface() kubernetes.Interface {
+	return f.kubernetesClientset
 }
 
 // Dynamic implements interface ClientFactory

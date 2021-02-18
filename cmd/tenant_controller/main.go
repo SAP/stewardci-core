@@ -65,7 +65,6 @@ func main() {
 
 	klog.V(2).Infof("Start Informers")
 	factory.StewardInformerFactory().Start(stopCh)
-	factory.CoreV1InformerFactory().Start(stopCh)
 
 	klog.V(2).Infof("Run controller")
 	if err = controller.Run(2, stopCh); err != nil {
