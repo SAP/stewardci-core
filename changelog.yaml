@@ -52,6 +52,12 @@
   date: TBD
   changes:
 
+  - type: documentation
+    impact: patch
+    title: Add network policy examples
+    description: Add examples for pipeline runs with configured network profiles.
+    pullRequestNumber: 188
+
   - type: internal
     impact: patch
     title: "[Developer] update-codegen.sh: make generators selectable"
