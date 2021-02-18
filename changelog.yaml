@@ -54,7 +54,7 @@
 
   - type: internal
     impact: patch
-    title: [Developer] update-codegen.sh: make generators selectable
+    title: "[Developer] update-codegen.sh: make generators selectable"
     description: |-
       The code generation script `hack/update-codegen.sh` got two new options `--gen-clients`
       and `--gen-mocks` to select what should be generated.
