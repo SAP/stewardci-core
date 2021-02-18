@@ -836,6 +836,40 @@ func Test_Controller_syncHandler_CleanupOnStatusUpdateFailure(t *testing.T) {
 	)
 }
 
+func Test_Controller_syncHandler_NamespaceListerFailsWithoutPurposeLabel(t *testing.T) {
+
+	// SETUP
+	const (
+		clientNSName   = "client1"
+		tenantNSPrefix = "prefix1"
+		tenantID       = "tenant1"
+		tenantRoleName = "tenantClusterRole1"
+	)
+
+	cf := fake.NewClientFactory(
+		// the client namespace without the label PurposeValueClientNamespace
+		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
+			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
+		}),
+		// the tenant
+		fake.Tenant(tenantID, clientNSName),
+	)
+	stopCh, ctl := startController(t, cf, false)
+	defer stopController(t, stopCh)
+	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
+
+	// EXERCISE
+	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
+
+	// VERIFY
+	assert.Assert(t, resultErr != nil)
+	assert.Error(t, resultErr, fmt.Sprintf(
+		"could not get namespace '%[1]s': namespace \"%[1]s\" not found",
+		clientNSName,
+	))
+}
+
 func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_listManagedRoleBindings(t *testing.T) {
 	// SETUP
 	const (
