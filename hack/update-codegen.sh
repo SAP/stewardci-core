@@ -69,11 +69,11 @@ function print_usage() {
     echo ""
     echo "   --gen-clients"
     echo "      Enable generation of clients. This is enabled implicitly if no --gen-*"
-    ecno "      option is specified."
+    echo "      option is specified."
     echo ""
     echo "   --gen-mocks"
     echo "      Enable generation of mocks. This is enabled implicitly if no --gen-*"
-    ecno "      option is specified."
+    echo "      option is specified."
     echo ""
 }
 
