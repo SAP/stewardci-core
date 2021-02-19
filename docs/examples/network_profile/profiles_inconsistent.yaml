@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: steward-pipelineruns-network-policies
+data:
+  # broken because _default refers to non-existent key
+  _default: nonexistent-key

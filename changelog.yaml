@@ -60,6 +60,21 @@
       This allows for adjusting to the needs of particular usage scenarios.
     pullRequestNumber: 216
     jiraIssueNumber: 502
+
+  - type: documentation
+    impact: patch
+    title: Add network policy examples
+    description: Add examples for pipeline runs with configured network profiles.
+    pullRequestNumber: 188
+
+  - type: internal
+    impact: patch
+    title: "[Developer] update-codegen.sh: make generators selectable"
+    description: |-
+      The code generation script `hack/update-codegen.sh` got two new options `--gen-clients`
+      and `--gen-mocks` to select what should be generated.
+      If none of the `--gen-*` options is specified, _all_ generators are enabled.
+    pullRequestNumber: 208
   
   - type: enhancement
     impact: minor

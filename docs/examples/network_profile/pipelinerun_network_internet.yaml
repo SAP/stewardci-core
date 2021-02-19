@@ -1,0 +1,14 @@
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+metadata:
+  generateName: network-profile-internet-
+spec:
+  profiles:
+    network: internet
+  jenkinsFile:
+    repoUrl: https://github.com/SAP-samples/stewardci-example-pipelines
+    revision: master
+    relativePath: success/Jenkinsfile
+  logging:
+    elasticsearch:
+      runID: {"build": 1}
