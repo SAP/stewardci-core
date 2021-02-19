@@ -1,13 +1,13 @@
 package tenantctl
 
 import (
+	v1 "k8s.io/client-go/listers/core/v1"
 	"math"
 	"strconv"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
 	errors "github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type clientConfig interface {
@@ -28,7 +28,7 @@ type clientConfigImpl struct {
 }
 
 // getClientConfig returns the configurartion of the Steward client.
-func getClientConfig(factory k8s.ClientFactory, clientNamespace string) (clientConfig, error) {
+func getClientConfig(namespaceLister v1.NamespaceLister, clientNamespace string) (clientConfig, error) {
 	if clientNamespace == "" {
 		panic("must provide a client namespace")
 	}
@@ -37,7 +37,7 @@ func getClientConfig(factory k8s.ClientFactory, clientNamespace string) (clientC
 		tenantNamespaceSuffixLength: -1,
 	}
 
-	namespace, err := factory.CoreV1().Namespaces().Get(clientNamespace, metav1.GetOptions{})
+	namespace, err := namespaceLister.Get(clientNamespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "could not get namespace '%s'", clientNamespace)
 	}

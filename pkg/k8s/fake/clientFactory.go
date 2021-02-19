@@ -15,6 +15,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	dynamic "k8s.io/client-go/dynamic"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+	kubernetesTrue "k8s.io/client-go/kubernetes"
 	kubernetes "k8s.io/client-go/kubernetes/fake"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	networkingv1 "k8s.io/client-go/kubernetes/typed/networking/v1"
@@ -40,9 +41,10 @@ func NewClientFactory(objects ...runtime.Object) *ClientFactory {
 	stewardInformerFactory := stewardinformer.NewSharedInformerFactory(stewardClientset, time.Minute*10)
 	tektonClientset := tektonclientfake.NewSimpleClientset(tektonObjects...)
 	tektonInformerFactory := tektoninformers.NewSharedInformerFactory(tektonClientset, time.Minute*10)
+	kubernetesClientset := kubernetes.NewSimpleClientset(kubernetesObjects...)
 	sleepDuration, _ := time.ParseDuration("300ms")
 	return &ClientFactory{
-		kubernetesClientset:    kubernetes.NewSimpleClientset(kubernetesObjects...),
+		kubernetesClientset:    kubernetesClientset,
 		dynamicClient:          dynamicfake.NewSimpleDynamicClient(runtime.NewScheme()),
 		stewardClientset:       stewardClientset,
 		stewardInformerFactory: stewardInformerFactory,
@@ -90,6 +92,11 @@ func (f *ClientFactory) StewardInformerFactory() stewardinformer.SharedInformerF
 
 // KubernetesClientset returns the Kubernetes fake clientset.
 func (f *ClientFactory) KubernetesClientset() *kubernetes.Clientset {
+	return f.kubernetesClientset
+}
+
+// KubernetesClientset returns an interface of the Kubernetes fake clientset.
+func (f *ClientFactory) KubernetesInterface() kubernetesTrue.Interface {
 	return f.kubernetesClientset
 }
 

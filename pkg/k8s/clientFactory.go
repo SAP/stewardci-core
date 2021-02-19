@@ -23,6 +23,9 @@ type ClientFactory interface {
 	// CoreV1 returns the core/v1 Kubernetes client
 	CoreV1() corev1.CoreV1Interface
 
+	// KubernetesClientset returns Kubernetes clientset
+	KubernetesInterface() kubernetes.Interface
+
 	// NetworkingV1 returns the networking/v1 Kubernetes client
 	NetworkingV1() networkingv1.NetworkingV1Interface
 
@@ -105,6 +108,11 @@ func (f *clientFactory) StewardV1alpha1() stewardv1alpha1.StewardV1alpha1Interfa
 // CoreV1 implements interface ClientFactory
 func (f *clientFactory) CoreV1() corev1.CoreV1Interface {
 	return f.kubernetesClientset.CoreV1()
+}
+
+// KubernetesInterface implements interface ClientFactory
+func (f *clientFactory) KubernetesInterface() kubernetes.Interface {
+	return f.kubernetesClientset
 }
 
 // Dynamic implements interface ClientFactory
