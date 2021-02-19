@@ -379,11 +379,11 @@ func Test_getClientConfig_TwoClients(t *testing.T) {
 	assert.Equal(t, uint8(4), rand2)
 }
 
-func createLister(runs ...*corev1.Namespace) listers.NamespaceLister {
+func createLister(namespaces ...*corev1.Namespace) listers.NamespaceLister {
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc,
 		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
-	for _, run := range runs {
-		indexer.Add(run)
+	for _, namespace := range namespaces {
+		indexer.Add(namespace)
 	}
 	return listers.NewNamespaceLister(indexer)
 }

@@ -110,10 +110,7 @@ func (f *clientFactory) CoreV1() corev1.CoreV1Interface {
 	return f.kubernetesClientset.CoreV1()
 }
 
-func (f *clientFactory) KubernetesClientset() *kubernetes.Clientset {
-	return f.kubernetesClientset
-}
-
+// KubernetesInterface implements interface ClientFactory
 func (f *clientFactory) KubernetesInterface() kubernetes.Interface {
 	return f.kubernetesClientset
 }

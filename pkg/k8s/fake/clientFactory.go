@@ -42,7 +42,6 @@ func NewClientFactory(objects ...runtime.Object) *ClientFactory {
 	tektonClientset := tektonclientfake.NewSimpleClientset(tektonObjects...)
 	tektonInformerFactory := tektoninformers.NewSharedInformerFactory(tektonClientset, time.Minute*10)
 	kubernetesClientset := kubernetes.NewSimpleClientset(kubernetesObjects...)
-	//kubernetesInformerFactory := informers.NewSharedInformerFactory(kubernetesClientset, time.Minute*10)
 	sleepDuration, _ := time.ParseDuration("300ms")
 	return &ClientFactory{
 		kubernetesClientset:    kubernetesClientset,
@@ -96,6 +95,7 @@ func (f *ClientFactory) KubernetesClientset() *kubernetes.Clientset {
 	return f.kubernetesClientset
 }
 
+// KubernetesClientset returns an interface of the Kubernetes fake clientset.
 func (f *ClientFactory) KubernetesInterface() kubernetesTrue.Interface {
 	return f.kubernetesClientset
 }
