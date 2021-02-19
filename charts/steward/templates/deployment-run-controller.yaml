@@ -36,6 +36,7 @@ spec:
         args:
         - {{ printf "-qps=%d" ( .Values.runController.args.qps | int ) | quote }}
         - {{ printf "-burst=%d" ( .Values.runController.args.burst | int ) | quote }}
+        - {{ printf "-threadiness=%d" ( .Values.runController.args.threadiness | int ) | quote }}
         {{- if .Values.runController.args.logVerbosity }}
         - {{ printf "-v=%d" ( .Values.runController.args.logVerbosity | int ) | quote }}
         {{- end }}

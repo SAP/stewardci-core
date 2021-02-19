@@ -9,6 +9,7 @@ runController:
   args:
     qps: 5
     burst: 10
+    threadiness: 2
     logVerbosity: 2
   image:
     repository: stewardci/stewardci-run-controller
@@ -38,6 +39,7 @@ tenantController:
   args:
     qps: 5
     burst: 10
+    threadiness: 2
     logVerbosity: 2
   image:
     repository: stewardci/stewardci-tenant-controller
