@@ -54,7 +54,7 @@
   
   - type: bug
     impact: patch
-    title: Delete finalizer after pipeline run is cleaned.
+    title: fix args qps and burst of tenant controller deployment
     description: |-
       fix use qps and burst of tenant controller from the corresponding config values and not from run controller configuration
     warning:
