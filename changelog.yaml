@@ -51,6 +51,16 @@
 - version: NEXT
   date: TBD
   changes:
+  
+  - type: bug
+    impact: patch
+    title: fix args qps and burst of tenant controller deployment
+    description: |-
+      fix use qps and burst of tenant controller from the corresponding config values and not from run controller configuration
+    warning:
+    deprecations:
+    pullRequestNumber: 218
+    jiraIssueNumber: 214
 
 - version: "0.8.0"
   date: 2021-02-19

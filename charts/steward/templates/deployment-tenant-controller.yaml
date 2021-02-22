@@ -34,8 +34,8 @@ spec:
         imagePullPolicy: {{ .pullPolicy | quote }}
         {{- end }}
         args:
-        - {{ printf "-qps=%d" ( .Values.runController.args.qps | int ) | quote }}
-        - {{ printf "-burst=%d" ( .Values.runController.args.burst | int ) | quote }}
+        - {{ printf "-qps=%d" ( .Values.tenantController.args.qps | int ) | quote }}
+        - {{ printf "-burst=%d" ( .Values.tenantController.args.burst | int ) | quote }}
         - {{ printf "-threadiness=%d" ( .Values.tenantController.args.threadiness | int ) | quote }}
         {{- if .Values.tenantController.args.logVerbosity }}
         - {{ printf "-v=%d" ( .Values.tenantController.args.logVerbosity | int ) | quote }}
