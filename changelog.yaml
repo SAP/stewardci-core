@@ -51,6 +51,10 @@
 - version: NEXT
   date: TBD
   changes:
+
+- version: "0.8.1"
+  date: 2021-02-23
+  changes:
   
   - type: bug
     impact: patch
