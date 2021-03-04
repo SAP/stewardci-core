@@ -52,6 +52,13 @@
   date: TBD
   changes:
 
+    - type: internal
+      impact: patch
+      title: Updated release pipeline
+      description: |-
+        The release pipeline has been updated with compliance aspects
+      pullRequestNumber: 
+
 - version: "0.8.1"
   date: 2021-02-23
   changes:
