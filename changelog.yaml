@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.8.2"
+  date: 2021-03-05
+  changes:
+
     - type: internal
       impact: patch
       title: Updated release pipeline
