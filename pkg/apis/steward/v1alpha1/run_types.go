@@ -154,15 +154,16 @@ type PipelineStatus struct {
 	// +optional
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty"`
 
-	State        State                 `json:"state"`
-	StateDetails StateItem             `json:"stateDetails"`
-	StateHistory []StateItem           `json:"stateHistory"`
-	Result       Result                `json:"result"`
-	Container    corev1.ContainerState `json:"container,omitempty"`
-	MessageShort string                `json:"messageShort"`
-	Message      string                `json:"message"`
-	History      []string              `json:"history"`
-	Namespace    string                `json:"namespace"`
+	State              State                 `json:"state"`
+	StateDetails       StateItem             `json:"stateDetails"`
+	StateHistory       []StateItem           `json:"stateHistory"`
+	Result             Result                `json:"result"`
+	Container          corev1.ContainerState `json:"container,omitempty"`
+	MessageShort       string                `json:"messageShort"`
+	Message            string                `json:"message"`
+	History            []string              `json:"history"`
+	Namespace          string                `json:"namespace"`
+	AuxiliaryNamespace string                `json:"auxiliaryNamespace"`
 }
 
 // StateItem holds start and end time of a state in the history

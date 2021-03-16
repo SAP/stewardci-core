@@ -52,6 +52,22 @@
   date: TBD
   changes:
 
+  - title: Introduce auxiliary pipeline run namespaces
+    type: enhancement
+    impact: patch
+    description: |-
+      In the future Steward will be enabled to provision service instances
+      per pipeline run, e.g. a pipeline log forwarder.
+      This change introduces auxiliary pipeline run namespaces where
+      those run-specific service instances are defined in Kubernetes.
+
+      The pattern of pipeline run namespace names changes.
+
+      By default auxiliary namespaces are not created because they are not
+      used yet. Enabling the feature flag `CreateAuxNamespaceIfUnused`
+      enforces creating auxiliary namespaces.
+    pullRequestNumber: 168
+
 - version: "0.8.2"
   date: 2021-03-05
   changes:
@@ -66,7 +82,7 @@
 - version: "0.8.1"
   date: 2021-02-23
   changes:
-  
+
   - type: bug
     impact: patch
     title: fix args qps and burst of tenant controller deployment
@@ -104,7 +120,7 @@
       and `--gen-mocks` to select what should be generated.
       If none of the `--gen-*` options is specified, _all_ generators are enabled.
     pullRequestNumber: 208
-  
+
   - type: enhancement
     impact: minor
     title: "Client-side rate limiting configurable for tenant controller"
@@ -134,8 +150,8 @@
       Jenkinsfile Runner container entrypoint retries cloning the pipeline
       repository. The retry parameters (retry interval and timeout) are now
       configurable via Helm chart parameters.
-      Jenkinsfile Runner image version which enables configuring retry 
-      parameters is also updated in the same PR. Changes in the new 
+      Jenkinsfile Runner image version which enables configuring retry
+      parameters is also updated in the same PR. Changes in the new
       release of JFR image can be found [here](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/210205_1988c5e).
     pullRequestNumber: 209
     jiraIssueNumber: 350
@@ -152,7 +168,7 @@
   - type: enhancement
     impact: minor
     title: "Add maintenance mode to run controller"
-    description: |- 
+    description: |-
       Steward can be put in _maintenance mode_.
       It prevents _new_ pipeline runs to be processed, while pipeline runs that are in progress _already_ still run to completion.
     pullRequestNumber: 204
@@ -165,7 +181,7 @@
       The state history of a pipeline run is not updated correctly if a concurrent change happens.
       This change will fix this bug.
     pullRequestNumber: 206
-  
+
   - type: security
     impact: patch
     title: "network: don't allow local subnet multicast traffic"

@@ -7,13 +7,16 @@ import (
 	"strings"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
-	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
+	"github.com/SAP/stewardci-core/pkg/featureflag"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	"github.com/SAP/stewardci-core/pkg/runctl/secretmgr"
+	slabels "github.com/SAP/stewardci-core/pkg/stewardlabels"
+	"github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1api "k8s.io/api/core/v1"
@@ -24,12 +27,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	yamlserial "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	"k8s.io/client-go/util/retry"
 	klog "k8s.io/klog/v2"
 )
 
 const (
 	runNamespacePrefix       = "steward-run"
-	runNamespaceRandomLength = 16
+	runNamespaceRandomLength = 5
 	serviceAccountName       = "default"
 
 	// in general, the token of the above service account should not be automatically mounted into pods
@@ -51,9 +55,8 @@ const (
 )
 
 type runManager struct {
-	factory          k8s.ClientFactory
-	namespaceManager k8s.NamespaceManager
-	secretProvider   secrets.SecretProvider
+	factory        k8s.ClientFactory
+	secretProvider secrets.SecretProvider
 
 	testing *runManagerTesting
 }
@@ -77,15 +80,15 @@ type runContext struct {
 	pipelineRun        k8s.PipelineRun
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct
 	runNamespace       string
+	auxNamespace       string
 	serviceAccount     *k8s.ServiceAccountWrap
 }
 
-// NewRunManager creates a new RunManager.
-func NewRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider, namespaceManager k8s.NamespaceManager) runifc.Manager {
+// newRunManager creates a new runManager.
+func newRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider) *runManager {
 	return &runManager{
-		factory:          factory,
-		namespaceManager: namespaceManager,
-		secretProvider:   secretProvider,
+		factory:        factory,
+		secretProvider: secretProvider,
 	}
 }
 
@@ -96,8 +99,10 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.
 	ctx := &runContext{
 		pipelineRun:        pipelineRun,
 		pipelineRunsConfig: pipelineRunsConfig,
+		runNamespace:       pipelineRun.GetRunNamespace(),
+		auxNamespace:       pipelineRun.GetAuxNamespace(),
 	}
-	err = c.cleanupPreviousAttempt(ctx)
+	err = c.cleanup(ctx)
 	if err != nil {
 		return err
 	}
@@ -113,26 +118,29 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.
 	return nil
 }
 
-func (c *runManager) cleanupPreviousAttempt(ctx *runContext) error {
-	runNamespace := ctx.pipelineRun.GetRunNamespace()
-	if runNamespace != "" {
-		ctx.runNamespace = runNamespace
-		return c.cleanup(ctx)
-	}
-	return nil
-}
-
 // prepareRunNamespace creates a new namespace for the pipeline run
 // and populates it with needed resources.
 func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 	var err error
 
-	ctx.runNamespace, err = c.namespaceManager.Create("", nil)
+	randName, err := utils.RandomAlphaNumString(runNamespaceRandomLength)
 	if err != nil {
-		return errors.Wrap(err, "failed to create run namespace")
+		return err
 	}
 
+	ctx.runNamespace, err = c.createNamespace(ctx, "main", randName)
+	if err != nil {
+		return errors.Wrap(err, "failed to create main run namespace")
+	}
 	ctx.pipelineRun.UpdateRunNamespace(ctx.runNamespace)
+
+	if featureflag.CreateAuxNamespaceIfUnused.Enabled() {
+		ctx.auxNamespace, err = c.createNamespace(ctx, "aux", randName)
+		if err != nil {
+			return errors.Wrap(err, "failed to create auxiliary run namespace")
+		}
+		ctx.pipelineRun.UpdateAuxNamespace(ctx.auxNamespace)
+	}
 
 	// If something goes wrong while creating objects inside the namespaces, we delete everything.
 	cleanupOnError := func() {
@@ -264,9 +272,6 @@ func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(ctx *runContext) erro
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: steward.GroupName + "--isolate-all-",
 			Namespace:    ctx.runNamespace,
-			Labels: map[string]string{
-				v1alpha1.LabelSystemManaged: "",
-			},
 		},
 		Spec: networkingv1api.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{}, // select all pods from namespace
@@ -276,6 +281,8 @@ func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(ctx *runContext) erro
 			},
 		},
 	}
+
+	slabels.LabelAsSystemManaged(policy)
 
 	policyIfce := c.factory.NetworkingV1().NetworkPolicies(ctx.runNamespace)
 	if _, err := policyIfce.Create(policy); err != nil {
@@ -297,7 +304,7 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx *runContext) error {
 		networkProfile = spec.Profiles.Network
 
 		if _, exists := ctx.pipelineRunsConfig.NetworkPolicies[networkProfile]; !exists {
-			return serrors.Classify(fmt.Errorf("network profile %q does not exist", networkProfile), v1alpha1.ResultErrorConfig)
+			return serrors.Classify(fmt.Errorf("network profile %q does not exist", networkProfile), stewardv1alpha1.ResultErrorConfig)
 		}
 	}
 
@@ -409,9 +416,8 @@ func (c *runManager) createResource(configStr string, resource string, resourceD
 
 		obj.SetGenerateName(steward.GroupName + "--configured-")
 		obj.SetNamespace(ctx.runNamespace)
-		obj.SetLabels(map[string]string{
-			v1alpha1.LabelSystemManaged: "",
-		})
+
+		slabels.LabelAsSystemManaged(obj)
 	}
 
 	// create resource object
@@ -503,7 +509,7 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 	c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
 	err = c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
 	if err != nil {
-		return serrors.Classify(err, v1alpha1.ResultErrorConfig)
+		return serrors.Classify(err, stewardv1alpha1.ResultErrorConfig)
 	}
 
 	c.addTektonTaskRunParamsForRunDetails(ctx, &tektonTaskRun)
@@ -642,7 +648,6 @@ func (c *runManager) GetRun(pipelineRun k8s.PipelineRun) (runifc.Run, error) {
 				k8serrors.IsUnexpectedServerError(err))
 	}
 	return NewRun(run), nil
-
 }
 
 // Cleanup a run based on a pipelineRun
@@ -650,6 +655,7 @@ func (c *runManager) Cleanup(pipelineRun k8s.PipelineRun) error {
 	ctx := &runContext{
 		pipelineRun:  pipelineRun,
 		runNamespace: pipelineRun.GetRunNamespace(),
+		auxNamespace: pipelineRun.GetAuxNamespace(),
 	}
 	return c.cleanup(ctx)
 }
@@ -659,18 +665,105 @@ func (c *runManager) cleanup(ctx *runContext) error {
 		return c.testing.cleanupStub(ctx)
 	}
 
-	namespace := ctx.runNamespace
-	if namespace == "" {
-		//TODO: Don't store on resource as message. Add it as event.
-		ctx.pipelineRun.StoreErrorAsMessage(fmt.Errorf("Nothing to clean up as namespace not set"), "")
-	} else {
-		err := c.namespaceManager.Delete(namespace)
-		if err != nil {
-			ctx.pipelineRun.StoreErrorAsMessage(err, "error deleting namespace")
-			return err
+	var deleteOptions *metav1.DeleteOptions
+	{
+		deletePropagation := metav1.DeletePropagationBackground
+		deleteOptions = &metav1.DeleteOptions{
+			PropagationPolicy: &deletePropagation,
 		}
 	}
-	return nil
+
+	var firstErr error
+
+	namespacesToDelete := []string{
+		ctx.runNamespace,
+		ctx.auxNamespace,
+	}
+	for _, name := range namespacesToDelete {
+		if name == "" {
+			continue
+		}
+		err := c.deleteNamespace(name, deleteOptions)
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	if firstErr != nil {
+		// TODO Don't store on resource as message. Add it as event.
+		ctx.pipelineRun.StoreErrorAsMessage(firstErr, "cleanup failed")
+	}
+
+	return firstErr
+}
+
+func (c *runManager) createNamespace(ctx *runContext, purpose, randName string) (string, error) {
+	var err error
+
+	wanted := &corev1api.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: fmt.Sprintf("%s-%s-%s-", runNamespacePrefix, randName, purpose),
+		},
+	}
+
+	slabels.LabelAsSystemManaged(wanted)
+	err = slabels.LabelAsOwnedByPipelineRun(wanted, ctx.pipelineRun.GetAPIObject())
+	if err != nil {
+		return "", errors.Wrap(err, "failed to label namespace as owned by pipeline run")
+	}
+
+	isRetriable := func(err error) bool {
+		return k8serrors.IsConflict(err) ||
+			k8serrors.IsInternalError(err) ||
+			k8serrors.IsServerTimeout(err) ||
+			k8serrors.IsServiceUnavailable(err) ||
+			k8serrors.IsTimeout(err) ||
+			k8serrors.IsTooManyRequests(err) ||
+			k8serrors.IsUnexpectedServerError(err)
+	}
+
+	var created *corev1api.Namespace
+
+	err = retry.OnError(retry.DefaultBackoff, isRetriable,
+		func() error {
+			var err error
+			created, err = c.factory.CoreV1().Namespaces().Create(wanted)
+			return err
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return created.GetName(), err
+}
+
+func (c *runManager) deleteNamespace(name string, options *metav1.DeleteOptions) error {
+	isIgnorable := func(err error) bool {
+		return k8serrors.IsNotFound(err) ||
+			k8serrors.IsGone(err) ||
+			k8serrors.IsResourceExpired(err)
+	}
+
+	isRetriable := func(err error) bool {
+		return k8serrors.IsConflict(err) ||
+			k8serrors.IsInternalError(err) ||
+			k8serrors.IsServerTimeout(err) ||
+			k8serrors.IsServiceUnavailable(err) ||
+			k8serrors.IsTimeout(err) ||
+			k8serrors.IsTooManyRequests(err) ||
+			k8serrors.IsUnexpectedServerError(err)
+	}
+
+	return retry.OnError(retry.DefaultBackoff, isRetriable,
+		func() error {
+			err := c.factory.CoreV1().Namespaces().Delete(name, options)
+			if isIgnorable(err) {
+				return nil
+			}
+			return err
+		},
+	)
 }
 
 func toJSONString(value interface{}) (string, error) {
