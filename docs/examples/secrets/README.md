@@ -8,11 +8,11 @@ You can find some basic examples in [secretExamples.yaml](secretExamples.yaml).
 
 ## Missing secrets
 
-If a secret is missing the pipelien run will fail with an content error.
+If a secret is referenced in a pipeline run spec but does not exist, the pipeline run will fail with result `error_content`.
 
 ```bash
-spr=$(kubectl -n "$TENANT_NAMESPACE" create -f pipelinerun_missing_secret.yaml -oname)
-kubectl  -n "$TENANT_NAMESPACE" get $spr -owide
+spr=$(kubectl -n "$TENANT_NAMESPACE" create -f pipelinerun_missing_secret.yaml -o name)
+kubectl  -n "$TENANT_NAMESPACE" get "$spr" -o wide
 ```
 
 ```
@@ -22,12 +22,15 @@ missingsecret-rsww9   12s                  finished   error_content   ERROR: pre
 
 ## Secret renaming
 
-It is possible to [rename secrets](../secrets/Secrets.md). This can be tested with the pipeline run in the file [pipelinerun_secret_rename.yaml](pipelinerun_secret_rename.yaml). As preparation you need to create the secret with the rename annotation. You can find the renamed secret in the run namespace as listed below.
+It is possible to [rename secrets](../secrets/Secrets.md).
+This can be tested with the pipeline run in file [`pipelinerun_secret_rename.yaml`](pipelinerun_secret_rename.yaml).
+As a preparation you need to create the secret with the rename annotation.
+You can find the renamed secret in the run namespace as listed below.
 
 ```bash
 kubectl -n "$TENANT_NAMESPACE" create -f secret_rename.yaml
-spr=$(kubectl -n "$TENANT_NAMESPACE" create -f pipelinerun_secret_rename.yaml -oname)
-runnamespace=$(kubectl  -n "$TENANT_NAMESPACE" get $spr -ojsonpath='{.status.namespace}')
+spr=$(kubectl -n "$TENANT_NAMESPACE" create -f pipelinerun_secret_rename.yaml -o name)
+runnamespace=$(kubectl  -n "$TENANT_NAMESPACE" get "$spr" -o jsonpath='{.status.namespace}')
 kubectl -n "$runnamespace" get secret
 ```
 
