@@ -54,7 +54,7 @@
 
   - type: documentation
     impact: patch
-    title: "Updat secret examples"
+    title: "Update secret examples"
     description: |-
       Move secret examples to own folder and extend the documentation.
     pullRequestNumber: 203
