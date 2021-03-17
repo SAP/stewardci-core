@@ -52,6 +52,13 @@
   date: TBD
   changes:
 
+  - type: documentation
+    impact: patch
+    title: "Updat secret examples"
+    description: |-
+      Move secret examples to own folder and extend the documentation.
+    pullRequestNumber: 203
+
 - version: "0.8.0"
   date: 2021-02-19
   changes:
