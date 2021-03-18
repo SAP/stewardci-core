@@ -68,6 +68,13 @@
       enforces creating auxiliary namespaces.
     pullRequestNumber: 168
 
+  - type: documentation
+    impact: patch
+    title: "Update secret examples"
+    description: |-
+      Move secret examples to own folder and extend the documentation.
+    pullRequestNumber: 203
+
 - version: "0.8.2"
   date: 2021-03-05
   changes:
