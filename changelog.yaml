@@ -57,6 +57,7 @@
       title: Update JFR image to 210413_777e270 with secure agent protocols
       description: |-
         Insecure Jenkins agent protocols have been disabled by configuring only secure ones.
+        Here you can see the [Jenkinsfile Runner Image changes](https://github.com/SAP/stewardci-jenkinsfilerunner-image/compare/210205_1988c5e...210413_777e270).
       pullRequestNumber: 222
       jiraIssueNumber: 62
 
