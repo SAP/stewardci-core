@@ -84,7 +84,7 @@ pipelineRuns:
       # Example: http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc
       indexURL: ""
   jenkinsfileRunner:
-    image: "stewardci/stewardci-jenkinsfile-runner:210205_1988c5e"
+    image: "stewardci/stewardci-jenkinsfile-runner:210413_777e270"
     imagePullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0
