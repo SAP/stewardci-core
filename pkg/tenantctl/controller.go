@@ -208,7 +208,7 @@ func (c *Controller) syncHandler(key string) error {
 		if err != nil {
 			return err
 		}
-		tenant, err = c.removeFinalizerAndUpdate(tenant) //TODO: static code check complains: "this value of tenant is never used (SA4006)go-staticcheck"
+		_, err = c.removeFinalizerAndUpdate(tenant)
 		if err == nil {
 			c.syncCount++
 		}
