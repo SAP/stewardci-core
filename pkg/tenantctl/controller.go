@@ -208,7 +208,7 @@ func (c *Controller) syncHandler(key string) error {
 		if err != nil {
 			return err
 		}
-		tenant, err = c.removeFinalizerAndUpdate(tenant)
+		_, err = c.removeFinalizerAndUpdate(tenant)
 		if err == nil {
 			c.syncCount++
 		}
@@ -226,7 +226,7 @@ func (c *Controller) syncHandler(key string) error {
 	if !equality.Semantic.DeepEqual(origTenant.Status, tenant.Status) {
 		if _, err := c.updateStatus(tenant); err != nil {
 			if !c.isInitialized(origTenant) && c.isInitialized(tenant) {
-				c.deleteTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config)
+				c.deleteTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config) // clean-up ignoring error
 			}
 			return err
 		}
@@ -259,7 +259,7 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 
 	nsName, err := c.createTenantNamespace(config, tenant)
 	if err != nil {
-		condMsg := fmt.Sprintf("Failed to create a new tenant namespace.")
+		condMsg := "Failed to create a new tenant namespace."
 		tenant.Status.SetCondition(&knativeapis.Condition{
 			Type:    knativeapis.ConditionReady,
 			Status:  corev1.ConditionFalse,
@@ -271,7 +271,7 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 
 	_, err = c.reconcileTenantRoleBinding(tenant, nsName, config)
 	if err != nil {
-		condMsg := fmt.Sprintf("Failed to initialize a new tenant namespace because the RoleBinding could not be created.")
+		condMsg := "Failed to initialize a new tenant namespace because the RoleBinding could not be created."
 		tenant.Status.SetCondition(&knativeapis.Condition{
 			Type:    knativeapis.ConditionReady,
 			Status:  corev1.ConditionFalse,

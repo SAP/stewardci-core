@@ -300,7 +300,10 @@ func (c *Controller) syncHandler(key string) error {
 
 	// As soon as we have a result we can cleanup
 	if pipelineRun.GetStatus().Result != api.ResultUndefined && pipelineRun.GetStatus().State != api.StateCleaning {
-		c.changeState(pipelineRun, api.StateCleaning)
+		err = c.changeState(pipelineRun, api.StateCleaning)
+		if err != nil {
+			klog.V(1).Infof("WARN: change state to cleaning failed with: %s", err.Error())
+		}
 	}
 
 	if pipelineRun.GetStatus().State == api.StateNew {

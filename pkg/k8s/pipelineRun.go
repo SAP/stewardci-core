@@ -285,7 +285,8 @@ func (r *pipelineRun) HasDeletionTimestamp() bool {
 func (r *pipelineRun) AddFinalizer() error {
 	changed, finalizerList := utils.AddStringIfMissing(r.apiObj.ObjectMeta.Finalizers, FinalizerName)
 	if changed {
-		r.updateFinalizers(finalizerList)
+		err := r.updateFinalizers(finalizerList)
+		return err
 	}
 	return nil
 }
