@@ -508,7 +508,7 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 	c.addTektonTaskRunParamsForJenkinsfileRunnerImage(ctx, &tektonTaskRun)
 	err = c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
 	if err != nil {
-		return serrors.Classify(err, stewardv1alpha1.ResultErrorInfra)
+		return serrors.Classify(err, stewardv1alpha1.ResultErrorConfig)
 	}
 	err = c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
 	if err != nil {
