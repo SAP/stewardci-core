@@ -278,7 +278,7 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 			Reason:  api.StatusReasonFailed,
 			Message: condMsg,
 		})
-		_ = c.deleteTenantNamespace(nsName, tenant, config) // clean-up ignoring error
+		c.deleteTenantNamespace(nsName, tenant, config) // clean-up ignoring error
 		return err
 	}
 
