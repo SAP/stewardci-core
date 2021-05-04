@@ -145,7 +145,7 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 	// If something goes wrong while creating objects inside the namespaces, we delete everything.
 	cleanupOnError := func() {
 		if err != nil {
-			c.cleanup(ctx)
+			_ = c.cleanup(ctx)
 		}
 	}
 	defer cleanupOnError()
@@ -506,7 +506,10 @@ func (c *runManager) createTektonTaskRun(ctx *runContext) error {
 		},
 	}
 	c.addTektonTaskRunParamsForJenkinsfileRunnerImage(ctx, &tektonTaskRun)
-	c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
+	err = c.addTektonTaskRunParamsForPipeline(ctx, &tektonTaskRun)
+	if err != nil {
+		return serrors.Classify(err, stewardv1alpha1.ResultErrorInfra)
+	}
 	err = c.addTektonTaskRunParamsForLoggingElasticsearch(ctx, &tektonTaskRun)
 	if err != nil {
 		return serrors.Classify(err, stewardv1alpha1.ResultErrorConfig)
