@@ -145,7 +145,7 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 	// If something goes wrong while creating objects inside the namespaces, we delete everything.
 	cleanupOnError := func() {
 		if err != nil {
-			_ = c.cleanup(ctx)
+			c.cleanup(ctx) // clean-up ignoring error
 		}
 	}
 	defer cleanupOnError()
