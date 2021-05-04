@@ -52,6 +52,13 @@
   date: TBD
   changes:
 
+    - type: internal
+      impact: patch
+      title: Fixed checkmarx scan
+      description: |-
+        The checkmarks scan reported some low findings which are fixed now.
+      pullRequestNumber: 223
+
   - type: security
     impact: patch
     title: Update JFR image to 210413_777e270 with secure agent protocols
