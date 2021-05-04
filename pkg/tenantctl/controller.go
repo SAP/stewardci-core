@@ -226,7 +226,7 @@ func (c *Controller) syncHandler(key string) error {
 	if !equality.Semantic.DeepEqual(origTenant.Status, tenant.Status) {
 		if _, err := c.updateStatus(tenant); err != nil {
 			if !c.isInitialized(origTenant) && c.isInitialized(tenant) {
-				_ = c.deleteTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config) // clean-up ignoring error
+				c.deleteTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config) // clean-up ignoring error
 			}
 			return err
 		}
