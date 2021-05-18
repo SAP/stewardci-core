@@ -52,6 +52,18 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: minor
+      title: Updated Jenkinsfile Runner image to 210518_50469d1
+      description: |-
+        The Jenkinsfile Runner image has been updated to [210518_50469d1](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/210518_50469d1).
+        This image version contains an updated LTS Jenkins Core version 2.277.4, updated plugins and an updated Jenkinsfile Runner 1.0-beta-27 with
+        [steward specific adjustments](https://github.com/SAP/stewardci-jenkinsfilerunner-image/tree/jenkinsfile-runner--1.0-beta-27-steward-1).
+      deprecations: |-
+        The following plugins were removed: 'analysis-collector', 'badge', 'email-ext'. Make sure your pipelines do not use those plugins.
+      pullRequestNumber: 229
+      jiraIssueNumber: 722
+
 - version: "0.8.3"
   date: 2021-05-04
   changes:
