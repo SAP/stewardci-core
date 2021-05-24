@@ -215,8 +215,11 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	tenant, err = c.addFinalizerAndUpdate(tenant)
-	if err != nil {
+	// Add finalizer if it doesn't exist
+	changed, finalizerList := utils.AddStringIfMissing(tenant.GetFinalizers(), k8s.FinalizerName)
+	if changed {
+		tenant.SetFinalizers(finalizerList)
+		_, err:= c.update(tenant)
 		return err
 	}
 
@@ -364,15 +367,6 @@ func (c *Controller) getClientConfig(factory k8s.ClientFactory, clientNamespace 
 
 func (c *Controller) hasFinalizer(tenant *api.Tenant) bool {
 	return utils.StringSliceContains(tenant.GetFinalizers(), k8s.FinalizerName)
-}
-
-func (c *Controller) addFinalizerAndUpdate(tenant *api.Tenant) (*api.Tenant, error) {
-	changed, finalizerList := utils.AddStringIfMissing(tenant.GetFinalizers(), k8s.FinalizerName)
-	if changed {
-		tenant.SetFinalizers(finalizerList)
-		return c.update(tenant)
-	}
-	return tenant, nil
 }
 
 func (c *Controller) removeFinalizerAndUpdate(tenant *api.Tenant) (*api.Tenant, error) {
