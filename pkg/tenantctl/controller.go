@@ -8,24 +8,24 @@ import (
 	"fmt"
 	"time"
 
-	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
+	"github.com/SAP/stewardci-core/pkg/apis/steward"
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	listers "github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
-	k8s "github.com/SAP/stewardci-core/pkg/k8s"
+	"github.com/SAP/stewardci-core/pkg/k8s"
 	slabels "github.com/SAP/stewardci-core/pkg/stewardlabels"
-	utils "github.com/SAP/stewardci-core/pkg/utils"
+	"github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	wait "k8s.io/apimachinery/pkg/util/wait"
-	cache "k8s.io/client-go/tools/cache"
-	workqueue "k8s.io/client-go/util/workqueue"
-	klog "k8s.io/klog/v2"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog/v2"
 	knativeapis "knative.dev/pkg/apis"
 )
 
@@ -204,7 +204,7 @@ func (c *Controller) syncHandler(key string) error {
 			klog.V(3).Infof(c.formatLog(tenant, "dependent resources cleaned already, nothing to do"))
 			return nil
 		}
-		err = c.deleteTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config)
+		err = c.deleteTenantNamespace(tenant, config)
 		if err != nil {
 			return err
 		}
@@ -225,9 +225,6 @@ func (c *Controller) syncHandler(key string) error {
 	// do not update the status if there's no change
 	if !equality.Semantic.DeepEqual(origTenant.Status, tenant.Status) {
 		if _, err := c.updateStatus(tenant); err != nil {
-			if !c.isInitialized(origTenant) && c.isInitialized(tenant) {
-				c.deleteTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config) // clean-up ignoring error
-			}
 			return err
 		}
 	}
@@ -257,16 +254,30 @@ func (c *Controller) reconcile(config clientConfig, tenant *api.Tenant) (err err
 func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Tenant) error {
 	klog.V(3).Infof(c.formatLog(tenant, "tenant not initialized yet"))
 
-	nsName, err := c.createTenantNamespace(config, tenant)
+	// Check whether namespace is already created for current tenant in case the controller failed update tenant status
+	nsName, err := c.getTenantNamespace(config, tenant)
 	if err != nil {
-		condMsg := "Failed to create a new tenant namespace."
+		klog.V(4).Info(c.formatLog(tenant), err)
 		tenant.Status.SetCondition(&knativeapis.Condition{
 			Type:    knativeapis.ConditionReady,
 			Status:  corev1.ConditionFalse,
 			Reason:  api.StatusReasonFailed,
-			Message: condMsg,
+			Message: err.Error(),
 		})
 		return err
+	}
+
+	if nsName == "" {
+		if nsName, err = c.createTenantNamespace(config, tenant); err != nil {
+			condMsg := "Failed to create a new tenant namespace."
+			tenant.Status.SetCondition(&knativeapis.Condition{
+				Type:    knativeapis.ConditionReady,
+				Status:  corev1.ConditionFalse,
+				Reason:  api.StatusReasonFailed,
+				Message: condMsg,
+			})
+			return err
+		}
 	}
 
 	_, err = c.reconcileTenantRoleBinding(tenant, nsName, config)
@@ -278,7 +289,6 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 			Reason:  api.StatusReasonFailed,
 			Message: condMsg,
 		})
-		c.deleteTenantNamespace(nsName, tenant, config) // clean-up ignoring error
 		return err
 	}
 
@@ -416,6 +426,27 @@ func (c *Controller) checkNamespaceExists(name string) (bool, error) {
 	return namespace.GetDeletionTimestamp().IsZero(), nil
 }
 
+func (c *Controller) getTenantNamespace(config clientConfig, tenant *api.Tenant) (string, error) {
+	klog.V(4).Infof(c.formatLog(tenant, "get namespace for tenant"))
+	var nsName string
+
+	namespaceManager := c.getNamespaceManager(config)
+	namespaces, err := namespaceManager.List(tenant.GetName())
+	if err != nil {
+		return "", err
+	}
+
+	if len(namespaces) > 1 {
+		msg := fmt.Sprintf("found more than one namespaces %v", namespaces)
+		err := errors.Errorf(c.formatLog(tenant, msg))
+		return "", err
+	} else if len(namespaces) == 1 {
+		nsName = namespaces[0]
+	}
+
+	return nsName, nil
+}
+
 func (c *Controller) createTenantNamespace(config clientConfig, tenant *api.Tenant) (string, error) {
 	klog.V(4).Infof(c.formatLog(tenant, "creating new tenant namespace"))
 	namespaceManager := c.getNamespaceManager(config)
@@ -428,18 +459,27 @@ func (c *Controller) createTenantNamespace(config clientConfig, tenant *api.Tena
 	return nsName, err
 }
 
-func (c *Controller) deleteTenantNamespace(namespace string, tenant *api.Tenant, config clientConfig) error {
-	if namespace == "" {
-		return nil
-	}
-	klog.V(4).Infof(c.formatLogf(tenant, "rolling back tenant namespace %q", namespace))
-	namespaceManager := c.getNamespaceManager(config)
-	err := namespaceManager.Delete(namespace)
+func (c *Controller) deleteTenantNamespace(tenant *api.Tenant, config clientConfig) error {
+	klog.V(4).Infof(c.formatLogf(tenant, "rolling back tenant namespace"))
+	ns, err := c.getTenantNamespace(config, tenant)
 	if err != nil {
-		err = errors.WithMessagef(err, "failed to delete tenant namespace %q", namespace)
+		err = errors.WithMessagef(err, "failed to delete tenant namespace")
 		klog.V(4).Infof(c.formatLog(tenant), err)
 		return err
 	}
+
+	if ns == "" {
+		return nil
+	}
+
+	namespaceManager := c.getNamespaceManager(config)
+	err = namespaceManager.Delete(ns)
+	if err != nil {
+		err = errors.WithMessagef(err, "failed to delete tenant namespace %q", ns)
+		klog.V(4).Infof(c.formatLog(tenant), err)
+		return err
+	}
+
 	return nil
 }
 

@@ -2,6 +2,8 @@ package tenantctl
 
 import (
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,7 +12,6 @@ import (
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
 	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	assert "gotest.tools/assert"
@@ -345,9 +346,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnErrorWhenSyncingRole
 		assert.Equal(t, "", tenant.Status.TenantNamespaceName, dump)
 	}
 
-	assertThatExactlyTheseNamespacesExist(t, cf,
-		clientNSName,
-	)
+	assertThatTenantNamespaceExist(t, cf, tenantID, clientNSName)
 }
 
 func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *testing.T) {
@@ -807,17 +806,38 @@ func Test_Controller_syncHandler_CleanupOnStatusUpdateFailure(t *testing.T) {
 			return tenant, injectedError
 		},
 	}
+	tenantKey := makeTenantKey(clientNSName, tenantID)
 
 	// EXERCISE
-	resultErr := ctl.syncHandler(makeTenantKey(clientNSName, tenantID))
+	resultErr := ctl.syncHandler(tenantKey)
 
 	// VERIFY
 	assert.Assert(t, injectedError == resultErr)
 
+	assertThatTenantNamespaceExist(t, cf, tenantID, clientNSName)
+
+	// mark tenant as deleted
+	{
+		tenantsIfc := cf.StewardV1alpha1().Tenants(clientNSName)
+
+		// Fake client deletes immediately -> set deletion timestamp
+		tenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
+		assert.NilError(t, err)
+		tenant.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
+		_, err = tenantsIfc.Update(tenant)
+		assert.NilError(t, err)
+	}
+
+	// EXERCISE
+	resultErr = ctl.syncHandler(tenantKey)
+
+	// VERIFY
+	assert.NilError(t, resultErr)
 	assertThatExactlyTheseNamespacesExist(t, cf,
 		clientNSName,
-		/* no tenant namespace */
+		// tenant namespace removed
 	)
+	assertThatExactlyTheseTenantsExistInNamespace(t, cf, clientNSName /*none*/)
 }
 
 func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_listManagedRoleBindings(t *testing.T) {
@@ -1114,6 +1134,22 @@ func Test_Controller_FullWorkflow(t *testing.T) {
 		)
 		assertThatExactlyTheseTenantsExistInNamespace(t, cf, clientNSName /* none */)
 	}
+}
+
+func assertThatTenantNamespaceExist(t *testing.T, cf *fake.ClientFactory, tenantName, clientNS string) {
+	config, err := getClientConfig(cf, clientNS)
+	assert.NilError(t, err)
+
+	namespaceManager := k8s.NewNamespaceManager(
+		cf,
+		config.GetTenantNamespacePrefix(),
+		config.GetTenantNamespaceSuffixLength(),
+	)
+
+	namespaces, err := namespaceManager.List(tenantName)
+	assert.NilError(t, err)
+	assert.Equal(t, len(namespaces), 1)
+	assert.Assert(t, strings.HasPrefix(namespaces[0], config.GetTenantNamespacePrefix()), "found namespace %s is not prefixed as %s", namespaces[0], config.GetTenantNamespacePrefix())
 }
 
 func assertThatExactlyTheseNamespacesExist(t *testing.T, cf *fake.ClientFactory, expectedNamespaces ...string) {

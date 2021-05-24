@@ -1,14 +1,15 @@
 package k8s
 
 import (
-	"strings"
-
+	"fmt"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	klog "k8s.io/klog/v2"
+	"strings"
 
 	utils "github.com/SAP/stewardci-core/pkg/utils"
 )
@@ -17,6 +18,7 @@ import (
 type NamespaceManager interface {
 	Create(name string, annotations map[string]string) (string, error)
 	Delete(name string) error
+	List(name string) ([]string, error)
 }
 
 type namespaceManager struct {
@@ -113,4 +115,29 @@ func (m *namespaceManager) generateName(customPart string) (string, error) {
 		parts = append(parts, suffix)
 	}
 	return strings.Join(parts, "-"), nil
+}
+
+func (m *namespaceManager) List(nameCustomPart string) ([]string, error) {
+	matchLables := map[string]string{
+		labelPrefix: m.prefix,
+		labelID:     nameCustomPart,
+	}
+
+	namespaces, err := m.nsInterface.List(metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%v", labels.Set(matchLables).String()),
+	})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil, nil
+		}
+		err = errors.WithMessagef(err, "error: failed to list namespaces with label selector %v", matchLables)
+		return nil, err
+	}
+
+	var result []string
+	for _, ns := range namespaces.Items {
+		result = append(result, ns.Name)
+	}
+
+	return result, nil
 }
