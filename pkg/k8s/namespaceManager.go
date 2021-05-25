@@ -118,19 +118,19 @@ func (m *namespaceManager) generateName(customPart string) (string, error) {
 }
 
 func (m *namespaceManager) List(nameCustomPart string) ([]string, error) {
-	matchLables := map[string]string{
+	matchLabels := map[string]string{
 		labelPrefix: m.prefix,
 		labelID:     nameCustomPart,
 	}
 
 	namespaces, err := m.nsInterface.List(metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%v", labels.Set(matchLables).String()),
+		LabelSelector: fmt.Sprintf("%v", labels.Set(matchLabels).String()),
 	})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, nil
 		}
-		err = errors.WithMessagef(err, "error: failed to list namespaces with label selector %v", matchLables)
+		err = errors.WithMessagef(err, "error: failed to list namespaces with label selector %v", matchLabels)
 		return nil, err
 	}
 
