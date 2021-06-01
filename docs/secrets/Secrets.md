@@ -171,6 +171,8 @@ The given secrets are standard Kubernetes `v1/Secret` resource objects that must
 The Kubernetes Credentials Provider Plugin requires Secret resource objects to be of __certain types and carry special labels and annotations__ in order to map correctly them to Jenkins credential types.
 Details can be found on the [Examples page][jenkins_k8s_credential_provider_plugin_examples] of the plugin.
 
+__:warning: Warning:__ For usernamePassword credentials `type: Opaque` does not work, instead `type: kubernetes.io/basic-auth` is required.
+
 When a pipeline gets executed in a transient sandbox namespace, the secrets listed in `spec.secrets` of the corresponding PipelineRun resource object are copied to the sandbox namespace with the same name.
 It is also possible to rename the secret while it gets copied by providing the desired name as annotation `steward.sap.com/secret-rename-to` on the original secret. The desired name must be a valid Kubernetes Secret name and be unique within the sandbox namespace. In `spec.secrets` of pipeline runs the original secret name must be used to select secrets.
 The Jenkins Kubernetes Credentials Provider Plugin will use the secrets from the sandbox namespace only.
