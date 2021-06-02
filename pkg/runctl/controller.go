@@ -293,6 +293,10 @@ func (c *Controller) syncHandler(key string) error {
 		}
 	}
 
+	if err :=  c.metrics.ObservePipelineStateDuration(pipelineRun.GetStatus(),key); err != nil{
+		klog.Errorf("Failed to measure state '%+v': '%s'", pipelineRun.GetStatus(), err)
+	}
+
 	// Check if pipeline run is aborted
 	if err := c.handleAborted(pipelineRun); err != nil {
 		return err

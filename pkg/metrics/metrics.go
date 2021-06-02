@@ -21,6 +21,7 @@ type Metrics interface {
 	ObserveUpdateDurationByType(kind string, duration time.Duration)
 	StartServer()
 	SetQueueCount(int)
+	ObservePipelineStateDuration(state *api.PipelineStatus, key string) error
 }
 
 type metrics struct {
@@ -30,6 +31,7 @@ type metrics struct {
 	Update    *prometheus.HistogramVec
 	Queued    prometheus.Gauge
 	Total     prometheus.Gauge
+	State 	  *prometheus.GaugeVec
 }
 
 // NewMetrics create metrics
@@ -64,6 +66,11 @@ func NewMetrics() Metrics {
 			Name: "steward_pipelineruns_total",
 			Help: "total number of pipelineruns",
 		}),
+		State: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "steward_state_duration",
+			Help: "duration of states by pipelines",
+		},
+		[]string{"state","pipeline"}),
 	}
 }
 
@@ -74,6 +81,7 @@ func (metrics *metrics) StartServer() {
 	prometheus.MustRegister(metrics.Duration)
 	prometheus.MustRegister(metrics.Update)
 	prometheus.MustRegister(metrics.Queued)
+	prometheus.MustRegister(metrics.State)
 	go provideMetrics()
 }
 
@@ -110,6 +118,18 @@ func (metrics *metrics) ObserveDurationByState(state *api.StateItem) error {
 
 func (metrics *metrics) ObserveUpdateDurationByType(typ string, duration time.Duration) {
 	metrics.Update.With(prometheus.Labels{"type": typ}).Observe(duration.Seconds())
+}
+
+func (metrics *metrics) ObservePipelineStateDuration(state *api.PipelineStatus, key string) error{
+	if state.StartedAt.IsZero() {
+		return fmt.Errorf("cannot observe StateItem if StartedAt is not set")
+	}
+	duration := time.Now().Sub(state.StartedAt.Time)
+	if duration < 0 {
+		return fmt.Errorf("cannot observe StateItem if FinishedAt is before StartedAt")
+	}
+	metrics.State.With(prometheus.Labels{"state": string(state.State),"pipeline":key}).Add(duration.Seconds())
+	return nil
 }
 
 // SetQueueCount logs queue count metric
