@@ -122,3 +122,5 @@ hooks:
       pullPolicy: IfNotPresent
 
 featureFlags: ""
+
+PodSecurityPolicy: {}

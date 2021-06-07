@@ -8,38 +8,4 @@ metadata:
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'runtime/default'
     seccomp.security.alpha.kubernetes.io/defaultProfileName:  'runtime/default'
 spec:
-  privileged: false
-  allowPrivilegeEscalation: false
-  requiredDropCapabilities:
-  - ALL
-  runAsUser:
-    rule: 'MustRunAsNonRoot'
-  runAsGroup:
-    rule: 'MustRunAs'
-    ranges:
-    - min: 1000 # min of first range used as default
-      max: 1000
-    - min: 1
-      max: 65535
-  supplementalGroups:
-    rule: 'MayRunAs'
-    ranges:
-    - min: 1
-      max: 65535
-  fsGroup:
-    rule: 'MayRunAs'
-    ranges:
-    - min: 1
-      max: 65535
-  seLinux:
-    rule: 'RunAsAny'
-  hostNetwork: false
-  hostIPC: false
-  hostPID: false
-  hostPorts: [] # do not allow host ports
-  volumes:
-  - configMap
-  - downwardAPI
-  - emptyDir
-  - projected
-  - secret
+  {{- .Values.PodSecurityPolicy.controllers | default ( $.Files.Get "data/controllers-default-podsecuritypolicy.yaml" ) | nindent 2 }}

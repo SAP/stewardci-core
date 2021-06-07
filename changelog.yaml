@@ -52,6 +52,15 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: minor
+      title: Make PodSecurityPolicies for pipelineRun and both controllers configurable
+      description: |-
+        Make 'PodSecurityPolicy' configurable to be able to change the policy during installation with helm.
+        steward helmchart loads default 'PodSecurityPolicy' from a file if corresponding fields are not set inside 'Values.yaml' file.
+      pullRequestNumber:
+      jiraIssueNumber: 738
+
 - version: "0.9.0"
   date: 2021-05-18
   changes:
