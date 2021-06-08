@@ -8,4 +8,4 @@ metadata:
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'runtime/default'
     seccomp.security.alpha.kubernetes.io/defaultProfileName:  'runtime/default'
 spec:
-  {{- .Values.PodSecurityPolicy.run | default ( $.Files.Get "data/run-default-podsecuritypolicy.yaml" ) | nindent 2 }}
+  {{- .Values.podSecurityPolicy.run | default ( $.Files.Get "data/run-default-podsecuritypolicy.yaml" ) | nindent 2 }}
