@@ -123,4 +123,20 @@ hooks:
 
 featureFlags: ""
 
+# Entering non-empty values in this section overwrites the default 'spec'
+# setting of 'PodSecurityPolicy' for pipelineRun or both controllers, which
+# are located inside 'data/pipelineruns-default-podsecuritypolicy.yaml'
+# and 'data/controllers-default-podsecuritypolicy.yaml' files.
+#
+# Example:
+#
+# podSecurityPolicy:
+#   run: |
+#     privileged: true
+#     allowPrivilegeEscalation: true
+#     ...
+#   controllers: |
+#     privileged: true
+#     allowPrivilegeEscalation: false
+#     ...
 podSecurityPolicy: {}
