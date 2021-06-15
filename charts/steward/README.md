@@ -17,6 +17,7 @@ Install and configure [Steward][] on Kubernetes.
     - [Pipeline Runs](#pipeline-runs)
     - [Feature Flags ](#feature-flags)
       - [List of Defined Feature Flags](#list-of-defined-feature-flags)
+    - [PodSecurityPolicy Setting](#podsecuritypolicy-setting)
   - [Custom Resource Definitions](#custom-resource-definitions)
 
 ## Prerequisites
@@ -211,6 +212,15 @@ The definition string has leading and trailing separators and uses different sep
 | Feature Flag | Description | Default |
 | --- | --- | --- |
 | `RetryOnInvalidPipelineRunsConfig` | If enabled, the pipeline run controller retries reconciling PipelineRun objects in case the controller configuration (in ConfigMaps) is invalid or cannot be loaded. It is assumed that the condition can be detected by a monitoring tool, triggers an alert and operators fix the issue in a timely manner. By that operator errors do not immediately break user pipeline runs. However, processing of PipelineRun objects may be delayed significantly in case of invalid configuration.<br/><br/> If disabled, the current behavior is used: immediately set all unfinished PipelineRun objects to finished with result code `error_infra`.<br/><br/>  The new behavior is supposed to become the default in a future release of Steward. | disabled |
+
+### PodSecurityPolicy Setting
+
+| Parameter | Description | Default |
+|---|---|---|
+| <code>podSecurityPolicy.run</code> | (string)<br/> spec setting of 'PodSecurityPolicy' for pipelineRun. | Content of the file `data/pipelineruns-default-podsecuritypolicy.yaml` (see `values.yaml`) |
+| <code>podSecurityPolicy.controllers</code> | (string)<br/> spec setting of 'PodSecurityPolicy' for both tenant- and run-controllers. | Content of the file `data/controllers-default-podsecuritypolicy.yaml` (see `values.yaml`) |
+
+PodSecurityPolicy setting of `pipelineRun` and both `run-controller` and `tenent-controller` are configurable. The `spec` settings are taken by default from `data/pipelineruns-default-podsecuritypolicy.yaml` and `data/controllers-default-podsecuritypolicy.yaml` respectively but to overwrite the default values these parameters are introduced.
 
 ## Custom Resource Definitions
 
