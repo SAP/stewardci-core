@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.10.0"
+  date: 2021-06-16
+  changes:
+
     - type: enhancement
       impact: minor
       title: Make PodSecurityPolicies for pipelineRun and both controllers configurable
