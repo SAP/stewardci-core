@@ -10,19 +10,19 @@ import (
 
 func Test_Duration_Missing_Start_Time(t *testing.T) {
 	m := NewMetrics()
-	e := m.ObserveDurationByState(&api.StateItem{})
+	e := m.ObserveTotalDurationByState(&api.StateItem{})
 	assert.Equal(t, "cannot observe StateItem if StartedAt is not set", e.Error())
 }
 
 func Test_Duration_Missing_End_Time(t *testing.T) {
 	m := NewMetrics()
-	e := m.ObserveDurationByState(&api.StateItem{StartedAt: metav1.Now()})
+	e := m.ObserveTotalDurationByState(&api.StateItem{StartedAt: metav1.Now()})
 	assert.Equal(t, "cannot observe StateItem if FinishedAt is before StartedAt", e.Error())
 }
 
 func Test_Duration_End_Before_Beginning(t *testing.T) {
 	m := NewMetrics()
-	e := m.ObserveDurationByState(fakeStateItem(api.StateRunning, -1))
+	e := m.ObserveTotalDurationByState(fakeStateItem(api.StateRunning, -1))
 	assert.Equal(t, "cannot observe StateItem if FinishedAt is before StartedAt", e.Error())
 }
 

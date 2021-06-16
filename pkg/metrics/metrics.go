@@ -17,19 +17,21 @@ import (
 type Metrics interface {
 	CountStart()
 	CountResult(api.Result)
-	ObserveDurationByState(state *api.StateItem) error
+	ObserveTotalDurationByState(state *api.StateItem) error
+	ObserveCurrentDurationByState(state *api.PipelineStatus) error
 	ObserveUpdateDurationByType(kind string, duration time.Duration)
 	StartServer()
 	SetQueueCount(int)
 }
 
 type metrics struct {
-	Started   prometheus.Counter
-	Completed *prometheus.CounterVec
-	Duration  *prometheus.HistogramVec
-	Update    *prometheus.HistogramVec
-	Queued    prometheus.Gauge
-	Total     prometheus.Gauge
+	Started         prometheus.Counter
+	Completed       *prometheus.CounterVec
+	TotalDuration   *prometheus.HistogramVec
+	CurrentDuration *prometheus.HistogramVec
+	Update          *prometheus.HistogramVec
+	Queued          prometheus.Gauge
+	Total           prometheus.Gauge
 }
 
 // NewMetrics create metrics
@@ -44,9 +46,15 @@ func NewMetrics() Metrics {
 			Help: "completed pipelines",
 		},
 			[]string{"result"}),
-		Duration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Name:    "steward_pipelinerun_duration_seconds",
-			Help:    "pipeline run durations",
+		TotalDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "steward_pipelinerun_total_duration_seconds",
+			Help:    "pipeline run durations after they changed their status",
+			Buckets: prometheus.ExponentialBuckets(0.125, 2, 15),
+		},
+			[]string{"state"}),
+		CurrentDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "steward_pipelinerun_current_duration_seconds",
+			Help:    "pipeline run durations in their current status",
 			Buckets: prometheus.ExponentialBuckets(0.125, 2, 15),
 		},
 			[]string{"state"}),
@@ -71,7 +79,8 @@ func NewMetrics() Metrics {
 func (metrics *metrics) StartServer() {
 	prometheus.MustRegister(metrics.Started)
 	prometheus.MustRegister(metrics.Completed)
-	prometheus.MustRegister(metrics.Duration)
+	prometheus.MustRegister(metrics.TotalDuration)
+	prometheus.MustRegister(metrics.CurrentDuration)
 	prometheus.MustRegister(metrics.Update)
 	prometheus.MustRegister(metrics.Queued)
 	go provideMetrics()
@@ -96,7 +105,7 @@ func (metrics *metrics) CountResult(result api.Result) {
 }
 
 // ObserveDurationByState logs duration of the state
-func (metrics *metrics) ObserveDurationByState(state *api.StateItem) error {
+func (metrics *metrics) ObserveTotalDurationByState(state *api.StateItem) error {
 	if state.StartedAt.IsZero() {
 		return fmt.Errorf("cannot observe StateItem if StartedAt is not set")
 	}
@@ -104,7 +113,20 @@ func (metrics *metrics) ObserveDurationByState(state *api.StateItem) error {
 	if duration < 0 {
 		return fmt.Errorf("cannot observe StateItem if FinishedAt is before StartedAt")
 	}
-	metrics.Duration.With(prometheus.Labels{"state": string(state.State)}).Observe(duration.Seconds())
+	metrics.TotalDuration.With(prometheus.Labels{"state": string(state.State)}).Observe(duration.Seconds())
+	return nil
+}
+
+// ObserveDurationByState logs duration of the state
+func (metrics *metrics) ObserveCurrentDurationByState(state *api.PipelineStatus) error {
+	if state.StartedAt.IsZero() {
+		return fmt.Errorf("cannot observe StateItem if StartedAt is not set")
+	}
+	duration := time.Now().Sub(state.StartedAt.Time)
+	if duration < 0 {
+		return fmt.Errorf("cannot observe StateItem if FinishedAt is before StartedAt")
+	}
+	metrics.CurrentDuration.With(prometheus.Labels{"state": string(state.State)}).Observe(duration.Seconds())
 	return nil
 }
 

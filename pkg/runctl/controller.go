@@ -36,6 +36,9 @@ const kind = "PipelineRuns"
 var heartbeatIntervalSeconds int64 = 60
 var heartbeatTimer int64 = 0
 
+// Used for metering
+var meteringHistogramInterval = time.Minute * 1
+
 // Controller processes PipelineRun resources
 type Controller struct {
 	factory              k8s.ClientFactory
@@ -43,6 +46,7 @@ type Controller struct {
 	pipelineRunSynced    cache.InformerSynced
 	tektonTaskRunsSynced cache.InformerSynced
 	workqueue            workqueue.RateLimitingInterface
+	metricsWorkqueue     workqueue.RateLimitingInterface
 	metrics              metrics.Metrics
 	testing              *controllerTesting
 	recorder             record.EventRecorder
@@ -75,6 +79,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 
 		tektonTaskRunsSynced: tektonTaskRunInformer.Informer().HasSynced,
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
+		metricsWorkqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
 		metrics:              metrics,
 		recorder:             recorder,
 	}
@@ -90,7 +95,33 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 			controller.handleTektonTaskRun(new)
 		},
 	})
+
 	return controller
+}
+
+//meterCurrentPipelineStatus writes the current Duration of Pipeline States in a histogram
+func (c *Controller) meterCurrentPipelineStatus(ticker time.Duration) {
+	for range time.Tick(ticker) {
+		klog.V(4).Infof("Current metrics Observation still alive")
+		for c.metricsWorkqueue.Len() > 0 {
+			obj, shutdown := c.metricsWorkqueue.Get()
+			if shutdown {
+				return
+			}
+			key, _ := obj.(string)
+			run, err := c.pipelineRunFetcher.ByKey(key)
+			if err != nil || run == nil {
+				klog.V(4).Infof("Could not find the pipeline %v for metering", key)
+				c.metricsWorkqueue.Forget(obj)
+				continue
+			}
+			if run.Status.State == api.StateFinished {
+				c.metricsWorkqueue.Forget(obj)
+			} else {
+				c.metrics.ObserveCurrentDurationByState(&run.Status)
+			}
+		}
+	}
 }
 
 // Run runs the controller
@@ -101,6 +132,10 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	if ok := cache.WaitForCacheSync(stopCh, c.pipelineRunSynced, c.tektonTaskRunsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
+
+	klog.V(2).Infof("Start metering: Create all %v minutes a new histogram", meteringHistogramInterval)
+	go c.meterCurrentPipelineStatus(meteringHistogramInterval)
+
 	klog.V(2).Infof("Start workers")
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
@@ -191,7 +226,7 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) e
 	c.metrics.ObserveUpdateDurationByType("UpdateState", elapsed)
 
 	if oldState != nil {
-		err := c.metrics.ObserveDurationByState(oldState)
+		err := c.metrics.ObserveTotalDurationByState(oldState)
 		if err != nil {
 			klog.Errorf("Failed to measure state '%+v': '%s'", oldState, err)
 		}
@@ -446,6 +481,7 @@ func (c *Controller) addPipelineRun(obj interface{}) {
 	}
 	klog.V(4).Infof("Add to workqueue '%s'", key)
 	c.workqueue.Add(key)
+	c.metricsWorkqueue.Add(key)
 }
 
 // handleTektonTaskRun takes any resource implementing metav1.Object and attempts
@@ -474,5 +510,6 @@ func (c *Controller) handleTektonTaskRun(obj interface{}) {
 	if runKey != "" {
 		klog.V(4).Infof("Add to workqueue '%s'", runKey)
 		c.workqueue.Add(runKey)
+		c.metricsWorkqueue.Add(runKey)
 	}
 }
