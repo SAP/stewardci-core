@@ -18,7 +18,7 @@ type Metrics interface {
 	CountStart()
 	CountResult(api.Result)
 	ObserveTotalDurationByState(state *api.StateItem) error
-	ObserveCurrentDurationByState(state *api.PipelineStatus) error
+	ObserveCurrentDurationByState(state *api.PipelineRun) error
 	ObserveUpdateDurationByType(kind string, duration time.Duration)
 	StartServer()
 	SetQueueCount(int)
@@ -118,15 +118,21 @@ func (metrics *metrics) ObserveTotalDurationByState(state *api.StateItem) error 
 }
 
 // ObserveDurationByState logs duration of the state
-func (metrics *metrics) ObserveCurrentDurationByState(state *api.PipelineStatus) error {
-	if state.StartedAt.IsZero() {
-		return fmt.Errorf("cannot observe StateItem if StartedAt is not set")
+func (metrics *metrics) ObserveCurrentDurationByState(run *api.PipelineRun) error {
+	var duration time.Duration
+	if run.Status.State == api.StateUndefined {
+		duration = time.Now().Sub(run.CreationTimestamp.Time)
+	} else {
+		if run.Status.StartedAt.IsZero() {
+			return fmt.Errorf("cannot observe StateItem if StartedAt is not set")
+		}
+		duration := time.Now().Sub(run.Status.StartedAt.Time)
+		if duration < 0 {
+			return fmt.Errorf("cannot observe StateItem if FinishedAt is before StartedAt")
+		}
 	}
-	duration := time.Now().Sub(state.StartedAt.Time)
-	if duration < 0 {
-		return fmt.Errorf("cannot observe StateItem if FinishedAt is before StartedAt")
-	}
-	metrics.CurrentDuration.With(prometheus.Labels{"state": string(state.State)}).Observe(duration.Seconds())
+
+	metrics.CurrentDuration.With(prometheus.Labels{"state": string(run.Status.State)}).Observe(duration.Seconds())
 	return nil
 }
 

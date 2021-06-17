@@ -37,7 +37,7 @@ var heartbeatIntervalSeconds int64 = 60
 var heartbeatTimer int64 = 0
 
 // Used for metering
-var meteringHistogramInterval = time.Minute * 1
+var meteringHistogramInterval = time.Second * 3
 
 // Controller processes PipelineRun resources
 type Controller struct {
@@ -46,11 +46,11 @@ type Controller struct {
 	pipelineRunSynced    cache.InformerSynced
 	tektonTaskRunsSynced cache.InformerSynced
 	workqueue            workqueue.RateLimitingInterface
-	metricsWorkqueue     workqueue.RateLimitingInterface
 	metrics              metrics.Metrics
 	testing              *controllerTesting
 	recorder             record.EventRecorder
 	pipelineRunLister    v1alpha1.PipelineRunLister
+	pipelinerunStore     cache.Store
 }
 
 type controllerTesting struct {
@@ -70,6 +70,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 	eventBroadcaster.StartLogging(klog.V(3).Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
+	pipelinerunStore := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns().Informer().GetStore()
 
 	controller := &Controller{
 		factory:            factory,
@@ -79,9 +80,9 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 
 		tektonTaskRunsSynced: tektonTaskRunInformer.Informer().HasSynced,
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
-		metricsWorkqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
 		metrics:              metrics,
 		recorder:             recorder,
+		pipelinerunStore:     pipelinerunStore,
 	}
 	pipelineRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.addPipelineRun,
@@ -103,23 +104,14 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 func (c *Controller) meterCurrentPipelineStatus(ticker time.Duration) {
 	for range time.Tick(ticker) {
 		klog.V(4).Infof("Current metrics Observation still alive")
-		for c.metricsWorkqueue.Len() > 0 {
-			obj, shutdown := c.metricsWorkqueue.Get()
-			if shutdown {
-				return
-			}
-			key, _ := obj.(string)
-			run, err := c.pipelineRunFetcher.ByKey(key)
-			if err != nil || run == nil {
-				klog.V(4).Infof("Could not find the pipeline %v for metering", key)
-				c.metricsWorkqueue.Forget(obj)
+		objs := c.pipelinerunStore.List()
+		for _, obj := range objs {
+			run, ok := obj.(*api.PipelineRun)
+			if !ok {
+				klog.V(4).Infof("Could not cast stored object to pipelinerun")
 				continue
 			}
-			if run.Status.State == api.StateFinished {
-				c.metricsWorkqueue.Forget(obj)
-			} else {
-				c.metrics.ObserveCurrentDurationByState(&run.Status)
-			}
+			c.metrics.ObserveCurrentDurationByState(run)
 		}
 	}
 }
@@ -481,7 +473,6 @@ func (c *Controller) addPipelineRun(obj interface{}) {
 	}
 	klog.V(4).Infof("Add to workqueue '%s'", key)
 	c.workqueue.Add(key)
-	c.metricsWorkqueue.Add(key)
 }
 
 // handleTektonTaskRun takes any resource implementing metav1.Object and attempts
@@ -510,6 +501,5 @@ func (c *Controller) handleTektonTaskRun(obj interface{}) {
 	if runKey != "" {
 		klog.V(4).Infof("Add to workqueue '%s'", runKey)
 		c.workqueue.Add(runKey)
-		c.metricsWorkqueue.Add(runKey)
 	}
 }
