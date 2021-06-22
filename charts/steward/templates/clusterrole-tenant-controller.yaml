@@ -22,4 +22,4 @@ rules:
 - apiGroups: ['policy']
   resources: ['podsecuritypolicies']
   verbs:     ['use']
-  resourceNames: ['00-steward-controllers']
+  resourceNames: [{{ .Values.tenantController.podSecurityPolicyName | squote }}]

@@ -17,7 +17,6 @@ Install and configure [Steward][] on Kubernetes.
     - [Pipeline Runs](#pipeline-runs)
     - [Feature Flags ](#feature-flags)
       - [List of Defined Feature Flags](#list-of-defined-feature-flags)
-    - [PodSecurityPolicy Setting](#podsecuritypolicy-setting)
   - [Custom Resource Definitions](#custom-resource-definitions)
 
 ## Prerequisites
@@ -114,6 +113,7 @@ Pipeline Run Controller:
 | <code>runController.<wbr/>args.<wbr/>burst</code> | (integer)<br/> The burst limit for throttle connections (maximum number of concurrent requests). | 10 |
 | <code>runController.<wbr/>args.<wbr/>threadiness</code> | (integer)<br/> The maximum number of reconciliations performed in parallel. | 2 |
 | <code>runController.<wbr/>args.<wbr/>logVerbosity</code> | (integer)<br/> The log verbosity. Levels are adopted from [Kubernetes logging conventions][k8s-logging-conventions]. | 2 |
+| <code>runController.<wbr/>podSecurityPolicyName</code> | (string)<br/> podSecurityPolicy resource name which should be used by the runController. | `00-steward-controllers` |
 
 Tenant Controller:
 
@@ -133,6 +133,7 @@ Tenant Controller:
 | <code>tenantController.<wbr/>args.<wbr/>threadiness</code> | (integer)<br/> The maximum number of reconciliations performed in parallel. | 2 |
 | <code>tenantController.<wbr/>possibleTenantRoles</code> | (array of string)<br/> The names of all possible tenant roles. A tenant role is a Kubernetes ClusterRole that the controller binds within a tenant namespace to (a) the default service account of the client namespace the tenant belongs to and (b) to the default service account of the tenant namespace. The tenant role to be used can be configured per Steward client namespace via annotation `steward.sap.com/tenant-role`. | `['steward-tenant']` |
 | <code>tenantController.<wbr/>args.<wbr/>logVerbosity</code> | The log verbosity. Levels are adopted from [Kubernetes logging conventions][k8s-logging-conventions]. | 2 |
+| <code>tenantController.<wbr/>podSecurityPolicyName</code> | (string)<br/> podSecurityPolicy resource name which should be used by the tenantController. | `00-steward-controllers` |
 
 Common parameters:
 
@@ -170,6 +171,7 @@ Common parameters:
 | <code>pipelineRuns.<wbr/>networkPolicies</code> | (map[string]string)<br/> The network policies selectable as network profiles in pipeline run specs. The key can be any valid YAML key not starting with underscore (`_`). The value must be a string containing a complete `networkpolicy.networking.k8s.io` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of network policies][k8s-networkpolicies] for details about Kubernetes network policies.<br/><br/> Note that Steward ensures that all pods in pipeline run namespaces are _isolated_ in terms of network policies. The policy defined here _adds_ egress and/or ingress rules. | A single entry named `default` whose value is a network policy defining rules that allow ingress traffic from all pods in the same namespace and egress traffic to the internet, the cluster DNS resolver and the Kubernetes API server. |
 | <code>pipelineRuns.<wbr/>limitRange</code> | (string)<br/> The limit range to be created in every pipeline run namespace. The value must be a string containing a complete `limitrange` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of limit ranges][k8s-limitranges] for details about Kubernetes limit ranges. | A limit range defining a default CPU request of 0.5 CPUs, a default CPU limit of 3 CPUs, a default memory request of 0.5 GiB and a default memory limit of 3 GiB.<br/><br/>This default limit range might change with newer releases of Steward. It is recommended to set an own limit range to avoid unexpected changes with Steward upgrades. |
 | <code>pipelineRuns.<wbr/>resourceQuota</code> | (string)<br/> The resource quota to be created in every pipeline run namespace. The value must be a string containing a complete `resourcequotas` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of resource quotas][k8s-resourcequotas] for details about Kubernetes resource quotas.| none |
+| <code>pipelineRuns.<wbr/>podSecurityPolicyName</code> | (string)<br/> podSecurityPolicy resource name which should be used by the pipelineRun. | `00-steward-run` |
 
 ### Feature Flags
 
@@ -212,15 +214,6 @@ The definition string has leading and trailing separators and uses different sep
 | Feature Flag | Description | Default |
 | --- | --- | --- |
 | `RetryOnInvalidPipelineRunsConfig` | If enabled, the pipeline run controller retries reconciling PipelineRun objects in case the controller configuration (in ConfigMaps) is invalid or cannot be loaded. It is assumed that the condition can be detected by a monitoring tool, triggers an alert and operators fix the issue in a timely manner. By that operator errors do not immediately break user pipeline runs. However, processing of PipelineRun objects may be delayed significantly in case of invalid configuration.<br/><br/> If disabled, the current behavior is used: immediately set all unfinished PipelineRun objects to finished with result code `error_infra`.<br/><br/>  The new behavior is supposed to become the default in a future release of Steward. | disabled |
-
-### PodSecurityPolicy Setting
-
-| Parameter | Description | Default |
-|---|---|---|
-| <code>podSecurityPolicy.run</code> | (string)<br/> spec setting of 'PodSecurityPolicy' for pipelineRun. | Content of the file `data/pipelineruns-default-podsecuritypolicy.yaml` (see `values.yaml`) |
-| <code>podSecurityPolicy.controllers</code> | (string)<br/> spec setting of 'PodSecurityPolicy' for both tenant- and run-controllers. | Content of the file `data/controllers-default-podsecuritypolicy.yaml` (see `values.yaml`) |
-
-PodSecurityPolicy setting of `pipelineRun` and both `run-controller` and `tenent-controller` are configurable. The `spec` settings are taken by default from `data/pipelineruns-default-podsecuritypolicy.yaml` and `data/controllers-default-podsecuritypolicy.yaml` respectively but to overwrite the default values these parameters are introduced.
 
 ## Custom Resource Definitions
 
