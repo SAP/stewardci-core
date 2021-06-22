@@ -111,7 +111,12 @@ func (c *Controller) meterCurrentPipelineStatus(ticker time.Duration) {
 				klog.V(4).Infof("Could not cast stored object to pipelinerun")
 				continue
 			}
-			c.metrics.ObserveCurrentDurationByState(run)
+			if run.Status.State != api.StateFinished {
+				err := c.metrics.ObserveCurrentDurationByState(run)
+				if err != nil {
+					klog.V(4).Infof("metrics observation of pipelinerun %v failed: %v", run, err)
+				}
+			}
 		}
 	}
 }
