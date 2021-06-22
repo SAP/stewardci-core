@@ -61,7 +61,7 @@
         `PodSecurityPolicy` podSecurityPolicyName field should be adjusted accordingly inside `values.yaml`
         file and the corresponding yaml file with new PodSecurityPolicy resource should be created
         separately via Helm.
-      pullRequestNumber:
+      pullRequestNumber: 237
       jiraIssueNumber: 738
 
 - version: "0.10.0"
