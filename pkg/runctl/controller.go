@@ -36,8 +36,8 @@ const kind = "PipelineRuns"
 var heartbeatIntervalSeconds int64 = 60
 var heartbeatTimer int64 = 0
 
-// Used for metering
-var meteringHistogramInterval = time.Second * 3
+// Interval vor Histogram creation set to prometheus default scrape interval
+var meteringHistogramInterval = time.Minute * 1
 
 // Controller processes PipelineRun resources
 type Controller struct {
