@@ -129,7 +129,7 @@ func (metrics *metrics) ObserveCurrentDurationByState(run *api.PipelineRun) erro
 		if run.Status.StartedAt.IsZero() {
 			return fmt.Errorf("cannot observe StateItem if StartedAt is not set")
 		}
-		duration := time.Now().Sub(run.Status.StartedAt.Time)
+		duration = time.Now().Sub(run.Status.StartedAt.Time)
 		if duration < 0 {
 			return fmt.Errorf("cannot observe StateItem if StartedAt is in the future")
 		}
