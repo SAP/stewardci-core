@@ -1,4 +1,4 @@
-{{- if eq .Values.pipelineRuns.podSecurityPolicyName "00-steward-run" -}}
+{{- if (include "steward.pipelineRuns.generatePodSecurityPolicy" .) -}}
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:

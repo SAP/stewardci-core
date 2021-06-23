@@ -1,4 +1,4 @@
-{{- if or (eq .Values.runController.podSecurityPolicyName "00-steward-controllers") (eq .Values.tenantController.podSecurityPolicyName "00-steward-controllers") -}}
+{{- if (include "steward.controllers.generatePodSecurityPolicy" .) -}}
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:

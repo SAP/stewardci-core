@@ -113,7 +113,7 @@ Pipeline Run Controller:
 | <code>runController.<wbr/>args.<wbr/>burst</code> | (integer)<br/> The burst limit for throttle connections (maximum number of concurrent requests). | 10 |
 | <code>runController.<wbr/>args.<wbr/>threadiness</code> | (integer)<br/> The maximum number of reconciliations performed in parallel. | 2 |
 | <code>runController.<wbr/>args.<wbr/>logVerbosity</code> | (integer)<br/> The log verbosity. Levels are adopted from [Kubernetes logging conventions][k8s-logging-conventions]. | 2 |
-| <code>runController.<wbr/>podSecurityPolicyName</code> | (string)<br/> podSecurityPolicy resource name which should be used by the runController. | `00-steward-controllers` |
+| <code>runController.<wbr/>podSecurityPolicyName</code> | (string)<br/> podSecurityPolicy resource name which should be used by the runController. | empty |
 
 Tenant Controller:
 
@@ -133,7 +133,7 @@ Tenant Controller:
 | <code>tenantController.<wbr/>args.<wbr/>threadiness</code> | (integer)<br/> The maximum number of reconciliations performed in parallel. | 2 |
 | <code>tenantController.<wbr/>possibleTenantRoles</code> | (array of string)<br/> The names of all possible tenant roles. A tenant role is a Kubernetes ClusterRole that the controller binds within a tenant namespace to (a) the default service account of the client namespace the tenant belongs to and (b) to the default service account of the tenant namespace. The tenant role to be used can be configured per Steward client namespace via annotation `steward.sap.com/tenant-role`. | `['steward-tenant']` |
 | <code>tenantController.<wbr/>args.<wbr/>logVerbosity</code> | The log verbosity. Levels are adopted from [Kubernetes logging conventions][k8s-logging-conventions]. | 2 |
-| <code>tenantController.<wbr/>podSecurityPolicyName</code> | (string)<br/> podSecurityPolicy resource name which should be used by the tenantController. | `00-steward-controllers` |
+| <code>tenantController.<wbr/>podSecurityPolicyName</code> | (string)<br/> podSecurityPolicy resource name which should be used by the tenantController. | empty |
 
 Common parameters:
 
@@ -171,7 +171,7 @@ Common parameters:
 | <code>pipelineRuns.<wbr/>networkPolicies</code> | (map[string]string)<br/> The network policies selectable as network profiles in pipeline run specs. The key can be any valid YAML key not starting with underscore (`_`). The value must be a string containing a complete `networkpolicy.networking.k8s.io` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of network policies][k8s-networkpolicies] for details about Kubernetes network policies.<br/><br/> Note that Steward ensures that all pods in pipeline run namespaces are _isolated_ in terms of network policies. The policy defined here _adds_ egress and/or ingress rules. | A single entry named `default` whose value is a network policy defining rules that allow ingress traffic from all pods in the same namespace and egress traffic to the internet, the cluster DNS resolver and the Kubernetes API server. |
 | <code>pipelineRuns.<wbr/>limitRange</code> | (string)<br/> The limit range to be created in every pipeline run namespace. The value must be a string containing a complete `limitrange` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of limit ranges][k8s-limitranges] for details about Kubernetes limit ranges. | A limit range defining a default CPU request of 0.5 CPUs, a default CPU limit of 3 CPUs, a default memory request of 0.5 GiB and a default memory limit of 3 GiB.<br/><br/>This default limit range might change with newer releases of Steward. It is recommended to set an own limit range to avoid unexpected changes with Steward upgrades. |
 | <code>pipelineRuns.<wbr/>resourceQuota</code> | (string)<br/> The resource quota to be created in every pipeline run namespace. The value must be a string containing a complete `resourcequotas` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of resource quotas][k8s-resourcequotas] for details about Kubernetes resource quotas.| none |
-| <code>pipelineRuns.<wbr/>podSecurityPolicyName</code> | (string)<br/> podSecurityPolicy resource name which should be used by the pipelineRun. | `00-steward-run` |
+| <code>pipelineRuns.<wbr/>podSecurityPolicyName</code> | (string)<br/> podSecurityPolicy resource name which should be used by the pipelineRun. | empty |
 
 ### Feature Flags
 

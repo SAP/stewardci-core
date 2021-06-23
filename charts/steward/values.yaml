@@ -34,7 +34,7 @@ runController:
   nodeSelector: {}
   affinity: {}
   tolerations: []
-  podSecurityPolicyName: "00-steward-controllers"
+  podSecurityPolicyName: ""
 
 tenantController:
   args:
@@ -66,7 +66,7 @@ tenantController:
   affinity: {}
   tolerations: []
   possibleTenantRoles: ["steward-tenant"]
-  podSecurityPolicyName: "00-steward-controllers"
+  podSecurityPolicyName: ""
 
 # imagePullSecrets are used to pull controller images, but no other images.
 imagePullSecrets: []
@@ -115,7 +115,7 @@ pipelineRuns:
   networkPolicies: {}
   limitRange: ""
   resourceQuota: ""
-  podSecurityPolicyName: "00-steward-run"
+  podSecurityPolicyName: ""
 
 hooks:
   images:
