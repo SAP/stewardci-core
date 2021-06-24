@@ -34,6 +34,7 @@ runController:
   nodeSelector: {}
   affinity: {}
   tolerations: []
+  podSecurityPolicyName: ""
 
 tenantController:
   args:
@@ -65,6 +66,7 @@ tenantController:
   affinity: {}
   tolerations: []
   possibleTenantRoles: ["steward-tenant"]
+  podSecurityPolicyName: ""
 
 # imagePullSecrets are used to pull controller images, but no other images.
 imagePullSecrets: []
@@ -113,6 +115,7 @@ pipelineRuns:
   networkPolicies: {}
   limitRange: ""
   resourceQuota: ""
+  podSecurityPolicyName: ""
 
 hooks:
   images:
@@ -122,21 +125,3 @@ hooks:
       pullPolicy: IfNotPresent
 
 featureFlags: ""
-
-# Entering non-empty values in this section overwrites the default 'spec'
-# setting of 'PodSecurityPolicy' for pipelineRun or both controllers, which
-# are located inside 'data/pipelineruns-default-podsecuritypolicy.yaml'
-# and 'data/controllers-default-podsecuritypolicy.yaml' files.
-#
-# Example:
-#
-# podSecurityPolicy:
-#   run: |
-#     privileged: true
-#     allowPrivilegeEscalation: true
-#     ...
-#   controllers: |
-#     privileged: true
-#     allowPrivilegeEscalation: false
-#     ...
-podSecurityPolicy: {}

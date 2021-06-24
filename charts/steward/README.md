@@ -17,7 +17,6 @@ Install and configure [Steward][] on Kubernetes.
     - [Pipeline Runs](#pipeline-runs)
     - [Feature Flags ](#feature-flags)
       - [List of Defined Feature Flags](#list-of-defined-feature-flags)
-    - [PodSecurityPolicy Setting](#podsecuritypolicy-setting)
   - [Custom Resource Definitions](#custom-resource-definitions)
 
 ## Prerequisites
@@ -114,6 +113,7 @@ Pipeline Run Controller:
 | <code>runController.<wbr/>args.<wbr/>burst</code> | (integer)<br/> The burst limit for throttle connections (maximum number of concurrent requests). | 10 |
 | <code>runController.<wbr/>args.<wbr/>threadiness</code> | (integer)<br/> The maximum number of reconciliations performed in parallel. | 2 |
 | <code>runController.<wbr/>args.<wbr/>logVerbosity</code> | (integer)<br/> The log verbosity. Levels are adopted from [Kubernetes logging conventions][k8s-logging-conventions]. | 2 |
+| <code>runController.<wbr/>podSecurityPolicyName</code> | (string)<br/> The name of an _existing_ pod security policy that should be used by the run controller. If empty, a default pod security policy will be created. | empty |
 
 Tenant Controller:
 
@@ -133,6 +133,7 @@ Tenant Controller:
 | <code>tenantController.<wbr/>args.<wbr/>threadiness</code> | (integer)<br/> The maximum number of reconciliations performed in parallel. | 2 |
 | <code>tenantController.<wbr/>possibleTenantRoles</code> | (array of string)<br/> The names of all possible tenant roles. A tenant role is a Kubernetes ClusterRole that the controller binds within a tenant namespace to (a) the default service account of the client namespace the tenant belongs to and (b) to the default service account of the tenant namespace. The tenant role to be used can be configured per Steward client namespace via annotation `steward.sap.com/tenant-role`. | `['steward-tenant']` |
 | <code>tenantController.<wbr/>args.<wbr/>logVerbosity</code> | The log verbosity. Levels are adopted from [Kubernetes logging conventions][k8s-logging-conventions]. | 2 |
+| <code>tenantController.<wbr/>podSecurityPolicyName</code> | (string)<br/> The name of an _existing_ pod security policy that should be used by the tenant controller. If empty, a default pod security policy will be created. | empty |
 
 Common parameters:
 
@@ -159,11 +160,12 @@ Common parameters:
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>imagePullPolicy</code> | (string)<br/> The image pull policy for the Jenkinsfile Runner image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation. <br/><br/> **Currently broken, `IfNotPresent` is used in any case. See [tektoncd/pipeline #3423](https://github.com/tektoncd/pipeline/issues/3423)** | `IfNotPresent` |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>javaOpts</code> | (string)<br/> The JAVA_OPTS for the Jenkinsfile Runner process.  | (see `values.yaml`) |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>resources</code> | (object of [`RecourceRequirements`][k8s-resourcerequirements])<br/> The resource requirements of Jenkinsfile Runner containers. When overriding, override the complete value, not just subvalues, because the default value might change in future versions and a partial override might not make sense anymore. | Limits and requests set (see `values.yaml`) |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>podSecurityPolicy.<wbr/>runAsUser</code> | (integer)<br/> The user ID (UID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of [1,65535]. Corresponds to field `runAsUser` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>podSecurityPolicy.<wbr/>runAsGroup</code> | (integer)<br/> The group ID (GID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of [1,65535]. Corresponds to field `runAsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>podSecurityPolicy.<wbr/>fsGroup</code> | (integer)<br/> A special supplemental group ID of the container processes of the Jenkinsfile Runner pod, that defines the ownership of some volume types. The value must be an integer in the range of [1,65535]. Corresponds to field `fsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>podSecurityContext.<wbr/>runAsUser</code> | (integer)<br/> The user ID (UID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of [1,65535]. Corresponds to field `runAsUser` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>podSecurityContext.<wbr/>runAsGroup</code> | (integer)<br/> The group ID (GID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of [1,65535]. Corresponds to field `runAsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>podSecurityContext.<wbr/>fsGroup</code> | (integer)<br/> A special supplemental group ID of the container processes of the Jenkinsfile Runner pod, that defines the ownership of some volume types. The value must be an integer in the range of [1,65535]. Corresponds to field `fsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>pipelineCloneRetryIntervalSec</code> | (string)<br/> The retry interval for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>pipelineCloneRetryTimeoutSec</code> | (string)<br/> The retry timeout for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
+| <code>pipelineRuns.<wbr/>podSecurityPolicyName</code> | (string)<br/> The name of an _existing_ pod security policy that should be used by pipeline run pods. If empty, a default pod security policy will be created. | empty |
 | <code>pipelineRuns.<wbr/>timeout</code> | (string)<br/> The maximum execution time of pipelines. Must be specified as a string understood by [Go's `time.parseDuration()`](https://godoc.org/time#ParseDuration): <blockquote>A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix, such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".</blockquote> | `60m` |
 | <code>pipelineRuns.<wbr/>networkPolicy</code> | (string)<br/> DEPRECATED: Use <code>pipelineRuns.<wbr/>networkPolicies</code> instead. | |
 | <code>pipelineRuns.<wbr/>defaultNetworkPolicyName</code> | The name of the network policy which is used when no network profile is selected by a pipeline run spec. | `default` if <code>pipelineRuns.<wbr/>networkPolicies</code> is not set or empty. |
@@ -212,15 +214,6 @@ The definition string has leading and trailing separators and uses different sep
 | Feature Flag | Description | Default |
 | --- | --- | --- |
 | `RetryOnInvalidPipelineRunsConfig` | If enabled, the pipeline run controller retries reconciling PipelineRun objects in case the controller configuration (in ConfigMaps) is invalid or cannot be loaded. It is assumed that the condition can be detected by a monitoring tool, triggers an alert and operators fix the issue in a timely manner. By that operator errors do not immediately break user pipeline runs. However, processing of PipelineRun objects may be delayed significantly in case of invalid configuration.<br/><br/> If disabled, the current behavior is used: immediately set all unfinished PipelineRun objects to finished with result code `error_infra`.<br/><br/>  The new behavior is supposed to become the default in a future release of Steward. | disabled |
-
-### PodSecurityPolicy Setting
-
-| Parameter | Description | Default |
-|---|---|---|
-| <code>podSecurityPolicy.run</code> | (string)<br/> spec setting of 'PodSecurityPolicy' for pipelineRun. | Content of the file `data/pipelineruns-default-podsecuritypolicy.yaml` (see `values.yaml`) |
-| <code>podSecurityPolicy.controllers</code> | (string)<br/> spec setting of 'PodSecurityPolicy' for both tenant- and run-controllers. | Content of the file `data/controllers-default-podsecuritypolicy.yaml` (see `values.yaml`) |
-
-PodSecurityPolicy setting of `pipelineRun` and both `run-controller` and `tenent-controller` are configurable. The `spec` settings are taken by default from `data/pipelineruns-default-podsecuritypolicy.yaml` and `data/controllers-default-podsecuritypolicy.yaml` respectively but to overwrite the default values these parameters are introduced.
 
 ## Custom Resource Definitions
 

@@ -54,3 +54,74 @@ The additional labels for the service monitors.
 {{- toYaml .Values.metrics.serviceMonitors.extraLabels -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+The name of the pod security policy for the run controller.
+*/}}
+{{- define "steward.runController.podSecurityPolicyName" -}}
+{{- if .Values.runController.podSecurityPolicyName -}}
+{{- .Values.runController.podSecurityPolicyName -}}
+{{- else -}}
+{{- include "steward.controllers.podSecurityPolicyName.builtin" . -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+The name of the pod security policy for the tenant controller.
+*/}}
+{{- define "steward.tenantController.podSecurityPolicyName" -}}
+{{- if .Values.tenantController.podSecurityPolicyName -}}
+{{- .Values.tenantController.podSecurityPolicyName -}}
+{{- else -}}
+{{- include "steward.controllers.podSecurityPolicyName.builtin" . -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+The name of the pod security policy for Steward controllers that is
+created by this chart if the user doesn't provide an own PSP.
+*/}}
+{{- define "steward.controllers.podSecurityPolicyName.builtin" -}}
+00-steward-controllers
+{{- end -}}
+
+{{/*
+The name of the pod security policy for pipeline runs.
+*/}}
+{{- define "steward.pipelineRuns.podSecurityPolicyName" -}}
+{{- if .Values.pipelineRuns.podSecurityPolicyName -}}
+{{- .Values.pipelineRuns.podSecurityPolicyName -}}
+{{- else -}}
+{{- include "steward.pipelineRuns.podSecurityPolicyName.builtin" . -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+The name of the pod security policy for pipeline runs that is
+created by this chart if the user doesn't provide an own PSP.
+*/}}
+{{- define "steward.pipelineRuns.podSecurityPolicyName.builtin" -}}
+00-steward-run
+{{- end -}}
+
+{{/*
+Resolves to a non-empty string if the Chart should generate a
+pod security policy for Steward controllers, otherwise resolves
+to the empty string.
+*/}}
+{{- define "steward.controllers.generatePodSecurityPolicy" -}}
+{{- if not (and .Values.tenantController.podSecurityPolicyName .Values.runController.podSecurityPolicyName) -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+Resolves to a non-empty string if the Chart should generate a
+pod security policy for pipeline runs, otherwise resolves
+to the empty string.
+*/}}
+{{- define "steward.pipelineRuns.generatePodSecurityPolicy" -}}
+{{- if not .Values.pipelineRuns.podSecurityPolicyName -}}
+true
+{{- end -}}
+{{- end -}}
