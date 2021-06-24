@@ -12,14 +12,14 @@ rules:
   resources: ["clusterroles"]
   verbs: ["bind"]
   resourceNames:
-  {{- toYaml .Values.tenantController.possibleTenantRoles | nindent 4 }}
+    {{- toYaml .Values.tenantController.possibleTenantRoles | nindent 4 }}
 - apiGroups: ["steward.sap.com"]
   resources: ["tenants","tenants/status"]
   verbs: ["get","list","patch","update","watch"]
 - apiGroups: [""]
   resources: ["namespaces"]
   verbs: ["create","delete","get","list","patch","update","watch"]
-- apiGroups: ['policy']
-  resources: ['podsecuritypolicies']
-  verbs:     ['use']
-  resourceNames: [{{ .Values.tenantController.podSecurityPolicyName | squote }}]
+- apiGroups: ["policy"]
+  resources: ["podsecuritypolicies"]
+  verbs:     ["use"]
+  resourceNames: [{{ include "steward.tenantController.podSecurityPolicyName" . | quote }}]

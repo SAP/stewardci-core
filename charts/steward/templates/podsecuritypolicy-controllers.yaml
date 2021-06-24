@@ -1,8 +1,8 @@
-{{- if (include "steward.controllers.generatePodSecurityPolicy" .) -}}
+{{- if include "steward.controllers.generatePodSecurityPolicy" . -}}
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: 00-steward-controllers
+  name: {{ include "steward.controllers.podSecurityPolicyName.builtin" . | quote }}
   labels:
     {{- include "steward.labels" . | nindent 4 }}
   annotations:
@@ -44,4 +44,4 @@ spec:
   - emptyDir
   - projected
   - secret
-{{- end -}}
+{{ end -}}

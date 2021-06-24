@@ -54,13 +54,19 @@
 
     - type: enhancement
       impact: minor
-      title: Make PodSecurityPolicies for pipelineRun and both controllers configurable
+      title: Configurable pod security policies
       description: |-
-        Make `PodSecurityPolicy` configurable to be able to change the policy during helm installation.
-        For backward compatibility steward helmchart loads default `PodSecurityPolicy`. To overwrite
-        `PodSecurityPolicy` podSecurityPolicyName field should be adjusted accordingly inside `values.yaml`
-        file and the corresponding yaml file with new PodSecurityPolicy resource should be created
-        separately via Helm.
+        There are new chart parameters to specify which _existing_ pod security
+        policies should be used by pipeline run pods and Steward controllers:
+
+        - `pipelineRuns.podSecurityPolicyName`
+        - `tenantController.podSecurityPolicyName`
+        - `runController.podSecurityPolicyName`
+
+        If such parameters are _not_ specified, the chart generates default
+        pod security policies as before.
+
+        See the chart README for details.
       pullRequestNumber: 237
       jiraIssueNumber: 738
 
