@@ -12,7 +12,7 @@ rules:
   resources: ["clusterroles"]
   verbs: ["bind"]
   resourceNames:
-    {{- toYaml .Values.tenantController.possibleTenantRoles | nindent 4 }}
+  {{- toYaml .Values.tenantController.possibleTenantRoles | nindent 2 }}
 - apiGroups: ["steward.sap.com"]
   resources: ["tenants","tenants/status"]
   verbs: ["get","list","patch","update","watch"]
