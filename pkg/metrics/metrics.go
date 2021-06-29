@@ -55,7 +55,7 @@ func NewMetrics() Metrics {
 		CurrentDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Name:    "steward_pipelinerun_current_duration_seconds",
 			Help:    "pipeline run durations in their current status",
-			Buckets: prometheus.ExponentialBuckets(0.125, 2, 15),
+			Buckets: prometheus.ExponentialBuckets(60, 2, 7),
 		},
 			[]string{"state"}),
 		Queued: prometheus.NewGauge(prometheus.GaugeOpts{
