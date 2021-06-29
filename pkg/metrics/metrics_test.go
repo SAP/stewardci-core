@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"gotest.tools/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,6 +32,62 @@ func Test_ObserveUpdateDurationByType(t *testing.T) {
 	m.ObserveUpdateDurationByType("foo", 1)
 }
 
+func Test_ObserveCurrentDurationByState(t *testing.T) {
+	m := NewMetrics()
+	for _, test := range []struct {
+		name                           string
+		state                          api.State
+		StartedAtRelativeToNow         time.Duration
+		creationTimestampRelativeToNow time.Duration
+		expectedError                  error
+	}{
+		{
+			name:                   "success_with_state_preparing",
+			state:                  api.StatePreparing,
+			StartedAtRelativeToNow: -time.Hour * 1,
+		},
+		{
+			name:                   "failed_when_StartedAt_is_zero_with_state_waiting",
+			state:                  api.StateWaiting,
+			StartedAtRelativeToNow: 0,
+			expectedError:          fmt.Errorf("cannot observe StateItem if StartedAt is not set"),
+		},
+		{
+			name:                   "success_with_state_undefined",
+			StartedAtRelativeToNow: -time.Hour * 1,
+			state:                  api.StateUndefined,
+		},
+		{
+			name:                           "failed_when_CreationTimestamp_is_before_StartedAt_with_state_new",
+			state:                          api.StateUndefined,
+			StartedAtRelativeToNow:         -time.Hour * 1,
+			creationTimestampRelativeToNow: time.Hour * 1,
+			expectedError:                  fmt.Errorf("cannot observe pipelinerun if CreationTimestamp is before StartedAt of the state %v", api.StateUndefined),
+		},
+		{
+			name:                   "failed_when_StartedAt_is_in_future",
+			state:                  api.StateRunning,
+			StartedAtRelativeToNow: time.Hour * 1,
+			expectedError:          fmt.Errorf("cannot observe StateItem if StartedAt is in the future"),
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			// SETUP
+			creation := time.Now().Add(test.creationTimestampRelativeToNow)
+			run := fakePipelineRun(test.state, test.StartedAtRelativeToNow, metav1.Time{creation})
+			// EXERCISE
+			resultErr := m.ObserveCurrentDurationByState(run)
+
+			// VERIFY
+			if test.expectedError == nil {
+				assert.NilError(t, resultErr)
+			} else {
+				assert.Error(t, resultErr, test.expectedError.Error())
+			}
+		})
+	}
+}
+
 func fakeStateItem(state api.State, duration time.Duration) *api.StateItem {
 	startTime := metav1.Now()
 	endTime := metav1.NewTime(startTime.Time.Add(duration))
@@ -38,5 +95,16 @@ func fakeStateItem(state api.State, duration time.Duration) *api.StateItem {
 		State:      state,
 		StartedAt:  startTime,
 		FinishedAt: endTime,
+	}
+}
+
+func fakePipelineRun(state api.State, started time.Duration, creation metav1.Time) *api.PipelineRun {
+	var startTime metav1.Time
+	if started != 0 {
+		startTime = metav1.NewTime(metav1.Now().Add(started))
+	}
+	return &api.PipelineRun{
+		Status:     api.PipelineStatus{State: state, StartedAt: &startTime},
+		ObjectMeta: metav1.ObjectMeta{CreationTimestamp: creation},
 	}
 }
