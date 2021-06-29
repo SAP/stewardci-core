@@ -120,7 +120,7 @@ func (metrics *metrics) ObserveTotalDurationByState(state *api.StateItem) error 
 // ObserveCurrentDurationByState logs duration of the current and unfinished pipeline state
 func (metrics *metrics) ObserveCurrentDurationByState(run *api.PipelineRun) error {
 	var duration time.Duration
-	if run.Status.State == api.StateUndefined {
+	if run.Status.State == api.StateNew {
 		duration = time.Now().Sub(run.CreationTimestamp.Time)
 		if duration < 0 {
 			return fmt.Errorf("cannot observe pipelinerun if CreationTimestamp is before StartedAt of the state %v", run.Status.State)

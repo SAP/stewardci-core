@@ -50,7 +50,7 @@ type Controller struct {
 	testing              *controllerTesting
 	recorder             record.EventRecorder
 	pipelineRunLister    v1alpha1.PipelineRunLister
-	pipelinerunStore     cache.Store
+	pipelineRunStore     cache.Store
 }
 
 type controllerTesting struct {
@@ -82,7 +82,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
 		metrics:              metrics,
 		recorder:             recorder,
-		pipelinerunStore:     pipelinerunStore,
+		pipelineRunStore:     pipelinerunStore,
 	}
 	pipelineRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.addPipelineRun,
@@ -101,21 +101,19 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 }
 
 //meterCurrentPipelineStatus writes the current Duration of Pipeline States in a histogram
-func (c *Controller) meterCurrentPipelineStatus(ticker time.Duration) {
-	for range time.Tick(ticker) {
-		klog.V(4).Infof("Current metrics Observation still alive")
-		objs := c.pipelinerunStore.List()
-		for _, obj := range objs {
-			run, ok := obj.(*api.PipelineRun)
-			if !ok {
-				klog.V(4).Infof("Could not cast stored object to pipelinerun")
-				continue
-			}
-			if run.Status.State != api.StateFinished {
-				err := c.metrics.ObserveCurrentDurationByState(run)
-				if err != nil {
-					klog.V(4).Infof("metrics observation of pipelinerun %v failed: %v", run, err)
-				}
+func (c *Controller) meterCurrentPipelineStatus() {
+	klog.V(4).Infof("Current metrics Observation still alive")
+	objs := c.pipelineRunStore.List()
+	for _, obj := range objs {
+		pipelineRun, ok := obj.(*api.PipelineRun)
+		if !ok {
+			klog.V(4).Infof("could not cast cached object of type %T to a PipelineRun", obj)
+			continue
+		}
+		if pipelineRun.Status.State != api.StateFinished {
+			err := c.metrics.ObserveCurrentDurationByState(pipelineRun)
+			if err != nil {
+				klog.V(4).Infof("metrics observation of PipelineRun %v failed: %v", pipelineRun, err)
 			}
 		}
 	}
@@ -131,7 +129,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	}
 
 	klog.V(2).Infof("Start metering: Create all %v minutes a new histogram", meteringHistogramInterval)
-	go c.meterCurrentPipelineStatus(meteringHistogramInterval)
+	go wait.Until(c.meterCurrentPipelineStatus, meteringHistogramInterval, stopCh)
 
 	klog.V(2).Infof("Start workers")
 	for i := 0; i < threadiness; i++ {

@@ -47,28 +47,28 @@ func Test_ObserveCurrentDurationByState(t *testing.T) {
 			StartedAtRelativeToNow: -time.Hour * 1,
 		},
 		{
-			name:                   "failed_when_StartedAt_is_zero_with_state_waiting",
+			name:                   "failed_when_StartedAt_is_zero",
 			state:                  api.StateWaiting,
 			StartedAtRelativeToNow: 0,
 			expectedError:          fmt.Errorf("cannot observe StateItem if StartedAt is not set"),
-		},
-		{
-			name:                   "success_with_state_undefined",
-			StartedAtRelativeToNow: -time.Hour * 1,
-			state:                  api.StateUndefined,
-		},
-		{
-			name:                           "failed_when_CreationTimestamp_is_before_StartedAt_with_state_new",
-			state:                          api.StateUndefined,
-			StartedAtRelativeToNow:         -time.Hour * 1,
-			creationTimestampRelativeToNow: time.Hour * 1,
-			expectedError:                  fmt.Errorf("cannot observe pipelinerun if CreationTimestamp is before StartedAt of the state %v", api.StateUndefined),
 		},
 		{
 			name:                   "failed_when_StartedAt_is_in_future",
 			state:                  api.StateRunning,
 			StartedAtRelativeToNow: time.Hour * 1,
 			expectedError:          fmt.Errorf("cannot observe StateItem if StartedAt is in the future"),
+		},
+		{
+			name:                   "success_with_state_new",
+			StartedAtRelativeToNow: -time.Hour * 1,
+			state:                  api.StateNew,
+		},
+		{
+			name:                           "failed_when_CreationTimestamp_is_before_StartedAt_in_state_new",
+			state:                          api.StateNew,
+			StartedAtRelativeToNow:         -time.Hour * 1,
+			creationTimestampRelativeToNow: time.Hour * 1,
+			expectedError:                  fmt.Errorf("cannot observe pipelinerun if CreationTimestamp is before StartedAt of the state %v", api.StateNew),
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
