@@ -107,7 +107,7 @@ func (c *Controller) meterCurrentPipelineStatus() {
 	for _, obj := range objs {
 		pipelineRun, ok := obj.(*api.PipelineRun)
 		if !ok {
-			klog.V(4).Infof("could not cast cached object of type %T to a PipelineRun", obj)
+			klog.V(4).Infof("failed to cast cached object of type %T to a PipelineRun", obj)
 			continue
 		}
 		if pipelineRun.Status.State != api.StateFinished {
