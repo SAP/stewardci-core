@@ -37,7 +37,7 @@ var heartbeatIntervalSeconds int64 = 60
 var heartbeatTimer int64 = 0
 
 // Interval vor Histogram creation set to prometheus default scrape interval
-var meteringHistogramInterval = time.Minute * 1
+var meteringInterval = time.Minute * 1
 
 // Controller processes PipelineRun resources
 type Controller struct {
@@ -70,7 +70,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 	eventBroadcaster.StartLogging(klog.V(3).Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
-	pipelinerunStore := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns().Informer().GetStore()
+	pipelineRunStore := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns().Informer().GetStore()
 
 	controller := &Controller{
 		factory:            factory,
@@ -82,7 +82,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
 		metrics:              metrics,
 		recorder:             recorder,
-		pipelineRunStore:     pipelinerunStore,
+		pipelineRunStore:     pipelineRunStore,
 	}
 	pipelineRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.addPipelineRun,
@@ -128,8 +128,8 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	klog.V(2).Infof("Start metering: Create all %v minutes a new histogram", meteringHistogramInterval)
-	go wait.Until(c.meterCurrentPipelineStatus, meteringHistogramInterval, stopCh)
+	klog.V(2).Infof("Start metering: Create all %v minutes a new histogram", meteringInterval)
+	go wait.Until(c.meterCurrentPipelineStatus, meteringInterval, stopCh)
 
 	klog.V(2).Infof("Start workers")
 	for i := 0; i < threadiness; i++ {
