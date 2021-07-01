@@ -47,13 +47,13 @@ func NewMetrics() Metrics {
 		},
 			[]string{"result"}),
 		TotalDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Name:    "steward_pipelinerun_finished_states_duration_seconds",
+			Name:    "steward_pipelinerun_finished_status_duration_seconds",
 			Help:    "pipeline run durations after they changed their status",
 			Buckets: prometheus.ExponentialBuckets(0.125, 2, 15),
 		},
 			[]string{"state"}),
 		CurrentDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Name:    "steward_pipelinerun_ongoing_states_duration_seconds",
+			Name:    "steward_pipelinerun_ongoing_status_duration_seconds",
 			Help:    "pipeline run durations in their current status",
 			Buckets: prometheus.ExponentialBuckets(60, 2, 7),
 		},

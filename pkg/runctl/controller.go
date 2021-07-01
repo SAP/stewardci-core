@@ -128,7 +128,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	klog.V(2).Infof("Start metering: Create all %v minutes a new histogram", meteringInterval)
+	klog.V(2).Infof("Starting metering of pipeline runs with interval %v", meteringInterval)
 	go wait.Until(c.meterCurrentPipelineStatus, meteringInterval, stopCh)
 
 	klog.V(2).Infof("Start workers")
