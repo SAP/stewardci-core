@@ -35,11 +35,10 @@ func Test_ObserveUpdateDurationByType(t *testing.T) {
 func Test_ObserveCurrentDurationByState(t *testing.T) {
 	m := NewMetrics()
 	for _, test := range []struct {
-		name                           string
-		state                          api.State
-		StartedAtRelativeToNow         time.Duration
-		creationTimestampRelativeToNow time.Duration
-		expectedError                  error
+		name                   string
+		state                  api.State
+		StartedAtRelativeToNow time.Duration
+		expectedError          error
 	}{
 		{
 			name:                   "success_with_state_preparing",
@@ -58,23 +57,10 @@ func Test_ObserveCurrentDurationByState(t *testing.T) {
 			StartedAtRelativeToNow: time.Hour * 1,
 			expectedError:          fmt.Errorf("cannot observe StateItem if StartedAt is in the future"),
 		},
-		{
-			name:                   "success_with_state_new",
-			StartedAtRelativeToNow: -time.Hour * 1,
-			state:                  api.StateNew,
-		},
-		{
-			name:                           "failed_when_CreationTimestamp_is_before_StartedAt_in_state_new",
-			state:                          api.StateNew,
-			StartedAtRelativeToNow:         -time.Hour * 1,
-			creationTimestampRelativeToNow: time.Hour * 1,
-			expectedError:                  fmt.Errorf("cannot observe pipelinerun if CreationTimestamp is before StartedAt of the state %v", api.StateNew),
-		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			// SETUP
-			creation := time.Now().Add(test.creationTimestampRelativeToNow)
-			run := fakePipelineRun(test.state, test.StartedAtRelativeToNow, metav1.Time{creation})
+			run := fakePipelineRun(test.state, test.StartedAtRelativeToNow)
 			// EXERCISE
 			resultErr := m.ObserveCurrentDurationByState(run)
 
@@ -98,13 +84,12 @@ func fakeStateItem(state api.State, duration time.Duration) *api.StateItem {
 	}
 }
 
-func fakePipelineRun(state api.State, started time.Duration, creation metav1.Time) *api.PipelineRun {
+func fakePipelineRun(state api.State, started time.Duration) *api.PipelineRun {
 	var startTime metav1.Time
 	if started != 0 {
 		startTime = metav1.NewTime(metav1.Now().Add(started))
 	}
 	return &api.PipelineRun{
-		Status:     api.PipelineStatus{State: state, StartedAt: &startTime},
-		ObjectMeta: metav1.ObjectMeta{CreationTimestamp: creation},
+		Status: api.PipelineStatus{State: state, StartedAt: &startTime},
 	}
 }
