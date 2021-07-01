@@ -117,7 +117,7 @@ func (metrics *metrics) ObserveTotalDurationByState(state *api.StateItem) error 
 	return nil
 }
 
-// ObserveCurrentDurationByState logs duration of the current and unfinished pipeline state
+// ObserveCurrentDurationByState logs the duration of the current (unfinished) pipeline state.
 func (metrics *metrics) ObserveCurrentDurationByState(run *api.PipelineRun) error {
 	if run.Status.StartedAt.IsZero() {
 		return fmt.Errorf("cannot observe StateItem if StartedAt is not set")
