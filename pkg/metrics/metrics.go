@@ -119,6 +119,19 @@ func (metrics *metrics) ObserveTotalDurationByState(state *api.StateItem) error 
 
 // ObserveCurrentDurationByState logs the duration of the current (unfinished) pipeline state.
 func (metrics *metrics) ObserveCurrentDurationByState(run *api.PipelineRun) error {
+	//state undefined is not processed yet and will be metered as new
+	if run.Status.State == api.StateUndefined {
+		if run.CreationTimestamp.IsZero() {
+			return fmt.Errorf("cannot observe PipelineRun if creationTimestamp is not set")
+		}
+		duration := time.Now().Sub(run.CreationTimestamp.Time)
+		if duration < 0 {
+			return fmt.Errorf("cannot observe PipelineRun if creationTimestamp is in future")
+		}
+		metrics.CurrentDuration.With(prometheus.Labels{"state": string(api.StateNew)}).Observe(duration.Seconds())
+		return nil
+	}
+
 	if run.Status.StartedAt.IsZero() {
 		return fmt.Errorf("cannot observe StateItem if StartedAt is not set")
 	}

@@ -35,32 +35,53 @@ func Test_ObserveUpdateDurationByType(t *testing.T) {
 func Test_ObserveCurrentDurationByState(t *testing.T) {
 	m := NewMetrics()
 	for _, test := range []struct {
-		name                   string
-		state                  api.State
-		StartedAtRelativeToNow time.Duration
-		expectedError          error
+		name                           string
+		state                          api.State
+		startedAtRelativeToNow         time.Duration
+		creationTimestampRelativeToNow time.Duration
+		expectedError                  error
 	}{
 		{
 			name:                   "success_with_state_preparing",
 			state:                  api.StatePreparing,
-			StartedAtRelativeToNow: -time.Hour * 1,
+			startedAtRelativeToNow: -time.Hour * 1,
 		},
 		{
 			name:                   "failed_when_StartedAt_is_zero",
 			state:                  api.StateWaiting,
-			StartedAtRelativeToNow: 0,
+			startedAtRelativeToNow: 0,
 			expectedError:          fmt.Errorf("cannot observe StateItem if StartedAt is not set"),
 		},
 		{
 			name:                   "failed_when_StartedAt_is_in_future",
 			state:                  api.StateRunning,
-			StartedAtRelativeToNow: time.Hour * 1,
+			startedAtRelativeToNow: time.Hour * 1,
 			expectedError:          fmt.Errorf("cannot observe StateItem if StartedAt is in the future"),
+		},
+		{
+			// TODO check if it gets metered as api.StateNew
+			name:                           "success_when_state_undefined",
+			state:                          api.StateUndefined,
+			startedAtRelativeToNow:         0,
+			creationTimestampRelativeToNow: -time.Hour * 1,
+		},
+		{
+			name:                   "failed_when_state_undefined_has_no_creation_timestamp",
+			state:                  api.StateUndefined,
+			startedAtRelativeToNow: 0,
+			expectedError:          fmt.Errorf("cannot observe PipelineRun if creationTimestamp is not set"),
+		},
+		{
+			name:                           "failed_when_state_undefined_creation_timestamp_in_future",
+			state:                          api.StateUndefined,
+			startedAtRelativeToNow:         0,
+			creationTimestampRelativeToNow: time.Hour * 1,
+			expectedError:                  fmt.Errorf("cannot observe PipelineRun if creationTimestamp is in future"),
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			// SETUP
-			run := fakePipelineRun(test.state, test.StartedAtRelativeToNow)
+			run := fakePipelineRun(test.state, test.startedAtRelativeToNow, test.creationTimestampRelativeToNow)
 			// EXERCISE
 			resultErr := m.ObserveCurrentDurationByState(run)
 
@@ -84,12 +105,20 @@ func fakeStateItem(state api.State, duration time.Duration) *api.StateItem {
 	}
 }
 
-func fakePipelineRun(state api.State, started time.Duration) *api.PipelineRun {
+func fakePipelineRun(state api.State, started time.Duration, creation time.Duration) *api.PipelineRun {
 	var startTime metav1.Time
 	if started != 0 {
 		startTime = metav1.NewTime(metav1.Now().Add(started))
 	}
+
+	var meta metav1.ObjectMeta
+	if creation != 0 {
+		creationTimestamp := metav1.NewTime(metav1.Now().Add(creation))
+		meta = metav1.ObjectMeta{CreationTimestamp: creationTimestamp}
+	}
+
 	return &api.PipelineRun{
-		Status: api.PipelineStatus{State: state, StartedAt: &startTime},
+		Status:     api.PipelineStatus{State: state, StartedAt: &startTime},
+		ObjectMeta: meta,
 	}
 }
