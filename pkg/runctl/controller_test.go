@@ -2,9 +2,6 @@ package runctl
 
 import (
 	"fmt"
-	"strings"
-	"testing"
-
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
@@ -27,12 +24,15 @@ import (
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
 	klog "k8s.io/klog/v2"
+	"strings"
+	"testing"
 )
 
 func Test_meterCurrentPipelineStatus(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+
 	cf := newFakeClientFactory(
 		fake.SecretOpaque("secret1", "ns1"),
 		fake.ClusterRole(string(runClusterRoleName)),
@@ -45,8 +45,14 @@ func Test_meterCurrentPipelineStatus(t *testing.T) {
 	c := NewController(cf, metrics)
 
 	run := fake.PipelineRun("r1", "ns1", api.PipelineSpec{})
-	tenant := fake.Tenant("t1", "ns1")
 	c.pipelineRunStore.Add(run)
+
+	deletedRun := fake.PipelineRun("r2", "ns1", api.PipelineSpec{})
+	now := metav1.Now()
+	deletedRun.SetDeletionTimestamp(&now)
+	c.pipelineRunStore.Add(deletedRun)
+
+	tenant := fake.Tenant("t1", "ns1")
 	c.pipelineRunStore.Add(tenant)
 
 	//VERIFY

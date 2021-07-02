@@ -110,7 +110,8 @@ func (c *Controller) meterCurrentPipelineStatus() {
 			klog.V(4).Infof("failed to cast cached object of type %T to a PipelineRun", obj)
 			continue
 		}
-		if pipelineRun.Status.State != api.StateFinished {
+		//do not meter delays caused by finalizers
+		if pipelineRun.DeletionTimestamp.IsZero() {
 			err := c.metrics.ObserveCurrentDurationByState(pipelineRun)
 			if err != nil {
 				klog.V(4).Infof("metrics observation of PipelineRun %v failed: %v", pipelineRun, err)
