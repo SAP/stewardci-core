@@ -17,8 +17,8 @@ import (
 type Metrics interface {
 	CountStart()
 	CountResult(api.Result)
-	ObserveTotalDurationByState(state *api.StateItem) error
-	ObserveCurrentDurationByState(state *api.PipelineRun) error
+	ObserveDurationByState(state *api.StateItem) error
+	ObserveOngoingStateDuration(state *api.PipelineRun) error
 	ObserveUpdateDurationByType(kind string, duration time.Duration)
 	StartServer()
 	SetQueueCount(int)
@@ -47,14 +47,14 @@ func NewMetrics() Metrics {
 		},
 			[]string{"result"}),
 		TotalDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Name:    "steward_pipelinerun_finished_status_duration_seconds",
+			Name:    "steward_pipelinerun_state_duration_seconds",
 			Help:    "pipeline run durations after they changed their status",
 			Buckets: prometheus.ExponentialBuckets(0.125, 2, 15),
 		},
 			[]string{"state"}),
 		CurrentDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Name:    "steward_pipelinerun_ongoing_status_duration_seconds",
-			Help:    "pipeline run durations in their current status",
+			Name:    "steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds",
+			Help:    "pipeline run state durations, which get periodically observed in a specific interval. At the scraping time point the data might be not complete or states might already metered multiple times, so that the absolut bucket values are not conclusive",
 			Buckets: prometheus.ExponentialBuckets(60, 2, 7),
 		},
 			[]string{"state"}),
@@ -104,8 +104,8 @@ func (metrics *metrics) CountResult(result api.Result) {
 	metrics.Completed.With(prometheus.Labels{"result": string(result)}).Inc()
 }
 
-// ObserveTotalDurationByState logs duration of the given state
-func (metrics *metrics) ObserveTotalDurationByState(state *api.StateItem) error {
+// ObserveDurationByState logs duration of the given state
+func (metrics *metrics) ObserveDurationByState(state *api.StateItem) error {
 	if state.StartedAt.IsZero() {
 		return fmt.Errorf("cannot observe StateItem if StartedAt is not set")
 	}
@@ -117,16 +117,16 @@ func (metrics *metrics) ObserveTotalDurationByState(state *api.StateItem) error 
 	return nil
 }
 
-// ObserveCurrentDurationByState logs the duration of the current (unfinished) pipeline state.
-func (metrics *metrics) ObserveCurrentDurationByState(run *api.PipelineRun) error {
+// ObserveOngoingStateDuration logs the duration of the current (unfinished) pipeline state.
+func (metrics *metrics) ObserveOngoingStateDuration(run *api.PipelineRun) error {
 	//state undefined is not processed yet and will be metered as new
 	if run.Status.State == api.StateUndefined {
 		if run.CreationTimestamp.IsZero() {
-			return fmt.Errorf("cannot observe PipelineRun if creationTimestamp is not set")
+			return fmt.Errorf("cannot observe pipeline run if creationTimestamp is not set")
 		}
 		duration := time.Now().Sub(run.CreationTimestamp.Time)
 		if duration < 0 {
-			return fmt.Errorf("cannot observe PipelineRun if creationTimestamp is in future")
+			return fmt.Errorf("cannot observe pipeline run if creationTimestamp is in future")
 		}
 		metrics.CurrentDuration.With(prometheus.Labels{"state": string(api.StateNew)}).Observe(duration.Seconds())
 		return nil

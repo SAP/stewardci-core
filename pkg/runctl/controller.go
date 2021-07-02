@@ -112,7 +112,7 @@ func (c *Controller) meterCurrentPipelineStatus() {
 		}
 		//do not meter delays caused by finalizers
 		if pipelineRun.DeletionTimestamp.IsZero() {
-			err := c.metrics.ObserveCurrentDurationByState(pipelineRun)
+			err := c.metrics.ObserveOngoingStateDuration(pipelineRun)
 			if err != nil {
 				klog.V(4).Infof("metrics observation of PipelineRun %v failed: %v", pipelineRun, err)
 			}
@@ -222,7 +222,7 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) e
 	c.metrics.ObserveUpdateDurationByType("UpdateState", elapsed)
 
 	if oldState != nil {
-		err := c.metrics.ObserveTotalDurationByState(oldState)
+		err := c.metrics.ObserveDurationByState(oldState)
 		if err != nil {
 			klog.Errorf("Failed to measure state '%+v': '%s'", oldState, err)
 		}

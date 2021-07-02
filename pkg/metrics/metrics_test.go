@@ -11,19 +11,19 @@ import (
 
 func Test_Duration_Missing_Start_Time(t *testing.T) {
 	m := NewMetrics()
-	e := m.ObserveTotalDurationByState(&api.StateItem{})
+	e := m.ObserveDurationByState(&api.StateItem{})
 	assert.Equal(t, "cannot observe StateItem if StartedAt is not set", e.Error())
 }
 
 func Test_Duration_Missing_End_Time(t *testing.T) {
 	m := NewMetrics()
-	e := m.ObserveTotalDurationByState(&api.StateItem{StartedAt: metav1.Now()})
+	e := m.ObserveDurationByState(&api.StateItem{StartedAt: metav1.Now()})
 	assert.Equal(t, "cannot observe StateItem if FinishedAt is before StartedAt", e.Error())
 }
 
 func Test_Duration_End_Before_Beginning(t *testing.T) {
 	m := NewMetrics()
-	e := m.ObserveTotalDurationByState(fakeStateItem(api.StateRunning, -1))
+	e := m.ObserveDurationByState(fakeStateItem(api.StateRunning, -1))
 	assert.Equal(t, "cannot observe StateItem if FinishedAt is before StartedAt", e.Error())
 }
 
@@ -32,7 +32,7 @@ func Test_ObserveUpdateDurationByType(t *testing.T) {
 	m.ObserveUpdateDurationByType("foo", 1)
 }
 
-func Test_ObserveCurrentDurationByState(t *testing.T) {
+func Test_ObserveOngoingStateDuration(t *testing.T) {
 	m := NewMetrics()
 	for _, test := range []struct {
 		name                           string
@@ -69,21 +69,21 @@ func Test_ObserveCurrentDurationByState(t *testing.T) {
 			name:                   "failed_when_state_undefined_has_no_creation_timestamp",
 			state:                  api.StateUndefined,
 			startedAtRelativeToNow: 0,
-			expectedError:          fmt.Errorf("cannot observe PipelineRun if creationTimestamp is not set"),
+			expectedError:          fmt.Errorf("cannot observe pipeline run if creationTimestamp is not set"),
 		},
 		{
 			name:                           "failed_when_state_undefined_creation_timestamp_in_future",
 			state:                          api.StateUndefined,
 			startedAtRelativeToNow:         0,
 			creationTimestampRelativeToNow: time.Hour * 1,
-			expectedError:                  fmt.Errorf("cannot observe PipelineRun if creationTimestamp is in future"),
+			expectedError:                  fmt.Errorf("cannot observe pipeline run if creationTimestamp is in future"),
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			// SETUP
 			run := fakePipelineRun(test.state, test.startedAtRelativeToNow, test.creationTimestampRelativeToNow)
 			// EXERCISE
-			resultErr := m.ObserveCurrentDurationByState(run)
+			resultErr := m.ObserveOngoingStateDuration(run)
 
 			// VERIFY
 			if test.expectedError == nil {

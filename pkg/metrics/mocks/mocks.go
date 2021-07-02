@@ -58,32 +58,32 @@ func (mr *MockMetricsMockRecorder) CountResult(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountResult", reflect.TypeOf((*MockMetrics)(nil).CountResult), arg0)
 }
 
-// ObserveTotalDurationByState mocks base method
-func (m *MockMetrics) ObserveTotalDurationByState(state *v1alpha1.StateItem) error {
+// ObserveDurationByState mocks base method
+func (m *MockMetrics) ObserveDurationByState(state *v1alpha1.StateItem) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ObserveTotalDurationByState", state)
+	ret := m.ctrl.Call(m, "ObserveDurationByState", state)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// ObserveTotalDurationByState indicates an expected call of ObserveTotalDurationByState
-func (mr *MockMetricsMockRecorder) ObserveTotalDurationByState(state interface{}) *gomock.Call {
+// ObserveDurationByState indicates an expected call of ObserveDurationByState
+func (mr *MockMetricsMockRecorder) ObserveDurationByState(state interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveTotalDurationByState", reflect.TypeOf((*MockMetrics)(nil).ObserveTotalDurationByState), state)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveDurationByState", reflect.TypeOf((*MockMetrics)(nil).ObserveDurationByState), state)
 }
 
-// ObserveCurrentDurationByState mocks base method
-func (m *MockMetrics) ObserveCurrentDurationByState(state *v1alpha1.PipelineRun) error {
+// ObserveOngoingStateDuration mocks base method
+func (m *MockMetrics) ObserveOngoingStateDuration(state *v1alpha1.PipelineRun) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ObserveCurrentDurationByState", state)
+	ret := m.ctrl.Call(m, "ObserveOngoingStateDuration", state)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// ObserveCurrentDurationByState indicates an expected call of ObserveCurrentDurationByState
-func (mr *MockMetricsMockRecorder) ObserveCurrentDurationByState(state interface{}) *gomock.Call {
+// ObserveOngoingStateDuration indicates an expected call of ObserveOngoingStateDuration
+func (mr *MockMetricsMockRecorder) ObserveOngoingStateDuration(state interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveCurrentDurationByState", reflect.TypeOf((*MockMetrics)(nil).ObserveCurrentDurationByState), state)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveOngoingStateDuration", reflect.TypeOf((*MockMetrics)(nil).ObserveOngoingStateDuration), state)
 }
 
 // ObserveUpdateDurationByType mocks base method

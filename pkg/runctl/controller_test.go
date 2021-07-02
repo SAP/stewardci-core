@@ -56,7 +56,7 @@ func Test_meterCurrentPipelineStatus(t *testing.T) {
 	c.pipelineRunStore.Add(tenant)
 
 	//VERIFY
-	metrics.EXPECT().ObserveCurrentDurationByState(run)
+	metrics.EXPECT().ObserveOngoingStateDuration(run)
 
 	//EXERCISE
 	c.meterCurrentPipelineStatus()
