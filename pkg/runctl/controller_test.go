@@ -32,7 +32,6 @@ func Test_meterCurrentPipelineStatus(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
-
 	cf := newFakeClientFactory(
 		fake.SecretOpaque("secret1", "ns1"),
 		fake.ClusterRole(string(runClusterRoleName)),
@@ -51,9 +50,6 @@ func Test_meterCurrentPipelineStatus(t *testing.T) {
 	now := metav1.Now()
 	deletedRun.SetDeletionTimestamp(&now)
 	c.pipelineRunStore.Add(deletedRun)
-
-	tenant := fake.Tenant("t1", "ns1")
-	c.pipelineRunStore.Add(tenant)
 
 	//VERIFY
 	metrics.EXPECT().ObserveOngoingStateDuration(run)

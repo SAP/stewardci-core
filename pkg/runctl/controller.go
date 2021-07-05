@@ -105,16 +105,13 @@ func (c *Controller) meterCurrentPipelineStatus() {
 	klog.V(4).Infof("Current metrics Observation still alive")
 	objs := c.pipelineRunStore.List()
 	for _, obj := range objs {
-		pipelineRun, ok := obj.(*api.PipelineRun)
-		if !ok {
-			klog.V(4).Infof("failed to cast cached object of type %T to a PipelineRun", obj)
-			continue
-		}
+		pipelineRun := obj.(*api.PipelineRun)
+
 		//do not meter delays caused by finalizers
 		if pipelineRun.DeletionTimestamp.IsZero() {
 			err := c.metrics.ObserveOngoingStateDuration(pipelineRun)
 			if err != nil {
-				klog.V(4).Infof("metrics observation of PipelineRun %v failed: %v", pipelineRun, err)
+				klog.Errorf("metrics observation of PipelineRun %v failed: %v", pipelineRun, err)
 			}
 		}
 	}
