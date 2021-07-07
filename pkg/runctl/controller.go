@@ -70,7 +70,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 	eventBroadcaster.StartLogging(klog.V(3).Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
-	pipelineRunStore := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns().Informer().GetStore()
+	pipelineRunStore := pipelineRunInformer.Informer().GetStore()
 
 	controller := &Controller{
 		factory:            factory,
@@ -100,8 +100,8 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 	return controller
 }
 
-//meterCurrentPipelineStatus writes the current Duration of Pipeline States in a histogram
-func (c *Controller) meterCurrentPipelineStatus() {
+// meterPipelineRuns observes certain metrics of all existing pipeline runs (in the informer cache).
+func (c *Controller) meterPipelineRuns() {
 	klog.V(4).Infof("metering all pipeline runs")
 	objs := c.pipelineRunStore.List()
 	for _, obj := range objs {
@@ -127,7 +127,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	}
 
 	klog.V(2).Infof("Starting metering of pipeline runs with interval %v", meteringInterval)
-	go wait.Until(c.meterCurrentPipelineStatus, meteringInterval, stopCh)
+	go wait.Until(c.meterPipelineRuns, meteringInterval, stopCh)
 
 	klog.V(2).Infof("Start workers")
 	for i := 0; i < threadiness; i++ {

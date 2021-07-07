@@ -55,7 +55,7 @@ func Test_meterCurrentPipelineStatus(t *testing.T) {
 	metrics.EXPECT().ObserveOngoingStateDuration(run)
 
 	//EXERCISE
-	c.meterCurrentPipelineStatus()
+	c.meterPipelineRuns()
 }
 
 func Test_Controller_Success(t *testing.T) {

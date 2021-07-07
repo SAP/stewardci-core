@@ -25,13 +25,13 @@ type Metrics interface {
 }
 
 type metrics struct {
-	Started         prometheus.Counter
-	Completed       *prometheus.CounterVec
-	TotalDuration   *prometheus.HistogramVec
-	CurrentDuration *prometheus.HistogramVec
-	Update          *prometheus.HistogramVec
-	Queued          prometheus.Gauge
-	Total           prometheus.Gauge
+	Started              prometheus.Counter
+	Completed            *prometheus.CounterVec
+	StateDuration        *prometheus.HistogramVec
+	OngoingStateDuration *prometheus.HistogramVec
+	Update               *prometheus.HistogramVec
+	Queued               prometheus.Gauge
+	Total                prometheus.Gauge
 }
 
 // NewMetrics create metrics
@@ -46,13 +46,13 @@ func NewMetrics() Metrics {
 			Help: "completed pipelines",
 		},
 			[]string{"result"}),
-		TotalDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		StateDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Name:    "steward_pipelinerun_state_duration_seconds",
 			Help:    "Family of histograms counting the pipeline runs grouped by the duration of their processing states. There's one histogram per pipeline run state (label `state`). A pipeline run gets counted immediately when a state is finished.",
 			Buckets: prometheus.ExponentialBuckets(0.125, 2, 15),
 		},
 			[]string{"state"}),
-		CurrentDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		OngoingStateDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Name:    "steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds",
 			Help:    "Family of histograms counting the number of periodic observations of pipeline runs in certain states grouped by duration of the current state at the time of observation. The purpose of this metric is the detection of overly long processing times, caused by e.g. hanging controllers. There's one histogram per pipeline run state (label `state`). All existing pipeline runs get counted periodically, i.e. every observation cycle counts each pipeline run in exactly one histogram. This means a single pipeline run may be counted zero, one or multiple times in the same or different buckets of a histogram. This in turn means without knowing the observation and scraping intervals it is not possible to infer the _absolute_ number of pipeline runs observed. It is only meaningful to calculate a _ratio_ between observations in certain buckets and the total number of observations (in a single or across all histograms). Pipeline runs that are marked as deleted are not counted to exclude delays caused by finalization.",
 			Buckets: prometheus.ExponentialBuckets(60, 2, 7),
@@ -79,8 +79,8 @@ func NewMetrics() Metrics {
 func (metrics *metrics) StartServer() {
 	prometheus.MustRegister(metrics.Started)
 	prometheus.MustRegister(metrics.Completed)
-	prometheus.MustRegister(metrics.TotalDuration)
-	prometheus.MustRegister(metrics.CurrentDuration)
+	prometheus.MustRegister(metrics.StateDuration)
+	prometheus.MustRegister(metrics.OngoingStateDuration)
 	prometheus.MustRegister(metrics.Update)
 	prometheus.MustRegister(metrics.Queued)
 	go provideMetrics()
@@ -113,7 +113,7 @@ func (metrics *metrics) ObserveDurationByState(state *api.StateItem) error {
 	if duration < 0 {
 		return fmt.Errorf("cannot observe StateItem if FinishedAt is before StartedAt")
 	}
-	metrics.TotalDuration.With(prometheus.Labels{"state": string(state.State)}).Observe(duration.Seconds())
+	metrics.StateDuration.With(prometheus.Labels{"state": string(state.State)}).Observe(duration.Seconds())
 	return nil
 }
 
@@ -128,7 +128,7 @@ func (metrics *metrics) ObserveOngoingStateDuration(run *api.PipelineRun) error 
 		if duration < 0 {
 			return fmt.Errorf("cannot observe pipeline run if creationTimestamp is in future")
 		}
-		metrics.CurrentDuration.With(prometheus.Labels{"state": string(api.StateNew)}).Observe(duration.Seconds())
+		metrics.OngoingStateDuration.With(prometheus.Labels{"state": string(api.StateNew)}).Observe(duration.Seconds())
 		return nil
 	}
 
@@ -139,7 +139,7 @@ func (metrics *metrics) ObserveOngoingStateDuration(run *api.PipelineRun) error 
 	if duration < 0 {
 		return fmt.Errorf("cannot observe StateItem if StartedAt is in the future")
 	}
-	metrics.CurrentDuration.With(prometheus.Labels{"state": string(run.Status.State)}).Observe(duration.Seconds())
+	metrics.OngoingStateDuration.With(prometheus.Labels{"state": string(run.Status.State)}).Observe(duration.Seconds())
 	return nil
 }
 
