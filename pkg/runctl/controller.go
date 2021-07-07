@@ -102,12 +102,12 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 
 //meterCurrentPipelineStatus writes the current Duration of Pipeline States in a histogram
 func (c *Controller) meterCurrentPipelineStatus() {
-	klog.V(4).Infof("Current metrics Observation still alive")
+	klog.V(4).Infof("metering all pipeline runs")
 	objs := c.pipelineRunStore.List()
 	for _, obj := range objs {
 		pipelineRun := obj.(*api.PipelineRun)
 
-		//do not meter delays caused by finalizers
+		// do not meter delays caused by finalizers
 		if pipelineRun.DeletionTimestamp.IsZero() {
 			err := c.metrics.ObserveOngoingStateDuration(pipelineRun)
 			if err != nil {
