@@ -41,7 +41,6 @@ func Test_ObserveOngoingStateDuration(t *testing.T) {
 		state         api.State
 		stateDuration time.Duration
 		setStartedAt  bool
-		//creationTimestampRelativeToNow time.Duration
 		expectedError error
 		expectedState api.State
 	}{
@@ -113,10 +112,9 @@ func Test_ObserveOngoingStateDuration(t *testing.T) {
 			// VERIFY
 			if test.expectedError == nil {
 				assert.NilError(t, resultErr)
-				//check the state labels
 				assert.Equal(t, ioMetric.Label[0].GetName(), "state")
 				assert.Equal(t, ioMetric.Label[0].GetValue(), string(test.expectedState))
-				//check if the buckets are filled
+
 				for _, bucket := range ioMetric.Histogram.Bucket {
 					duration := float64(test.stateDuration.Seconds())
 					if duration <= *bucket.UpperBound {
