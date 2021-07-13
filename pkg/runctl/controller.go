@@ -36,7 +36,7 @@ const kind = "PipelineRuns"
 var heartbeatIntervalSeconds int64 = 60
 var heartbeatTimer int64 = 0
 
-// Interval vor Histogram creation set to prometheus default scrape interval
+// Interval for histogram creation set to prometheus default scrape interval
 var meteringInterval = time.Minute * 1
 
 // Controller processes PipelineRun resources
@@ -375,7 +375,7 @@ func (c *Controller) syncHandler(key string) error {
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			resultClass := serrors.GetClass(err)
-			//In case we have a result we can cleanup. Otherwise we retry in the next iteration.
+			// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 			if resultClass != api.ResultUndefined {
 				pipelineRun.UpdateMessage(err.Error())
 				pipelineRun.UpdateResult(resultClass)

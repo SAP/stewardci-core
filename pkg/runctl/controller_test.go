@@ -51,10 +51,10 @@ func Test_meterCurrentPipelineStatus(t *testing.T) {
 	deletedRun.SetDeletionTimestamp(&now)
 	c.pipelineRunStore.Add(deletedRun)
 
-	//VERIFY
+	// VERIFY
 	metrics.EXPECT().ObserveOngoingStateDuration(run)
 
-	//EXERCISE
+	// EXERCISE
 	c.meterPipelineRuns()
 }
 
