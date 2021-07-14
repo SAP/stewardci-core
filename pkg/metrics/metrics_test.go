@@ -4,7 +4,6 @@ import (
 	"fmt"
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/prometheus/client_golang/prometheus"
-	io_prometheus_client "github.com/prometheus/client_model/go"
 	"gotest.tools/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
@@ -34,14 +33,12 @@ func Test_ObserveUpdateDurationByType(t *testing.T) {
 	m.ObserveUpdateDurationByType("foo", 1)
 }
 
-func Test_ObserveOngoingStateDuration(t *testing.T) {
-	m := NewMetrics().(*metrics)
+func Test_ObserveOngoingStateDuration_Success(t *testing.T) {
 	for _, test := range []struct {
 		name          string
 		state         api.State
 		stateDuration time.Duration
 		setStartedAt  bool
-		expectedError error
 		expectedState api.State
 	}{
 		{
@@ -51,6 +48,65 @@ func Test_ObserveOngoingStateDuration(t *testing.T) {
 			setStartedAt:  true,
 			expectedState: api.StatePreparing,
 		},
+		{
+			name:          "success_with_state_cleaning",
+			state:         api.StateCleaning,
+			stateDuration: time.Minute * 25,
+			setStartedAt:  true,
+			expectedState: api.StateCleaning,
+		},
+		{
+			name:          "success_when_state_undefined",
+			state:         api.StateUndefined,
+			stateDuration: time.Hour * 2,
+			setStartedAt:  false,
+			expectedState: api.StateNew,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			// SETUP
+			m := NewMetrics().(*metrics)
+			reg := prometheus.NewPedanticRegistry()
+			reg.MustRegister(m.OngoingStateDuration)
+
+			run := fakePipelineRun(test.state, test.stateDuration, test.setStartedAt)
+
+			// EXERCISE
+			resultErr := m.ObserveOngoingStateDuration(run)
+
+			// VERIFY
+			assert.NilError(t, resultErr)
+
+			metricFamily, err := reg.Gather()
+			assert.NilError(t, err)
+			assert.Equal(t, len(metricFamily), 1)
+			assert.Equal(t, len(metricFamily[0].GetMetric()), 1)
+
+			ioMetric := metricFamily[0].GetMetric()[0]
+			assert.Equal(t, ioMetric.Label[0].GetName(), "state")
+			assert.Equal(t, ioMetric.Label[0].GetValue(), string(test.expectedState))
+
+			for _, bucket := range ioMetric.Histogram.Bucket {
+				duration := float64(test.stateDuration.Seconds())
+				if duration <= *bucket.UpperBound {
+					assert.Equal(t, *bucket.CumulativeCount, uint64(1))
+				} else {
+					assert.Equal(t, *bucket.CumulativeCount, uint64(0))
+				}
+			}
+		})
+	}
+}
+
+func Test_ObserveOngoingStateDuration_Failures(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		state         api.State
+		stateDuration time.Duration
+		setStartedAt  bool
+		expectedError error
+		expectedState api.State
+	}{
 		{
 			name:          "failed_when_StartedAt_is_zero",
 			state:         api.StateWaiting,
@@ -64,13 +120,6 @@ func Test_ObserveOngoingStateDuration(t *testing.T) {
 			stateDuration: -time.Hour * 2,
 			setStartedAt:  true,
 			expectedError: fmt.Errorf("cannot observe StateItem if StartedAt is in the future"),
-		},
-		{
-			name:          "success_when_state_undefined",
-			state:         api.StateUndefined,
-			stateDuration: time.Hour * 2,
-			setStartedAt:  false,
-			expectedState: api.StateNew,
 		},
 		{
 			name:          "failed_when_state_undefined_has_no_creation_timestamp",
@@ -89,43 +138,21 @@ func Test_ObserveOngoingStateDuration(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			// SETUP
+			m := NewMetrics().(*metrics)
+			reg := prometheus.NewPedanticRegistry()
+			reg.MustRegister(m.OngoingStateDuration)
+
 			run := fakePipelineRun(test.state, test.stateDuration, test.setStartedAt)
+
 			// EXERCISE
 			resultErr := m.ObserveOngoingStateDuration(run)
 
-			// Collect the results using https://github.com/prometheus/client_model to access the data directly like in testutil lib client_golang/prometheus/testutil
-			var ioMetric *io_prometheus_client.Metric
-			reg := prometheus.NewPedanticRegistry()
-			if err := reg.Register(m.OngoingStateDuration); err != nil {
-				t.Errorf("registering collector failed: %s", err)
-			}
-			reg.Gather()
-			got, err := reg.Gather()
-			if err != nil {
-				t.Errorf("registering collector failed: %s", err)
-			}
-			for _, mf := range got {
-				x := mf.GetMetric()
-				ioMetric = x[0]
-			}
-
 			// VERIFY
-			if test.expectedError == nil {
-				assert.NilError(t, resultErr)
-				assert.Equal(t, ioMetric.Label[0].GetName(), "state")
-				assert.Equal(t, ioMetric.Label[0].GetValue(), string(test.expectedState))
+			assert.Error(t, resultErr, test.expectedError.Error())
 
-				for _, bucket := range ioMetric.Histogram.Bucket {
-					duration := float64(test.stateDuration.Seconds())
-					if duration <= *bucket.UpperBound {
-						assert.Equal(t, *bucket.CumulativeCount, uint64(1))
-					} else {
-						assert.Equal(t, *bucket.CumulativeCount, uint64(0))
-					}
-				}
-			} else {
-				assert.Error(t, resultErr, test.expectedError.Error())
-			}
+			metricFamily, err := reg.Gather()
+			assert.NilError(t, err)
+			assert.Equal(t, len(metricFamily), 0)
 		})
 	}
 }
