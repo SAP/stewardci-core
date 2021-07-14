@@ -70,7 +70,6 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 	eventBroadcaster.StartLogging(klog.V(3).Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
-	pipelineRunStore := pipelineRunInformer.Informer().GetStore()
 
 	controller := &Controller{
 		factory:            factory,
@@ -82,7 +81,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
 		metrics:              metrics,
 		recorder:             recorder,
-		pipelineRunStore:     pipelineRunStore,
+		pipelineRunStore:     pipelineRunInformer.Informer().GetStore(),
 	}
 	pipelineRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.addPipelineRun,
