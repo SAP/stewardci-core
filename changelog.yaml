@@ -56,7 +56,7 @@
       impact: minor
       title: Meter ongoing state durations periodically
       description: |-
-        Introduced a new histogram with metric steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds.
+        Introduced a new histogram with metric `steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds`.
         The purpose of this metric is the detection of overly long processing times, caused by e.g. hanging controllers.
       pullRequestNumber: 236
       jiraIssueNumber: 719
