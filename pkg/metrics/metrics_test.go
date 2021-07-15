@@ -2,12 +2,13 @@ package metrics
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/prometheus/client_golang/prometheus"
 	"gotest.tools/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
-	"time"
 )
 
 func Test_Duration_Missing_Start_Time(t *testing.T) {

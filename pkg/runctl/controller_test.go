@@ -2,6 +2,9 @@ package runctl
 
 import (
 	"fmt"
+	"strings"
+	"testing"
+
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
@@ -24,8 +27,6 @@ import (
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
 	klog "k8s.io/klog/v2"
-	"strings"
-	"testing"
 )
 
 func Test_meterCurrentPipelineStatus(t *testing.T) {
