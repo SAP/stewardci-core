@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -88,7 +87,7 @@ func Test_ObserveOngoingStateDuration_Success(t *testing.T) {
 			assert.Equal(t, ioMetric.Label[0].GetValue(), string(test.expectedState))
 
 			for _, bucket := range ioMetric.Histogram.Bucket {
-				duration := float64(test.stateDuration.Seconds())
+				duration := test.stateDuration.Seconds()
 				if duration <= *bucket.UpperBound {
 					assert.Equal(t, *bucket.CumulativeCount, uint64(1))
 				} else {
@@ -105,36 +104,35 @@ func Test_ObserveOngoingStateDuration_Failures(t *testing.T) {
 		state         api.State
 		stateDuration time.Duration
 		setStartedAt  bool
-		expectedError error
-		expectedState api.State
+		expectedError string
 	}{
 		{
 			name:          "failed_when_StartedAt_is_zero",
 			state:         api.StateWaiting,
 			stateDuration: 0,
 			setStartedAt:  true,
-			expectedError: fmt.Errorf("cannot observe StateItem if StartedAt is not set"),
+			expectedError: "cannot observe StateItem if StartedAt is not set",
 		},
 		{
 			name:          "failed_when_StartedAt_is_in_future",
 			state:         api.StateRunning,
 			stateDuration: -time.Hour * 2,
 			setStartedAt:  true,
-			expectedError: fmt.Errorf("cannot observe StateItem if StartedAt is in the future"),
+			expectedError: "cannot observe StateItem if StartedAt is in the future",
 		},
 		{
 			name:          "failed_when_state_undefined_has_no_creation_timestamp",
 			state:         api.StateUndefined,
 			stateDuration: 0,
 			setStartedAt:  false,
-			expectedError: fmt.Errorf("cannot observe pipeline run if creationTimestamp is not set"),
+			expectedError: "cannot observe pipeline run if creationTimestamp is not set",
 		},
 		{
 			name:          "failed_when_state_undefined_creation_timestamp_in_future",
 			state:         api.StateUndefined,
 			stateDuration: -time.Hour * 2,
 			setStartedAt:  false,
-			expectedError: fmt.Errorf("cannot observe pipeline run if creationTimestamp is in future"),
+			expectedError: "cannot observe pipeline run if creationTimestamp is in future",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -149,7 +147,7 @@ func Test_ObserveOngoingStateDuration_Failures(t *testing.T) {
 			resultErr := m.ObserveOngoingStateDuration(run)
 
 			// VERIFY
-			assert.Error(t, resultErr, test.expectedError.Error())
+			assert.Error(t, resultErr, test.expectedError)
 
 			metricFamily, err := reg.Gather()
 			assert.NilError(t, err)
