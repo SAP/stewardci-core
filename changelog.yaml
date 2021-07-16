@@ -60,6 +60,40 @@
         The purpose of this metric is the detection of overly long processing times, caused by e.g. hanging controllers.
       pullRequestNumber: 236
       jiraIssueNumber: 719
+      
+- version: "0.11.0"
+  date: 2021-06-29
+  changes:
+
+    - type: enhancement
+      impact: minor
+      title: Configurable pod security policies
+      description: |-
+        There are new chart parameters to specify which _existing_ pod security
+        policies should be used by pipeline run pods and Steward controllers:
+
+        - `pipelineRuns.podSecurityPolicyName`
+        - `tenantController.podSecurityPolicyName`
+        - `runController.podSecurityPolicyName`
+
+        If such parameters are _not_ specified, the chart generates default
+        pod security policies as before.
+
+        See the chart README for details.
+      pullRequestNumber: 237
+      jiraIssueNumber: 738
+
+- version: "0.10.0"
+  date: 2021-06-16
+  changes:
+
+    - type: enhancement
+      impact: minor
+      title: Make PodSecurityPolicies for pipelineRun and both controllers configurable
+      description: |-
+        Make 'PodSecurityPolicy' configurable to be able to change the policy during installation with helm.
+        steward helmchart loads default 'PodSecurityPolicy' from a file if corresponding fields are not set inside 'Values.yaml' file.
+      pullRequestNumber: 234
 
 - version: "0.9.0"
   date: 2021-05-18

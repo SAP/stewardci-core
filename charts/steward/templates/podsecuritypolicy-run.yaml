@@ -1,7 +1,8 @@
+{{- if include "steward.pipelineRuns.generatePodSecurityPolicy" . -}}
 apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
-  name: 00-steward-run
+  name: {{ include "steward.pipelineRuns.podSecurityPolicyName.builtin" . | quote }}
   labels:
     {{- include "steward.labels" . | nindent 4 }}
   annotations:
@@ -43,3 +44,4 @@ spec:
   - emptyDir
   - projected
   - secret
+{{ end -}}
