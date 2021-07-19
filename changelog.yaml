@@ -58,8 +58,20 @@
       description: |-
         Introduced a new histogram with metric `steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds`.
         The purpose of this metric is the detection of overly long processing times, caused by e.g. hanging controllers.
+      upgradeNotes: |-
+        Adapt consumers of monitoring data to the new metric name.
       pullRequestNumber: 236
       jiraIssueNumber: 719
+      
+    - type: enhancement
+      impact: incompatible
+      title: Rename metric
+      description: |-
+        Metric `steward_pipelinerun_duration_seconds` has been renamed to
+        `steward_pipelinerun_state_duration_seconds` to better express the
+        fact that durations are reported for pipeline run _states_, not pipeline
+        runs as a whole.
+      pullRequestNumber: 236
       
 - version: "0.11.0"
   date: 2021-06-29
