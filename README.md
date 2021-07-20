@@ -1,3 +1,5 @@
+[![REUSE status](https://api.reuse.software/badge/github.com/SAP/stewardci-core)](https://api.reuse.software/info/github.com/SAP/stewardci-core)
+
 ## Description
 
 This repo contains the sources of _project "Steward"_ &ndash; a "pipeline as a service" based on [jenkinsfile-runner] running on k8s.
@@ -27,10 +29,6 @@ See [GitHub issues](https://github.com/SAP/stewardci-core/issues)
 ## How to obtain support
 
 Please create issues on this repository to contact us.
-
-## Contributing
-
-You are welcome to contribute to this project via Pull Requests. See [Development Guide](docs/development/README.md).
 
 
 ## To-Do (upcoming changes)
