@@ -265,21 +265,6 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
-	// Check if object has deletion timestamp
-	// If not, try to add finalizer if missing
-	if pipelineRun.HasDeletionTimestamp() {
-		runManager := c.createRunManager(pipelineRun)
-		err = runManager.Cleanup(pipelineRun)
-		if err == nil {
-			err = pipelineRun.DeleteFinalizerIfExists()
-			if err == nil {
-				c.metrics.CountResult(api.ResultDeleted)
-			}
-		}
-		return err
-	}
-	pipelineRun.AddFinalizer()
-
 	// Finished and no deletion timestamp, no need to process anything further
 	if pipelineRun.GetStatus().State == api.StateFinished {
 		return nil
@@ -292,6 +277,23 @@ func (c *Controller) syncHandler(key string) error {
 			return err
 		}
 	}
+
+	// Check if object has deletion timestamp
+	// If not, try to add finalizer if missing
+	if pipelineRun.HasDeletionTimestamp() {
+		runManager := c.createRunManager(pipelineRun)
+		err = runManager.Cleanup(pipelineRun)
+
+		if err == nil {
+			pipelineRun.UpdateResult(api.ResultDeleted)
+			err = c.finish(pipelineRun)
+			if err == nil {
+				c.metrics.CountResult(api.ResultDeleted)
+			}
+		}
+		return err
+	}
+	pipelineRun.AddFinalizer()
 
 	// Check if pipeline run is aborted
 	if err := c.handleAborted(pipelineRun); err != nil {
