@@ -265,11 +265,6 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
-	// Finished and no deletion timestamp, no need to process anything further
-	if pipelineRun.GetStatus().State == api.StateFinished {
-		return nil
-	}
-
 	// Init state when undefined
 	if pipelineRun.GetStatus().State == api.StateUndefined {
 		err = pipelineRun.InitState()
@@ -294,6 +289,11 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 	pipelineRun.AddFinalizer()
+
+	// Finished and no deletion timestamp, no need to process anything further
+	if pipelineRun.GetStatus().State == api.StateFinished {
+		return nil
+	}
 
 	// Check if pipeline run is aborted
 	if err := c.handleAborted(pipelineRun); err != nil {
