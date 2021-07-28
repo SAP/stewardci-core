@@ -56,7 +56,8 @@
        title: Fix deletion bug #241
        description: |-
          When a pipeline run was deleted the state and the result has not been updated. This is fixed now.
-       upgradeNotes: `ResultDeleted` was only used in the metrics before. Now it can also occur as a pipeline run result.
+       upgradeNotes: |-
+         `ResultDeleted` was only used in the metrics before. Now it can also occur as a pipeline run result.
        pullRequestNumber: 242
 
 - version: "0.11.0"
