@@ -72,7 +72,11 @@
       upgradeNotes: |-
         Adapt consumers of monitoring data to the new metric name.
       pullRequestNumber: 236
-      
+
+- version: "0.11.1"
+  date: 2021-07-28
+  changes:
+
     - type: internal
       impact: patch
       title: Update JenkinsfileRunner image to 210728_f8be088
