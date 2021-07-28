@@ -36,6 +36,9 @@ const kind = "PipelineRuns"
 var heartbeatIntervalSeconds int64 = 60
 var heartbeatTimer int64 = 0
 
+// Interval for histogram creation set to prometheus default scrape interval
+var meteringInterval = time.Minute * 1
+
 // Controller processes PipelineRun resources
 type Controller struct {
 	factory              k8s.ClientFactory
@@ -47,6 +50,7 @@ type Controller struct {
 	testing              *controllerTesting
 	recorder             record.EventRecorder
 	pipelineRunLister    v1alpha1.PipelineRunLister
+	pipelineRunStore     cache.Store
 }
 
 type controllerTesting struct {
@@ -77,6 +81,7 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
 		metrics:              metrics,
 		recorder:             recorder,
+		pipelineRunStore:     pipelineRunInformer.Informer().GetStore(),
 	}
 	pipelineRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.addPipelineRun,
@@ -90,7 +95,25 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 			controller.handleTektonTaskRun(new)
 		},
 	})
+
 	return controller
+}
+
+// meterPipelineRuns observes certain metrics of all existing pipeline runs (in the informer cache).
+func (c *Controller) meterPipelineRuns() {
+	klog.V(4).Infof("metering all pipeline runs")
+	objs := c.pipelineRunStore.List()
+	for _, obj := range objs {
+		pipelineRun := obj.(*api.PipelineRun)
+
+		// do not meter delays caused by finalizers
+		if pipelineRun.DeletionTimestamp.IsZero() {
+			err := c.metrics.ObserveOngoingStateDuration(pipelineRun)
+			if err != nil {
+				klog.Errorf("metrics observation of PipelineRun %v failed: %v", pipelineRun, err)
+			}
+		}
+	}
 }
 
 // Run runs the controller
@@ -101,6 +124,10 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	if ok := cache.WaitForCacheSync(stopCh, c.pipelineRunSynced, c.tektonTaskRunsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
+
+	klog.V(2).Infof("Starting metering of pipeline runs with interval %v", meteringInterval)
+	go wait.Until(c.meterPipelineRuns, meteringInterval, stopCh)
+
 	klog.V(2).Infof("Start workers")
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
@@ -347,7 +374,7 @@ func (c *Controller) syncHandler(key string) error {
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			resultClass := serrors.GetClass(err)
-			//In case we have a result we can cleanup. Otherwise we retry in the next iteration.
+			// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 			if resultClass != api.ResultUndefined {
 				pipelineRun.UpdateMessage(err.Error())
 				pipelineRun.UpdateResult(resultClass)
