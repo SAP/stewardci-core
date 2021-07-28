@@ -292,13 +292,23 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
+	// Init state when undefined
+	if pipelineRun.GetStatus().State == api.StateUndefined {
+		err = pipelineRun.InitState()
+		if err != nil {
+			return err
+		}
+	}
+
 	// Check if object has deletion timestamp
 	// If not, try to add finalizer if missing
 	if pipelineRun.HasDeletionTimestamp() {
 		runManager := c.createRunManager(pipelineRun)
 		err = runManager.Cleanup(pipelineRun)
+
 		if err == nil {
-			err = pipelineRun.DeleteFinalizerIfExists()
+			pipelineRun.UpdateResult(api.ResultDeleted)
+			err = c.finish(pipelineRun)
 			if err == nil {
 				c.metrics.CountResult(api.ResultDeleted)
 			}
@@ -310,14 +320,6 @@ func (c *Controller) syncHandler(key string) error {
 	// Finished and no deletion timestamp, no need to process anything further
 	if pipelineRun.GetStatus().State == api.StateFinished {
 		return nil
-	}
-
-	// Init state when undefined
-	if pipelineRun.GetStatus().State == api.StateUndefined {
-		err = pipelineRun.InitState()
-		if err != nil {
-			return err
-		}
 	}
 
 	// Check if pipeline run is aborted

@@ -193,6 +193,8 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 		hasFinalizer          bool
 		expectedError         bool
 		expectedFinalizer     bool
+		expectedResult        api.Result
+		expectedState         api.State
 	}{
 
 		{name: "delete with finalizer ok",
@@ -202,6 +204,8 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 			hasFinalizer:      true,
 			expectedError:     false,
 			expectedFinalizer: false,
+			expectedResult:    api.ResultDeleted,
+			expectedState:     api.StateFinished,
 		},
 		{name: "delete with finalizer fail",
 			runManagerExpectation: func(rm *runmocks.MockManager) {
@@ -210,12 +214,15 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 			hasFinalizer:      true,
 			expectedError:     true,
 			expectedFinalizer: true,
+			expectedResult:    api.ResultUndefined,
+			expectedState:     api.StateNew,
 		},
 		{name: "delete without finalizer already done",
 			runManagerExpectation: func(rm *runmocks.MockManager) {},
 			hasFinalizer:          false,
 			expectedError:         false,
 			expectedFinalizer:     false,
+			expectedResult:        api.ResultUndefined,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -252,6 +259,8 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 			assert.NilError(t, err)
 			klog.Infof("%+v", result.Status)
 
+			assert.Equal(t, test.expectedResult, result.Status.Result)
+			assert.Equal(t, test.expectedState, result.Status.State)
 			if test.expectedFinalizer {
 				assert.Assert(t, len(result.GetFinalizers()) == 1)
 			} else {
