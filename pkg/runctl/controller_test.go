@@ -12,6 +12,7 @@ import (
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	metrics "github.com/SAP/stewardci-core/pkg/metrics"
+	metricsmocks "github.com/SAP/stewardci-core/pkg/metrics/mocks"
 	cfg "github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
 	runmocks "github.com/SAP/stewardci-core/pkg/runctl/run/mocks"
@@ -27,6 +28,36 @@ import (
 	"k8s.io/client-go/tools/record"
 	klog "k8s.io/klog/v2"
 )
+
+func Test_meterCurrentPipelineStatus(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	cf := newFakeClientFactory(
+		fake.SecretOpaque("secret1", "ns1"),
+		fake.ClusterRole(string(runClusterRoleName)),
+	)
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	metrics := metricsmocks.NewMockMetrics(mockCtrl)
+	c := NewController(cf, metrics)
+
+	run := fake.PipelineRun("r1", "ns1", api.PipelineSpec{})
+	c.pipelineRunStore.Add(run)
+
+	deletedRun := fake.PipelineRun("r2", "ns1", api.PipelineSpec{})
+	now := metav1.Now()
+	deletedRun.SetDeletionTimestamp(&now)
+	c.pipelineRunStore.Add(deletedRun)
+
+	// VERIFY
+	metrics.EXPECT().ObserveOngoingStateDuration(run)
+
+	// EXERCISE
+	c.meterPipelineRuns()
+}
 
 func Test_Controller_Success(t *testing.T) {
 	t.Parallel()

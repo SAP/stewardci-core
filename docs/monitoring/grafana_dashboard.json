@@ -15,7 +15,6 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 22,
   "links": [],
   "panels": [
     {
@@ -32,6 +31,7 @@
         "x": 0,
         "y": 0
       },
+      "hiddenSeries": false,
       "id": 12,
       "legend": {
         "avg": false,
@@ -138,6 +138,7 @@
         "x": 0,
         "y": 8
       },
+      "hiddenSeries": false,
       "id": 4,
       "legend": {
         "avg": false,
@@ -254,6 +255,7 @@
         "x": 0,
         "y": 16
       },
+      "hiddenSeries": false,
       "id": 8,
       "legend": {
         "avg": false,
@@ -293,7 +295,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(steward_pipelinerun_duration_seconds_sum[1m])/rate(steward_pipelinerun_duration_seconds_count[1m])",
+          "expr": "rate(steward_pipelinerun_state_duration_seconds_sum[1m])/rate(steward_pipelinerun_state_duration_seconds_count[1m])",
           "legendFormat": "{{state}}",
           "refId": "A"
         }
@@ -356,6 +358,7 @@
         "x": 0,
         "y": 24
       },
+      "hiddenSeries": false,
       "id": 2,
       "legend": {
         "avg": false,
@@ -382,22 +385,22 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.5,sum(rate(steward_pipelinerun_duration_seconds_bucket{}[1m])) by (le))",
+          "expr": "histogram_quantile(0.5,sum(rate(steward_pipelinerun_state_duration_seconds_bucket{}[1m])) by (le))",
           "legendFormat": "50%",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.8,sum(rate(steward_pipelinerun_duration_seconds_bucket{}[1m])) by (le))",
+          "expr": "histogram_quantile(0.8,sum(rate(steward_pipelinerun_state_duration_seconds_bucket{}[1m])) by (le))",
           "legendFormat": "80%",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.9,sum(rate(steward_pipelinerun_duration_seconds_bucket{}[1m])) by (le))",
+          "expr": "histogram_quantile(0.9,sum(rate(steward_pipelinerun_state_duration_seconds_bucket{}[1m])) by (le))",
           "legendFormat": "90%",
           "refId": "C"
         },
         {
-          "expr": "histogram_quantile(0.99,sum(rate(steward_pipelinerun_duration_seconds_bucket{}[1m])) by (le))",
+          "expr": "histogram_quantile(0.99,sum(rate(steward_pipelinerun_state_duration_seconds_bucket{}[1m])) by (le))",
           "legendFormat": "99%",
           "refId": "D"
         }
@@ -442,21 +445,321 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "id": 19,
+      "panels": [],
+      "title": "Observation Of Ongoing Pipeline Runs",
+      "type": "row"
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateBlues",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": "Prometheus",
+      "description": "Heatmap pipeline runs duration's in state new. Due the periodic observations of pipeline runs in certain intervals it's possible that some are not counted at all and some are counted multiple times, so that the absolute values are only an approximation.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 14,
+      "interval": "",
+      "legend": {
+        "show": true
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum by (le)(increase(steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds_bucket{state=\"new\"}[1m])) ",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "1m",
+          "intervalFactor": 1,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Duration of Pipeline Runs in State 'new'",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "short",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateBlues",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": "Prometheus",
+      "description": "Heatmap pipeline runs duration's in state preparing. Due the periodic observations of pipeline runs in certain intervals it's possible that some are not counted at all and some are counted multiple times, so that the absolute values are only an approximation.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 20,
+      "interval": "",
+      "legend": {
+        "show": true
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum by (le)(increase(steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds_bucket{state=\"preparing\"}[1m])) ",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "1m",
+          "intervalFactor": 1,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Duration of Pipeline Runs in State 'preparing'",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "short",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateBlues",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": "Prometheus",
+      "description": "Heatmap pipeline runs duration's in state waiting. Due the periodic observations of pipeline runs in certain intervals it's possible that some are not counted at all and some are counted multiple times, so that the absolute values are only an approximation.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 54
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 21,
+      "interval": "",
+      "legend": {
+        "show": true
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum by (le)(increase(steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds_bucket{state=\"waiting\"}[1m])) ",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "1m",
+          "intervalFactor": 1,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Duration of Pipeline Runs in State 'waiting'",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "short",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateBlues",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": "Prometheus",
+      "description": "Heatmap pipeline runs duration's in state cleaning. Due the periodic observations of pipeline runs in certain intervals it's possible that some are not counted at all and some are counted multiple times, so that the absolute values are only an approximation.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 64
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 22,
+      "interval": "",
+      "legend": {
+        "show": true
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum by (le)(increase(steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds_bucket{state=\"cleaning\"}[1m])) ",
+          "format": "heatmap",
+          "instant": false,
+          "interval": "1m",
+          "intervalFactor": 1,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Duration of Pipeline Runs in State 'cleaning'",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "short",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
     }
   ],
-  "schemaVersion": 20,
+  "refresh": false,
+  "schemaVersion": 21,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": []
   },
   "time": {
-    "from": "now-1h",
-    "to": "now"
+    "from": "2021-07-24T01:23:22.756Z",
+    "to": "2021-07-28T22:18:13.606Z"
   },
-  "timepicker": {},
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
   "timezone": "",
   "title": "Steward",
   "uid": "UWZdR3xWz",
-  "version": 2
+  "version": 1
 }
