@@ -349,6 +349,9 @@ func (c *Controller) syncHandler(key string) error {
 		if err = c.changeState(pipelineRun, api.StatePreparing); err != nil {
 			return err
 		}
+		if err = pipelineRun.Commit(); err != nil {
+			return err
+		}
 		c.metrics.CountStart()
 	}
 
@@ -364,7 +367,12 @@ func (c *Controller) syncHandler(key string) error {
 		pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
 		c.metrics.CountResult(pipelineRun.GetStatus().Result)
 
-		return c.finish(pipelineRun)
+		if err := c.finish(pipelineRun); err != nil {
+			return err
+		}
+		if err := pipelineRun.Commit(); err != nil {
+			return err
+		}
 	}
 
 	runManager := c.createRunManager(pipelineRun)
@@ -384,6 +392,9 @@ func (c *Controller) syncHandler(key string) error {
 					return errClean
 				}
 				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
+				if err := pipelineRun.Commit(); err != nil {
+					return err
+				}
 				c.metrics.CountResult(pipelineRun.GetStatus().Result)
 				return nil
 			}
@@ -404,12 +415,18 @@ func (c *Controller) syncHandler(key string) error {
 			}
 			pipelineRun.StoreErrorAsMessage(err, "waiting failed")
 			pipelineRun.UpdateResult(api.ResultErrorInfra)
+			if err := pipelineRun.Commit(); err != nil {
+				return err
+			}
 			c.metrics.CountResult(api.ResultErrorInfra)
 			return nil
 		}
 		started := run.GetStartTime()
 		if started != nil {
 			if err = c.changeState(pipelineRun, api.StateRunning); err != nil {
+				return err
+			}
+			if err = pipelineRun.Commit(); err != nil {
 				return err
 			}
 		}
@@ -424,7 +441,7 @@ func (c *Controller) syncHandler(key string) error {
 				return errClean
 			}
 			pipelineRun.StoreErrorAsMessage(err, "running failed")
-			return nil
+			return pipelineRun.Commit()
 		}
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
@@ -433,6 +450,9 @@ func (c *Controller) syncHandler(key string) error {
 			pipelineRun.UpdateMessage(msg)
 			pipelineRun.UpdateResult(result)
 			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
+				return err
+			}
+			if err = pipelineRun.Commit(); err != nil {
 				return err
 			}
 			c.metrics.CountResult(result)
@@ -450,7 +470,12 @@ func (c *Controller) finish(pipelineRun k8s.PipelineRun) error {
 	if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
 		return err
 	}
-	return pipelineRun.DeleteFinalizerIfExists()
+
+	if err := pipelineRun.DeleteFinalizerIfExists(); err != nil {
+		return err
+	}
+
+	return pipelineRun.Commit()
 }
 
 // handleAborted checks if pipeline run should be aborted.
