@@ -147,6 +147,7 @@ func Test_pipelineRun_StoreErrorAsMessage(t *testing.T) {
 
 	// EXERCISE
 	examinee.StoreErrorAsMessage(errorToStore, message)
+	examinee.Commit()
 
 	// VERIFY
 	client := factory.StewardV1alpha1().PipelineRuns(ns1)
@@ -399,23 +400,6 @@ func Test_pipelineRun_UpdateResult(t *testing.T) {
 	assert.Equal(t, api.ResultSuccess, status.Result)
 	assert.Assert(t, !examinee.GetStatus().FinishedAt.IsZero())
 }
-
-func Test_pipelineRun_UpdateResult_PanicsIfNoClientFactory(t *testing.T) {
-	t.Parallel()
-
-	// SETUP
-	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
-	examinee, err := NewPipelineRun(pipelineRun, nil /* client factory */)
-	assert.NilError(t, err)
-
-	// EXERCISE and VERIFY
-	assert.Assert(t, cmp.Panics(
-		func() {
-			examinee.UpdateResult(api.ResultSuccess)
-		},
-	))
-}
-
 func Test_pipelineRun_GetPipelineRepoServerURL_CorrectURLs(t *testing.T) {
 	t.Parallel()
 
@@ -471,6 +455,7 @@ func Test_pipelineRun_GetPipelineRepoServerURL_WrongURLs(t *testing.T) {
 	}
 }
 
+/*
 func Test_pipelineRun_UpdateState_PropagatesError(t *testing.T) {
 	t.Parallel()
 
@@ -491,8 +476,8 @@ func Test_pipelineRun_UpdateState_PropagatesError(t *testing.T) {
 	// VERIFY
 	assert.Assert(t, err != nil)
 }
-
-func Test_pipelineRun_UpdateState_RetriesOnConflict(t *testing.T) {
+*/
+func Test_pipelineRun_Commit_RetriesOnConflict(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -515,36 +500,16 @@ func Test_pipelineRun_UpdateState_RetriesOnConflict(t *testing.T) {
 	assert.NilError(t, err)
 	err = examinee.InitState()
 	assert.NilError(t, err)
+	_, resultErr := examinee.UpdateState(api.StateWaiting)
+	assert.NilError(t, resultErr)
 
 	// EXCERCISE
-	_, resultErr := examinee.UpdateState(api.StateWaiting)
+	resultErr = examinee.Commit()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
 	assert.Equal(t, examinee.(*pipelineRun).apiObj.Status.State, api.StateWaiting)
 	assert.Assert(t, count == 3)
-}
-
-func Test_pipelineRun_changeStatusAndUpdateSafely_PanicsIfNoClientFactory(t *testing.T) {
-	t.Parallel()
-
-	// SETUP
-	run := newPipelineRunWithEmptySpec(ns1, run1)
-	examinee2, err := NewPipelineRun(run, nil /* client factory */)
-	assert.NilError(t, err)
-	examinee := examinee2.(*pipelineRun)
-
-	// EXERCISE and VERIFY
-	assert.Assert(t, cmp.Panics(
-		func() {
-			changeFunc := func() error {
-				return nil
-			}
-
-			examinee.registerChange(changeFunc)
-			examinee.Commit()
-		},
-	))
 }
 
 func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfNoConflict(t *testing.T) {
@@ -755,18 +720,20 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_ReturnsErrorIfFetchFailed(t *t
 	assert.Equal(t, changeCallCount, 1)
 }
 
-func Test_pipelineRun_updateFinalizers_PanicsIfNoClientFactory(t *testing.T) {
+func Test_pipelineRun_Commit_PanicsIfNoClientFactory(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	run := newPipelineRunWithEmptySpec(ns1, run1)
 	examinee, err := NewPipelineRun(run, nil /* client factory */)
 	assert.NilError(t, err)
+	examinee2 := examinee.(*pipelineRun)
+	examinee2.registerChange(func() error { /* foo */ return nil })
 
 	// EXERCISE and VERIFY
 	assert.Assert(t, cmp.Panics(
 		func() {
-			examinee.(*pipelineRun).updateFinalizers([]string{"dummy"})
+			examinee2.Commit()
 		},
 	))
 }

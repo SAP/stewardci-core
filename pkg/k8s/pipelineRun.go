@@ -31,6 +31,7 @@ type PipelineRun interface {
 	GetPipelineRepoServerURL() (string, error)
 	HasDeletionTimestamp() bool
 	AddFinalizer() error
+	Commit() error
 	DeleteFinalizerIfExists() error
 	InitState() error
 	UpdateState(api.State) (*api.StateItem, error)
@@ -158,11 +159,8 @@ func (r *pipelineRun) InitState() error {
 		return nil
 	})
 
-	if err != nil {
-		return err
-	}
+	return err
 
-	return r.Commit()
 }
 
 // UpdateState set end time of current (defined) state (A) and store it to the history.
@@ -206,10 +204,6 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 		return nil, err
 	}
 
-	err = r.Commit()
-	if err != nil {
-		return nil, err
-	}
 	his := r.apiObj.Status.StateHistory
 	hisLen := len(his)
 	return &his[hisLen-1], nil
@@ -229,10 +223,7 @@ func (r *pipelineRun) UpdateResult(result api.Result) error {
 		r.apiObj.Status.FinishedAt = &now
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	return r.Commit()
+	return err
 }
 
 // UpdateContainer ...
@@ -246,10 +237,7 @@ func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
 		return nil
 	})
 
-	if err != nil {
-		return err
-	}
-	return r.Commit()
+	return err
 }
 
 // StoreErrorAsMessage stores the error as message in the status
@@ -278,10 +266,7 @@ func (r *pipelineRun) UpdateMessage(message string) error {
 		return nil
 	})
 
-	if err != nil {
-		return err
-	}
-	return r.Commit()
+	return err
 }
 
 // UpdateRunNamespace overrides the namespace in which the builds happens
@@ -291,22 +276,17 @@ func (r *pipelineRun) UpdateRunNamespace(ns string) error {
 		r.apiObj.Status.Namespace = ns
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-	return r.Commit()
+	return err
 }
 
 // UpdateAuxNamespace overrides the namespace hosting auxiliary services
 // for the pipeline run.
 func (r *pipelineRun) UpdateAuxNamespace(ns string) error {
 	r.ensureCopy()
-	r.registerChange(func() error {
+	return r.registerChange(func() error {
 		r.apiObj.Status.AuxiliaryNamespace = ns
 		return nil
 	})
-
-	return r.Commit()
 }
 
 //HasDeletionTimestamp returns true if deletion timestamp is set
