@@ -613,8 +613,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_NoUpdateOnChangeErrorInFirstAt
 	}
 
 	// EXCERCISE
-	examinee.registerChange(changeFunc)
-	resultErr := examinee.Commit()
+	resultErr := examinee.registerChange(changeFunc)
 
 	// VERIFY
 	assert.Error(t, resultErr, changeError.Error())

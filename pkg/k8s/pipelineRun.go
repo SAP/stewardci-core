@@ -143,7 +143,7 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 func (r *pipelineRun) InitState() error {
 	r.ensureCopy()
 	klog.V(3).Infof("Init State [%s]", r.String())
-	r.registerChange(func() error {
+	err := r.registerChange(func() error {
 
 		if r.apiObj.Status.State != api.StateUndefined {
 			return fmt.Errorf("Cannot initialize multiple times")
@@ -157,6 +157,10 @@ func (r *pipelineRun) InitState() error {
 		r.apiObj.Status.State = api.StateNew
 		return nil
 	})
+
+	if err != nil {
+		return err
+	}
 
 	return r.Commit()
 }
@@ -174,7 +178,7 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	now := metav1.Now()
 	oldStateDetails := r.apiObj.Status.StateDetails
 
-	r.registerChange(func() error {
+	err := r.registerChange(func() error {
 
 		currentStateDetails := r.apiObj.Status.StateDetails
 		if currentStateDetails.State != oldStateDetails.State {
@@ -198,7 +202,11 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 		return nil
 	})
 
-	err := r.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.Commit()
 	if err != nil {
 		return nil, err
 	}
@@ -215,12 +223,15 @@ func (r *pipelineRun) String() string {
 // UpdateResult of the pipeline run
 func (r *pipelineRun) UpdateResult(result api.Result) error {
 	r.ensureCopy()
-	r.registerChange(func() error {
+	err := r.registerChange(func() error {
 		r.apiObj.Status.Result = result
 		now := metav1.Now()
 		r.apiObj.Status.FinishedAt = &now
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 	return r.Commit()
 }
 
@@ -230,10 +241,14 @@ func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
 		return nil
 	}
 	r.ensureCopy()
-	r.registerChange(func() error {
+	err := r.registerChange(func() error {
 		r.apiObj.Status.Container = *c
 		return nil
 	})
+
+	if err != nil {
+		return err
+	}
 	return r.Commit()
 }
 
@@ -251,7 +266,7 @@ func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 func (r *pipelineRun) UpdateMessage(message string) error {
 	r.ensureCopy()
 
-	r.registerChange(func() error {
+	err := r.registerChange(func() error {
 		old := r.apiObj.Status.Message
 		if old != "" {
 			his := r.apiObj.Status.History
@@ -263,16 +278,22 @@ func (r *pipelineRun) UpdateMessage(message string) error {
 		return nil
 	})
 
+	if err != nil {
+		return err
+	}
 	return r.Commit()
 }
 
 // UpdateRunNamespace overrides the namespace in which the builds happens
 func (r *pipelineRun) UpdateRunNamespace(ns string) error {
 	r.ensureCopy()
-	r.registerChange(func() error {
+	err := r.registerChange(func() error {
 		r.apiObj.Status.Namespace = ns
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 	return r.Commit()
 }
 
@@ -331,8 +352,12 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 	return nil
 }
 
-func (r *pipelineRun) registerChange(change func() error) {
-	r.changes = append(r.changes, change)
+func (r *pipelineRun) registerChange(change func() error) error {
+	err := change()
+	if err == nil {
+		r.changes = append(r.changes, change)
+	}
+	return err
 }
 
 // Commit executes `change` and writes the
@@ -359,13 +384,16 @@ func (r *pipelineRun) Commit() error {
 		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
 	}
 
+	if len(r.changes) == 0 {
+		return fmt.Errorf("no changes to commit")
+	}
+
 	isRetry := false
 	var changeError error
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		var err error
 
 		if isRetry {
-			fmt.Printf("[MH] we are in retry mode")
 			new, err := r.client.Get(r.apiObj.GetName(), metav1.GetOptions{})
 			if err != nil {
 				return errors.Wrap(err,
@@ -373,16 +401,14 @@ func (r *pipelineRun) Commit() error {
 			}
 			r.apiObj = new
 			r.copied = true
+			for _, change := range r.changes {
+				changeError = change()
+				if changeError != nil {
+					return nil
+				}
+			}
 		} else {
 			defer func() { isRetry = true }()
-		}
-
-		for _, change := range r.changes {
-			fmt.Printf("[MH] applying change\n")
-			changeError = change()
-			if changeError != nil {
-				return nil
-			}
 		}
 
 		result, err := r.client.UpdateStatus(r.apiObj)
