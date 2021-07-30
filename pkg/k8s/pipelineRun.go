@@ -43,9 +43,10 @@ type PipelineRun interface {
 }
 
 type pipelineRun struct {
-	client stewardv1alpha1.PipelineRunInterface
-	apiObj *api.PipelineRun
-	copied bool
+	client  stewardv1alpha1.PipelineRunInterface
+	apiObj  *api.PipelineRun
+	copied  bool
+	changes []func() error
 }
 
 // NewPipelineRun creates a managed pipeline run object.
@@ -72,9 +73,10 @@ func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun
 		return nil, err
 	}
 	return &pipelineRun{
-		apiObj: obj,
-		copied: true,
-		client: client,
+		apiObj:  obj,
+		copied:  true,
+		client:  client,
+		changes: []func() error{},
 	}, nil
 }
 
@@ -141,7 +143,7 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 func (r *pipelineRun) InitState() error {
 	r.ensureCopy()
 	klog.V(3).Infof("Init State [%s]", r.String())
-	return r.changeStatusAndUpdateSafely(func() error {
+	r.registerChange(func() error {
 
 		if r.apiObj.Status.State != api.StateUndefined {
 			return fmt.Errorf("Cannot initialize multiple times")
@@ -155,6 +157,8 @@ func (r *pipelineRun) InitState() error {
 		r.apiObj.Status.State = api.StateNew
 		return nil
 	})
+
+	return r.Commit()
 }
 
 // UpdateState set end time of current (defined) state (A) and store it to the history.
@@ -170,7 +174,7 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	now := metav1.Now()
 	oldStateDetails := r.apiObj.Status.StateDetails
 
-	err := r.changeStatusAndUpdateSafely(func() error {
+	r.registerChange(func() error {
 
 		currentStateDetails := r.apiObj.Status.StateDetails
 		if currentStateDetails.State != oldStateDetails.State {
@@ -194,6 +198,7 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 		return nil
 	})
 
+	err := r.Commit()
 	if err != nil {
 		return nil, err
 	}
@@ -210,12 +215,13 @@ func (r *pipelineRun) String() string {
 // UpdateResult of the pipeline run
 func (r *pipelineRun) UpdateResult(result api.Result) error {
 	r.ensureCopy()
-	return r.changeStatusAndUpdateSafely(func() error {
+	r.registerChange(func() error {
 		r.apiObj.Status.Result = result
 		now := metav1.Now()
 		r.apiObj.Status.FinishedAt = &now
 		return nil
 	})
+	return r.Commit()
 }
 
 // UpdateContainer ...
@@ -224,10 +230,11 @@ func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
 		return nil
 	}
 	r.ensureCopy()
-	return r.changeStatusAndUpdateSafely(func() error {
+	r.registerChange(func() error {
 		r.apiObj.Status.Container = *c
 		return nil
 	})
+	return r.Commit()
 }
 
 // StoreErrorAsMessage stores the error as message in the status
@@ -244,7 +251,7 @@ func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 func (r *pipelineRun) UpdateMessage(message string) error {
 	r.ensureCopy()
 
-	return r.changeStatusAndUpdateSafely(func() error {
+	r.registerChange(func() error {
 		old := r.apiObj.Status.Message
 		if old != "" {
 			his := r.apiObj.Status.History
@@ -255,25 +262,30 @@ func (r *pipelineRun) UpdateMessage(message string) error {
 		r.apiObj.Status.MessageShort = utils.ShortenMessage(message, 100)
 		return nil
 	})
+
+	return r.Commit()
 }
 
 // UpdateRunNamespace overrides the namespace in which the builds happens
 func (r *pipelineRun) UpdateRunNamespace(ns string) error {
 	r.ensureCopy()
-	return r.changeStatusAndUpdateSafely(func() error {
+	r.registerChange(func() error {
 		r.apiObj.Status.Namespace = ns
 		return nil
 	})
+	return r.Commit()
 }
 
 // UpdateAuxNamespace overrides the namespace hosting auxiliary services
 // for the pipeline run.
 func (r *pipelineRun) UpdateAuxNamespace(ns string) error {
 	r.ensureCopy()
-	return r.changeStatusAndUpdateSafely(func() error {
+	r.registerChange(func() error {
 		r.apiObj.Status.AuxiliaryNamespace = ns
 		return nil
 	})
+
+	return r.Commit()
 }
 
 //HasDeletionTimestamp returns true if deletion timestamp is set
@@ -319,7 +331,11 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 	return nil
 }
 
-// changeStatusAndUpdateSafely executes `change` and writes the
+func (r *pipelineRun) registerChange(change func() error) {
+	r.changes = append(r.changes, change)
+}
+
+// Commit executes `change` and writes the
 // status of the underlying PipelineRun object to storage afterwards.
 // `change` is expected to mutate only the status of the underlying
 // object, not more.
@@ -338,17 +354,18 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 // that change _gets_ persisted in case there's _no_ update conflict, but
 // gets _lost_ in case there _is_ an update conflict! This is hard to find
 // by tests, as those typically do not encounter update conflicts.
-func (r *pipelineRun) changeStatusAndUpdateSafely(change func() error) error {
+func (r *pipelineRun) Commit() error {
 	if r.client == nil {
 		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
 	}
 
 	isRetry := false
-	var changeError error = nil
+	var changeError error
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		var err error
 
 		if isRetry {
+			fmt.Printf("[MH] we are in retry mode")
 			new, err := r.client.Get(r.apiObj.GetName(), metav1.GetOptions{})
 			if err != nil {
 				return errors.Wrap(err,
@@ -360,9 +377,12 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func() error) error {
 			defer func() { isRetry = true }()
 		}
 
-		changeError = change()
-		if changeError != nil {
-			return nil
+		for _, change := range r.changes {
+			fmt.Printf("[MH] applying change\n")
+			changeError = change()
+			if changeError != nil {
+				return nil
+			}
 		}
 
 		result, err := r.client.UpdateStatus(r.apiObj)
@@ -375,6 +395,8 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func() error) error {
 	if changeError != nil {
 		return changeError
 	}
+
+	r.changes = []func() error{}
 
 	return errors.Wrapf(err, "failed to update status [%s]", r.String())
 }

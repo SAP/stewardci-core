@@ -232,16 +232,6 @@ func Test_pipelineRun_InitState(t *testing.T) {
 func Test_pipelineRun_InitState_ReturnsErrorIfCalledMultipleTimes(t *testing.T) {
 	t.Parallel()
 
-	// SETUP
-	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
-	creationTimestamp := metav1.Now()
-	pipelineRun.ObjectMeta.CreationTimestamp = creationTimestamp
-	factory := fake.NewClientFactory(pipelineRun)
-	examinee, err := NewPipelineRun(pipelineRun, factory)
-	assert.NilError(t, err)
-	resultErr := examinee.InitState()
-	assert.NilError(t, resultErr)
-
 	for _, oldState := range []api.State{
 		api.StateNew,
 		api.StatePreparing,
@@ -250,15 +240,29 @@ func Test_pipelineRun_InitState_ReturnsErrorIfCalledMultipleTimes(t *testing.T) 
 		api.StateCleaning,
 		api.StateFinished,
 	} {
-		_, resultErr = examinee.UpdateState(oldState)
-		assert.NilError(t, resultErr)
 
-		// EXERCISE
-		resultErr = examinee.InitState()
+		t.Run(string(oldState), func(t *testing.T) {
+			// SETUP
+			pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
+			creationTimestamp := metav1.Now()
+			pipelineRun.ObjectMeta.CreationTimestamp = creationTimestamp
+			factory := fake.NewClientFactory(pipelineRun)
 
-		// VERIFY
-		assert.Error(t, resultErr, "Cannot initialize multiple times")
-		assert.Equal(t, oldState, examinee.GetStatus().State)
+			examinee, err := NewPipelineRun(pipelineRun, factory)
+			assert.NilError(t, err)
+			resultErr := examinee.InitState()
+			assert.NilError(t, resultErr)
+
+			_, resultErr = examinee.UpdateState(oldState)
+			assert.NilError(t, resultErr)
+
+			// EXERCISE
+			resultErr = examinee.InitState()
+
+			// VERIFY
+			assert.Error(t, resultErr, "Cannot initialize multiple times")
+			assert.Equal(t, oldState, examinee.GetStatus().State)
+		})
 	}
 }
 
@@ -526,8 +530,9 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_PanicsIfNoClientFactory(t *tes
 
 	// SETUP
 	run := newPipelineRunWithEmptySpec(ns1, run1)
-	examinee, err := NewPipelineRun(run, nil /* client factory */)
+	examinee2, err := NewPipelineRun(run, nil /* client factory */)
 	assert.NilError(t, err)
+	examinee := examinee2.(*pipelineRun)
 
 	// EXERCISE and VERIFY
 	assert.Assert(t, cmp.Panics(
@@ -536,7 +541,8 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_PanicsIfNoClientFactory(t *tes
 				return nil
 			}
 
-			examinee.(*pipelineRun).changeStatusAndUpdateSafely(changeFunc)
+			examinee.registerChange(changeFunc)
+			examinee.Commit()
 		},
 	))
 }
@@ -569,7 +575,8 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfNoConflict(
 	}
 
 	// EXCERCISE
-	resultErr := examinee.changeStatusAndUpdateSafely(changeFunc)
+	examinee.registerChange(changeFunc)
+	resultErr := examinee.Commit()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -606,7 +613,8 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_NoUpdateOnChangeErrorInFirstAt
 	}
 
 	// EXCERCISE
-	resultErr := examinee.changeStatusAndUpdateSafely(changeFunc)
+	examinee.registerChange(changeFunc)
+	resultErr := examinee.Commit()
 
 	// VERIFY
 	assert.Error(t, resultErr, changeError.Error())
@@ -646,7 +654,8 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfConflict(t 
 	}
 
 	// EXCERCISE
-	resultErr := examinee.changeStatusAndUpdateSafely(changeFunc)
+	examinee.registerChange(changeFunc)
+	resultErr := examinee.Commit()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -690,7 +699,8 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_FailsAfterTooManyConflicts(t *
 	}
 
 	// EXCERCISE
-	resultErr := examinee.changeStatusAndUpdateSafely(changeFunc)
+	examinee.registerChange(changeFunc)
+	resultErr := examinee.Commit()
 
 	// VERIFY
 	assert.Assert(t, errors.Is(resultErr, errorOnUpdate))
@@ -735,7 +745,8 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_ReturnsErrorIfFetchFailed(t *t
 	}
 
 	// EXCERCISE
-	resultErr := examinee.changeStatusAndUpdateSafely(changeFunc)
+	examinee.registerChange(changeFunc)
+	resultErr := examinee.Commit()
 
 	// VERIFY
 	assert.Assert(t, errors.Is(resultErr, errorOnGet))
