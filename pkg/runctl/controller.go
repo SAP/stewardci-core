@@ -294,6 +294,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	// Init state when undefined
 	if pipelineRun.GetStatus().State == api.StateUndefined {
+		fmt.Printf("[MH] init\n")
 		err = pipelineRun.InitState()
 		if err != nil {
 			return err
@@ -305,9 +306,13 @@ func (c *Controller) syncHandler(key string) error {
 	if pipelineRun.HasDeletionTimestamp() {
 		runManager := c.createRunManager(pipelineRun)
 		err = runManager.Cleanup(pipelineRun)
-
+		fmt.Printf("[MH]Error from cleanup: %v\n", err)
 		if err == nil {
-			pipelineRun.UpdateResult(api.ResultDeleted)
+			err = pipelineRun.UpdateResult(api.ResultDeleted)
+			if err != nil {
+				fmt.Printf("[MH]Error from update result\n")
+				return err
+			}
 			err = c.finish(pipelineRun)
 			if err == nil {
 				c.metrics.CountResult(api.ResultDeleted)
@@ -316,6 +321,7 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 	pipelineRun.AddFinalizer()
+	fmt.Printf("[MH] finalizer added\n")
 
 	// Finished and no deletion timestamp, no need to process anything further
 	if pipelineRun.GetStatus().State == api.StateFinished {
@@ -334,7 +340,7 @@ func (c *Controller) syncHandler(key string) error {
 			klog.V(1).Infof("WARN: change state to cleaning failed with: %s", err.Error())
 		}
 	}
-
+	fmt.Printf("[MH] status: %s^n", pipelineRun.GetStatus().State)
 	if pipelineRun.GetStatus().State == api.StateNew {
 		maintenanceMode, err := c.isMaintenanceMode()
 		if err != nil {
@@ -352,8 +358,10 @@ func (c *Controller) syncHandler(key string) error {
 		if err = pipelineRun.Commit(); err != nil {
 			return err
 		}
+		fmt.Printf("[MH] switch to preparing\n")
 		c.metrics.CountStart()
 	}
+	fmt.Printf("[MH] after get status control block\n")
 
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
@@ -370,9 +378,6 @@ func (c *Controller) syncHandler(key string) error {
 		if err := c.finish(pipelineRun); err != nil {
 			return err
 		}
-		if err := pipelineRun.Commit(); err != nil {
-			return err
-		}
 	}
 
 	runManager := c.createRunManager(pipelineRun)
@@ -380,7 +385,9 @@ func (c *Controller) syncHandler(key string) error {
 	// Process pipeline run based on current state
 	switch state := pipelineRun.GetStatus().State; state {
 	case api.StatePreparing:
+		fmt.Printf("[MH] Enter preparing\n")
 		err = runManager.Start(pipelineRun, pipelineRunsConfig)
+		fmt.Printf("[MH]err 1: %v\n", err)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			resultClass := serrors.GetClass(err)
@@ -389,18 +396,27 @@ func (c *Controller) syncHandler(key string) error {
 				pipelineRun.UpdateMessage(err.Error())
 				pipelineRun.UpdateResult(resultClass)
 				if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
+					fmt.Printf("[MH]err clean: %v\n", errClean)
 					return errClean
 				}
 				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
 				if err := pipelineRun.Commit(); err != nil {
+					fmt.Printf("[MH]err commit: %v\n", err)
 					return err
 				}
 				c.metrics.CountResult(pipelineRun.GetStatus().Result)
 				return nil
 			}
+			fmt.Printf("[MH]err 2: %v\n", err)
 			return err
 		}
 		if err = c.changeState(pipelineRun, api.StateWaiting); err != nil {
+			fmt.Printf("[MH]err changeState: %v\n", err)
+			return err
+		}
+		// TODO try to get rid of that commit
+		if err := pipelineRun.Commit(); err != nil {
+			fmt.Printf("[MH]err commit after changeState: %v\n", err)
 			return err
 		}
 	case api.StateWaiting:
