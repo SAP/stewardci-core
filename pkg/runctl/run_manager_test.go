@@ -1949,6 +1949,7 @@ func (*testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv
 	mockPipelineRun.EXPECT().UpdateAuxNamespace(gomock.Any()).Do(func(arg string) {
 		auxNamespace = arg
 	}).MaxTimes(1)
+	mockPipelineRun.EXPECT().Commit()
 
 	mockSecretProvider := secretmocks.NewMockSecretProvider(ctrl)
 
