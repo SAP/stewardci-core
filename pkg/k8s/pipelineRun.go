@@ -364,9 +364,9 @@ func (r *pipelineRun) Commit() error {
 		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
 	}
 
-	if len(r.changes) == 0 {
-		return fmt.Errorf("no changes to commit")
-	}
+	//if len(r.changes) == 0 {
+	//	return fmt.Errorf("no changes to commit")
+	//}
 
 	isRetry := false
 	var changeError error
