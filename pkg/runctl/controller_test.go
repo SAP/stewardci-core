@@ -71,7 +71,6 @@ func Test_Controller_Success(t *testing.T) {
 		Secrets: []string{"secret1"},
 	})
 
-	fmt.Printf("[MH] pr: %v\n", pr)
 	// EXERCISE
 	stopCh := startController(t, cf)
 	defer stopController(t, stopCh)
@@ -82,7 +81,6 @@ func Test_Controller_Success(t *testing.T) {
 	status := run.GetStatus()
 
 	assert.Assert(t, !strings.Contains(status.Message, "ERROR"), status.Message)
-	fmt.Printf("[MH] pr-run: %v\n", run)
 	assert.Equal(t, api.StateWaiting, status.State)
 	assert.Equal(t, 2, len(status.StateHistory))
 }

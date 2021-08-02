@@ -740,7 +740,6 @@ func (c *runManager) createNamespace(ctx *runContext, purpose, randName string) 
 		return "", err
 	}
 
-	fmt.Printf("[MH] created name: %s\n", created.GetName())
 	return created.GetName(), err
 }
 
