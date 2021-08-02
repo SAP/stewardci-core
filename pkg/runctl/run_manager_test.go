@@ -107,6 +107,7 @@ func Test__runManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
 			// namespaces
 			{
 				pipelineRun1 := h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1)
+				fmt.Printf("[MH] pr status: %v\n", pipelineRun1.Status)
 				expectedNamespaces := []string{h.namespace1}
 
 				h.verifyNamespace(cf, pipelineRun1.Status.Namespace, "main")
