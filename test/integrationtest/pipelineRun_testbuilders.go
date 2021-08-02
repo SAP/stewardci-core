@@ -214,11 +214,8 @@ func PipelineRunWrongJenkinsfileRepo(Namespace string, runID *api.CustomJSON) f.
 				builder.JenkinsFileSpec("https://github.com/SAP/steward-foo",
 					"Jenkinsfile"),
 			)),
-		Check: f.PipelineRunMessageOnFinished(`Command ['git' 'clone' 'https://github.com/SAP/steward-foo' '.'] failed with exit code 128
-Error output:
-Cloning into '.'...
-fatal: could not read Username for 'https://github.com': No such device or address`),
-		Timeout: 120 * time.Second,
+		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
+		Timeout: 300 * time.Second,
 	}
 }
 
@@ -234,11 +231,8 @@ func PipelineRunWrongJenkinsfileRepoWithUser(Namespace string, runID *api.Custom
 				),
 			)),
 		Secrets: []*v1.Secret{builder.SecretBasicAuth("repo-auth", Namespace, "bar", "baz")},
-		Check: f.PipelineRunMessageOnFinished(`Command ['git' 'clone' 'https://github.com/SAP/steward-foo' '.'] failed with exit code 128
-Error output:
-Cloning into '.'...
-fatal: could not read Username for 'https://github.com': No such device or address`),
-		Timeout: 120 * time.Second,
+		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
+		Timeout: 300 * time.Second,
 	}
 }
 
