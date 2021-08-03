@@ -170,7 +170,9 @@ func (r *pipelineRun) InitState() error {
 // Returns the state details of state A
 func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	if r.apiObj.Status.State == api.StateUndefined {
-		return nil, fmt.Errorf("Cannot update uninitialize state")
+		if err := r.InitState(); err != nil {
+			return nil, err
+		}
 	}
 	r.ensureCopy()
 	klog.V(3).Infof("Update State to %s [%s]", state, r.String())

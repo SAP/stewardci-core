@@ -292,14 +292,6 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
-	// Init state when undefined
-	if pipelineRun.GetStatus().State == api.StateUndefined {
-		err = pipelineRun.InitState()
-		if err != nil {
-			return err
-		}
-	}
-
 	// Check if object has deletion timestamp
 	// If not, try to add finalizer if missing
 	if pipelineRun.HasDeletionTimestamp() {
@@ -336,6 +328,16 @@ func (c *Controller) syncHandler(key string) error {
 			klog.V(1).Infof("WARN: change state to cleaning failed with: %s", err.Error())
 		}
 	}
+
+	// Init state when undefined
+	if pipelineRun.GetStatus().State == api.StateUndefined {
+
+		err = pipelineRun.InitState()
+		if err != nil {
+			return err
+		}
+	}
+
 	if pipelineRun.GetStatus().State == api.StateNew {
 		maintenanceMode, err := c.isMaintenanceMode()
 		if err != nil {
@@ -470,12 +472,10 @@ func (c *Controller) finish(pipelineRun k8s.PipelineRun) error {
 	if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
 		return err
 	}
-
-	if err := pipelineRun.DeleteFinalizerIfExists(); err != nil {
+	if err := pipelineRun.CommitStatus(); err != nil {
 		return err
 	}
-
-	return pipelineRun.CommitStatus()
+	return pipelineRun.DeleteFinalizerIfExists()
 }
 
 // handleAborted checks if pipeline run should be aborted.
