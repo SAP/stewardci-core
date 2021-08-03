@@ -455,7 +455,6 @@ func Test_pipelineRun_GetPipelineRepoServerURL_WrongURLs(t *testing.T) {
 	}
 }
 
-/*
 func Test_pipelineRun_UpdateState_PropagatesError(t *testing.T) {
 	t.Parallel()
 
@@ -471,12 +470,13 @@ func Test_pipelineRun_UpdateState_PropagatesError(t *testing.T) {
 	factory.StewardClientset().PrependReactor("update", "*", fake.NewErrorReactor(expectedError))
 
 	// EXCERCISE
-	_, err = examinee.UpdateState(api.StateWaiting)
+	examinee.UpdateState(api.StateWaiting)
+	err = examinee.Commit()
 
 	// VERIFY
 	assert.Assert(t, err != nil)
 }
-*/
+
 func Test_pipelineRun_Commit_RetriesOnConflict(t *testing.T) {
 	t.Parallel()
 
