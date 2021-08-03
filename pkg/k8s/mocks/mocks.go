@@ -267,18 +267,18 @@ func (mr *MockPipelineRunMockRecorder) AddFinalizer() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddFinalizer", reflect.TypeOf((*MockPipelineRun)(nil).AddFinalizer))
 }
 
-// Commit mocks base method.
-func (m *MockPipelineRun) Commit() error {
+// CommitStatus mocks base method.
+func (m *MockPipelineRun) CommitStatus() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Commit")
+	ret := m.ctrl.Call(m, "CommitStatus")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Commit indicates an expected call of Commit.
-func (mr *MockPipelineRunMockRecorder) Commit() *gomock.Call {
+// CommitStatus indicates an expected call of CommitStatus.
+func (mr *MockPipelineRunMockRecorder) CommitStatus() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockPipelineRun)(nil).Commit))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitStatus", reflect.TypeOf((*MockPipelineRun)(nil).CommitStatus))
 }
 
 // DeleteFinalizerIfExists mocks base method.

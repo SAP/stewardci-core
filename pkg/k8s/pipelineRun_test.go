@@ -147,7 +147,7 @@ func Test_pipelineRun_StoreErrorAsMessage(t *testing.T) {
 
 	// EXERCISE
 	examinee.StoreErrorAsMessage(errorToStore, message)
-	examinee.Commit()
+	examinee.CommitStatus()
 
 	// VERIFY
 	client := factory.StewardV1alpha1().PipelineRuns(ns1)
@@ -471,13 +471,13 @@ func Test_pipelineRun_UpdateState_PropagatesError(t *testing.T) {
 
 	// EXCERCISE
 	examinee.UpdateState(api.StateWaiting)
-	err = examinee.Commit()
+	err = examinee.CommitStatus()
 
 	// VERIFY
 	assert.Assert(t, err != nil)
 }
 
-func Test_pipelineRun_Commit_RetriesOnConflict(t *testing.T) {
+func Test_pipelineRun_CommitStatus_RetriesOnConflict(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -504,7 +504,7 @@ func Test_pipelineRun_Commit_RetriesOnConflict(t *testing.T) {
 	assert.NilError(t, resultErr)
 
 	// EXCERCISE
-	resultErr = examinee.Commit()
+	resultErr = examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -541,7 +541,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfNoConflict(
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	resultErr := examinee.Commit()
+	resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -619,7 +619,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfConflict(t 
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	resultErr := examinee.Commit()
+	resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -664,7 +664,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_FailsAfterTooManyConflicts(t *
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	resultErr := examinee.Commit()
+	resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.Assert(t, errors.Is(resultErr, errorOnUpdate))
@@ -710,7 +710,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_ReturnsErrorIfFetchFailed(t *t
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	resultErr := examinee.Commit()
+	resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.Assert(t, errors.Is(resultErr, errorOnGet))
@@ -720,7 +720,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_ReturnsErrorIfFetchFailed(t *t
 	assert.Equal(t, changeCallCount, 1)
 }
 
-func Test_pipelineRun_Commit_PanicsIfNoClientFactory(t *testing.T) {
+func Test_pipelineRun_CommitStatus_PanicsIfNoClientFactory(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -733,7 +733,7 @@ func Test_pipelineRun_Commit_PanicsIfNoClientFactory(t *testing.T) {
 	// EXERCISE and VERIFY
 	assert.Assert(t, cmp.Panics(
 		func() {
-			examinee2.Commit()
+			examinee2.CommitStatus()
 		},
 	))
 }

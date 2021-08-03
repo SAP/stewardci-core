@@ -31,7 +31,7 @@ type PipelineRun interface {
 	GetPipelineRepoServerURL() (string, error)
 	HasDeletionTimestamp() bool
 	AddFinalizer() error
-	Commit() error
+	CommitStatus() error
 	DeleteFinalizerIfExists() error
 	InitState() error
 	UpdateState(api.State) (*api.StateItem, error)
@@ -345,7 +345,7 @@ func (r *pipelineRun) changeStatusAndStoreForRetry(change func() error) error {
 	return err
 }
 
-// Commit executes `change` and writes the
+// CommitStatus executes `change` and writes the
 // status of the underlying PipelineRun object to storage afterwards.
 // `change` is expected to mutate only the status of the underlying
 // object, not more.
@@ -364,7 +364,7 @@ func (r *pipelineRun) changeStatusAndStoreForRetry(change func() error) error {
 // that change _gets_ persisted in case there's _no_ update conflict, but
 // gets _lost_ in case there _is_ an update conflict! This is hard to find
 // by tests, as those typically do not encounter update conflicts.
-func (r *pipelineRun) Commit() error {
+func (r *pipelineRun) CommitStatus() error {
 	if r.client == nil {
 		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
 	}

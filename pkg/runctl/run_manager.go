@@ -133,7 +133,7 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 		return errors.Wrap(err, "failed to create main run namespace")
 	}
 	ctx.pipelineRun.UpdateRunNamespace(ctx.runNamespace)
-	ctx.pipelineRun.Commit()
+	ctx.pipelineRun.CommitStatus()
 
 	if featureflag.CreateAuxNamespaceIfUnused.Enabled() {
 		ctx.auxNamespace, err = c.createNamespace(ctx, "aux", randName)
@@ -141,7 +141,7 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 			return errors.Wrap(err, "failed to create auxiliary run namespace")
 		}
 		ctx.pipelineRun.UpdateAuxNamespace(ctx.auxNamespace)
-		ctx.pipelineRun.Commit()
+		ctx.pipelineRun.CommitStatus()
 	}
 
 	// If something goes wrong while creating objects inside the namespaces, we delete everything.

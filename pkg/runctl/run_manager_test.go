@@ -1492,7 +1492,7 @@ func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
 			}
 			err = examinee.prepareRunNamespace(runCtx)
 			assert.NilError(t, err)
-			err = runCtx.pipelineRun.Commit()
+			err = runCtx.pipelineRun.CommitStatus()
 			assert.NilError(t, err)
 			{
 				pipelineRun1 := h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1)
@@ -1948,7 +1948,7 @@ func (*testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv
 	mockPipelineRun.EXPECT().UpdateAuxNamespace(gomock.Any()).Do(func(arg string) {
 		auxNamespace = arg
 	}).MaxTimes(1)
-	mockPipelineRun.EXPECT().Commit().MaxTimes(1)
+	mockPipelineRun.EXPECT().CommitStatus().MaxTimes(1)
 
 	mockSecretProvider := secretmocks.NewMockSecretProvider(ctrl)
 
