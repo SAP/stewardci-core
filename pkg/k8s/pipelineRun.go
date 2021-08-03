@@ -187,7 +187,7 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 			s.StartedAt = &now
 		}
 		currentStateDetails.FinishedAt = now
-		his := r.apiObj.Status.StateHistory
+		his := s.StateHistory
 		his = append(his, currentStateDetails)
 
 		newStateDetails := api.StateItem{State: state, StartedAt: now}
