@@ -540,7 +540,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfNoConflict(
 	}
 
 	// EXCERCISE
-	examinee.registerChange(changeFunc)
+	examinee.changeAndStoreForRetry(changeFunc)
 	resultErr := examinee.Commit()
 
 	// VERIFY
@@ -578,7 +578,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_NoUpdateOnChangeErrorInFirstAt
 	}
 
 	// EXCERCISE
-	resultErr := examinee.registerChange(changeFunc)
+	resultErr := examinee.changeAndStoreForRetry(changeFunc)
 
 	// VERIFY
 	assert.Error(t, resultErr, changeError.Error())
@@ -618,7 +618,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfConflict(t 
 	}
 
 	// EXCERCISE
-	examinee.registerChange(changeFunc)
+	examinee.changeAndStoreForRetry(changeFunc)
 	resultErr := examinee.Commit()
 
 	// VERIFY
@@ -663,7 +663,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_FailsAfterTooManyConflicts(t *
 	}
 
 	// EXCERCISE
-	examinee.registerChange(changeFunc)
+	examinee.changeAndStoreForRetry(changeFunc)
 	resultErr := examinee.Commit()
 
 	// VERIFY
@@ -709,7 +709,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_ReturnsErrorIfFetchFailed(t *t
 	}
 
 	// EXCERCISE
-	examinee.registerChange(changeFunc)
+	examinee.changeAndStoreForRetry(changeFunc)
 	resultErr := examinee.Commit()
 
 	// VERIFY
@@ -728,7 +728,7 @@ func Test_pipelineRun_Commit_PanicsIfNoClientFactory(t *testing.T) {
 	examinee, err := NewPipelineRun(run, nil /* client factory */)
 	assert.NilError(t, err)
 	examinee2 := examinee.(*pipelineRun)
-	examinee2.registerChange(func() error { /* foo */ return nil })
+	examinee2.changeAndStoreForRetry(func() error { /* foo */ return nil })
 
 	// EXERCISE and VERIFY
 	assert.Assert(t, cmp.Panics(
