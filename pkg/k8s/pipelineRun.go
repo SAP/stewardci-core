@@ -398,12 +398,10 @@ func (r *pipelineRun) Commit() error {
 		}
 		return err
 	})
+	r.changes = []func() error{}
 	if changeError != nil {
 		return changeError
 	}
-
-	r.changes = []func() error{}
-
 	return errors.Wrapf(err, "failed to update status [%s]", r.String())
 }
 
