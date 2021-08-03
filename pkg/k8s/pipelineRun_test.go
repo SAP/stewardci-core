@@ -534,7 +534,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfNoConflict(
 	}
 
 	changeCallCount := 0
-	changeFunc := func() error {
+	changeFunc := func(*api.PipelineStatus) error {
 		changeCallCount++
 		return nil
 	}
@@ -566,7 +566,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_NoUpdateOnChangeErrorInFirstAt
 
 	changeError := fmt.Errorf("ChangeError1")
 	changeCallCount := 0
-	changeFunc := func() error {
+	changeFunc := func(*api.PipelineStatus) error {
 		changeCallCount++
 		return changeError
 	}
@@ -612,7 +612,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfConflict(t 
 	}
 
 	changeCallCount := 0
-	changeFunc := func() error {
+	changeFunc := func(*api.PipelineStatus) error {
 		changeCallCount++
 		return nil
 	}
@@ -657,7 +657,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_FailsAfterTooManyConflicts(t *
 	}
 
 	changeCallCount := 0
-	changeFunc := func() error {
+	changeFunc := func(*api.PipelineStatus) error {
 		changeCallCount++
 		return nil
 	}
@@ -703,7 +703,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_ReturnsErrorIfFetchFailed(t *t
 	}
 
 	changeCallCount := 0
-	changeFunc := func() error {
+	changeFunc := func(*api.PipelineStatus) error {
 		changeCallCount++
 		return nil
 	}
@@ -728,7 +728,7 @@ func Test_pipelineRun_CommitStatus_PanicsIfNoClientFactory(t *testing.T) {
 	examinee, err := NewPipelineRun(run, nil /* client factory */)
 	assert.NilError(t, err)
 	examinee2 := examinee.(*pipelineRun)
-	examinee2.changeStatusAndStoreForRetry(func() error { /* foo */ return nil })
+	examinee2.changeStatusAndStoreForRetry(func(*api.PipelineStatus) error { /* foo */ return nil })
 
 	// EXERCISE and VERIFY
 	assert.Assert(t, cmp.Panics(

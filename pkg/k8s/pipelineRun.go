@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
@@ -47,7 +48,7 @@ type pipelineRun struct {
 	client  stewardv1alpha1.PipelineRunInterface
 	apiObj  *api.PipelineRun
 	copied  bool
-	changes []func() error
+	changes []func(*api.PipelineStatus) error
 }
 
 // NewPipelineRun creates a managed pipeline run object.
@@ -77,7 +78,7 @@ func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun
 		apiObj:  obj,
 		copied:  true,
 		client:  client,
-		changes: []func() error{},
+		changes: []func(*v1alpha1.PipelineStatus) error{},
 	}, nil
 }
 
@@ -144,9 +145,9 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 func (r *pipelineRun) InitState() error {
 	r.ensureCopy()
 	klog.V(3).Infof("Init State [%s]", r.String())
-	err := r.changeStatusAndStoreForRetry(func() error {
+	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
 
-		if r.apiObj.Status.State != api.StateUndefined {
+		if s.State != api.StateUndefined {
 			return fmt.Errorf("Cannot initialize multiple times")
 		}
 
@@ -154,8 +155,8 @@ func (r *pipelineRun) InitState() error {
 			State:     api.StateNew,
 			StartedAt: r.apiObj.ObjectMeta.CreationTimestamp,
 		}
-		r.apiObj.Status.StateDetails = newStateDetails
-		r.apiObj.Status.State = api.StateNew
+		s.StateDetails = newStateDetails
+		s.State = api.StateNew
 		return nil
 	})
 
@@ -176,14 +177,14 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	now := metav1.Now()
 	oldStateDetails := r.apiObj.Status.StateDetails
 
-	err := r.changeStatusAndStoreForRetry(func() error {
+	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
 
-		currentStateDetails := r.apiObj.Status.StateDetails
+		currentStateDetails := s.StateDetails
 		if currentStateDetails.State != oldStateDetails.State {
 			return fmt.Errorf("State cannot be updated as it was changed concurrently from %q to %q", oldStateDetails.State, currentStateDetails.State)
 		}
 		if state == api.StatePreparing {
-			r.apiObj.Status.StartedAt = &now
+			s.StartedAt = &now
 		}
 		currentStateDetails.FinishedAt = now
 		his := r.apiObj.Status.StateHistory
@@ -194,9 +195,9 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 			newStateDetails.FinishedAt = now
 		}
 
-		r.apiObj.Status.StateDetails = newStateDetails
-		r.apiObj.Status.StateHistory = his
-		r.apiObj.Status.State = state
+		s.StateDetails = newStateDetails
+		s.StateHistory = his
+		s.State = state
 		return nil
 	})
 
@@ -217,10 +218,10 @@ func (r *pipelineRun) String() string {
 // UpdateResult of the pipeline run
 func (r *pipelineRun) UpdateResult(result api.Result) error {
 	r.ensureCopy()
-	err := r.changeStatusAndStoreForRetry(func() error {
-		r.apiObj.Status.Result = result
+	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
+		s.Result = result
 		now := metav1.Now()
-		r.apiObj.Status.FinishedAt = &now
+		s.FinishedAt = &now
 		return nil
 	})
 	return err
@@ -232,8 +233,8 @@ func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
 		return nil
 	}
 	r.ensureCopy()
-	err := r.changeStatusAndStoreForRetry(func() error {
-		r.apiObj.Status.Container = *c
+	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
+		s.Container = *c
 		return nil
 	})
 
@@ -254,15 +255,15 @@ func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 func (r *pipelineRun) UpdateMessage(message string) error {
 	r.ensureCopy()
 
-	err := r.changeStatusAndStoreForRetry(func() error {
-		old := r.apiObj.Status.Message
+	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
+		old := s.Message
 		if old != "" {
-			his := r.apiObj.Status.History
+			his := s.History
 			his = append(his, old)
-			r.apiObj.Status.History = his
+			s.History = his
 		}
-		r.apiObj.Status.Message = utils.Trim(message)
-		r.apiObj.Status.MessageShort = utils.ShortenMessage(message, 100)
+		s.Message = utils.Trim(message)
+		s.MessageShort = utils.ShortenMessage(message, 100)
 		return nil
 	})
 
@@ -272,8 +273,8 @@ func (r *pipelineRun) UpdateMessage(message string) error {
 // UpdateRunNamespace overrides the namespace in which the builds happens
 func (r *pipelineRun) UpdateRunNamespace(ns string) error {
 	r.ensureCopy()
-	err := r.changeStatusAndStoreForRetry(func() error {
-		r.apiObj.Status.Namespace = ns
+	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
+		s.Namespace = ns
 		return nil
 	})
 	return err
@@ -283,8 +284,8 @@ func (r *pipelineRun) UpdateRunNamespace(ns string) error {
 // for the pipeline run.
 func (r *pipelineRun) UpdateAuxNamespace(ns string) error {
 	r.ensureCopy()
-	return r.changeStatusAndStoreForRetry(func() error {
-		r.apiObj.Status.AuxiliaryNamespace = ns
+	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
+		s.AuxiliaryNamespace = ns
 		return nil
 	})
 }
@@ -337,8 +338,8 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 // and remembered so that it can be re-applied later in case of a re-tr. The change function
 // must only apply changes to pipelinerun.Status.
 //
-func (r *pipelineRun) changeStatusAndStoreForRetry(change func() error) error {
-	err := change()
+func (r *pipelineRun) changeStatusAndStoreForRetry(change func(*api.PipelineStatus) error) error {
+	err := change(r.GetStatus())
 	if err == nil {
 		r.changes = append(r.changes, change)
 	}
@@ -387,7 +388,7 @@ func (r *pipelineRun) CommitStatus() error {
 			r.apiObj = new
 			r.copied = true
 			for _, change := range r.changes {
-				changeError = change()
+				changeError = change(r.GetStatus())
 				if changeError != nil {
 					return nil
 				}
@@ -403,7 +404,7 @@ func (r *pipelineRun) CommitStatus() error {
 		}
 		return err
 	})
-	r.changes = []func() error{}
+	r.changes = []func(*api.PipelineStatus) error{}
 	if changeError != nil {
 		return changeError
 	}
