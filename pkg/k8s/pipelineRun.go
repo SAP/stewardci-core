@@ -144,7 +144,7 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 func (r *pipelineRun) InitState() error {
 	r.ensureCopy()
 	klog.V(3).Infof("Init State [%s]", r.String())
-	err := r.changeStateAndStoreForRetry(func() error {
+	err := r.changeStatusAndStoreForRetry(func() error {
 
 		if r.apiObj.Status.State != api.StateUndefined {
 			return fmt.Errorf("Cannot initialize multiple times")
@@ -176,7 +176,7 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	now := metav1.Now()
 	oldStateDetails := r.apiObj.Status.StateDetails
 
-	err := r.changeStateAndStoreForRetry(func() error {
+	err := r.changeStatusAndStoreForRetry(func() error {
 
 		currentStateDetails := r.apiObj.Status.StateDetails
 		if currentStateDetails.State != oldStateDetails.State {
@@ -217,7 +217,7 @@ func (r *pipelineRun) String() string {
 // UpdateResult of the pipeline run
 func (r *pipelineRun) UpdateResult(result api.Result) error {
 	r.ensureCopy()
-	err := r.changeStateAndStoreForRetry(func() error {
+	err := r.changeStatusAndStoreForRetry(func() error {
 		r.apiObj.Status.Result = result
 		now := metav1.Now()
 		r.apiObj.Status.FinishedAt = &now
@@ -232,7 +232,7 @@ func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
 		return nil
 	}
 	r.ensureCopy()
-	err := r.changeStateAndStoreForRetry(func() error {
+	err := r.changeStatusAndStoreForRetry(func() error {
 		r.apiObj.Status.Container = *c
 		return nil
 	})
@@ -254,7 +254,7 @@ func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 func (r *pipelineRun) UpdateMessage(message string) error {
 	r.ensureCopy()
 
-	err := r.changeStateAndStoreForRetry(func() error {
+	err := r.changeStatusAndStoreForRetry(func() error {
 		old := r.apiObj.Status.Message
 		if old != "" {
 			his := r.apiObj.Status.History
@@ -272,7 +272,7 @@ func (r *pipelineRun) UpdateMessage(message string) error {
 // UpdateRunNamespace overrides the namespace in which the builds happens
 func (r *pipelineRun) UpdateRunNamespace(ns string) error {
 	r.ensureCopy()
-	err := r.changeStateAndStoreForRetry(func() error {
+	err := r.changeStatusAndStoreForRetry(func() error {
 		r.apiObj.Status.Namespace = ns
 		return nil
 	})
@@ -283,7 +283,7 @@ func (r *pipelineRun) UpdateRunNamespace(ns string) error {
 // for the pipeline run.
 func (r *pipelineRun) UpdateAuxNamespace(ns string) error {
 	r.ensureCopy()
-	return r.changeStateAndStoreForRetry(func() error {
+	return r.changeStatusAndStoreForRetry(func() error {
 		r.apiObj.Status.AuxiliaryNamespace = ns
 		return nil
 	})
@@ -332,12 +332,12 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 	return nil
 }
 
-// changeStateAndStoreForRetry receives a function applying changes to pipelinerun.Status
+// changeStatusAndStoreForRetry receives a function applying changes to pipelinerun.Status
 // This function get executed on the current memory representation of the pipeline run
 // and remembered so that it can be re-applied later in case of a re-tr. The change function
 // must only apply changes to pipelinerun.Status.
 //
-func (r *pipelineRun) changeStateAndStoreForRetry(change func() error) error {
+func (r *pipelineRun) changeStatusAndStoreForRetry(change func() error) error {
 	err := change()
 	if err == nil {
 		r.changes = append(r.changes, change)
