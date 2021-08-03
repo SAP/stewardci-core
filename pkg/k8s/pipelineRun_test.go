@@ -267,7 +267,7 @@ func Test_pipelineRun_InitState_ReturnsErrorIfCalledMultipleTimes(t *testing.T) 
 	}
 }
 
-func Test_pipelineRun_UpdateState_FailsWithoutInit(t *testing.T) {
+func Test_pipelineRun_UpdateState_HasAutomaticInitialization(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -277,10 +277,19 @@ func Test_pipelineRun_UpdateState_FailsWithoutInit(t *testing.T) {
 	assert.NilError(t, err)
 
 	// EXERCISE
-	_, resultErr := examinee.UpdateState(api.StatePreparing)
+	result, resultErr := examinee.UpdateState(api.StatePreparing)
 
 	// VERIFY
-	assert.Error(t, resultErr, "Cannot update uninitialize state")
+	assert.NilError(t, resultErr)
+
+	assert.Equal(t, api.StatePreparing, examinee.GetStatus().State)
+	assert.Equal(t, 1, len(examinee.GetStatus().StateHistory))
+	assert.Equal(t, api.StateNew, examinee.GetStatus().StateHistory[0].State)
+	startedAt := examinee.GetStatus().StartedAt
+	assert.Assert(t, !startedAt.IsZero())
+	assert.Equal(t, *startedAt, examinee.GetStatus().StateHistory[0].FinishedAt)
+	assert.Equal(t, api.StateNew, result.State)
+	assert.Equal(t, *startedAt, result.FinishedAt)
 }
 
 func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
