@@ -297,6 +297,9 @@ func (r *pipelineRun) HasDeletionTimestamp() bool {
 
 // AddFinalizer adds a finalizer to pipeline run
 func (r *pipelineRun) AddFinalizer() error {
+	if len(r.changes) > 0 {
+		return fmt.Errorf("cannot add finalizers when we have uncommited status updates")
+	}
 	changed, finalizerList := utils.AddStringIfMissing(r.apiObj.ObjectMeta.Finalizers, FinalizerName)
 	if changed {
 		err := r.updateFinalizers(finalizerList)
@@ -307,6 +310,9 @@ func (r *pipelineRun) AddFinalizer() error {
 
 // DeleteFinalizerIfExists deletes a finalizer from pipeline run
 func (r *pipelineRun) DeleteFinalizerIfExists() error {
+	if len(r.changes) > 0 {
+		return fmt.Errorf("cannot remove finalizers when we have uncommited status updates")
+	}
 	changed, finalizerList := utils.RemoveString(r.apiObj.ObjectMeta.Finalizers, FinalizerName)
 	if changed {
 		return r.updateFinalizers(finalizerList)
