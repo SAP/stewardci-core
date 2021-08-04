@@ -149,7 +149,7 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 func (r *pipelineRun) InitState() error {
 	r.ensureCopy()
 	klog.V(3).Infof("Init State [%s]", r.String())
-	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 
 		if s.State != api.StateUndefined {
 			return nil, fmt.Errorf("Cannot initialize multiple times")
@@ -163,9 +163,6 @@ func (r *pipelineRun) InitState() error {
 		s.State = api.StateNew
 		return nil, nil
 	})
-
-	return err
-
 }
 
 // UpdateState set end time of current (defined) state (A) and store it to the history.
