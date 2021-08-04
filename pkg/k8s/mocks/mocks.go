@@ -493,11 +493,9 @@ func (mr *MockPipelineRunMockRecorder) UpdateAuxNamespace(arg0 interface{}) *gom
 }
 
 // UpdateContainer mocks base method
-func (m *MockPipelineRun) UpdateContainer(arg0 *v1.ContainerState) error {
+func (m *MockPipelineRun) UpdateContainer(arg0 *v1.ContainerState) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateContainer", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "UpdateContainer", arg0)
 }
 
 // UpdateContainer indicates an expected call of UpdateContainer

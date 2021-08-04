@@ -36,7 +36,7 @@ type PipelineRun interface {
 	InitState() error
 	UpdateState(api.State) error
 	UpdateResult(api.Result)
-	UpdateContainer(*corev1.ContainerState) error
+	UpdateContainer(*corev1.ContainerState)
 	StoreErrorAsMessage(error, string) error
 	UpdateRunNamespace(string) error
 	UpdateAuxNamespace(string) error
@@ -225,12 +225,12 @@ func (r *pipelineRun) UpdateResult(result api.Result) {
 }
 
 // UpdateContainer ...
-func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
+func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) {
 	if c == nil {
-		return nil
+		return
 	}
 	r.ensureCopy()
-	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.Container = *c
 		return nil, nil
 	})
