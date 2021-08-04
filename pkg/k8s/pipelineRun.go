@@ -169,7 +169,6 @@ func (r *pipelineRun) InitState() error {
 // UpdateState set end time of current (defined) state (A) and store it to the history.
 // if no current state is defined a new state (A) with cretiontime of the pipelinerun as start time is created.
 // It also creates a new current state (B) with start time.
-// Returns the state details of state A
 func (r *pipelineRun) UpdateState(state api.State) error {
 	if r.apiObj.Status.State == api.StateUndefined {
 		if err := r.InitState(); err != nil {
