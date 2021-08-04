@@ -44,11 +44,11 @@ type PipelineRun interface {
 }
 
 type pipelineRun struct {
-	client         stewardv1alpha1.PipelineRunInterface
-	apiObj         *api.PipelineRun
-	copied         bool
-	changes        []changeFunc
-	commitRecorder []commitRecorderFunc
+	client          stewardv1alpha1.PipelineRunInterface
+	apiObj          *api.PipelineRun
+	copied          bool
+	changes         []changeFunc
+	commitRecorders []commitRecorderFunc
 }
 
 type changeFunc func(*api.PipelineStatus) (commitRecorderFunc, error)
@@ -78,11 +78,11 @@ func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun
 		return nil, err
 	}
 	return &pipelineRun{
-		apiObj:         obj,
-		copied:         true,
-		client:         client,
-		changes:        []changeFunc{},
-		commitRecorder: []commitRecorderFunc{},
+		apiObj:          obj,
+		copied:          true,
+		client:          client,
+		changes:         []changeFunc{},
+		commitRecorders: []commitRecorderFunc{},
 	}, nil
 }
 
@@ -344,7 +344,7 @@ func (r *pipelineRun) changeStatusAndStoreForRetry(change func(*api.PipelineStat
 	commitRecorder, err := change(r.GetStatus())
 	if err == nil {
 		r.changes = append(r.changes, change)
-		r.commitRecorder = append(r.commitRecorder, commitRecorder)
+		r.commitRecorders = append(r.commitRecorders, commitRecorder)
 	}
 
 	return err
@@ -391,14 +391,14 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 			}
 			r.apiObj = new
 			r.copied = true
-			r.commitRecorder = []commitRecorderFunc{}
+			r.commitRecorders = []commitRecorderFunc{}
 			var commitRecorder func() *api.StateItem
 			for _, change := range r.changes {
 				commitRecorder, changeError = change(r.GetStatus())
 				if changeError != nil {
 					return nil
 				} else {
-					r.commitRecorder = append(r.commitRecorder, commitRecorder)
+					r.commitRecorders = append(r.commitRecorders, commitRecorder)
 				}
 			}
 		} else {
@@ -417,7 +417,7 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 		return nil, changeError
 	}
 	result := []*api.StateItem{}
-	for _, recorder := range r.commitRecorder {
+	for _, recorder := range r.commitRecorders {
 		if recorder != nil {
 			result = append(result, recorder())
 		}
