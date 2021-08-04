@@ -479,11 +479,9 @@ func (mr *MockPipelineRunMockRecorder) String() *gomock.Call {
 }
 
 // UpdateAuxNamespace mocks base method
-func (m *MockPipelineRun) UpdateAuxNamespace(arg0 string) error {
+func (m *MockPipelineRun) UpdateAuxNamespace(arg0 string) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateAuxNamespace", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "UpdateAuxNamespace", arg0)
 }
 
 // UpdateAuxNamespace indicates an expected call of UpdateAuxNamespace

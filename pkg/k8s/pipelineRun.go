@@ -39,7 +39,7 @@ type PipelineRun interface {
 	UpdateContainer(*corev1.ContainerState)
 	StoreErrorAsMessage(error, string) error
 	UpdateRunNamespace(string)
-	UpdateAuxNamespace(string) error
+	UpdateAuxNamespace(string)
 	UpdateMessage(string)
 }
 
@@ -274,9 +274,9 @@ func (r *pipelineRun) UpdateRunNamespace(ns string) {
 
 // UpdateAuxNamespace overrides the namespace hosting auxiliary services
 // for the pipeline run.
-func (r *pipelineRun) UpdateAuxNamespace(ns string) error {
+func (r *pipelineRun) UpdateAuxNamespace(ns string) {
 	r.ensureCopy()
-	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.AuxiliaryNamespace = ns
 		return nil, nil
 	})
