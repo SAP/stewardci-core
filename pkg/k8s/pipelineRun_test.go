@@ -254,7 +254,7 @@ func Test_pipelineRun_InitState_ReturnsErrorIfCalledMultipleTimes(t *testing.T) 
 			resultErr := examinee.InitState()
 			assert.NilError(t, resultErr)
 
-			_, resultErr = examinee.UpdateState(oldState)
+			resultErr = examinee.UpdateState(oldState)
 			assert.NilError(t, resultErr)
 
 			// EXERCISE
@@ -277,7 +277,9 @@ func Test_pipelineRun_UpdateState_HasAutomaticInitialization(t *testing.T) {
 	assert.NilError(t, err)
 
 	// EXERCISE
-	result, resultErr := examinee.UpdateState(api.StatePreparing)
+	resultErr := examinee.UpdateState(api.StatePreparing)
+	assert.NilError(t, resultErr)
+	results, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -288,8 +290,8 @@ func Test_pipelineRun_UpdateState_HasAutomaticInitialization(t *testing.T) {
 	startedAt := examinee.GetStatus().StartedAt
 	assert.Assert(t, !startedAt.IsZero())
 	assert.Equal(t, *startedAt, examinee.GetStatus().StateHistory[0].FinishedAt)
-	assert.Equal(t, api.StateNew, result.State)
-	assert.Equal(t, *startedAt, result.FinishedAt)
+	assert.Equal(t, api.StateNew, results[0].State)
+	assert.Equal(t, *startedAt, results[0].FinishedAt)
 }
 
 func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
@@ -306,7 +308,9 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	assert.NilError(t, err)
 
 	// EXERCISE
-	result, resultErr := examinee.UpdateState(api.StatePreparing)
+	resultErr := examinee.UpdateState(api.StatePreparing)
+	assert.NilError(t, resultErr)
+	results, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -319,9 +323,9 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	assert.Assert(t, !startedAt.IsZero())
 	assert.Equal(t, *startedAt, examinee.GetStatus().StateHistory[0].FinishedAt)
 
-	assert.Equal(t, api.StateNew, result.State)
-	assert.Equal(t, creationTimestamp, result.StartedAt)
-	assert.Equal(t, *startedAt, result.FinishedAt)
+	assert.Equal(t, api.StateNew, results[0].State)
+	assert.Equal(t, creationTimestamp, results[0].StartedAt)
+	assert.Equal(t, *startedAt, results[0].FinishedAt)
 }
 
 func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
@@ -334,12 +338,14 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	assert.NilError(t, err)
 	err = examinee.InitState()
 	assert.NilError(t, err)
-	_, err = examinee.UpdateState(api.StatePreparing) // first call
+	err = examinee.UpdateState(api.StatePreparing) // first call
 	assert.NilError(t, err)
 	factory.Sleep("let time elapse to check timestamps afterwards")
 
 	// EXERCISE
-	result, resultErr := examinee.UpdateState(api.StateRunning) // second call
+	resultErr := examinee.UpdateState(api.StateRunning) // second call
+	assert.NilError(t, resultErr)
+	results, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -353,9 +359,10 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	assert.Assert(t, !start.IsZero())
 	assert.Assert(t, factory.CheckTimeOrder(start, end))
 
-	assert.Equal(t, api.StatePreparing, result.State)
-	start = result.StartedAt
-	end = result.FinishedAt
+	assert.Equal(t, api.StateNew, results[0].State)
+	assert.Equal(t, api.StatePreparing, results[1].State)
+	start = results[1].StartedAt
+	end = results[1].FinishedAt
 	assert.Assert(t, !start.IsZero())
 	assert.Assert(t, factory.CheckTimeOrder(start, end))
 
@@ -371,12 +378,14 @@ func Test_pipelineRun_UpdateStateToFinished_HistoryIfUpdateStateCalledBefore(t *
 	assert.NilError(t, err)
 	err = examinee.InitState()
 	assert.NilError(t, err)
-	_, err = examinee.UpdateState(api.StatePreparing) // called before
+	err = examinee.UpdateState(api.StatePreparing) // called before
 	assert.NilError(t, err)
 	factory.Sleep("let time elapse to check timestamps afterwards")
 
 	// EXERCISE
 	examinee.UpdateState(api.StateFinished)
+	_, err = examinee.CommitStatus()
+	assert.NilError(t, err)
 
 	// VERIFY
 	status := examinee.GetStatus()
@@ -480,7 +489,7 @@ func Test_pipelineRun_UpdateState_PropagatesError(t *testing.T) {
 
 	// EXCERCISE
 	examinee.UpdateState(api.StateWaiting)
-	err = examinee.CommitStatus()
+	_, err = examinee.CommitStatus()
 
 	// VERIFY
 	assert.Assert(t, err != nil)
@@ -509,11 +518,11 @@ func Test_pipelineRun_CommitStatus_RetriesOnConflict(t *testing.T) {
 	assert.NilError(t, err)
 	err = examinee.InitState()
 	assert.NilError(t, err)
-	_, resultErr := examinee.UpdateState(api.StateWaiting)
+	resultErr := examinee.UpdateState(api.StateWaiting)
 	assert.NilError(t, resultErr)
 
 	// EXCERCISE
-	resultErr = examinee.CommitStatus()
+	_, resultErr = examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -543,14 +552,14 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfNoConflict(
 	}
 
 	changeCallCount := 0
-	changeFunc := func(*api.PipelineStatus) error {
+	changeFunc := func(*api.PipelineStatus) (func() *api.StateItem, error) {
 		changeCallCount++
-		return nil
+		return nil, nil
 	}
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	resultErr := examinee.CommitStatus()
+	_, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -575,9 +584,9 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_NoUpdateOnChangeErrorInFirstAt
 
 	changeError := fmt.Errorf("ChangeError1")
 	changeCallCount := 0
-	changeFunc := func(*api.PipelineStatus) error {
+	changeFunc := func(*api.PipelineStatus) (func() *api.StateItem, error) {
 		changeCallCount++
-		return changeError
+		return nil, changeError
 	}
 
 	examinee := &pipelineRun{
@@ -621,14 +630,14 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfConflict(t 
 	}
 
 	changeCallCount := 0
-	changeFunc := func(*api.PipelineStatus) error {
+	changeFunc := func(*api.PipelineStatus) (func() *api.StateItem, error) {
 		changeCallCount++
-		return nil
+		return nil, nil
 	}
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	resultErr := examinee.CommitStatus()
+	_, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -666,14 +675,14 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_FailsAfterTooManyConflicts(t *
 	}
 
 	changeCallCount := 0
-	changeFunc := func(*api.PipelineStatus) error {
+	changeFunc := func(*api.PipelineStatus) (func() *api.StateItem, error) {
 		changeCallCount++
-		return nil
+		return nil, nil
 	}
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	resultErr := examinee.CommitStatus()
+	_, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.Assert(t, errors.Is(resultErr, errorOnUpdate))
@@ -712,14 +721,14 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_ReturnsErrorIfFetchFailed(t *t
 	}
 
 	changeCallCount := 0
-	changeFunc := func(*api.PipelineStatus) error {
+	changeFunc := func(*api.PipelineStatus) (func() *api.StateItem, error) {
 		changeCallCount++
-		return nil
+		return nil, nil
 	}
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	resultErr := examinee.CommitStatus()
+	_, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.Assert(t, errors.Is(resultErr, errorOnGet))
@@ -737,7 +746,7 @@ func Test_pipelineRun_CommitStatus_PanicsIfNoClientFactory(t *testing.T) {
 	examinee, err := NewPipelineRun(run, nil /* client factory */)
 	assert.NilError(t, err)
 	examinee2 := examinee.(*pipelineRun)
-	examinee2.changeStatusAndStoreForRetry(func(*api.PipelineStatus) error { /* foo */ return nil })
+	examinee2.changeStatusAndStoreForRetry(func(*api.PipelineStatus) (func() *api.StateItem, error) { /* foo */ return nil, nil })
 
 	// EXERCISE and VERIFY
 	assert.Assert(t, cmp.Panics(

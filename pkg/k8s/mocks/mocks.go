@@ -267,11 +267,12 @@ func (mr *MockPipelineRunMockRecorder) AddFinalizer() *gomock.Call {
 }
 
 // CommitStatus mocks base method
-func (m *MockPipelineRun) CommitStatus() error {
+func (m *MockPipelineRun) CommitStatus() ([]*v1alpha1.StateItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CommitStatus")
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].([]*v1alpha1.StateItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CommitStatus indicates an expected call of CommitStatus
@@ -548,12 +549,11 @@ func (mr *MockPipelineRunMockRecorder) UpdateRunNamespace(arg0 interface{}) *gom
 }
 
 // UpdateState mocks base method
-func (m *MockPipelineRun) UpdateState(arg0 v1alpha1.State) (*v1alpha1.StateItem, error) {
+func (m *MockPipelineRun) UpdateState(arg0 v1alpha1.State) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateState", arg0)
-	ret0, _ := ret[0].(*v1alpha1.StateItem)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // UpdateState indicates an expected call of UpdateState

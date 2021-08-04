@@ -206,23 +206,12 @@ func (c *Controller) processNextWorkItem() bool {
 }
 
 func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) error {
-	start := time.Now()
-	oldState, err := pipelineRun.UpdateState(state)
+	err := pipelineRun.UpdateState(state)
 	if err != nil {
 		klog.V(3).Infof("Failed to UpdateState of [%s] to %q: %q", pipelineRun.String(), state, err.Error())
 		return err
 	}
 
-	end := time.Now()
-	elapsed := end.Sub(start)
-	c.metrics.ObserveUpdateDurationByType("UpdateState", elapsed)
-
-	if oldState != nil {
-		err := c.metrics.ObserveDurationByState(oldState)
-		if err != nil {
-			klog.Errorf("Failed to measure state '%+v': '%s'", oldState, err)
-		}
-	}
 	return nil
 }
 
@@ -352,7 +341,7 @@ func (c *Controller) syncHandler(key string) error {
 		if err = c.changeState(pipelineRun, api.StatePreparing); err != nil {
 			return err
 		}
-		if err = pipelineRun.CommitStatus(); err != nil {
+		if err = c.commitAndMeter(pipelineRun); err != nil {
 			return err
 		}
 		c.metrics.CountStart()
@@ -390,7 +379,7 @@ func (c *Controller) syncHandler(key string) error {
 					return errClean
 				}
 				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
-				if err := pipelineRun.CommitStatus(); err != nil {
+				if err := c.commitAndMeter(pipelineRun); err != nil {
 					return err
 				}
 				c.metrics.CountResult(pipelineRun.GetStatus().Result)
@@ -402,7 +391,7 @@ func (c *Controller) syncHandler(key string) error {
 			return err
 		}
 		// TODO try to get rid of that commit
-		if err := pipelineRun.CommitStatus(); err != nil {
+		if err := c.commitAndMeter(pipelineRun); err != nil {
 			return err
 		}
 	case api.StateWaiting:
@@ -417,7 +406,7 @@ func (c *Controller) syncHandler(key string) error {
 			}
 			pipelineRun.StoreErrorAsMessage(err, "waiting failed")
 			pipelineRun.UpdateResult(api.ResultErrorInfra)
-			if err := pipelineRun.CommitStatus(); err != nil {
+			if err := c.commitAndMeter(pipelineRun); err != nil {
 				return err
 			}
 			c.metrics.CountResult(api.ResultErrorInfra)
@@ -428,7 +417,7 @@ func (c *Controller) syncHandler(key string) error {
 			if err = c.changeState(pipelineRun, api.StateRunning); err != nil {
 				return err
 			}
-			if err = pipelineRun.CommitStatus(); err != nil {
+			if err = c.commitAndMeter(pipelineRun); err != nil {
 				return err
 			}
 		}
@@ -443,7 +432,7 @@ func (c *Controller) syncHandler(key string) error {
 				return errClean
 			}
 			pipelineRun.StoreErrorAsMessage(err, "running failed")
-			return pipelineRun.CommitStatus()
+			return c.commitAndMeter(pipelineRun)
 		}
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
@@ -454,7 +443,7 @@ func (c *Controller) syncHandler(key string) error {
 			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
 				return err
 			}
-			if err = pipelineRun.CommitStatus(); err != nil {
+			if err = c.commitAndMeter(pipelineRun); err != nil {
 				return err
 			}
 			c.metrics.CountResult(result)
@@ -468,11 +457,25 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
+func (c *Controller) commitAndMeter(pipelineRun k8s.PipelineRun) error {
+	finishedStates, err := pipelineRun.CommitStatus()
+	if err != nil {
+		return err
+	}
+	for _, finishedState := range finishedStates {
+		err := c.metrics.ObserveDurationByState(finishedState)
+		if err != nil {
+			klog.Errorf("Failed to measure state '%+v': '%s'", finishedState, err)
+		}
+	}
+	return nil
+}
+
 func (c *Controller) finish(pipelineRun k8s.PipelineRun) error {
 	if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
 		return err
 	}
-	if err := pipelineRun.CommitStatus(); err != nil {
+	if err := c.commitAndMeter(pipelineRun); err != nil {
 		return err
 	}
 	return pipelineRun.DeleteFinalizerIfExists()

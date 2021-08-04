@@ -32,10 +32,10 @@ type PipelineRun interface {
 	GetPipelineRepoServerURL() (string, error)
 	HasDeletionTimestamp() bool
 	AddFinalizer() error
-	CommitStatus() error
+	CommitStatus() ([]*api.StateItem, error)
 	DeleteFinalizerIfExists() error
 	InitState() error
-	UpdateState(api.State) (*api.StateItem, error)
+	UpdateState(api.State) error
 	UpdateResult(api.Result) error
 	UpdateContainer(*corev1.ContainerState) error
 	StoreErrorAsMessage(error, string) error
@@ -45,10 +45,11 @@ type PipelineRun interface {
 }
 
 type pipelineRun struct {
-	client  stewardv1alpha1.PipelineRunInterface
-	apiObj  *api.PipelineRun
-	copied  bool
-	changes []func(*api.PipelineStatus) error
+	client         stewardv1alpha1.PipelineRunInterface
+	apiObj         *api.PipelineRun
+	copied         bool
+	changes        []func(*api.PipelineStatus) (func() *api.StateItem, error)
+	commitRecorder []func() *api.StateItem
 }
 
 // NewPipelineRun creates a managed pipeline run object.
@@ -75,10 +76,11 @@ func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun
 		return nil, err
 	}
 	return &pipelineRun{
-		apiObj:  obj,
-		copied:  true,
-		client:  client,
-		changes: []func(*v1alpha1.PipelineStatus) error{},
+		apiObj:         obj,
+		copied:         true,
+		client:         client,
+		changes:        []func(*v1alpha1.PipelineStatus) (func() *api.StateItem, error){},
+		commitRecorder: []func() *api.StateItem{},
 	}, nil
 }
 
@@ -145,10 +147,10 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 func (r *pipelineRun) InitState() error {
 	r.ensureCopy()
 	klog.V(3).Infof("Init State [%s]", r.String())
-	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
+	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (func() *api.StateItem, error) {
 
 		if s.State != api.StateUndefined {
-			return fmt.Errorf("Cannot initialize multiple times")
+			return nil, fmt.Errorf("Cannot initialize multiple times")
 		}
 
 		newStateDetails := api.StateItem{
@@ -157,7 +159,7 @@ func (r *pipelineRun) InitState() error {
 		}
 		s.StateDetails = newStateDetails
 		s.State = api.StateNew
-		return nil
+		return nil, nil
 	})
 
 	return err
@@ -168,10 +170,10 @@ func (r *pipelineRun) InitState() error {
 // if no current state is defined a new state (A) with cretiontime of the pipelinerun as start time is created.
 // It also creates a new current state (B) with start time.
 // Returns the state details of state A
-func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
+func (r *pipelineRun) UpdateState(state api.State) error {
 	if r.apiObj.Status.State == api.StateUndefined {
 		if err := r.InitState(); err != nil {
-			return nil, err
+			return err
 		}
 	}
 	r.ensureCopy()
@@ -179,11 +181,10 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 	now := metav1.Now()
 	oldStateDetails := r.apiObj.Status.StateDetails
 
-	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
-
+	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (func() *api.StateItem, error) {
 		currentStateDetails := s.StateDetails
 		if currentStateDetails.State != oldStateDetails.State {
-			return fmt.Errorf("State cannot be updated as it was changed concurrently from %q to %q", oldStateDetails.State, currentStateDetails.State)
+			return nil, fmt.Errorf("State cannot be updated as it was changed concurrently from %q to %q", oldStateDetails.State, currentStateDetails.State)
 		}
 		if state == api.StatePreparing {
 			s.StartedAt = &now
@@ -192,6 +193,9 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 		his := s.StateHistory
 		his = append(his, currentStateDetails)
 
+		commitRecorderFunc := func() *api.StateItem {
+			return &currentStateDetails
+		}
 		newStateDetails := api.StateItem{State: state, StartedAt: now}
 		if state == api.StateFinished {
 			newStateDetails.FinishedAt = now
@@ -200,16 +204,8 @@ func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
 		s.StateDetails = newStateDetails
 		s.StateHistory = his
 		s.State = state
-		return nil
+		return commitRecorderFunc, nil
 	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	his := r.apiObj.Status.StateHistory
-	hisLen := len(his)
-	return &his[hisLen-1], nil
 }
 
 // String returns the full qualified name of the pipeline run
@@ -220,11 +216,11 @@ func (r *pipelineRun) String() string {
 // UpdateResult of the pipeline run
 func (r *pipelineRun) UpdateResult(result api.Result) error {
 	r.ensureCopy()
-	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
+	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (func() *api.StateItem, error) {
 		s.Result = result
 		now := metav1.Now()
 		s.FinishedAt = &now
-		return nil
+		return nil, nil
 	})
 	return err
 }
@@ -235,9 +231,9 @@ func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
 		return nil
 	}
 	r.ensureCopy()
-	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
+	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (func() *api.StateItem, error) {
 		s.Container = *c
-		return nil
+		return nil, nil
 	})
 
 	return err
@@ -257,7 +253,7 @@ func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 func (r *pipelineRun) UpdateMessage(message string) error {
 	r.ensureCopy()
 
-	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
+	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (func() *api.StateItem, error) {
 		old := s.Message
 		if old != "" {
 			his := s.History
@@ -266,7 +262,7 @@ func (r *pipelineRun) UpdateMessage(message string) error {
 		}
 		s.Message = utils.Trim(message)
 		s.MessageShort = utils.ShortenMessage(message, 100)
-		return nil
+		return nil, nil
 	})
 
 	return err
@@ -275,9 +271,9 @@ func (r *pipelineRun) UpdateMessage(message string) error {
 // UpdateRunNamespace overrides the namespace in which the builds happens
 func (r *pipelineRun) UpdateRunNamespace(ns string) error {
 	r.ensureCopy()
-	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
+	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (func() *api.StateItem, error) {
 		s.Namespace = ns
-		return nil
+		return nil, nil
 	})
 	return err
 }
@@ -286,9 +282,9 @@ func (r *pipelineRun) UpdateRunNamespace(ns string) error {
 // for the pipeline run.
 func (r *pipelineRun) UpdateAuxNamespace(ns string) error {
 	r.ensureCopy()
-	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) error {
+	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (func() *api.StateItem, error) {
 		s.AuxiliaryNamespace = ns
-		return nil
+		return nil, nil
 	})
 }
 
@@ -343,11 +339,13 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 // and remembered so that it can be re-applied later in case of a re-tr. The change function
 // must only apply changes to pipelinerun.Status.
 //
-func (r *pipelineRun) changeStatusAndStoreForRetry(change func(*api.PipelineStatus) error) error {
-	err := change(r.GetStatus())
+func (r *pipelineRun) changeStatusAndStoreForRetry(change func(*api.PipelineStatus) (func() *api.StateItem, error)) error {
+	commitRecoder, err := change(r.GetStatus())
 	if err == nil {
 		r.changes = append(r.changes, change)
+		r.commitRecorder = append(r.commitRecorder, commitRecoder)
 	}
+
 	return err
 }
 
@@ -370,13 +368,13 @@ func (r *pipelineRun) changeStatusAndStoreForRetry(change func(*api.PipelineStat
 // that change _gets_ persisted in case there's _no_ update conflict, but
 // gets _lost_ in case there _is_ an update conflict! This is hard to find
 // by tests, as those typically do not encounter update conflicts.
-func (r *pipelineRun) CommitStatus() error {
+func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 	if r.client == nil {
 		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
 	}
 
 	if len(r.changes) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	isRetry := false
@@ -392,10 +390,14 @@ func (r *pipelineRun) CommitStatus() error {
 			}
 			r.apiObj = new
 			r.copied = true
+			r.commitRecorder = []func() *api.StateItem{}
+			var commitRecorder func() *api.StateItem
 			for _, change := range r.changes {
-				changeError = change(r.GetStatus())
+				commitRecorder, changeError = change(r.GetStatus())
 				if changeError != nil {
 					return nil
+				} else {
+					r.commitRecorder = append(r.commitRecorder, commitRecorder)
 				}
 			}
 		} else {
@@ -409,11 +411,17 @@ func (r *pipelineRun) CommitStatus() error {
 		}
 		return err
 	})
-	r.changes = []func(*api.PipelineStatus) error{}
+	r.changes = []func(*api.PipelineStatus) (func() *api.StateItem, error){}
 	if changeError != nil {
-		return changeError
+		return nil, changeError
 	}
-	return errors.Wrapf(err, "failed to update status [%s]", r.String())
+	result := []*api.StateItem{}
+	for _, recorder := range r.commitRecorder {
+		if recorder != nil {
+			result = append(result, recorder())
+		}
+	}
+	return result, errors.Wrapf(err, "failed to update status [%s]", r.String())
 }
 
 func (r *pipelineRun) ensureCopy() {
