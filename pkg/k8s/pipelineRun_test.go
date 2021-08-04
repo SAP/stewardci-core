@@ -552,7 +552,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfNoConflict(
 	}
 
 	changeCallCount := 0
-	changeFunc := func(*api.PipelineStatus) (func() *api.StateItem, error) {
+	changeFunc := func(*api.PipelineStatus) (commitRecorderFunc, error) {
 		changeCallCount++
 		return nil, nil
 	}
@@ -584,7 +584,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_NoUpdateOnChangeErrorInFirstAt
 
 	changeError := fmt.Errorf("ChangeError1")
 	changeCallCount := 0
-	changeFunc := func(*api.PipelineStatus) (func() *api.StateItem, error) {
+	changeFunc := func(*api.PipelineStatus) (commitRecorderFunc, error) {
 		changeCallCount++
 		return nil, changeError
 	}
@@ -630,7 +630,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfConflict(t 
 	}
 
 	changeCallCount := 0
-	changeFunc := func(*api.PipelineStatus) (func() *api.StateItem, error) {
+	changeFunc := func(*api.PipelineStatus) (commitRecorderFunc, error) {
 		changeCallCount++
 		return nil, nil
 	}
@@ -675,7 +675,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_FailsAfterTooManyConflicts(t *
 	}
 
 	changeCallCount := 0
-	changeFunc := func(*api.PipelineStatus) (func() *api.StateItem, error) {
+	changeFunc := func(*api.PipelineStatus) (commitRecorderFunc, error) {
 		changeCallCount++
 		return nil, nil
 	}
@@ -721,7 +721,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_ReturnsErrorIfFetchFailed(t *t
 	}
 
 	changeCallCount := 0
-	changeFunc := func(*api.PipelineStatus) (func() *api.StateItem, error) {
+	changeFunc := func(*api.PipelineStatus) (commitRecorderFunc, error) {
 		changeCallCount++
 		return nil, nil
 	}
@@ -746,7 +746,7 @@ func Test_pipelineRun_CommitStatus_PanicsIfNoClientFactory(t *testing.T) {
 	examinee, err := NewPipelineRun(run, nil /* client factory */)
 	assert.NilError(t, err)
 	examinee2 := examinee.(*pipelineRun)
-	examinee2.changeStatusAndStoreForRetry(func(*api.PipelineStatus) (func() *api.StateItem, error) { /* foo */ return nil, nil })
+	examinee2.changeStatusAndStoreForRetry(func(*api.PipelineStatus) (commitRecorderFunc, error) { /* foo */ return nil, nil })
 
 	// EXERCISE and VERIFY
 	assert.Assert(t, cmp.Panics(
