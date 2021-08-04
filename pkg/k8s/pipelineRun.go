@@ -40,7 +40,7 @@ type PipelineRun interface {
 	StoreErrorAsMessage(error, string) error
 	UpdateRunNamespace(string) error
 	UpdateAuxNamespace(string) error
-	UpdateMessage(string) error
+	UpdateMessage(string)
 }
 
 type pipelineRun struct {
@@ -241,16 +241,16 @@ func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 	if err != nil {
 		text := fmt.Sprintf("ERROR: %s [%s]: %s", utils.Trim(message), r.String(), err.Error())
 		klog.V(3).Infof(text)
-		return r.UpdateMessage(text)
+		r.UpdateMessage(text)
 	}
 	return nil
 }
 
 // UpdateMessage stores string as message in the status
-func (r *pipelineRun) UpdateMessage(message string) error {
+func (r *pipelineRun) UpdateMessage(message string) {
 	r.ensureCopy()
 
-	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		old := s.Message
 		if old != "" {
 			his := s.History
