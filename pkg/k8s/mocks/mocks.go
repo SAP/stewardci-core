@@ -529,11 +529,9 @@ func (mr *MockPipelineRunMockRecorder) UpdateResult(arg0 interface{}) *gomock.Ca
 }
 
 // UpdateRunNamespace mocks base method
-func (m *MockPipelineRun) UpdateRunNamespace(arg0 string) error {
+func (m *MockPipelineRun) UpdateRunNamespace(arg0 string) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateRunNamespace", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "UpdateRunNamespace", arg0)
 }
 
 // UpdateRunNamespace indicates an expected call of UpdateRunNamespace

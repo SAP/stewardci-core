@@ -38,7 +38,7 @@ type PipelineRun interface {
 	UpdateResult(api.Result)
 	UpdateContainer(*corev1.ContainerState)
 	StoreErrorAsMessage(error, string) error
-	UpdateRunNamespace(string) error
+	UpdateRunNamespace(string)
 	UpdateAuxNamespace(string) error
 	UpdateMessage(string)
 }
@@ -264,9 +264,9 @@ func (r *pipelineRun) UpdateMessage(message string) {
 }
 
 // UpdateRunNamespace overrides the namespace in which the builds happens
-func (r *pipelineRun) UpdateRunNamespace(ns string) error {
+func (r *pipelineRun) UpdateRunNamespace(ns string) {
 	r.ensureCopy()
-	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.Namespace = ns
 		return nil, nil
 	})
