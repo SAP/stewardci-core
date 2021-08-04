@@ -214,13 +214,12 @@ func (r *pipelineRun) String() string {
 // UpdateResult of the pipeline run
 func (r *pipelineRun) UpdateResult(result api.Result) error {
 	r.ensureCopy()
-	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.Result = result
 		now := metav1.Now()
 		s.FinishedAt = &now
 		return nil, nil
 	})
-	return err
 }
 
 // UpdateContainer ...
@@ -229,12 +228,10 @@ func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
 		return nil
 	}
 	r.ensureCopy()
-	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.Container = *c
 		return nil, nil
 	})
-
-	return err
 }
 
 // StoreErrorAsMessage stores the error as message in the status
@@ -251,7 +248,7 @@ func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 func (r *pipelineRun) UpdateMessage(message string) error {
 	r.ensureCopy()
 
-	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		old := s.Message
 		if old != "" {
 			his := s.History
@@ -262,18 +259,15 @@ func (r *pipelineRun) UpdateMessage(message string) error {
 		s.MessageShort = utils.ShortenMessage(message, 100)
 		return nil, nil
 	})
-
-	return err
 }
 
 // UpdateRunNamespace overrides the namespace in which the builds happens
 func (r *pipelineRun) UpdateRunNamespace(ns string) error {
 	r.ensureCopy()
-	err := r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.Namespace = ns
 		return nil, nil
 	})
-	return err
 }
 
 // UpdateAuxNamespace overrides the namespace hosting auxiliary services
