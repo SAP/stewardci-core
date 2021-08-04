@@ -694,11 +694,6 @@ func (c *runManager) cleanup(ctx *runContext) error {
 		}
 	}
 
-	if firstErr != nil {
-		// TODO Don't store on resource as message. Add it as event.
-		ctx.pipelineRun.StoreErrorAsMessage(firstErr, "cleanup failed")
-	}
-
 	return firstErr
 }
 

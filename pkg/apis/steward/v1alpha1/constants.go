@@ -78,6 +78,10 @@ const (
 	// faces an intermittent error during running phase.
 	EventReasonRunningFailed = "RunningFailed"
 
+	// EventReasonCleaningFailed is the reason for a event occuring when the run controller
+	// faces an intermittent error during cleanup phase.
+	EventReasonCleaningFailed = "CleaningFailed"
+
 	// EventReasonLoadPipelineRunsConfigFailed is the reason for an event occuring when the
 	// loading of the pipeline runs configuration fails.
 	EventReasonLoadPipelineRunsConfigFailed = "LoadPipelineRunsConfigFailed"

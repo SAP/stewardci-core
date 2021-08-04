@@ -295,6 +295,8 @@ func (c *Controller) syncHandler(key string) error {
 			if err == nil {
 				c.metrics.CountResult(api.ResultDeleted)
 			}
+		} else {
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
 		}
 		return err
 	}
@@ -450,6 +452,9 @@ func (c *Controller) syncHandler(key string) error {
 		}
 	case api.StateCleaning:
 		err = runManager.Cleanup(pipelineRun)
+		if err != nil {
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
+		}
 		return c.finish(pipelineRun)
 	default:
 		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
