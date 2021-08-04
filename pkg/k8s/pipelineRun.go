@@ -52,6 +52,7 @@ type pipelineRun struct {
 	commitRecorder []commitRecorderFunc
 }
 
+type changeFunc func(*api.PipelineStatus) (commitRecorderFunc, error)
 type commitRecorderFunc func() *api.StateItem
 
 // NewPipelineRun creates a managed pipeline run object.
