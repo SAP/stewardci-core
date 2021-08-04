@@ -49,8 +49,10 @@ type pipelineRun struct {
 	apiObj         *api.PipelineRun
 	copied         bool
 	changes        []func(*api.PipelineStatus) (func() *api.StateItem, error)
-	commitRecorder []func() *api.StateItem
+	commitRecorder []commitRecorderFunc
 }
+
+type commitRecorderFunc func() *api.StateItem
 
 // NewPipelineRun creates a managed pipeline run object.
 // If a factory is provided a new version of the pipelinerun is fetched.
@@ -80,7 +82,7 @@ func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun
 		copied:         true,
 		client:         client,
 		changes:        []func(*v1alpha1.PipelineStatus) (func() *api.StateItem, error){},
-		commitRecorder: []func() *api.StateItem{},
+		commitRecorder: []commitRecorderFunc{},
 	}, nil
 }
 
@@ -389,7 +391,7 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 			}
 			r.apiObj = new
 			r.copied = true
-			r.commitRecorder = []func() *api.StateItem{}
+			r.commitRecorder = []commitRecorderFunc{}
 			var commitRecorder func() *api.StateItem
 			for _, change := range r.changes {
 				commitRecorder, changeError = change(r.GetStatus())
