@@ -339,10 +339,10 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 // must only apply changes to pipelinerun.Status.
 //
 func (r *pipelineRun) changeStatusAndStoreForRetry(change func(*api.PipelineStatus) (func() *api.StateItem, error)) error {
-	commitRecoder, err := change(r.GetStatus())
+	commitRecorder, err := change(r.GetStatus())
 	if err == nil {
 		r.changes = append(r.changes, change)
-		r.commitRecorder = append(r.commitRecorder, commitRecoder)
+		r.commitRecorder = append(r.commitRecorder, commitRecorder)
 	}
 
 	return err
