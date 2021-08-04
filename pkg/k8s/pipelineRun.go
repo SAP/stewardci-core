@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
@@ -48,7 +47,7 @@ type pipelineRun struct {
 	client         stewardv1alpha1.PipelineRunInterface
 	apiObj         *api.PipelineRun
 	copied         bool
-	changes        []func(*api.PipelineStatus) (commitRecorderFunc, error)
+	changes        []changeFunc
 	commitRecorder []commitRecorderFunc
 }
 
@@ -82,7 +81,7 @@ func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun
 		apiObj:         obj,
 		copied:         true,
 		client:         client,
-		changes:        []func(*v1alpha1.PipelineStatus) (commitRecorderFunc, error){},
+		changes:        []changeFunc{},
 		commitRecorder: []commitRecorderFunc{},
 	}, nil
 }
@@ -413,7 +412,7 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 		}
 		return err
 	})
-	r.changes = []func(*api.PipelineStatus) (commitRecorderFunc, error){}
+	r.changes = []changeFunc{}
 	if changeError != nil {
 		return nil, changeError
 	}
