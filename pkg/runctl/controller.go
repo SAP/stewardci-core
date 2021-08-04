@@ -359,9 +359,11 @@ func (c *Controller) syncHandler(key string) error {
 		}
 		pipelineRun.UpdateResult(api.ResultErrorInfra)
 		pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
-		c.metrics.CountResult(pipelineRun.GetStatus().Result)
-
-		return c.finish(pipelineRun)
+		err = c.finish(pipelineRun)
+		if err == nil {
+			c.metrics.CountResult(pipelineRun.GetStatus().Result)
+		}
+		return err
 	}
 
 	runManager := c.createRunManager(pipelineRun)
@@ -449,6 +451,9 @@ func (c *Controller) syncHandler(key string) error {
 				return err
 			}
 			c.metrics.CountResult(result)
+		} else {
+			// commit container update
+			c.commitAndMeter(pipelineRun)
 		}
 	case api.StateCleaning:
 		err = runManager.Cleanup(pipelineRun)
