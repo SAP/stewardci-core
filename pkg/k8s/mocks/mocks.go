@@ -521,11 +521,9 @@ func (mr *MockPipelineRunMockRecorder) UpdateMessage(arg0 interface{}) *gomock.C
 }
 
 // UpdateResult mocks base method
-func (m *MockPipelineRun) UpdateResult(arg0 v1alpha1.Result) error {
+func (m *MockPipelineRun) UpdateResult(arg0 v1alpha1.Result) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateResult", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "UpdateResult", arg0)
 }
 
 // UpdateResult indicates an expected call of UpdateResult

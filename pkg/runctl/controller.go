@@ -287,10 +287,7 @@ func (c *Controller) syncHandler(key string) error {
 		runManager := c.createRunManager(pipelineRun)
 		err = runManager.Cleanup(pipelineRun)
 		if err == nil {
-			err = pipelineRun.UpdateResult(api.ResultDeleted)
-			if err != nil {
-				return err
-			}
+			pipelineRun.UpdateResult(api.ResultDeleted)
 			err = c.finish(pipelineRun)
 			if err == nil {
 				c.metrics.CountResult(api.ResultDeleted)
