@@ -335,7 +335,7 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 
 // changeStatusAndStoreForRetry receives a function applying changes to pipelinerun.Status
 // This function get executed on the current memory representation of the pipeline run
-// and remembered so that it can be re-applied later in case of a re-tr. The change function
+// and remembered so that it can be re-applied later in case of a re-try. The change function
 // must only apply changes to pipelinerun.Status.
 //
 func (r *pipelineRun) changeStatusAndStoreForRetry(change func(*api.PipelineStatus) (func() *api.StateItem, error)) error {
