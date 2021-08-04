@@ -394,7 +394,6 @@ func (c *Controller) syncHandler(key string) error {
 		if err = c.changeState(pipelineRun, api.StateWaiting); err != nil {
 			return err
 		}
-		// TODO try to get rid of that commit
 		if err := c.commitAndMeter(pipelineRun); err != nil {
 			return err
 		}
