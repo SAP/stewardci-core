@@ -331,7 +331,7 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 // and remembered so that it can be re-applied later in case of a re-try. The change function
 // must only apply changes to pipelinerun.Status.
 //
-func (r *pipelineRun) changeStatusAndStoreForRetry(change func(*api.PipelineStatus) (commitRecorderFunc, error)) error {
+func (r *pipelineRun) changeStatusAndStoreForRetry(change changeFunc) error {
 	commitRecorder, err := change(r.GetStatus())
 	if err == nil {
 		r.changes = append(r.changes, change)
