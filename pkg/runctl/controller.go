@@ -368,8 +368,6 @@ func (c *Controller) syncHandler(key string) error {
 	// Process pipeline run based on current state
 	switch state := pipelineRun.GetStatus().State; state {
 	case api.StatePreparing:
-		// TODO namespaces contains the namespace at 0 and auxNamespace at 1. Should be improved,
-		// only temporary ... Let's see if it works and improve if so ...
 		namespace, auxNamespace, err := runManager.Start(pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
