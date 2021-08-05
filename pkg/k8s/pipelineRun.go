@@ -216,12 +216,12 @@ func (r *pipelineRun) UpdateResult(result api.Result) {
 	r.ensureCopy()
 	// the call below returns the error from the function. This error is always nil. Hence there
 	// is no need to return that always-nil-error.
-	panicOnError(r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.Result = result
 		now := metav1.Now()
 		s.FinishedAt = &now
 		return nil, nil
-	}))
+	})
 }
 
 // UpdateContainer ...
@@ -230,10 +230,10 @@ func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) {
 		return
 	}
 	r.ensureCopy()
-	panicOnError(r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.Container = *c
 		return nil, nil
-	}))
+	})
 }
 
 // StoreErrorAsMessage stores the error as message in the status
@@ -250,7 +250,7 @@ func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 func (r *pipelineRun) UpdateMessage(message string) {
 	r.ensureCopy()
 
-	panicOnError(r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		old := s.Message
 		if old != "" {
 			his := s.History
@@ -260,26 +260,26 @@ func (r *pipelineRun) UpdateMessage(message string) {
 		s.Message = utils.Trim(message)
 		s.MessageShort = utils.ShortenMessage(message, 100)
 		return nil, nil
-	}))
+	})
 }
 
 // UpdateRunNamespace overrides the namespace in which the builds happens
 func (r *pipelineRun) UpdateRunNamespace(ns string) {
 	r.ensureCopy()
-	panicOnError(r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.Namespace = ns
 		return nil, nil
-	}))
+	})
 }
 
 // UpdateAuxNamespace overrides the namespace hosting auxiliary services
 // for the pipeline run.
 func (r *pipelineRun) UpdateAuxNamespace(ns string) {
 	r.ensureCopy()
-	panicOnError(r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.AuxiliaryNamespace = ns
 		return nil, nil
-	}))
+	})
 }
 
 //HasDeletionTimestamp returns true if deletion timestamp is set
@@ -326,6 +326,15 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 	}
 	r.apiObj = result
 	return nil
+}
+
+// mustChangeStatusAndStoreForRetry calls changeStatusAndStoreForRetry and
+// oanics in case of an error.
+func (r *pipelineRun) mustChangeStatusAndStoreForRetry(change changeFunc) {
+	err := r.changeStatusAndStoreForRetry((change))
+	if err != nil {
+		panic(err)
+	}
 }
 
 // changeStatusAndStoreForRetry receives a function applying changes to pipelinerun.Status
@@ -422,14 +431,5 @@ func (r *pipelineRun) ensureCopy() {
 	if !r.copied {
 		r.apiObj = r.apiObj.DeepCopy()
 		r.copied = true
-	}
-}
-
-// panicOnError is intended for cases where we have to deal with an error but an error is technically not possible.
-// In such cases it is better to panic rather then just to swallow since we do not get the awareness in case of an
-// unexpected behaviour of the coding when we just swallow.
-func panicOnError(err error) {
-	if err != nil {
-		panic(err)
 	}
 }
