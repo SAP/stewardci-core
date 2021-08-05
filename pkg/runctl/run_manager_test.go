@@ -1274,6 +1274,41 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	assert.Assert(t, result != nil)
 }
 
+func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	h := newTestHelper1(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+	//h.preparePredefinedClusterRole(mockFactory, mockPipelineRun)
+	config := &cfg.PipelineRunsConfigStruct{}
+
+	examinee := newRunManager(mockFactory, mockSecretProvider)
+	examinee.testing = newRunManagerTestingWithRequiredStubs()
+
+	var cleanupCalled int
+	examinee.testing.cleanupStub = func(ctx *runContext) error {
+		assert.Assert(t, ctx.pipelineRun == mockPipelineRun)
+		cleanupCalled = cleanupCalled + 1
+		return nil
+	}
+	examinee.testing.createTektonTaskRunStub = func(ctx *runContext) error {
+		return fmt.Errorf("foo")
+	}
+	examinee.testing.prepareRunNamespaceStub = func(ctx *runContext) error {
+		return nil
+	}
+
+	// EXERCISE
+	_, _, resultError := examinee.Start(mockPipelineRun, config)
+
+	// VERIFY
+	assert.Error(t, resultError, "foo")
+	assert.Assert(t, cleanupCalled == 2)
+}
+
 func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing.T) {
 	t.Parallel()
 

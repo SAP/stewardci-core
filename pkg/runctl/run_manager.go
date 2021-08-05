@@ -64,8 +64,10 @@ type runManager struct {
 type runManagerTesting struct {
 	cleanupStub                               func(*runContext) error
 	copySecretsToRunNamespaceStub             func(*runContext) (string, []string, error)
+	createTektonTaskRunStub                   func(*runContext) error
 	getSecretManagerStub                      func(*runContext) runifc.SecretManager
 	getServiceAccountSecretNameStub           func(*runContext) string
+	prepareRunNamespaceStub                   func(*runContext) error
 	setupLimitRangeFromConfigStub             func(*runContext) error
 	setupNetworkPolicyFromConfigStub          func(*runContext) error
 	setupNetworkPolicyThatIsolatesAllPodsStub func(*runContext) error
@@ -94,8 +96,8 @@ func newRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvi
 
 // Start prepares the isolated environment for a new run and starts
 // the run in this environment.
-func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (string, string, error) {
-	var err error
+func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (namespace string, auxNamespace string, err error) {
+
 	ctx := &runContext{
 		pipelineRun:        pipelineRun,
 		pipelineRunsConfig: pipelineRunsConfig,
@@ -125,6 +127,11 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.
 // prepareRunNamespace creates a new namespace for the pipeline run
 // and populates it with needed resources.
 func (c *runManager) prepareRunNamespace(ctx *runContext) error {
+
+	if c.testing != nil && c.testing.prepareRunNamespaceStub != nil {
+		return c.testing.prepareRunNamespaceStub(ctx)
+	}
+
 	var err error
 
 	randName, err := utils.RandomAlphaNumString(runNamespaceRandomLength)
@@ -454,6 +461,11 @@ func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
 }
 
 func (c *runManager) createTektonTaskRun(ctx *runContext) error {
+
+	if c.testing != nil && c.testing.createTektonTaskRunStub != nil {
+		return c.testing.createTektonTaskRunStub(ctx)
+	}
+
 	var err error
 
 	copyInt64Ptr := func(ptr *int64) *int64 {
