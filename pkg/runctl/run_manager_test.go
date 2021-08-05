@@ -1492,6 +1492,8 @@ func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
 			}
 			err = examinee.prepareRunNamespace(runCtx)
 			assert.NilError(t, err)
+			runCtx.pipelineRun.UpdateRunNamespace(runCtx.runNamespace)
+			runCtx.pipelineRun.UpdateAuxNamespace(runCtx.auxNamespace)
 			_, err = runCtx.pipelineRun.CommitStatus()
 			assert.NilError(t, err)
 			{
