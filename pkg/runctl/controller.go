@@ -370,7 +370,7 @@ func (c *Controller) syncHandler(key string) error {
 	case api.StatePreparing:
 		// TODO namespaces contains the namespace at 0 and auxNamespace at 1. Should be improved,
 		// only temporary ... Let's see if it works and improve if so ...
-		namespaces, err := runManager.Start(pipelineRun, pipelineRunsConfig)
+		namespace, auxNamespace, err := runManager.Start(pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			resultClass := serrors.GetClass(err)
@@ -390,12 +390,10 @@ func (c *Controller) syncHandler(key string) error {
 			}
 			return err
 		}
-		if len(namespaces) >= 1 && len(namespaces[0]) > 0 {
-			pipelineRun.UpdateRunNamespace(namespaces[0])
-		}
-		if len(namespaces) > 1 && len(namespaces[1]) > 0 {
-			pipelineRun.UpdateAuxNamespace(namespaces[1])
-		}
+
+		pipelineRun.UpdateRunNamespace(namespace)
+		pipelineRun.UpdateAuxNamespace(auxNamespace)
+
 		if err = c.changeState(pipelineRun, api.StateWaiting); err != nil {
 			return err
 		}

@@ -295,7 +295,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				name:         "new_ok",
 				pipelineSpec: api.PipelineSpec{},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-					rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return([]string{}, nil)
+					rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return("", "", nil)
 				},
 				pipelineRunsConfigStub: newEmptyRunsConfig,
 				isMaintenanceModeStub:  newIsMaintenanceModeStub(false, nil),
@@ -413,7 +413,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 	errorRecover1 := serrors.Recoverable(error1)
 
 	for _, maintenanceMode := range []bool{true, false} {
-
 		for _, test := range []struct {
 			name                   string
 			pipelineSpec           api.PipelineSpec
@@ -432,7 +431,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 					State: api.StatePreparing,
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-					rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return([]string{}, nil)
+					rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return("", "", nil)
 				},
 				pipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:         api.ResultUndefined,
@@ -445,7 +444,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 					State: api.StatePreparing,
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-					rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return([]string{}, error1)
+					rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return("", "", error1)
 				},
 				pipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:         api.ResultUndefined,
@@ -463,7 +462,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 
-					rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return([]string{}, serrors.Classify(error1, api.ResultErrorContent))
+					rm.EXPECT().Start(gomock.Any(), gomock.Any()).Return("", "", serrors.Classify(error1, api.ResultErrorContent))
 				},
 				pipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:         api.ResultErrorContent,

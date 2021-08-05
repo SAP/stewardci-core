@@ -109,12 +109,12 @@ func Test__runManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
 				pipelineRun1 := h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1)
 				expectedNamespaces := []string{h.namespace1}
 
-				h.verifyNamespace(cf, pipelineRun1.Status.Namespace, "main")
-				expectedNamespaces = append(expectedNamespaces, pipelineRun1.Status.Namespace)
+				h.verifyNamespace(cf, runCtx.runNamespace, "main")
+				expectedNamespaces = append(expectedNamespaces, runCtx.runNamespace)
 
 				if ffEnabled {
-					h.verifyNamespace(cf, pipelineRun1.Status.AuxiliaryNamespace, "aux")
-					expectedNamespaces = append(expectedNamespaces, pipelineRun1.Status.AuxiliaryNamespace)
+					h.verifyNamespace(cf, runCtx.auxNamespace, "aux")
+					expectedNamespaces = append(expectedNamespaces, runCtx.auxNamespace)
 				} else {
 					assert.Equal(t, pipelineRun1.Status.AuxiliaryNamespace, "")
 				}
@@ -1291,7 +1291,7 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	_, resultError := examinee.Start(mockPipelineRun, config)
+	_, _, resultError := examinee.Start(mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY
@@ -1419,7 +1419,7 @@ func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	_, resultError := examinee.Start(mockPipelineRun, config)
+	_, _, resultError := examinee.Start(mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY

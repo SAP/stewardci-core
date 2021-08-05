@@ -94,7 +94,7 @@ func newRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvi
 
 // Start prepares the isolated environment for a new run and starts
 // the run in this environment.
-func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) ([]string, error) {
+func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (string, string, error) {
 	var err error
 	ctx := &runContext{
 		pipelineRun:        pipelineRun,
@@ -104,18 +104,18 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.
 	}
 	err = c.cleanupNamespaces(ctx)
 	if err != nil {
-		return []string{}, err
+		return "", "", err
 	}
 	err = c.prepareRunNamespace(ctx)
 	if err != nil {
-		return []string{}, err
+		return "", "", err
 	}
 	err = c.createTektonTaskRun(ctx)
 	if err != nil {
-		return []string{}, err
+		return "", "", err
 	}
 
-	return []string{ctx.runNamespace, ctx.auxNamespace}, nil
+	return ctx.runNamespace, ctx.auxNamespace, nil
 }
 
 // prepareRunNamespace creates a new namespace for the pipeline run
@@ -128,30 +128,23 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 		return err
 	}
 
-	var createNamespaceErr, createAuxNamespaceErr, commitErr error
-	ctx.runNamespace, createNamespaceErr = c.createNamespace(ctx, "main", randName)
-	if createNamespaceErr == nil {
-		ctx.pipelineRun.UpdateRunNamespace(ctx.runNamespace)
-	}
-	if createNamespaceErr == nil && featureflag.CreateAuxNamespaceIfUnused.Enabled() {
-		ctx.auxNamespace, createAuxNamespaceErr = c.createNamespace(ctx, "aux", randName)
-		if createAuxNamespaceErr == nil {
-			ctx.pipelineRun.UpdateAuxNamespace(ctx.auxNamespace)
-		}
-	}
-	if createNamespaceErr == nil || createAuxNamespaceErr == nil {
-		_, commitErr = ctx.pipelineRun.CommitStatus()
-	}
-
 	// If something goes wrong while creating objects inside the namespaces, we delete everything.
 	defer func() {
-		if err != nil || createNamespaceErr != nil || createAuxNamespaceErr != nil || commitErr != nil {
+		if err != nil {
 			c.cleanupNamespaces(ctx) // clean-up ignoring error
 		}
 	}()
 
-	if createNamespaceErr != nil || createAuxNamespaceErr != nil || commitErr != nil {
-		return fmt.Errorf("cannot create namespaces: createNamespace: %s, createAuxNamespace: %s, commit: %s", createNamespaceErr.Error(), createAuxNamespaceErr.Error(), commitErr)
+	ctx.runNamespace, err = c.createNamespace(ctx, "main", randName)
+	if err != nil {
+		return err
+	}
+
+	if featureflag.CreateAuxNamespaceIfUnused.Enabled() {
+		ctx.auxNamespace, err = c.createNamespace(ctx, "aux", randName)
+		if err != nil {
+			return err
+		}
 	}
 
 	pipelineCloneSecretName, imagePullSecretNames, err := c.copySecretsToRunNamespace(ctx)
