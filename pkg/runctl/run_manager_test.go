@@ -1355,7 +1355,6 @@ func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
 			assert.Assert(t, cleanupCalled == test.expectedCleanupCount)
 		})
 	}
-
 }
 
 func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing.T) {
