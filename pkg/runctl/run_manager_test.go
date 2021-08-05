@@ -153,13 +153,6 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 		return "", nil, expectedError
 	}
 
-	var cleanupCalled bool
-	examinee.testing.cleanupStub = func(ctx *runContext) error {
-		assert.Assert(t, ctx.pipelineRun == pipelineRunHelper)
-		cleanupCalled = true
-		return nil
-	}
-
 	runCtx := &runContext{
 		pipelineRun:        pipelineRunHelper,
 		pipelineRunsConfig: config,
@@ -171,7 +164,6 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 	// VERIFY
 	assert.Equal(t, expectedError, resultErr)
 	assert.Assert(t, methodCalled == true)
-	assert.Assert(t, cleanupCalled == true)
 }
 
 func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagatesError(t *testing.T) {
@@ -208,13 +200,6 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 		return expectedPipelineCloneSecretName, expectedImagePullSecretNames, nil
 	}
 
-	var cleanupCalled bool
-	examinee.testing.cleanupStub = func(ctx *runContext) error {
-		assert.Assert(t, ctx.pipelineRun == pipelineRunHelper)
-		cleanupCalled = true
-		return nil
-	}
-
 	runCtx := &runContext{
 		pipelineRun:        pipelineRunHelper,
 		pipelineRunsConfig: config,
@@ -226,7 +211,6 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 	// VERIFY
 	assert.Equal(t, expectedError, resultErr)
 	assert.Assert(t, methodCalled == true)
-	assert.Assert(t, cleanupCalled == true)
 }
 
 func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndPropagatesError(t *testing.T) {
@@ -256,13 +240,6 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 		return expectedError
 	}
 
-	var cleanupCalled bool
-	examinee.testing.cleanupStub = func(ctx *runContext) error {
-		assert.Assert(t, ctx.pipelineRun == pipelineRunHelper)
-		cleanupCalled = true
-		return nil
-	}
-
 	runCtx := &runContext{
 		pipelineRun:        pipelineRunHelper,
 		pipelineRunsConfig: config,
@@ -274,7 +251,6 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 	// VERIFY
 	assert.Equal(t, expectedError, resultErr)
 	assert.Assert(t, methodCalled == true)
-	assert.Assert(t, cleanupCalled == true)
 }
 
 func Test__runManager_setupStaticNetworkPolicies__Succeeds(t *testing.T) {

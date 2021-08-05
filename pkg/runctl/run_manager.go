@@ -106,16 +106,20 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.
 	if err != nil {
 		return "", "", err
 	}
+
+	// If something goes wrong while creating objects inside the namespaces, we delete everything.
+	defer func() {
+		if err != nil {
+			c.cleanupNamespaces(ctx) // clean-up ignoring error
+		}
+	}()
+
 	err = c.prepareRunNamespace(ctx)
 	if err != nil {
 		return "", "", err
 	}
-	err = c.createTektonTaskRun(ctx)
-	if err != nil {
-		return "", "", err
-	}
 
-	return ctx.runNamespace, ctx.auxNamespace, nil
+	return ctx.runNamespace, ctx.auxNamespace, c.createTektonTaskRun(ctx)
 }
 
 // prepareRunNamespace creates a new namespace for the pipeline run
@@ -127,13 +131,6 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 	if err != nil {
 		return err
 	}
-
-	// If something goes wrong while creating objects inside the namespaces, we delete everything.
-	defer func() {
-		if err != nil {
-			c.cleanupNamespaces(ctx) // clean-up ignoring error
-		}
-	}()
 
 	ctx.runNamespace, err = c.createNamespace(ctx, "main", randName)
 	if err != nil {
