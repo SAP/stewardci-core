@@ -340,7 +340,7 @@ func (c *Controller) syncHandler(key string) error {
 		if err = c.changeState(pipelineRun, api.StatePreparing); err != nil {
 			return err
 		}
-		if err = c.commitAndMeter(pipelineRun); err != nil {
+		if err = c.commitStatusAndMeter(pipelineRun); err != nil {
 			return err
 		}
 		c.metrics.CountStart()
@@ -380,7 +380,7 @@ func (c *Controller) syncHandler(key string) error {
 					return errClean
 				}
 				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
-				if err := c.commitAndMeter(pipelineRun); err != nil {
+				if err := c.commitStatusAndMeter(pipelineRun); err != nil {
 					return err
 				}
 				c.metrics.CountResult(pipelineRun.GetStatus().Result)
@@ -391,7 +391,7 @@ func (c *Controller) syncHandler(key string) error {
 		if err = c.changeState(pipelineRun, api.StateWaiting); err != nil {
 			return err
 		}
-		if err := c.commitAndMeter(pipelineRun); err != nil {
+		if err := c.commitStatusAndMeter(pipelineRun); err != nil {
 			return err
 		}
 	case api.StateWaiting:
@@ -406,7 +406,7 @@ func (c *Controller) syncHandler(key string) error {
 			}
 			pipelineRun.StoreErrorAsMessage(err, "waiting failed")
 			pipelineRun.UpdateResult(api.ResultErrorInfra)
-			if err := c.commitAndMeter(pipelineRun); err != nil {
+			if err := c.commitStatusAndMeter(pipelineRun); err != nil {
 				return err
 			}
 			c.metrics.CountResult(api.ResultErrorInfra)
@@ -417,7 +417,7 @@ func (c *Controller) syncHandler(key string) error {
 			if err = c.changeState(pipelineRun, api.StateRunning); err != nil {
 				return err
 			}
-			if err = c.commitAndMeter(pipelineRun); err != nil {
+			if err = c.commitStatusAndMeter(pipelineRun); err != nil {
 				return err
 			}
 		}
@@ -432,7 +432,7 @@ func (c *Controller) syncHandler(key string) error {
 				return errClean
 			}
 			pipelineRun.StoreErrorAsMessage(err, "running failed")
-			return c.commitAndMeter(pipelineRun)
+			return c.commitStatusAndMeter(pipelineRun)
 		}
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
@@ -443,13 +443,13 @@ func (c *Controller) syncHandler(key string) error {
 			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
 				return err
 			}
-			if err = c.commitAndMeter(pipelineRun); err != nil {
+			if err = c.commitStatusAndMeter(pipelineRun); err != nil {
 				return err
 			}
 			c.metrics.CountResult(result)
 		} else {
 			// commit container update
-			c.commitAndMeter(pipelineRun)
+			c.commitStatusAndMeter(pipelineRun)
 		}
 	case api.StateCleaning:
 		err = runManager.Cleanup(pipelineRun)
@@ -463,7 +463,7 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func (c *Controller) commitAndMeter(pipelineRun k8s.PipelineRun) error {
+func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
 	finishedStates, err := pipelineRun.CommitStatus()
 	if err != nil {
 		return err
@@ -481,7 +481,7 @@ func (c *Controller) finish(pipelineRun k8s.PipelineRun) error {
 	if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
 		return err
 	}
-	if err := c.commitAndMeter(pipelineRun); err != nil {
+	if err := c.commitStatusAndMeter(pipelineRun); err != nil {
 		return err
 	}
 	return pipelineRun.DeleteFinalizerIfExists()
