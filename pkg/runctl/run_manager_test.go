@@ -1277,36 +1277,85 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
 	t.Parallel()
 
-	// SETUP
-	h := newTestHelper1(t)
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
-	//h.preparePredefinedClusterRole(mockFactory, mockPipelineRun)
-	config := &cfg.PipelineRunsConfigStruct{}
+	for _, test := range []struct {
+		name                     string
+		prepareRunNamespaceError error
+		createTektonTaskRunError error
+		cleanupError             error
+		failOnCleanupCount       int
+		expectedError            error
+		expectedCleanupCount     int
+	}{
+		{
+			name:                 "no failure",
+			expectedCleanupCount: 1, // before, no cleanup afterwards since no error occured
+		},
+		{
+			name:                     "failing inside prepareRunNamespace",
+			prepareRunNamespaceError: fmt.Errorf("cannot prepare run namespace: foo"),
+			expectedError:            fmt.Errorf("cannot prepare run namespace: foo"),
+			expectedCleanupCount:     2, // before and after (since error occured)
+		},
+		{
+			name:                     "failing inside creating tekton task run",
+			createTektonTaskRunError: fmt.Errorf("cannot create tekton taks run: foo"),
+			expectedError:            fmt.Errorf("cannot create tekton taks run: foo"),
+			expectedCleanupCount:     2, // before and after (since error occured)
+		},
+		{
+			name:                 "failing inside initial cleanup",
+			failOnCleanupCount:   1,
+			cleanupError:         fmt.Errorf("cannot cleanup: foo"),
+			expectedError:        fmt.Errorf("cannot cleanup: foo"),
+			expectedCleanupCount: 1, // we are failing inside the initial cleanup, but this gets called.
+		},
+		{
+			name:                     "failing inside defered cleanup",
+			prepareRunNamespaceError: fmt.Errorf("cannot prepare run namespace: foo"),
+			failOnCleanupCount:       2,
+			cleanupError:             fmt.Errorf("cannot cleanup: foo"),
+			expectedError:            fmt.Errorf("cannot prepare run namespace: foo"), // we still expect "content" error
+			expectedCleanupCount:     2,                                               // we are failing inside the second (defered) cleanup
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			// SETUP
+			h := newTestHelper1(t)
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+			config := &cfg.PipelineRunsConfigStruct{}
 
-	examinee := newRunManager(mockFactory, mockSecretProvider)
-	examinee.testing = newRunManagerTestingWithRequiredStubs()
+			examinee := newRunManager(mockFactory, mockSecretProvider)
+			examinee.testing = newRunManagerTestingWithRequiredStubs()
 
-	var cleanupCalled int
-	examinee.testing.cleanupStub = func(ctx *runContext) error {
-		assert.Assert(t, ctx.pipelineRun == mockPipelineRun)
-		cleanupCalled = cleanupCalled + 1
-		return nil
+			var cleanupCalled int
+			examinee.testing.cleanupStub = func(ctx *runContext) error {
+				assert.Assert(t, ctx.pipelineRun == mockPipelineRun)
+				cleanupCalled++
+				if test.cleanupError != nil && cleanupCalled == test.failOnCleanupCount {
+					return test.cleanupError
+				}
+				return nil
+			}
+			examinee.testing.createTektonTaskRunStub = func(ctx *runContext) error {
+				return test.createTektonTaskRunError
+			}
+			examinee.testing.prepareRunNamespaceStub = func(ctx *runContext) error {
+				return test.prepareRunNamespaceError
+			}
+
+			// EXERCISE
+			_, _, resultError := examinee.Start(mockPipelineRun, config)
+
+			// VERIFY
+			if test.expectedError != nil {
+				assert.Error(t, resultError, test.expectedError.Error())
+			}
+			assert.Assert(t, cleanupCalled == test.expectedCleanupCount)
+		})
 	}
-	examinee.testing.createTektonTaskRunStub = func(ctx *runContext) error {
-		return fmt.Errorf("foo")
-	}
-	examinee.testing.prepareRunNamespaceStub = func(ctx *runContext) error {
-		return nil
-	}
 
-	// EXERCISE
-	_, _, resultError := examinee.Start(mockPipelineRun, config)
-
-	// VERIFY
-	assert.Error(t, resultError, "foo")
-	assert.Assert(t, cleanupCalled == 2)
 }
 
 func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing.T) {
