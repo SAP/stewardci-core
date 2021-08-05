@@ -150,7 +150,6 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 		methodCalled = true
 		assert.Assert(t, ctx.pipelineRun == pipelineRunHelper)
 		assert.Assert(t, ctx.runNamespace != "")
-		assert.Equal(t, pipelineRunHelper.GetRunNamespace(), ctx.runNamespace)
 		return "", nil, expectedError
 	}
 
@@ -201,7 +200,6 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 	examinee.testing.setupServiceAccountStub = func(ctx *runContext, pipelineCloneSecretName string, imagePullSecretNames []string) error {
 		methodCalled = true
 		assert.Assert(t, ctx.runNamespace != "")
-		assert.Equal(t, pipelineRunHelper.GetRunNamespace(), ctx.runNamespace)
 		assert.Equal(t, expectedPipelineCloneSecretName, pipelineCloneSecretName)
 		assert.DeepEqual(t, expectedImagePullSecretNames, imagePullSecretNames)
 		return expectedError
@@ -255,7 +253,6 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 	examinee.testing.setupStaticNetworkPoliciesStub = func(ctx *runContext) error {
 		methodCalled = true
 		assert.Assert(t, ctx.runNamespace != "")
-		assert.Equal(t, pipelineRunHelper.GetRunNamespace(), ctx.runNamespace)
 		return expectedError
 	}
 
@@ -1291,11 +1288,11 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	_, _, resultError := examinee.Start(mockPipelineRun, config)
+	runNamespace, _, resultError := examinee.Start(mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY
-	result, err := mockFactory.TektonV1beta1().TaskRuns(mockPipelineRun.GetRunNamespace()).Get(
+	result, err := mockFactory.TektonV1beta1().TaskRuns(runNamespace).Get(
 		tektonTaskRunName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	assert.Assert(t, result != nil)
