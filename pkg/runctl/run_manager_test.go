@@ -1291,7 +1291,7 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	resultError := examinee.Start(mockPipelineRun, config)
+	_, resultError := examinee.Start(mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY
@@ -1419,7 +1419,7 @@ func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	resultError := examinee.Start(mockPipelineRun, config)
+	_, resultError := examinee.Start(mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY

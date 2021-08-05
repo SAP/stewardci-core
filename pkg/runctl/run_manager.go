@@ -94,7 +94,7 @@ func newRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvi
 
 // Start prepares the isolated environment for a new run and starts
 // the run in this environment.
-func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) error {
+func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) ([]string, error) {
 	var err error
 	ctx := &runContext{
 		pipelineRun:        pipelineRun,
@@ -104,18 +104,18 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.
 	}
 	err = c.cleanupNamespaces(ctx)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 	err = c.prepareRunNamespace(ctx)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 	err = c.createTektonTaskRun(ctx)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
-	return nil
+	return []string{ctx.runNamespace, ctx.auxNamespace}, nil
 }
 
 // prepareRunNamespace creates a new namespace for the pipeline run

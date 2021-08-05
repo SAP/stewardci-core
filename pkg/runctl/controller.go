@@ -368,7 +368,7 @@ func (c *Controller) syncHandler(key string) error {
 	// Process pipeline run based on current state
 	switch state := pipelineRun.GetStatus().State; state {
 	case api.StatePreparing:
-		err = runManager.Start(pipelineRun, pipelineRunsConfig)
+		_, err := runManager.Start(pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			resultClass := serrors.GetClass(err)

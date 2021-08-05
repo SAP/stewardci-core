@@ -171,11 +171,12 @@ func (mr *MockManagerMockRecorder) GetRun(arg0 interface{}) *gomock.Call {
 }
 
 // Start mocks base method
-func (m *MockManager) Start(arg0 k8s.PipelineRun, arg1 *cfg.PipelineRunsConfigStruct) error {
+func (m *MockManager) Start(arg0 k8s.PipelineRun, arg1 *cfg.PipelineRunsConfigStruct) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Start", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Start indicates an expected call of Start
