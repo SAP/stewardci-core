@@ -102,7 +102,7 @@ func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.
 		runNamespace:       pipelineRun.GetRunNamespace(),
 		auxNamespace:       pipelineRun.GetAuxNamespace(),
 	}
-	err = c.cleanup(ctx)
+	err = c.cleanupNamespaces(ctx)
 	if err != nil {
 		return err
 	}
@@ -128,29 +128,31 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 		return err
 	}
 
-	ctx.runNamespace, err = c.createNamespace(ctx, "main", randName)
-	if err != nil {
-		return errors.Wrap(err, "failed to create main run namespace")
+	var createNamespaceErr, createAuxNamespaceErr, commitErr error
+	ctx.runNamespace, createNamespaceErr = c.createNamespace(ctx, "main", randName)
+	if createNamespaceErr == nil {
+		ctx.pipelineRun.UpdateRunNamespace(ctx.runNamespace)
 	}
-	ctx.pipelineRun.UpdateRunNamespace(ctx.runNamespace)
-	ctx.pipelineRun.CommitStatus()
-
-	if featureflag.CreateAuxNamespaceIfUnused.Enabled() {
-		ctx.auxNamespace, err = c.createNamespace(ctx, "aux", randName)
-		if err != nil {
-			return errors.Wrap(err, "failed to create auxiliary run namespace")
+	if createNamespaceErr == nil && featureflag.CreateAuxNamespaceIfUnused.Enabled() {
+		ctx.auxNamespace, createAuxNamespaceErr = c.createNamespace(ctx, "aux", randName)
+		if createAuxNamespaceErr == nil {
+			ctx.pipelineRun.UpdateAuxNamespace(ctx.auxNamespace)
 		}
-		ctx.pipelineRun.UpdateAuxNamespace(ctx.auxNamespace)
-		ctx.pipelineRun.CommitStatus()
+	}
+	if createNamespaceErr == nil || createAuxNamespaceErr == nil {
+		_, commitErr = ctx.pipelineRun.CommitStatus()
 	}
 
 	// If something goes wrong while creating objects inside the namespaces, we delete everything.
-	cleanupOnError := func() {
-		if err != nil {
-			c.cleanup(ctx) // clean-up ignoring error
+	defer func() {
+		if err != nil || createNamespaceErr != nil || createAuxNamespaceErr != nil || commitErr != nil {
+			c.cleanupNamespaces(ctx) // clean-up ignoring error
 		}
+	}()
+
+	if createNamespaceErr != nil || createAuxNamespaceErr != nil || commitErr != nil {
+		return fmt.Errorf("cannot create namespaces: createNamespace: %s, createAuxNamespace: %s, commit: %s", createNamespaceErr.Error(), createAuxNamespaceErr.Error(), commitErr)
 	}
-	defer cleanupOnError()
 
 	pipelineCloneSecretName, imagePullSecretNames, err := c.copySecretsToRunNamespace(ctx)
 	if err != nil {
@@ -662,10 +664,10 @@ func (c *runManager) Cleanup(pipelineRun k8s.PipelineRun) error {
 		runNamespace: pipelineRun.GetRunNamespace(),
 		auxNamespace: pipelineRun.GetAuxNamespace(),
 	}
-	return c.cleanup(ctx)
+	return c.cleanupNamespaces(ctx)
 }
 
-func (c *runManager) cleanup(ctx *runContext) error {
+func (c *runManager) cleanupNamespaces(ctx *runContext) error {
 	if c.testing != nil && c.testing.cleanupStub != nil {
 		return c.testing.cleanupStub(ctx)
 	}
