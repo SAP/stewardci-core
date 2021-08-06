@@ -18,7 +18,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
-	utils "github.com/SAP/stewardci-core/pkg/utils"
+	"github.com/SAP/stewardci-core/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -271,14 +271,8 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 	// fast exit
-	if pipelineRunAPIObj.GetDeletionTimestamp().IsZero() {
-		if pipelineRunAPIObj.Status.State == api.StateFinished {
-			return nil
-		}
-	} else {
-		if !utils.StringSliceContains(pipelineRunAPIObj.ObjectMeta.Finalizers, k8s.FinalizerName) {
-			return nil
-		}
+	if pipelineRunAPIObj.Status.State == api.StateFinished && !utils.StringSliceContains(pipelineRunAPIObj.ObjectMeta.Finalizers, k8s.FinalizerName) {
+		return nil
 	}
 
 	// Get real pipelineRun bypassing cache
@@ -304,6 +298,9 @@ func (c *Controller) syncHandler(key string) error {
 	// If not, try to add finalizer if missing
 	if pipelineRun.HasDeletionTimestamp() {
 		runManager := c.createRunManager(pipelineRun)
+		if pipelineRun.GetStatus().State == api.StateFinished {
+			return pipelineRun.DeleteFinalizerIfExists()
+		}
 		err = runManager.Cleanup(pipelineRun)
 
 		if err == nil {
