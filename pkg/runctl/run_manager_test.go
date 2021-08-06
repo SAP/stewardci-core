@@ -1277,6 +1277,10 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
 	t.Parallel()
 
+	prepareRunnamespaceErr := fmt.Errorf("cannot prepare run namespace: foo")
+	createTektonTaskRunError := fmt.Errorf("cannot create tekton taks run: foo")
+	cleanupError := fmt.Errorf("cannot cleanup: foo")
+
 	for _, test := range []struct {
 		name                     string
 		prepareRunNamespaceError error
@@ -1292,30 +1296,30 @@ func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
 		},
 		{
 			name:                     "failing inside prepareRunNamespace",
-			prepareRunNamespaceError: fmt.Errorf("cannot prepare run namespace: foo"),
-			expectedError:            fmt.Errorf("cannot prepare run namespace: foo"),
+			prepareRunNamespaceError: prepareRunnamespaceErr,
+			expectedError:            prepareRunnamespaceErr,
 			expectedCleanupCount:     2, // before and after (since error occured)
 		},
 		{
 			name:                     "failing inside creating tekton task run",
-			createTektonTaskRunError: fmt.Errorf("cannot create tekton taks run: foo"),
-			expectedError:            fmt.Errorf("cannot create tekton taks run: foo"),
+			createTektonTaskRunError: createTektonTaskRunError,
+			expectedError:            createTektonTaskRunError,
 			expectedCleanupCount:     2, // before and after (since error occured)
 		},
 		{
 			name:                 "failing inside initial cleanup",
 			failOnCleanupCount:   1,
-			cleanupError:         fmt.Errorf("cannot cleanup: foo"),
-			expectedError:        fmt.Errorf("cannot cleanup: foo"),
+			cleanupError:         cleanupError,
+			expectedError:        cleanupError,
 			expectedCleanupCount: 1, // we are failing inside the initial cleanup, but this gets called.
 		},
 		{
 			name:                     "failing inside defered cleanup",
-			prepareRunNamespaceError: fmt.Errorf("cannot prepare run namespace: foo"),
+			prepareRunNamespaceError: prepareRunnamespaceErr,
 			failOnCleanupCount:       2,
-			cleanupError:             fmt.Errorf("cannot cleanup: foo"),
-			expectedError:            fmt.Errorf("cannot prepare run namespace: foo"), // we still expect "content" error
-			expectedCleanupCount:     2,                                               // we are failing inside the second (defered) cleanup
+			cleanupError:             cleanupError,
+			expectedError:            prepareRunnamespaceErr, // we still expect "content" error
+			expectedCleanupCount:     2,                      // we are failing inside the second (defered) cleanup
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
