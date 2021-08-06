@@ -399,9 +399,8 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 				commitRecorder, changeError = change(r.GetStatus())
 				if changeError != nil {
 					return nil
-				} else {
-					r.commitRecorders = append(r.commitRecorders, commitRecorder)
 				}
+				r.commitRecorders = append(r.commitRecorders, commitRecorder)
 			}
 		} else {
 			defer func() { isRetry = true }()

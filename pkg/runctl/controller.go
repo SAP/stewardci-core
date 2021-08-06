@@ -34,7 +34,7 @@ const kind = "PipelineRuns"
 
 // Used for logging (control loop) "still alive" messages
 var heartbeatIntervalSeconds int64 = 60
-var heartbeatTimer int64 = 0
+var heartbeatTimer int64
 
 // Interval for histogram creation set to prometheus default scrape interval
 var meteringInterval = time.Minute * 1
