@@ -349,6 +349,8 @@ func (c *Controller) syncHandler(key string) error {
 		c.metrics.CountStart()
 	}
 
+	runManager := c.createRunManager(pipelineRun)
+
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
 	pipelineRunsConfig, err := c.loadPipelineRunsConfig()
@@ -360,11 +362,9 @@ func (c *Controller) syncHandler(key string) error {
 		pipelineRun.UpdateResult(api.ResultErrorInfra)
 		pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
 		c.metrics.CountResult(pipelineRun.GetStatus().Result)
-
+		runManager.Cleanup(pipelineRun)
 		return c.finish(pipelineRun)
 	}
-
-	runManager := c.createRunManager(pipelineRun)
 
 	// Process pipeline run based on current state
 	switch state := pipelineRun.GetStatus().State; state {

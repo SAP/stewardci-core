@@ -403,6 +403,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				name:         "new_get_cofig_fail_not_recoverable",
 				pipelineSpec: api.PipelineSpec{},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
 				},
 				pipelineRunsConfigStub: func() (*cfg.PipelineRunsConfigStruct, error) {
 					return nil, error1
