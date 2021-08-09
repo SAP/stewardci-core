@@ -51,6 +51,7 @@
 - version: NEXT
   date: TBD
   changes:
+
     - type: bug
       impact: patch
       title: Avoid non atomic status updates
@@ -65,6 +66,13 @@
         needs to be validated carefully since this is a bigger refactoring
       pullRequestNumber: 248
       jiraIssueNumber: CLOUDCIFEAT1-130
+
+     - type: bug
+       impact: patch
+       title: Fix deletion bug #241
+       description: |-
+         When a pipeline run was deleted the state and the result were not updated in some edge cases. This is fixed now.
+       pullRequestNumber: 250
 
 - version: "0.12.1"
   date: 2021-07-28
