@@ -51,7 +51,12 @@
 - version: NEXT
   date: TBD
   changes:
-
+     - type: bug
+       impact: patch
+       title: Fix deletion bug #241
+       description: |-
+         When a pipeline run was deleted the state and the result were not updated in some edge cases. This is fixed now.
+       pullRequestNumber: 250
 - version: "0.12.1"
   date: 2021-07-28
   changes:
