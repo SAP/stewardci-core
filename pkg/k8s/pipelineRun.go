@@ -329,7 +329,7 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 }
 
 // mustChangeStatusAndStoreForRetry calls changeStatusAndStoreForRetry and
-// oanics in case of an error.
+// panics in case of an error.
 func (r *pipelineRun) mustChangeStatusAndStoreForRetry(change changeFunc) {
 	err := r.changeStatusAndStoreForRetry((change))
 	if err != nil {
