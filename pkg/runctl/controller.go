@@ -440,7 +440,7 @@ func (c *Controller) syncHandler(key string) error {
 			msg := run.GetMessage()
 			pipelineRun.UpdateMessage(msg)
 			pipelineRun.UpdateResult(result)
-			if err = c.changeState(pipelineRun, api.StateCleaning, metav1.Now()); err != nil {
+			if err = c.changeState(pipelineRun, api.StateCleaning, *run.GetCompletionTime()); err != nil {
 				return err
 			}
 			if err = c.commitStatusAndMeter(pipelineRun); err != nil {
