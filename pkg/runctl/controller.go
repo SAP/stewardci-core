@@ -355,7 +355,10 @@ func (c *Controller) syncHandler(key string) error {
 		}
 		pipelineRun.UpdateResult(api.ResultErrorInfra)
 		pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
-		runManager.Cleanup(pipelineRun)
+		err = runManager.Cleanup(pipelineRun)
+		if err != nil {
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
+		}
 		err = c.finish(pipelineRun)
 		if err == nil {
 			c.metrics.CountResult(pipelineRun.GetStatus().Result)
