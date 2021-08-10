@@ -345,30 +345,25 @@ func (c *Controller) syncHandler(key string) error {
 
 	runManager := c.createRunManager(pipelineRun)
 
-	// the configuration should be loaded once per sync to avoid inconsistencies
-	// in case of concurrent configuration changes
-	pipelineRunsConfig, err := c.loadPipelineRunsConfig()
-	if err != nil {
-		if serrors.IsRecoverable(err) {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonLoadPipelineRunsConfigFailed, err.Error())
-			return err
-		}
-		pipelineRun.UpdateResult(api.ResultErrorInfra)
-		pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
-		err = runManager.Cleanup(pipelineRun)
-		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
-		}
-		err = c.finish(pipelineRun)
-		if err == nil {
-			c.metrics.CountResult(pipelineRun.GetStatus().Result)
-		}
-		return err
-	}
-
 	// Process pipeline run based on current state
 	switch state := pipelineRun.GetStatus().State; state {
 	case api.StatePreparing:
+		// the configuration should be loaded once per sync to avoid inconsistencies
+		// in case of concurrent configuration changes
+		pipelineRunsConfig, err := c.loadPipelineRunsConfig()
+		if err != nil {
+			if serrors.IsRecoverable(err) {
+				c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonLoadPipelineRunsConfigFailed, err.Error())
+				return err
+			}
+			pipelineRun.UpdateResult(api.ResultErrorInfra)
+			pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
+			err = c.finish(pipelineRun)
+			if err == nil {
+				c.metrics.CountResult(pipelineRun.GetStatus().Result)
+			}
+			return err
+		}
 		namespace, auxNamespace, err := runManager.Start(pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())

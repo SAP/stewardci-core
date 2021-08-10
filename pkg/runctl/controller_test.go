@@ -397,11 +397,9 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				expectedError:          fmt.Errorf("pipeline execution is paused while the system is in maintenance mode"),
 			},
 			{
-				name:         "new_get_cofig_fail_not_recoverable",
-				pipelineSpec: api.PipelineSpec{},
-				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-					rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
-				},
+				name:                  "new_get_cofig_fail_not_recoverable",
+				pipelineSpec:          api.PipelineSpec{},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {},
 				pipelineRunsConfigStub: func() (*cfg.PipelineRunsConfigStruct, error) {
 					return nil, error1
 				},
