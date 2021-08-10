@@ -34,7 +34,7 @@ type PipelineRun interface {
 	CommitStatus() ([]*api.StateItem, error)
 	DeleteFinalizerIfExists() error
 	InitState() error
-	UpdateState(api.State) error
+	UpdateState(api.State, metav1.Time) error
 	UpdateResult(api.Result)
 	UpdateContainer(*corev1.ContainerState)
 	StoreErrorAsMessage(error, string) error
@@ -168,7 +168,7 @@ func (r *pipelineRun) InitState() error {
 // UpdateState set end time of current (defined) state (A) and store it to the history.
 // if no current state is defined a new state (A) with cretiontime of the pipelinerun as start time is created.
 // It also creates a new current state (B) with start time.
-func (r *pipelineRun) UpdateState(state api.State) error {
+func (r *pipelineRun) UpdateState(state api.State, ts metav1.Time) error {
 	if r.apiObj.Status.State == api.StateUndefined {
 		if err := r.InitState(); err != nil {
 			return err
@@ -176,7 +176,6 @@ func (r *pipelineRun) UpdateState(state api.State) error {
 	}
 	r.ensureCopy()
 	klog.V(3).Infof("Update State to %s [%s]", state, r.String())
-	now := metav1.Now()
 	oldStateDetails := r.apiObj.Status.StateDetails
 
 	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
@@ -185,18 +184,18 @@ func (r *pipelineRun) UpdateState(state api.State) error {
 			return nil, fmt.Errorf("State cannot be updated as it was changed concurrently from %q to %q", oldStateDetails.State, currentStateDetails.State)
 		}
 		if state == api.StatePreparing {
-			s.StartedAt = &now
+			s.StartedAt = &ts
 		}
-		currentStateDetails.FinishedAt = now
+		currentStateDetails.FinishedAt = ts
 		his := s.StateHistory
 		his = append(his, currentStateDetails)
 
 		commitRecorderFunc := func() *api.StateItem {
 			return &currentStateDetails
 		}
-		newStateDetails := api.StateItem{State: state, StartedAt: now}
+		newStateDetails := api.StateItem{State: state, StartedAt: ts}
 		if state == api.StateFinished {
-			newStateDetails.FinishedAt = now
+			newStateDetails.FinishedAt = ts
 		}
 
 		s.StateDetails = newStateDetails

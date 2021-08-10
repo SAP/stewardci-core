@@ -1484,7 +1484,7 @@ func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
 
 	// VERIFY
 	// UpdateState should never be called
-	mockPipelineRun.EXPECT().UpdateState(gomock.Any()).Times(0)
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
 }
 
 func Test__runManager_copySecretsToRunNamespace__DoesCopySecret(t *testing.T) {

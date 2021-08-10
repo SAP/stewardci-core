@@ -206,7 +206,7 @@ func (c *Controller) processNextWorkItem() bool {
 }
 
 func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) error {
-	err := pipelineRun.UpdateState(state)
+	err := pipelineRun.UpdateState(state, metav1.Now())
 	if err != nil {
 		klog.V(3).Infof("Failed to UpdateState of [%s] to %q: %q", pipelineRun.String(), state, err.Error())
 		return err

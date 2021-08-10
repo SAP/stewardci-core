@@ -254,7 +254,7 @@ func Test_pipelineRun_InitState_ReturnsErrorIfCalledMultipleTimes(t *testing.T) 
 			resultErr := examinee.InitState()
 			assert.NilError(t, resultErr)
 
-			resultErr = examinee.UpdateState(oldState)
+			resultErr = examinee.UpdateState(oldState, metav1.Now())
 			assert.NilError(t, resultErr)
 
 			// EXERCISE
@@ -277,7 +277,7 @@ func Test_pipelineRun_UpdateState_HasAutomaticInitialization(t *testing.T) {
 	assert.NilError(t, err)
 
 	// EXERCISE
-	resultErr := examinee.UpdateState(api.StatePreparing)
+	resultErr := examinee.UpdateState(api.StatePreparing, metav1.Now())
 	assert.NilError(t, resultErr)
 	results, resultErr := examinee.CommitStatus()
 
@@ -308,7 +308,7 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	assert.NilError(t, err)
 
 	// EXERCISE
-	resultErr := examinee.UpdateState(api.StatePreparing)
+	resultErr := examinee.UpdateState(api.StatePreparing, metav1.Now())
 	assert.NilError(t, resultErr)
 	results, resultErr := examinee.CommitStatus()
 
@@ -338,12 +338,12 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	assert.NilError(t, err)
 	err = examinee.InitState()
 	assert.NilError(t, err)
-	err = examinee.UpdateState(api.StatePreparing) // first call
+	err = examinee.UpdateState(api.StatePreparing, metav1.Now()) // first call
 	assert.NilError(t, err)
 	factory.Sleep("let time elapse to check timestamps afterwards")
 
 	// EXERCISE
-	resultErr := examinee.UpdateState(api.StateRunning) // second call
+	resultErr := examinee.UpdateState(api.StateRunning, metav1.Now()) // second call
 	assert.NilError(t, resultErr)
 	results, resultErr := examinee.CommitStatus()
 
@@ -378,12 +378,12 @@ func Test_pipelineRun_UpdateStateToFinished_HistoryIfUpdateStateCalledBefore(t *
 	assert.NilError(t, err)
 	err = examinee.InitState()
 	assert.NilError(t, err)
-	err = examinee.UpdateState(api.StatePreparing) // called before
+	err = examinee.UpdateState(api.StatePreparing, metav1.Now()) // called before
 	assert.NilError(t, err)
 	factory.Sleep("let time elapse to check timestamps afterwards")
 
 	// EXERCISE
-	examinee.UpdateState(api.StateFinished)
+	examinee.UpdateState(api.StateFinished, metav1.Now())
 	_, err = examinee.CommitStatus()
 	assert.NilError(t, err)
 
@@ -488,7 +488,7 @@ func Test_pipelineRun_UpdateState_PropagatesError(t *testing.T) {
 	factory.StewardClientset().PrependReactor("update", "*", fake.NewErrorReactor(expectedError))
 
 	// EXCERCISE
-	examinee.UpdateState(api.StateWaiting)
+	examinee.UpdateState(api.StateWaiting, metav1.Now())
 	_, err = examinee.CommitStatus()
 
 	// VERIFY
@@ -518,7 +518,7 @@ func Test_pipelineRun_CommitStatus_RetriesOnConflict(t *testing.T) {
 	assert.NilError(t, err)
 	err = examinee.InitState()
 	assert.NilError(t, err)
-	resultErr := examinee.UpdateState(api.StateWaiting)
+	resultErr := examinee.UpdateState(api.StateWaiting, metav1.Now())
 	assert.NilError(t, resultErr)
 
 	// EXCERCISE
