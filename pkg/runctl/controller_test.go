@@ -187,86 +187,149 @@ func getAPIPipelineRun(cf *fake.ClientFactory, name, namespace string) (*api.Pip
 }
 
 func Test_Controller_syncHandler_delete(t *testing.T) {
-	for _, test := range []struct {
-		name                  string
-		runManagerExpectation func(*runmocks.MockManager)
-		hasFinalizer          bool
-		expectedError         bool
-		expectedFinalizer     bool
-		expectedResult        api.Result
-		expectedState         api.State
-	}{
-
-		{name: "delete with finalizer ok",
-			runManagerExpectation: func(rm *runmocks.MockManager) {
-				rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
-			},
-			hasFinalizer:      true,
-			expectedError:     false,
-			expectedFinalizer: false,
-			expectedResult:    api.ResultDeleted,
-			expectedState:     api.StateFinished,
-		},
-		{name: "delete with finalizer fail",
-			runManagerExpectation: func(rm *runmocks.MockManager) {
-				rm.EXPECT().Cleanup(gomock.Any()).Return(fmt.Errorf("expected"))
-			},
-			hasFinalizer:      true,
-			expectedError:     true,
-			expectedFinalizer: true,
-			expectedResult:    api.ResultUndefined,
-			expectedState:     api.StateUndefined,
-		},
-		{name: "delete without finalizer already done",
-			runManagerExpectation: func(rm *runmocks.MockManager) {},
-			hasFinalizer:          false,
-			expectedError:         false,
-			expectedFinalizer:     false,
-			expectedResult:        api.ResultUndefined,
-		},
+	for _, currentState := range []api.State{
+		api.StateNew,
+		api.StateWaiting,
+		api.StatePreparing,
+		api.StateRunning,
+		api.StateCleaning,
+		api.StateUndefined,
 	} {
-		t.Run(test.name, func(t *testing.T) {
-			test := test
-			t.Parallel()
 
-			// SETUP
-			run := fake.PipelineRun("foo", "ns1", api.PipelineSpec{})
-			if test.hasFinalizer {
-				run.ObjectMeta.Finalizers = []string{k8s.FinalizerName}
-			}
-			now := metav1.Now()
-			run.SetDeletionTimestamp(&now)
-			controller, cf := newController(run)
-			mockCtrl := gomock.NewController(t)
-			defer mockCtrl.Finish()
-			runManager := runmocks.NewMockManager(mockCtrl)
-			test.runManagerExpectation(runManager)
-			controller.testing = &controllerTesting{
-				runManagerStub:             runManager,
-				loadPipelineRunsConfigStub: newEmptyRunsConfig,
-			}
+		expectedStateOnError := currentState
 
-			// EXERCISE
-			err := controller.syncHandler("ns1/foo")
+		for _, test := range []struct {
+			name                  string
+			runManagerExpectation func(*runmocks.MockManager)
+			hasFinalizer          bool
+			expectedError         bool
+			expectedFinalizer     bool
+			expectedResult        api.Result
+			expectedState         api.State
+		}{
 
-			// VERIFY
-			if test.expectedError {
-				assert.Assert(t, err != nil)
-			} else {
+			{name: "delete with finalizer ok",
+				runManagerExpectation: func(rm *runmocks.MockManager) {
+					rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
+				},
+				hasFinalizer:      true,
+				expectedError:     false,
+				expectedFinalizer: false,
+				expectedResult:    api.ResultDeleted,
+				expectedState:     api.StateFinished,
+			},
+			{name: "delete with finalizer fail",
+				runManagerExpectation: func(rm *runmocks.MockManager) {
+					rm.EXPECT().Cleanup(gomock.Any()).Return(fmt.Errorf("expected"))
+				},
+				hasFinalizer:      true,
+				expectedError:     true,
+				expectedFinalizer: true,
+				expectedResult:    api.ResultUndefined,
+				expectedState:     expectedStateOnError,
+			},
+			{name: "delete without finalizer ensure finished state",
+				runManagerExpectation: func(rm *runmocks.MockManager) {
+					rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
+				},
+				hasFinalizer:      false,
+				expectedError:     false,
+				expectedFinalizer: false,
+				expectedResult:    api.ResultDeleted,
+				expectedState:     api.StateFinished,
+			},
+		} {
+			t.Run(fmt.Sprintf("%s current state %s", test.name, currentState), func(t *testing.T) {
+				currentState := currentState
+				test := test
+				t.Parallel()
+
+				// SETUP
+				run := fake.PipelineRun("foo", "ns1", api.PipelineSpec{})
+				if test.hasFinalizer {
+					run.ObjectMeta.Finalizers = []string{k8s.FinalizerName}
+				}
+				run.Status.State = currentState
+				now := metav1.Now()
+				run.SetDeletionTimestamp(&now)
+				controller, cf := newController(run)
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				runManager := runmocks.NewMockManager(mockCtrl)
+				test.runManagerExpectation(runManager)
+				controller.testing = &controllerTesting{
+					runManagerStub:             runManager,
+					loadPipelineRunsConfigStub: newEmptyRunsConfig,
+				}
+				// EXERCISE
+				err := controller.syncHandler("ns1/foo")
+
+				// VERIFY
+				if test.expectedError {
+					assert.Assert(t, err != nil)
+				} else {
+					assert.NilError(t, err)
+				}
+				result, err := getAPIPipelineRun(cf, "foo", "ns1")
 				assert.NilError(t, err)
-			}
-			result, err := getAPIPipelineRun(cf, "foo", "ns1")
-			assert.NilError(t, err)
-			klog.Infof("%+v", result.Status)
+				klog.Infof("%+v", result.Status)
 
-			assert.Equal(t, test.expectedResult, result.Status.Result)
-			assert.Equal(t, test.expectedState, result.Status.State)
-			if test.expectedFinalizer {
-				assert.Assert(t, len(result.GetFinalizers()) == 1)
-			} else {
+				assert.Equal(t, test.expectedResult, result.Status.Result)
+				assert.Equal(t, test.expectedState, result.Status.State)
+				if test.expectedFinalizer {
+					assert.Assert(t, len(result.GetFinalizers()) == 1)
+				} else {
+					assert.Assert(t, len(result.GetFinalizers()) == 0)
+				}
+			})
+		}
+	}
+}
+
+func Test_Controller_syncHandler_delete_on_finished_keeps_result_unchanged(t *testing.T) {
+	for _, currentResult := range []api.Result{
+		api.ResultDeleted,
+		api.ResultSuccess,
+		api.ResultErrorContent,
+		api.ResultAborted,
+		api.ResultErrorConfig,
+		api.ResultErrorInfra} {
+		for _, hasFinalizer := range []bool{true, false} {
+			t.Run(fmt.Sprintf("finalizer %t current result %s", hasFinalizer, currentResult), func(t *testing.T) {
+				currentResult := currentResult
+				hasFinalizer := hasFinalizer
+				t.Parallel()
+				// SETUP
+				run := fake.PipelineRun("foo", "ns1", api.PipelineSpec{})
+				if hasFinalizer {
+					run.ObjectMeta.Finalizers = []string{k8s.FinalizerName}
+				}
+				run.Status.State = api.StateFinished
+				run.Status.Result = currentResult
+				now := metav1.Now()
+				run.SetDeletionTimestamp(&now)
+				controller, cf := newController(run)
+				mockCtrl := gomock.NewController(t)
+				defer mockCtrl.Finish()
+				runManager := runmocks.NewMockManager(mockCtrl)
+				controller.testing = &controllerTesting{
+					runManagerStub:             runManager,
+					loadPipelineRunsConfigStub: newEmptyRunsConfig,
+				}
+				// EXERCISE
+				err := controller.syncHandler("ns1/foo")
+
+				// VERIFY
+				assert.NilError(t, err)
+				result, err := getAPIPipelineRun(cf, "foo", "ns1")
+				assert.NilError(t, err)
+				klog.Infof("%+v", result.Status)
+
+				assert.Equal(t, currentResult, result.Status.Result)
+				assert.Equal(t, api.StateFinished, result.Status.State)
 				assert.Assert(t, len(result.GetFinalizers()) == 0)
-			}
-		})
+			})
+		}
 	}
 }
 
@@ -337,6 +400,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				name:         "new_get_cofig_fail_not_recoverable",
 				pipelineSpec: api.PipelineSpec{},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().Cleanup(gomock.Any()).Return(nil)
 				},
 				pipelineRunsConfigStub: func() (*cfg.PipelineRunsConfigStruct, error) {
 					return nil, error1
@@ -413,6 +477,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 	errorRecover1 := serrors.Recoverable(error1)
 
 	for _, maintenanceMode := range []bool{true, false} {
+
 		for _, test := range []struct {
 			name                   string
 			pipelineSpec           api.PipelineSpec
