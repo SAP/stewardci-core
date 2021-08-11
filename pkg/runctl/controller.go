@@ -374,7 +374,7 @@ func (c *Controller) syncHandler(key string) error {
 			if resultClass != api.ResultUndefined {
 				pipelineRun.UpdateMessage(err.Error())
 				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
-				return c.commonHandlingTODOFindBetterName(pipelineRun, resultClass, metav1.Now())
+				return c.prepareCleaningAndCountResult(pipelineRun, resultClass, metav1.Now())
 			}
 			return err
 		}
@@ -396,7 +396,7 @@ func (c *Controller) syncHandler(key string) error {
 				return err
 			}
 			pipelineRun.StoreErrorAsMessage(err, "waiting failed")
-			return c.commonHandlingTODOFindBetterName(pipelineRun, api.ResultErrorInfra, metav1.Now())
+			return c.prepareCleaningAndCountResult(pipelineRun, api.ResultErrorInfra, metav1.Now())
 		}
 		started := run.GetStartTime()
 		if started != nil {
@@ -425,7 +425,7 @@ func (c *Controller) syncHandler(key string) error {
 		pipelineRun.UpdateContainer(containerInfo)
 		if finished, result := run.IsFinished(); finished {
 			pipelineRun.UpdateMessage(run.GetMessage())
-			return c.commonHandlingTODOFindBetterName(pipelineRun, result, *run.GetCompletionTime())
+			return c.prepareCleaningAndCountResult(pipelineRun, result, *run.GetCompletionTime())
 		} else {
 			// commit container update
 			c.commitStatusAndMeter(pipelineRun)
@@ -442,7 +442,9 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func (c *Controller) commonHandlingTODOFindBetterName(pipelineRun k8s.PipelineRun, result api.Result, ts metav1.Time) error {
+func (c *Controller) prepareCleaningAndCountResult(pipelineRun k8s.PipelineRun, result api.Result, ts metav1.Time) error {
+	// TODO: revisit: during state cleaning we have already the result. From the pure doctrine point of view
+	// that is questionable since only final states (finished) have a result. But ok, cleaning is close to finished ...
 	pipelineRun.UpdateResult(result, ts)
 	if errClean := c.changeState(pipelineRun, api.StateCleaning, ts); errClean != nil {
 		return errClean
