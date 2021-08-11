@@ -407,10 +407,7 @@ func (c *Controller) syncHandler(key string) error {
 			}
 			pipelineRun.StoreErrorAsMessage(err, "running failed")
 			// TODO: why don't we set a result here? Maybe prepareCleaningAndCountResult ...
-			if errClean := c.changeState(pipelineRun, api.StateCleaning, metav1.Now()); errClean != nil {
-				return errClean
-			}
-			return c.commitStatusAndMeter(pipelineRun)
+			return c.changeAndCommitStateAndMeter(pipelineRun, api.StateCleaning, metav1.Now())
 		}
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
