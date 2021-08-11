@@ -441,11 +441,8 @@ func (c *Controller) prepareCleaningAndCountResult(pipelineRun k8s.PipelineRun, 
 	// TODO: revisit: during state cleaning we have already the result. From the pure doctrine point of view
 	// that is questionable since only final states (finished) have a result. But ok, cleaning is close to finished ...
 	pipelineRun.UpdateResult(result, ts)
-	if errClean := c.changeState(pipelineRun, api.StateCleaning, ts); errClean != nil {
+	if errClean := c.changeAndCommitStateAndMeter(pipelineRun, api.StateCleaning, ts); errClean != nil {
 		return errClean
-	}
-	if err := c.commitStatusAndMeter(pipelineRun); err != nil {
-		return err
 	}
 	c.metrics.CountResult(pipelineRun.GetStatus().Result)
 	return nil
