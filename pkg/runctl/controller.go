@@ -424,8 +424,7 @@ func (c *Controller) syncHandler(key string) error {
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
 		if finished, result := run.IsFinished(); finished {
-			msg := run.GetMessage()
-			pipelineRun.UpdateMessage(msg)
+			pipelineRun.UpdateMessage(run.GetMessage())
 			return c.commonHandlingTODOFindBetterName(pipelineRun, result, *run.GetCompletionTime())
 		} else {
 			// commit container update
