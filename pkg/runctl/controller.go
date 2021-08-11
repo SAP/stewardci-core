@@ -374,7 +374,7 @@ func (c *Controller) syncHandler(key string) error {
 			if resultClass != api.ResultUndefined {
 				pipelineRun.UpdateMessage(err.Error())
 				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
-				return c.commonErrorHandlingTODOFindBetterName(pipelineRun, resultClass)
+				return c.commonHandlingTODOFindBetterName(pipelineRun, resultClass, metav1.Now())
 			}
 			return err
 		}
@@ -396,7 +396,7 @@ func (c *Controller) syncHandler(key string) error {
 				return err
 			}
 			pipelineRun.StoreErrorAsMessage(err, "waiting failed")
-			return c.commonErrorHandlingTODOFindBetterName(pipelineRun, api.ResultErrorInfra)
+			return c.commonHandlingTODOFindBetterName(pipelineRun, api.ResultErrorInfra, metav1.Now())
 		}
 		started := run.GetStartTime()
 		if started != nil {
@@ -451,10 +451,9 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func (c *Controller) commonErrorHandlingTODOFindBetterName(pipelineRun k8s.PipelineRun, result api.Result) error {
-	now := metav1.Now()
-	pipelineRun.UpdateResult(result, now)
-	if errClean := c.changeState(pipelineRun, api.StateCleaning, now); errClean != nil {
+func (c *Controller) commonHandlingTODOFindBetterName(pipelineRun k8s.PipelineRun, result api.Result, ts metav1.Time) error {
+	pipelineRun.UpdateResult(result, ts)
+	if errClean := c.changeState(pipelineRun, api.StateCleaning, ts); errClean != nil {
 		return errClean
 	}
 	if err := c.commitStatusAndMeter(pipelineRun); err != nil {
