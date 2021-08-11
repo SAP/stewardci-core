@@ -96,7 +96,7 @@ func Test_NewPipelineRun_IsCopy(t *testing.T) {
 
 	// VERIFY
 	assert.NilError(t, err)
-	examinee.UpdateResult(api.ResultSuccess)
+	examinee.UpdateResult(api.ResultSuccess, metav1.Now())
 	assert.Equal(t, api.ResultUndefined, run.Status.Result)
 	assert.Equal(t, api.ResultSuccess, examinee.GetStatus().Result)
 }
@@ -411,7 +411,7 @@ func Test_pipelineRun_UpdateResult(t *testing.T) {
 	assert.Assert(t, examinee.GetStatus().FinishedAt.IsZero())
 
 	// EXERCISE
-	examinee.UpdateResult(api.ResultSuccess)
+	examinee.UpdateResult(api.ResultSuccess, metav1.Now())
 
 	// VERIFY
 	status := examinee.GetStatus()

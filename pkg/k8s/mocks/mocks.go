@@ -516,15 +516,15 @@ func (mr *MockPipelineRunMockRecorder) UpdateMessage(arg0 interface{}) *gomock.C
 }
 
 // UpdateResult mocks base method
-func (m *MockPipelineRun) UpdateResult(arg0 v1alpha1.Result) {
+func (m *MockPipelineRun) UpdateResult(arg0 v1alpha1.Result, arg1 v10.Time) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UpdateResult", arg0)
+	m.ctrl.Call(m, "UpdateResult", arg0, arg1)
 }
 
 // UpdateResult indicates an expected call of UpdateResult
-func (mr *MockPipelineRunMockRecorder) UpdateResult(arg0 interface{}) *gomock.Call {
+func (mr *MockPipelineRunMockRecorder) UpdateResult(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResult", reflect.TypeOf((*MockPipelineRun)(nil).UpdateResult), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResult", reflect.TypeOf((*MockPipelineRun)(nil).UpdateResult), arg0, arg1)
 }
 
 // UpdateRunNamespace mocks base method
