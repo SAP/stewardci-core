@@ -400,7 +400,7 @@ func (c *Controller) syncHandler(key string) error {
 		}
 		started := run.GetStartTime()
 		if started != nil {
-			if err = c.changeState(pipelineRun, api.StateRunning, metav1.Now()); err != nil {
+			if err = c.changeState(pipelineRun, api.StateRunning, *started); err != nil {
 				return err
 			}
 			if err = c.commitStatusAndMeter(pipelineRun); err != nil {
