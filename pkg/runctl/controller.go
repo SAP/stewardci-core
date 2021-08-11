@@ -357,9 +357,9 @@ func (c *Controller) syncHandler(key string) error {
 				c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonLoadPipelineRunsConfigFailed, err.Error())
 				return err
 			}
+			pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
 			now := metav1.Now()
 			pipelineRun.UpdateResult(api.ResultErrorInfra, now)
-			pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
 			err = c.finish(pipelineRun, now)
 			if err == nil {
 				c.metrics.CountResult(pipelineRun.GetStatus().Result)
@@ -373,17 +373,8 @@ func (c *Controller) syncHandler(key string) error {
 			// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 			if resultClass != api.ResultUndefined {
 				pipelineRun.UpdateMessage(err.Error())
-				now := metav1.Now()
-				pipelineRun.UpdateResult(resultClass, now)
-				if errClean := c.changeState(pipelineRun, api.StateCleaning, now); errClean != nil {
-					return errClean
-				}
 				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
-				if err := c.commitStatusAndMeter(pipelineRun); err != nil {
-					return err
-				}
-				c.metrics.CountResult(pipelineRun.GetStatus().Result)
-				return nil
+				return c.commonErrorHandlingTODOFindBetterName(pipelineRun, resultClass)
 			}
 			return err
 		}
@@ -404,17 +395,8 @@ func (c *Controller) syncHandler(key string) error {
 			if serrors.IsRecoverable(err) {
 				return err
 			}
-			now := metav1.Now()
-			pipelineRun.UpdateResult(api.ResultErrorInfra, now)
-			if errClean := c.changeState(pipelineRun, api.StateCleaning, now); errClean != nil {
-				return errClean
-			}
 			pipelineRun.StoreErrorAsMessage(err, "waiting failed")
-			if err := c.commitStatusAndMeter(pipelineRun); err != nil {
-				return err
-			}
-			c.metrics.CountResult(pipelineRun.GetStatus().Result)
-			return nil
+			return c.commonErrorHandlingTODOFindBetterName(pipelineRun, api.ResultErrorInfra)
 		}
 		started := run.GetStartTime()
 		if started != nil {
@@ -432,10 +414,11 @@ func (c *Controller) syncHandler(key string) error {
 			if serrors.IsRecoverable(err) {
 				return err
 			}
+			pipelineRun.StoreErrorAsMessage(err, "running failed")
+			// TODO: why don't we set a result here?
 			if errClean := c.changeState(pipelineRun, api.StateCleaning, metav1.Now()); errClean != nil {
 				return errClean
 			}
-			pipelineRun.StoreErrorAsMessage(err, "running failed")
 			return c.commitStatusAndMeter(pipelineRun)
 		}
 		containerInfo := run.GetContainerInfo()
@@ -465,6 +448,19 @@ func (c *Controller) syncHandler(key string) error {
 	default:
 		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
+	return nil
+}
+
+func (c *Controller) commonErrorHandlingTODOFindBetterName(pipelineRun k8s.PipelineRun, result api.Result) error {
+	now := metav1.Now()
+	pipelineRun.UpdateResult(result, now)
+	if errClean := c.changeState(pipelineRun, api.StateCleaning, now); errClean != nil {
+		return errClean
+	}
+	if err := c.commitStatusAndMeter(pipelineRun); err != nil {
+		return err
+	}
+	c.metrics.CountResult(pipelineRun.GetStatus().Result)
 	return nil
 }
 
