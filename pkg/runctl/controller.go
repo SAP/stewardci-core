@@ -427,14 +427,7 @@ func (c *Controller) syncHandler(key string) error {
 			msg := run.GetMessage()
 			completionTime := *run.GetCompletionTime()
 			pipelineRun.UpdateMessage(msg)
-			pipelineRun.UpdateResult(result, completionTime)
-			if err = c.changeState(pipelineRun, api.StateCleaning, completionTime); err != nil {
-				return err
-			}
-			if err = c.commitStatusAndMeter(pipelineRun); err != nil {
-				return err
-			}
-			c.metrics.CountResult(result)
+			return c.commonHandlingTODOFindBetterName(pipelineRun, result, completionTime)
 		} else {
 			// commit container update
 			c.commitStatusAndMeter(pipelineRun)
