@@ -627,7 +627,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 					rm.EXPECT().GetRun(gomock.Any()).Return(nil, error1)
 				},
 				pipelineRunsConfigStub: newEmptyRunsConfig,
-				expectedResult:         "",
+				expectedResult:         "error_infra",
 				expectedState:          api.StateCleaning,
 				expectedMessage:        "running failed .*error1",
 			},
