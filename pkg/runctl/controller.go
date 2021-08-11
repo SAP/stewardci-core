@@ -405,15 +405,15 @@ func (c *Controller) syncHandler(key string) error {
 				return err
 			}
 			now := metav1.Now()
+			pipelineRun.UpdateResult(api.ResultErrorInfra, now)
 			if errClean := c.changeState(pipelineRun, api.StateCleaning, now); errClean != nil {
 				return errClean
 			}
 			pipelineRun.StoreErrorAsMessage(err, "waiting failed")
-			pipelineRun.UpdateResult(api.ResultErrorInfra, now)
 			if err := c.commitStatusAndMeter(pipelineRun); err != nil {
 				return err
 			}
-			c.metrics.CountResult(api.ResultErrorInfra)
+			c.metrics.CountResult(pipelineRun.GetStatus().Result)
 			return nil
 		}
 		started := run.GetStartTime()
