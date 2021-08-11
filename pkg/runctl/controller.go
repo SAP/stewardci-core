@@ -438,9 +438,10 @@ func (c *Controller) syncHandler(key string) error {
 		pipelineRun.UpdateContainer(containerInfo)
 		if finished, result := run.IsFinished(); finished {
 			msg := run.GetMessage()
+			completionTime := *run.GetCompletionTime()
 			pipelineRun.UpdateMessage(msg)
-			pipelineRun.UpdateResult(result, metav1.Now())
-			if err = c.changeState(pipelineRun, api.StateCleaning, *run.GetCompletionTime()); err != nil {
+			pipelineRun.UpdateResult(result, completionTime)
+			if err = c.changeState(pipelineRun, api.StateCleaning, completionTime); err != nil {
 				return err
 			}
 			if err = c.commitStatusAndMeter(pipelineRun); err != nil {
