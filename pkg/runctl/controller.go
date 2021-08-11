@@ -335,10 +335,7 @@ func (c *Controller) syncHandler(key string) error {
 			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
 			return err
 		}
-		if err = c.changeState(pipelineRun, api.StatePreparing, metav1.Now()); err != nil {
-			return err
-		}
-		if err = c.commitStatusAndMeter(pipelineRun); err != nil {
+		if err = c.changeAndCommitStateAndMeter(pipelineRun, api.StatePreparing, metav1.Now()); err != nil {
 			return err
 		}
 		c.metrics.CountStart()
@@ -382,10 +379,7 @@ func (c *Controller) syncHandler(key string) error {
 		pipelineRun.UpdateRunNamespace(namespace)
 		pipelineRun.UpdateAuxNamespace(auxNamespace)
 
-		if err = c.changeState(pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
-			return err
-		}
-		if err := c.commitStatusAndMeter(pipelineRun); err != nil {
+		if err = c.changeAndCommitStateAndMeter(pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
 			return err
 		}
 	case api.StateWaiting:
@@ -400,10 +394,7 @@ func (c *Controller) syncHandler(key string) error {
 		}
 		started := run.GetStartTime()
 		if started != nil {
-			if err = c.changeState(pipelineRun, api.StateRunning, *started); err != nil {
-				return err
-			}
-			if err = c.commitStatusAndMeter(pipelineRun); err != nil {
+			if err := c.changeAndCommitStateAndMeter(pipelineRun, api.StateRunning, *started); err != nil {
 				return err
 			}
 		}
@@ -442,6 +433,12 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
+func (c *Controller) changeAndCommitStateAndMeter(pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
+	if err := c.changeState(pipelineRun, state, ts); err != nil {
+		return err
+	}
+	return c.commitStatusAndMeter(pipelineRun)
+}
 func (c *Controller) prepareCleaningAndCountResult(pipelineRun k8s.PipelineRun, result api.Result, ts metav1.Time) error {
 	// TODO: revisit: during state cleaning we have already the result. From the pure doctrine point of view
 	// that is questionable since only final states (finished) have a result. But ok, cleaning is close to finished ...
