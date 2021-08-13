@@ -53,7 +53,7 @@
   changes:
 
     - type: bug
-      impact: patch
+      impact: minor
       title: Avoid non atomic status updates
       description: |-
         Without this change the state might be upated e.g. to a final state
