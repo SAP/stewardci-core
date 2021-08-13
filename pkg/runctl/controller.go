@@ -286,7 +286,7 @@ func (c *Controller) syncHandler(key string) error {
 		runManager := c.createRunManager(pipelineRun)
 		err = runManager.Cleanup(pipelineRun)
 		if err == nil {
-			err = c.updateResultAndState(pipelineRun, api.StateFinished, api.ResultDeleted, metav1.Now())
+			err = c.updateStateAndResult(pipelineRun, api.StateFinished, api.ResultDeleted, metav1.Now())
 			if err == nil {
 				c.metrics.CountResult(api.ResultDeleted)
 			}
@@ -350,7 +350,7 @@ func (c *Controller) syncHandler(key string) error {
 				return err
 			}
 			pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
-			err = c.updateResultAndState(pipelineRun, api.StateFinished, api.ResultErrorInfra, metav1.Now())
+			err = c.updateStateAndResult(pipelineRun, api.StateFinished, api.ResultErrorInfra, metav1.Now())
 			if err == nil {
 				c.metrics.CountResult(pipelineRun.GetStatus().Result)
 			}
@@ -364,7 +364,7 @@ func (c *Controller) syncHandler(key string) error {
 			if resultClass != api.ResultUndefined {
 				pipelineRun.UpdateMessage(err.Error())
 				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
-				return c.updateResultAndState(pipelineRun, api.StateCleaning, resultClass, metav1.Now())
+				return c.updateStateAndResult(pipelineRun, api.StateCleaning, resultClass, metav1.Now())
 			}
 			return err
 		}
@@ -383,7 +383,7 @@ func (c *Controller) syncHandler(key string) error {
 				return err
 			}
 			pipelineRun.StoreErrorAsMessage(err, "waiting failed")
-			return c.updateResultAndState(pipelineRun, api.StateCleaning, api.ResultErrorInfra, metav1.Now())
+			return c.updateStateAndResult(pipelineRun, api.StateCleaning, api.ResultErrorInfra, metav1.Now())
 		}
 		started := run.GetStartTime()
 		if started != nil {
@@ -399,13 +399,13 @@ func (c *Controller) syncHandler(key string) error {
 				return err
 			}
 			pipelineRun.StoreErrorAsMessage(err, "running failed")
-			return c.updateResultAndState(pipelineRun, api.StateCleaning, api.ResultErrorInfra, metav1.Now())
+			return c.updateStateAndResult(pipelineRun, api.StateCleaning, api.ResultErrorInfra, metav1.Now())
 		}
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
 		if finished, result := run.IsFinished(); finished {
 			pipelineRun.UpdateMessage(run.GetMessage())
-			return c.updateResultAndState(pipelineRun, api.StateCleaning, result, *run.GetCompletionTime())
+			return c.updateStateAndResult(pipelineRun, api.StateCleaning, result, *run.GetCompletionTime())
 		} else {
 			// commit container update
 			c.commitStatusAndMeter(pipelineRun)
@@ -432,7 +432,7 @@ func (c *Controller) changeAndCommitStateAndMeter(pipelineRun k8s.PipelineRun, s
 	return c.commitStatusAndMeter(pipelineRun)
 }
 
-func (c *Controller) updateResultAndState(pipelineRun k8s.PipelineRun, state api.State, result api.Result, ts metav1.Time) error {
+func (c *Controller) updateStateAndResult(pipelineRun k8s.PipelineRun, state api.State, result api.Result, ts metav1.Time) error {
 	pipelineRun.UpdateResult(result, ts)
 	if err := c.changeAndCommitStateAndMeter(pipelineRun, state, ts); err != nil {
 		return err
@@ -469,7 +469,7 @@ func (c *Controller) handleAborted(pipelineRun k8s.PipelineRun) error {
 	intent := pipelineRun.GetSpec().Intent
 	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {
 		pipelineRun.UpdateMessage("Aborted")
-		return c.updateResultAndState(pipelineRun, api.StateCleaning, api.ResultAborted, metav1.Now())
+		return c.updateStateAndResult(pipelineRun, api.StateCleaning, api.ResultAborted, metav1.Now())
 	}
 	return nil
 }
