@@ -681,9 +681,7 @@ func (c *runManager) cleanupNamespaces(ctx *runContext) error {
 			PropagationPolicy: &deletePropagation,
 		}
 	}
-
-	var firstErr error
-
+	errors := []error{}
 	namespacesToDelete := []string{
 		ctx.runNamespace,
 		ctx.auxNamespace,
@@ -693,12 +691,21 @@ func (c *runManager) cleanupNamespaces(ctx *runContext) error {
 			continue
 		}
 		err := c.deleteNamespace(name, deleteOptions)
-		if err != nil && firstErr == nil {
-			firstErr = err
+		if err != nil {
+			errors = append(errors, err)
 		}
 	}
-
-	return firstErr
+	if len(errors) == 0 {
+		return nil
+	}
+	if len(errors) == 1 {
+		return errors[0]
+	}
+	msg := []string{}
+	for _, e := range errors {
+		msg = append(msg, e.Error())
+	}
+	return fmt.Errorf("cannot delete all namespaces: %s", strings.Join(msg, ", "))
 }
 
 func (c *runManager) createNamespace(ctx *runContext, purpose, randName string) (string, error) {

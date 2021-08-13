@@ -35,7 +35,7 @@ type PipelineRun interface {
 	DeleteFinalizerIfExists() error
 	InitState() error
 	UpdateState(api.State, metav1.Time) error
-	UpdateResult(api.Result)
+	UpdateResult(api.Result, metav1.Time)
 	UpdateContainer(*corev1.ContainerState)
 	StoreErrorAsMessage(error, string) error
 	UpdateRunNamespace(string)
@@ -211,14 +211,13 @@ func (r *pipelineRun) String() string {
 }
 
 // UpdateResult of the pipeline run
-func (r *pipelineRun) UpdateResult(result api.Result) {
+func (r *pipelineRun) UpdateResult(result api.Result, ts metav1.Time) {
 	r.ensureCopy()
 	// the call below returns the error from the function. This error is always nil. Hence there
 	// is no need to return that always-nil-error.
 	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.Result = result
-		now := metav1.Now()
-		s.FinishedAt = &now
+		s.FinishedAt = &ts
 		return nil, nil
 	})
 }

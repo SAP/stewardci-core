@@ -627,7 +627,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 					rm.EXPECT().GetRun(gomock.Any()).Return(nil, error1)
 				},
 				pipelineRunsConfigStub: newEmptyRunsConfig,
-				expectedResult:         "",
+				expectedResult:         "error_infra",
 				expectedState:          api.StateCleaning,
 				expectedMessage:        "running failed .*error1",
 			},
@@ -642,6 +642,8 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 						&corev1.ContainerState{
 							Running: &corev1.ContainerStateRunning{},
 						})
+					now := metav1.Now()
+					run.EXPECT().GetCompletionTime().Return(&now)
 					run.EXPECT().IsFinished().Return(true, api.ResultTimeout)
 					run.EXPECT().GetMessage()
 					rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
@@ -663,7 +665,9 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 								Message: "message",
 							},
 						})
+					now := metav1.Now()
 					run.EXPECT().IsFinished().Return(true, api.ResultSuccess)
+					run.EXPECT().GetCompletionTime().Return(&now)
 					run.EXPECT().GetMessage()
 					rm.EXPECT().GetRun(gomock.Any()).Return(run, nil)
 				},

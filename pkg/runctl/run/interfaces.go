@@ -19,6 +19,7 @@ type Manager interface {
 type Run interface {
 	GetStartTime() *metav1.Time
 	IsFinished() (bool, steward.Result)
+	GetCompletionTime() *metav1.Time
 	GetContainerInfo() *corev1.ContainerState
 	GetMessage() string
 }

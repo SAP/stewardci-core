@@ -24,6 +24,11 @@ func (r *tektonRun) GetStartTime() *metav1.Time {
 	return r.tektonTaskRun.Status.StartTime
 }
 
+// GetCompletionTime returns completion time of run if already completed
+func (r *tektonRun) GetCompletionTime() *metav1.Time {
+	return r.tektonTaskRun.Status.CompletionTime
+}
+
 // GetContainerInfo returns the state of the Jenkinsfile Runner container
 // as reported in the Tekton TaskRun status.
 func (r *tektonRun) GetContainerInfo() *corev1.ContainerState {

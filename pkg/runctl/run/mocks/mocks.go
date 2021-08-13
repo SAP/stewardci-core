@@ -61,6 +61,20 @@ func (m *MockRun) EXPECT() *MockRunMockRecorder {
 	return m.recorder
 }
 
+// GetCompletionTime mocks base method
+func (m *MockRun) GetCompletionTime() *v10.Time {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCompletionTime")
+	ret0, _ := ret[0].(*v10.Time)
+	return ret0
+}
+
+// GetCompletionTime indicates an expected call of GetCompletionTime
+func (mr *MockRunMockRecorder) GetCompletionTime() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCompletionTime", reflect.TypeOf((*MockRun)(nil).GetCompletionTime))
+}
+
 // GetContainerInfo mocks base method
 func (m *MockRun) GetContainerInfo() *v1.ContainerState {
 	m.ctrl.T.Helper()
