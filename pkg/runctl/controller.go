@@ -437,8 +437,6 @@ func (c *Controller) changeAndCommitStateAndMeter(pipelineRun k8s.PipelineRun, s
 	return c.commitStatusAndMeter(pipelineRun)
 }
 func (c *Controller) setCleaningAndCountResult(pipelineRun k8s.PipelineRun, result api.Result, ts metav1.Time) error {
-	// TODO: revisit: during state cleaning we have already the result. From the pure doctrine point of view
-	// that is questionable since only final states (finished) have a result. But ok, cleaning is close to finished ...
 	pipelineRun.UpdateResult(result, ts)
 	if errClean := c.changeAndCommitStateAndMeter(pipelineRun, api.StateCleaning, ts); errClean != nil {
 		return errClean
