@@ -464,7 +464,7 @@ func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
 func (c *Controller) updateResultAndFinish(pipelineRun k8s.PipelineRun, result api.Result) error {
 	now := metav1.Now()
 	pipelineRun.UpdateResult(result, now)
-	if err := c.changeAndCommitStateAndMeter(pipelineRun, api.StateFinished, ts); err != nil {
+	if err := c.changeAndCommitStateAndMeter(pipelineRun, api.StateFinished, now); err != nil {
 		return err
 	}
 	return pipelineRun.DeleteFinalizerIfExists()
