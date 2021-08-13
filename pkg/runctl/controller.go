@@ -280,8 +280,7 @@ func (c *Controller) syncHandler(key string) error {
 		return pipelineRun.DeleteFinalizerIfExists()
 	}
 
-	// Check if object has deletion timestamp
-	// If not, try to add finalizer if missing
+	// Check if object has deletion timestamp ...
 	if pipelineRun.HasDeletionTimestamp() {
 		runManager := c.createRunManager(pipelineRun)
 		err = runManager.Cleanup(pipelineRun)
@@ -291,6 +290,7 @@ func (c *Controller) syncHandler(key string) error {
 		}
 		return c.updateStateAndResult(pipelineRun, api.StateFinished, api.ResultDeleted, metav1.Now())
 	}
+	// ... if not, try to add finalizer if missing
 	pipelineRun.AddFinalizer()
 
 	// Check if pipeline run is aborted
