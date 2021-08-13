@@ -446,10 +446,14 @@ func (c *Controller) setCleaningAndCountResult(pipelineRun k8s.PipelineRun, resu
 }
 
 func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
+	start := time.Now()
 	finishedStates, err := pipelineRun.CommitStatus()
 	if err != nil {
 		return err
 	}
+	end := time.Now()
+	elapsed := end.Sub(start)
+	c.metrics.ObserveUpdateDurationByType("UpdateState", elapsed)
 	for _, finishedState := range finishedStates {
 		err := c.metrics.ObserveDurationByState(finishedState)
 		if err != nil {
