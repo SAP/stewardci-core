@@ -480,8 +480,7 @@ func (c *Controller) handleAborted(pipelineRun k8s.PipelineRun) error {
 	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {
 		pipelineRun.UpdateMessage("Aborted")
 		now := metav1.Now()
-		pipelineRun.UpdateResult(api.ResultAborted, now)
-		return c.changeState(pipelineRun, api.StateCleaning, now)
+		return c.setCleaningAndCountResult(pipelineRun, api.ResultAborted, now)
 	}
 	return nil
 }
