@@ -416,7 +416,11 @@ func (c *Controller) syncHandler(key string) error {
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
 		}
-		return c.finish(pipelineRun, metav1.Now())
+		now := metav1.Now()
+		if err := c.changeAndCommitStateAndMeter(pipelineRun, api.StateFinished, now); err != nil {
+			return err
+		}
+		return pipelineRun.DeleteFinalizerIfExists()
 	default:
 		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
@@ -429,6 +433,7 @@ func (c *Controller) changeAndCommitStateAndMeter(pipelineRun k8s.PipelineRun, s
 	}
 	return c.commitStatusAndMeter(pipelineRun)
 }
+
 func (c *Controller) setCleaningAndCountResult(pipelineRun k8s.PipelineRun, result api.Result, ts metav1.Time) error {
 	pipelineRun.UpdateResult(result, ts)
 	if errClean := c.changeAndCommitStateAndMeter(pipelineRun, api.StateCleaning, ts); errClean != nil {
@@ -459,10 +464,6 @@ func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
 func (c *Controller) updateResultAndFinish(pipelineRun k8s.PipelineRun, result api.Result) error {
 	now := metav1.Now()
 	pipelineRun.UpdateResult(result, now)
-	return c.finish(pipelineRun, now)
-}
-
-func (c *Controller) finish(pipelineRun k8s.PipelineRun, ts metav1.Time) error {
 	if err := c.changeAndCommitStateAndMeter(pipelineRun, api.StateFinished, ts); err != nil {
 		return err
 	}
