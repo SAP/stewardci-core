@@ -341,16 +341,7 @@ func (c *Controller) syncHandler(key string) error {
 		// in case of concurrent configuration changes
 		pipelineRunsConfig, err := c.loadPipelineRunsConfig()
 		if err != nil {
-			if serrors.IsRecoverable(err) {
-				c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonLoadPipelineRunsConfigFailed, err.Error())
-				return err
-			}
-			pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
-			err = c.updateStateAndResult(pipelineRun, api.StateFinished, api.ResultErrorInfra, metav1.Now())
-			if err == nil {
-				c.metrics.CountResult(pipelineRun.GetStatus().Result)
-			}
-			return err
+			return c.onGetRunError(pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
 		}
 		namespace, auxNamespace, err := runManager.Start(pipelineRun, pipelineRunsConfig)
 		if err != nil {
@@ -374,12 +365,7 @@ func (c *Controller) syncHandler(key string) error {
 	case api.StateWaiting:
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
-			if serrors.IsRecoverable(err) {
-				return err
-			}
-			pipelineRun.StoreErrorAsMessage(err, "waiting failed")
-			return c.updateStateAndResult(pipelineRun, api.StateCleaning, api.ResultErrorInfra, metav1.Now())
+			return c.onGetRunError(pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "waiting failed")
 		}
 		started := run.GetStartTime()
 		if started != nil {
@@ -390,12 +376,7 @@ func (c *Controller) syncHandler(key string) error {
 	case api.StateRunning:
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
-			if serrors.IsRecoverable(err) {
-				return err
-			}
-			pipelineRun.StoreErrorAsMessage(err, "running failed")
-			return c.updateStateAndResult(pipelineRun, api.StateCleaning, api.ResultErrorInfra, metav1.Now())
+			return c.onGetRunError(pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "running failed")
 		}
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
@@ -419,6 +400,15 @@ func (c *Controller) syncHandler(key string) error {
 		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
 	return nil
+}
+
+func (c *Controller) onGetRunError(pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun, err error, state api.State, result api.Result, message string) error {
+	c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
+	if serrors.IsRecoverable(err) {
+		return err
+	}
+	pipelineRun.StoreErrorAsMessage(err, message)
+	return c.updateStateAndResult(pipelineRun, state, result, metav1.Now())
 }
 
 func (c *Controller) changeAndCommitStateAndMeter(pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
