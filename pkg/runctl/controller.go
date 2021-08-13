@@ -284,8 +284,7 @@ func (c *Controller) syncHandler(key string) error {
 		}
 		err = runManager.Cleanup(pipelineRun)
 		if err == nil {
-			now := metav1.Now()
-			err = c.updateResultAndFinish(pipelineRun, api.ResultDeleted, now)
+			err = c.updateResultAndFinish(pipelineRun, api.ResultDeleted)
 			if err == nil {
 				c.metrics.CountResult(api.ResultDeleted)
 			}
@@ -354,8 +353,7 @@ func (c *Controller) syncHandler(key string) error {
 				return err
 			}
 			pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
-			now := metav1.Now()
-			err = c.updateResultAndFinish(pipelineRun, api.ResultErrorInfra, now)
+			err = c.updateResultAndFinish(pipelineRun, api.ResultErrorInfra)
 			if err == nil {
 				c.metrics.CountResult(pipelineRun.GetStatus().Result)
 			}
@@ -461,9 +459,10 @@ func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
 	return nil
 }
 
-func (c *Controller) updateResultAndFinish(pipelineRun k8s.PipelineRun, result api.Result, ts metav1.Time) error {
-	pipelineRun.UpdateResult(result, ts)
-	return c.finish(pipelineRun, ts)
+func (c *Controller) updateResultAndFinish(pipelineRun k8s.PipelineRun, result api.Result) error {
+	now := metav1.Now()
+	pipelineRun.UpdateResult(result, now)
+	return c.finish(pipelineRun, now)
 }
 
 func (c *Controller) finish(pipelineRun k8s.PipelineRun, ts metav1.Time) error {
