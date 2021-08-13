@@ -259,7 +259,7 @@ func (c *Controller) syncHandler(key string) error {
 	if pipelineRunAPIObj == nil {
 		return nil
 	}
-	// fast exit
+	// fast exit - no finalizer cleanup needed
 	if pipelineRunAPIObj.Status.State == api.StateFinished && !utils.StringSliceContains(pipelineRunAPIObj.ObjectMeta.Finalizers, k8s.FinalizerName) {
 		return nil
 	}
@@ -268,6 +268,11 @@ func (c *Controller) syncHandler(key string) error {
 	pipelineRun, err := k8s.NewPipelineRun(pipelineRunAPIObj, c.factory)
 	if err != nil {
 		return err
+	}
+
+	// fast exit with finalizer cleanup
+	if pipelineRun.GetStatus().State == api.StateFinished {
+		return pipelineRun.DeleteFinalizerIfExists()
 	}
 
 	// If pipelineRun is not found there is nothing to sync
@@ -279,9 +284,6 @@ func (c *Controller) syncHandler(key string) error {
 	// If not, try to add finalizer if missing
 	if pipelineRun.HasDeletionTimestamp() {
 		runManager := c.createRunManager(pipelineRun)
-		if pipelineRun.GetStatus().State == api.StateFinished {
-			return pipelineRun.DeleteFinalizerIfExists()
-		}
 		err = runManager.Cleanup(pipelineRun)
 		if err == nil {
 			err = c.updateResultAndFinish(pipelineRun, api.ResultDeleted)
@@ -294,11 +296,6 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 	pipelineRun.AddFinalizer()
-
-	// Finished and no deletion timestamp, no need to process anything further
-	if pipelineRun.GetStatus().State == api.StateFinished {
-		return nil
-	}
 
 	// Check if pipeline run is aborted
 	if err := c.handleAborted(pipelineRun); err != nil {
