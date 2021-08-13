@@ -462,10 +462,7 @@ func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
 }
 
 func (c *Controller) finish(pipelineRun k8s.PipelineRun, ts metav1.Time) error {
-	if err := c.changeState(pipelineRun, api.StateFinished, ts); err != nil {
-		return err
-	}
-	if err := c.commitStatusAndMeter(pipelineRun); err != nil {
+	if err := c.changeAndCommitStateAndMeter(pipelineRun, api.StateFinished, ts); err != nil {
 		return err
 	}
 	return pipelineRun.DeleteFinalizerIfExists()
