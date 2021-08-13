@@ -407,8 +407,7 @@ func (c *Controller) syncHandler(key string) error {
 			}
 			pipelineRun.StoreErrorAsMessage(err, "running failed")
 			now := metav1.Now()
-			pipelineRun.UpdateResult(api.ResultErrorInfra, now)
-			return c.changeAndCommitStateAndMeter(pipelineRun, api.StateCleaning, now)
+			return c.setCleaningAndCountResult(pipelineRun, api.ResultErrorInfra, now)
 		}
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
