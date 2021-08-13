@@ -285,15 +285,11 @@ func (c *Controller) syncHandler(key string) error {
 	if pipelineRun.HasDeletionTimestamp() {
 		runManager := c.createRunManager(pipelineRun)
 		err = runManager.Cleanup(pipelineRun)
-		if err == nil {
-			err = c.updateStateAndResult(pipelineRun, api.StateFinished, api.ResultDeleted, metav1.Now())
-			if err == nil {
-				c.metrics.CountResult(api.ResultDeleted)
-			}
-		} else {
+		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
+			return err
 		}
-		return err
+		return c.updateStateAndResult(pipelineRun, api.StateFinished, api.ResultDeleted, metav1.Now())
 	}
 	pipelineRun.AddFinalizer()
 
