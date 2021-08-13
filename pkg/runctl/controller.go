@@ -270,14 +270,14 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	// fast exit with finalizer cleanup
-	if pipelineRun.GetStatus().State == api.StateFinished {
-		return pipelineRun.DeleteFinalizerIfExists()
-	}
-
 	// If pipelineRun is not found there is nothing to sync
 	if pipelineRun == nil {
 		return nil
+	}
+
+	// fast exit with finalizer cleanup
+	if pipelineRun.GetStatus().State == api.StateFinished {
+		return pipelineRun.DeleteFinalizerIfExists()
 	}
 
 	// Check if object has deletion timestamp
