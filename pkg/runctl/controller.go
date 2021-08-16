@@ -383,10 +383,10 @@ func (c *Controller) syncHandler(key string) error {
 		if finished, result := run.IsFinished(); finished {
 			pipelineRun.UpdateMessage(run.GetMessage())
 			return c.updateStateAndResult(pipelineRun, api.StateCleaning, result, *run.GetCompletionTime())
-		} else {
-			// commit container update
-			c.commitStatusAndMeter(pipelineRun)
 		}
+		// commit container update
+		c.commitStatusAndMeter(pipelineRun)
+
 	case api.StateCleaning:
 		err = runManager.Cleanup(pipelineRun)
 		if err != nil {
