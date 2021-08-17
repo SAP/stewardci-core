@@ -213,8 +213,6 @@ func (r *pipelineRun) String() string {
 // UpdateResult of the pipeline run
 func (r *pipelineRun) UpdateResult(result api.Result, ts metav1.Time) {
 	r.ensureCopy()
-	// the call below returns the error from the function. This error is always nil. Hence there
-	// is no need to return that always-nil-error.
 	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.Result = result
 		s.FinishedAt = &ts
