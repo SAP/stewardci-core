@@ -109,12 +109,12 @@ func Test__runManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
 				pipelineRun1 := h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1)
 				expectedNamespaces := []string{h.namespace1}
 
-				h.verifyNamespace(cf, pipelineRun1.Status.Namespace, "main")
-				expectedNamespaces = append(expectedNamespaces, pipelineRun1.Status.Namespace)
+				h.verifyNamespace(cf, runCtx.runNamespace, "main")
+				expectedNamespaces = append(expectedNamespaces, runCtx.runNamespace)
 
 				if ffEnabled {
-					h.verifyNamespace(cf, pipelineRun1.Status.AuxiliaryNamespace, "aux")
-					expectedNamespaces = append(expectedNamespaces, pipelineRun1.Status.AuxiliaryNamespace)
+					h.verifyNamespace(cf, runCtx.auxNamespace, "aux")
+					expectedNamespaces = append(expectedNamespaces, runCtx.auxNamespace)
 				} else {
 					assert.Equal(t, pipelineRun1.Status.AuxiliaryNamespace, "")
 				}
@@ -150,15 +150,7 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 		methodCalled = true
 		assert.Assert(t, ctx.pipelineRun == pipelineRunHelper)
 		assert.Assert(t, ctx.runNamespace != "")
-		assert.Equal(t, pipelineRunHelper.GetRunNamespace(), ctx.runNamespace)
 		return "", nil, expectedError
-	}
-
-	var cleanupCalled bool
-	examinee.testing.cleanupStub = func(ctx *runContext) error {
-		assert.Assert(t, ctx.pipelineRun == pipelineRunHelper)
-		cleanupCalled = true
-		return nil
 	}
 
 	runCtx := &runContext{
@@ -172,7 +164,6 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 	// VERIFY
 	assert.Equal(t, expectedError, resultErr)
 	assert.Assert(t, methodCalled == true)
-	assert.Assert(t, cleanupCalled == true)
 }
 
 func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagatesError(t *testing.T) {
@@ -201,20 +192,12 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 	examinee.testing.setupServiceAccountStub = func(ctx *runContext, pipelineCloneSecretName string, imagePullSecretNames []string) error {
 		methodCalled = true
 		assert.Assert(t, ctx.runNamespace != "")
-		assert.Equal(t, pipelineRunHelper.GetRunNamespace(), ctx.runNamespace)
 		assert.Equal(t, expectedPipelineCloneSecretName, pipelineCloneSecretName)
 		assert.DeepEqual(t, expectedImagePullSecretNames, imagePullSecretNames)
 		return expectedError
 	}
 	examinee.testing.copySecretsToRunNamespaceStub = func(ctx *runContext) (string, []string, error) {
 		return expectedPipelineCloneSecretName, expectedImagePullSecretNames, nil
-	}
-
-	var cleanupCalled bool
-	examinee.testing.cleanupStub = func(ctx *runContext) error {
-		assert.Assert(t, ctx.pipelineRun == pipelineRunHelper)
-		cleanupCalled = true
-		return nil
 	}
 
 	runCtx := &runContext{
@@ -228,7 +211,6 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 	// VERIFY
 	assert.Equal(t, expectedError, resultErr)
 	assert.Assert(t, methodCalled == true)
-	assert.Assert(t, cleanupCalled == true)
 }
 
 func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndPropagatesError(t *testing.T) {
@@ -255,15 +237,7 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 	examinee.testing.setupStaticNetworkPoliciesStub = func(ctx *runContext) error {
 		methodCalled = true
 		assert.Assert(t, ctx.runNamespace != "")
-		assert.Equal(t, pipelineRunHelper.GetRunNamespace(), ctx.runNamespace)
 		return expectedError
-	}
-
-	var cleanupCalled bool
-	examinee.testing.cleanupStub = func(ctx *runContext) error {
-		assert.Assert(t, ctx.pipelineRun == pipelineRunHelper)
-		cleanupCalled = true
-		return nil
 	}
 
 	runCtx := &runContext{
@@ -277,7 +251,6 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 	// VERIFY
 	assert.Equal(t, expectedError, resultErr)
 	assert.Assert(t, methodCalled == true)
-	assert.Assert(t, cleanupCalled == true)
 }
 
 func Test__runManager_setupStaticNetworkPolicies__Succeeds(t *testing.T) {
@@ -1291,14 +1264,101 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	resultError := examinee.Start(mockPipelineRun, config)
+	runNamespace, _, resultError := examinee.Start(mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY
-	result, err := mockFactory.TektonV1beta1().TaskRuns(mockPipelineRun.GetRunNamespace()).Get(
+	result, err := mockFactory.TektonV1beta1().TaskRuns(runNamespace).Get(
 		tektonTaskRunName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	assert.Assert(t, result != nil)
+}
+
+func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
+	t.Parallel()
+
+	prepareRunnamespaceErr := fmt.Errorf("cannot prepare run namespace: foo")
+	createTektonTaskRunError := fmt.Errorf("cannot create tekton taks run: foo")
+	cleanupError := fmt.Errorf("cannot cleanup: foo")
+
+	for _, test := range []struct {
+		name                     string
+		prepareRunNamespaceError error
+		createTektonTaskRunError error
+		cleanupError             error
+		failOnCleanupCount       int
+		expectedError            error
+		expectedCleanupCount     int
+	}{
+		{
+			name:                 "no failure",
+			expectedCleanupCount: 1, // before, no cleanup afterwards since no error occured
+		},
+		{
+			name:                     "failing inside prepareRunNamespace",
+			prepareRunNamespaceError: prepareRunnamespaceErr,
+			expectedError:            prepareRunnamespaceErr,
+			expectedCleanupCount:     2, // before and after (since error occured)
+		},
+		{
+			name:                     "failing inside creating tekton task run",
+			createTektonTaskRunError: createTektonTaskRunError,
+			expectedError:            createTektonTaskRunError,
+			expectedCleanupCount:     2, // before and after (since error occured)
+		},
+		{
+			name:                 "failing inside initial cleanup",
+			failOnCleanupCount:   1,
+			cleanupError:         cleanupError,
+			expectedError:        cleanupError,
+			expectedCleanupCount: 1, // we are failing inside the initial cleanup, but this gets called.
+		},
+		{
+			name:                     "failing inside defered cleanup",
+			prepareRunNamespaceError: prepareRunnamespaceErr,
+			failOnCleanupCount:       2,
+			cleanupError:             cleanupError,
+			expectedError:            prepareRunnamespaceErr, // we still expect "content" error
+			expectedCleanupCount:     2,                      // we are failing inside the second (defered) cleanup
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			// SETUP
+			h := newTestHelper1(t)
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+			config := &cfg.PipelineRunsConfigStruct{}
+
+			examinee := newRunManager(mockFactory, mockSecretProvider)
+			examinee.testing = newRunManagerTestingWithRequiredStubs()
+
+			var cleanupCalled int
+			examinee.testing.cleanupStub = func(ctx *runContext) error {
+				assert.Assert(t, ctx.pipelineRun == mockPipelineRun)
+				cleanupCalled++
+				if test.cleanupError != nil && cleanupCalled == test.failOnCleanupCount {
+					return test.cleanupError
+				}
+				return nil
+			}
+			examinee.testing.createTektonTaskRunStub = func(ctx *runContext) error {
+				return test.createTektonTaskRunError
+			}
+			examinee.testing.prepareRunNamespaceStub = func(ctx *runContext) error {
+				return test.prepareRunNamespaceError
+			}
+
+			// EXERCISE
+			_, _, resultError := examinee.Start(mockPipelineRun, config)
+
+			// VERIFY
+			if test.expectedError != nil {
+				assert.Error(t, resultError, test.expectedError.Error())
+			}
+			assert.Assert(t, cleanupCalled == test.expectedCleanupCount)
+		})
+	}
 }
 
 func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing.T) {
@@ -1419,12 +1479,12 @@ func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	resultError := examinee.Start(mockPipelineRun, config)
+	_, _, resultError := examinee.Start(mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY
 	// UpdateState should never be called
-	mockPipelineRun.EXPECT().UpdateState(gomock.Any()).Times(0)
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
 }
 
 func Test__runManager_copySecretsToRunNamespace__DoesCopySecret(t *testing.T) {
@@ -1491,6 +1551,10 @@ func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
 				pipelineRunsConfig: config,
 			}
 			err = examinee.prepareRunNamespace(runCtx)
+			assert.NilError(t, err)
+			runCtx.pipelineRun.UpdateRunNamespace(runCtx.runNamespace)
+			runCtx.pipelineRun.UpdateAuxNamespace(runCtx.auxNamespace)
+			_, err = runCtx.pipelineRun.CommitStatus()
 			assert.NilError(t, err)
 			{
 				pipelineRun1 := h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1)
@@ -1946,6 +2010,7 @@ func (*testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv
 	mockPipelineRun.EXPECT().UpdateAuxNamespace(gomock.Any()).Do(func(arg string) {
 		auxNamespace = arg
 	}).MaxTimes(1)
+	mockPipelineRun.EXPECT().CommitStatus().MaxTimes(1)
 
 	mockSecretProvider := secretmocks.NewMockSecretProvider(ctrl)
 

@@ -51,12 +51,29 @@
 - version: NEXT
   date: TBD
   changes:
+
+     - type: bug
+       impact: minor
+       title: Avoid non atomic status updates
+       description: |-
+         Without this change the state might be upated e.g. to a final state
+         without setting a corresponding result. The result is provided a short period
+         of time later with an other update. In the meantime we have an invalid state.
+         With this change we apply both changes to the memory representation of a
+         pipeline run and send the update only once. With this approach there is no
+         short period of time with an invalid state
+       warning: |-
+         needs to be validated carefully since this is a bigger refactoring
+       pullRequestNumber: 248
+       jiraIssueNumber: CLOUDCIFEAT1-130
+
      - type: bug
        impact: patch
        title: Fix deletion bug #241
        description: |-
          When a pipeline run was deleted the state and the result were not updated in some edge cases. This is fixed now.
        pullRequestNumber: 250
+
 - version: "0.12.1"
   date: 2021-07-28
   changes:

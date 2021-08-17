@@ -35,9 +35,10 @@ import (
 	externalversions0 "github.com/SAP/stewardci-core/pkg/tektonclient/informers/externalversions"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
+	v10 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	dynamic "k8s.io/client-go/dynamic"
-	v10 "k8s.io/client-go/kubernetes/typed/core/v1"
-	v11 "k8s.io/client-go/kubernetes/typed/networking/v1"
+	v11 "k8s.io/client-go/kubernetes/typed/core/v1"
+	v12 "k8s.io/client-go/kubernetes/typed/networking/v1"
 	v1beta10 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
 	reflect "reflect"
 )
@@ -66,10 +67,10 @@ func (m *MockClientFactory) EXPECT() *MockClientFactoryMockRecorder {
 }
 
 // CoreV1 mocks base method
-func (m *MockClientFactory) CoreV1() v10.CoreV1Interface {
+func (m *MockClientFactory) CoreV1() v11.CoreV1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CoreV1")
-	ret0, _ := ret[0].(v10.CoreV1Interface)
+	ret0, _ := ret[0].(v11.CoreV1Interface)
 	return ret0
 }
 
@@ -94,10 +95,10 @@ func (mr *MockClientFactoryMockRecorder) Dynamic() *gomock.Call {
 }
 
 // NetworkingV1 mocks base method
-func (m *MockClientFactory) NetworkingV1() v11.NetworkingV1Interface {
+func (m *MockClientFactory) NetworkingV1() v12.NetworkingV1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NetworkingV1")
-	ret0, _ := ret[0].(v11.NetworkingV1Interface)
+	ret0, _ := ret[0].(v12.NetworkingV1Interface)
 	return ret0
 }
 
@@ -264,6 +265,21 @@ func (m *MockPipelineRun) AddFinalizer() error {
 func (mr *MockPipelineRunMockRecorder) AddFinalizer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddFinalizer", reflect.TypeOf((*MockPipelineRun)(nil).AddFinalizer))
+}
+
+// CommitStatus mocks base method
+func (m *MockPipelineRun) CommitStatus() ([]*v1alpha1.StateItem, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CommitStatus")
+	ret0, _ := ret[0].([]*v1alpha1.StateItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CommitStatus indicates an expected call of CommitStatus
+func (mr *MockPipelineRunMockRecorder) CommitStatus() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitStatus", reflect.TypeOf((*MockPipelineRun)(nil).CommitStatus))
 }
 
 // DeleteFinalizerIfExists mocks base method
@@ -464,11 +480,9 @@ func (mr *MockPipelineRunMockRecorder) String() *gomock.Call {
 }
 
 // UpdateAuxNamespace mocks base method
-func (m *MockPipelineRun) UpdateAuxNamespace(arg0 string) error {
+func (m *MockPipelineRun) UpdateAuxNamespace(arg0 string) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateAuxNamespace", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "UpdateAuxNamespace", arg0)
 }
 
 // UpdateAuxNamespace indicates an expected call of UpdateAuxNamespace
@@ -478,11 +492,9 @@ func (mr *MockPipelineRunMockRecorder) UpdateAuxNamespace(arg0 interface{}) *gom
 }
 
 // UpdateContainer mocks base method
-func (m *MockPipelineRun) UpdateContainer(arg0 *v1.ContainerState) error {
+func (m *MockPipelineRun) UpdateContainer(arg0 *v1.ContainerState) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateContainer", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "UpdateContainer", arg0)
 }
 
 // UpdateContainer indicates an expected call of UpdateContainer
@@ -492,11 +504,9 @@ func (mr *MockPipelineRunMockRecorder) UpdateContainer(arg0 interface{}) *gomock
 }
 
 // UpdateMessage mocks base method
-func (m *MockPipelineRun) UpdateMessage(arg0 string) error {
+func (m *MockPipelineRun) UpdateMessage(arg0 string) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateMessage", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "UpdateMessage", arg0)
 }
 
 // UpdateMessage indicates an expected call of UpdateMessage
@@ -506,25 +516,21 @@ func (mr *MockPipelineRunMockRecorder) UpdateMessage(arg0 interface{}) *gomock.C
 }
 
 // UpdateResult mocks base method
-func (m *MockPipelineRun) UpdateResult(arg0 v1alpha1.Result) error {
+func (m *MockPipelineRun) UpdateResult(arg0 v1alpha1.Result, arg1 v10.Time) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateResult", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "UpdateResult", arg0, arg1)
 }
 
 // UpdateResult indicates an expected call of UpdateResult
-func (mr *MockPipelineRunMockRecorder) UpdateResult(arg0 interface{}) *gomock.Call {
+func (mr *MockPipelineRunMockRecorder) UpdateResult(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResult", reflect.TypeOf((*MockPipelineRun)(nil).UpdateResult), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResult", reflect.TypeOf((*MockPipelineRun)(nil).UpdateResult), arg0, arg1)
 }
 
 // UpdateRunNamespace mocks base method
-func (m *MockPipelineRun) UpdateRunNamespace(arg0 string) error {
+func (m *MockPipelineRun) UpdateRunNamespace(arg0 string) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateRunNamespace", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "UpdateRunNamespace", arg0)
 }
 
 // UpdateRunNamespace indicates an expected call of UpdateRunNamespace
@@ -534,18 +540,17 @@ func (mr *MockPipelineRunMockRecorder) UpdateRunNamespace(arg0 interface{}) *gom
 }
 
 // UpdateState mocks base method
-func (m *MockPipelineRun) UpdateState(arg0 v1alpha1.State) (*v1alpha1.StateItem, error) {
+func (m *MockPipelineRun) UpdateState(arg0 v1alpha1.State, arg1 v10.Time) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateState", arg0)
-	ret0, _ := ret[0].(*v1alpha1.StateItem)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "UpdateState", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // UpdateState indicates an expected call of UpdateState
-func (mr *MockPipelineRunMockRecorder) UpdateState(arg0 interface{}) *gomock.Call {
+func (mr *MockPipelineRunMockRecorder) UpdateState(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateState", reflect.TypeOf((*MockPipelineRun)(nil).UpdateState), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateState", reflect.TypeOf((*MockPipelineRun)(nil).UpdateState), arg0, arg1)
 }
 
 // MockPipelineRunFetcher is a mock of PipelineRunFetcher interface

@@ -34,7 +34,7 @@ const kind = "PipelineRuns"
 
 // Used for logging (control loop) "still alive" messages
 var heartbeatIntervalSeconds int64 = 60
-var heartbeatTimer int64 = 0
+var heartbeatTimer int64
 
 // Interval for histogram creation set to prometheus default scrape interval
 var meteringInterval = time.Minute * 1
@@ -205,24 +205,13 @@ func (c *Controller) processNextWorkItem() bool {
 	return true
 }
 
-func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State) error {
-	start := time.Now()
-	oldState, err := pipelineRun.UpdateState(state)
+func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
+	err := pipelineRun.UpdateState(state, ts)
 	if err != nil {
 		klog.V(3).Infof("Failed to UpdateState of [%s] to %q: %q", pipelineRun.String(), state, err.Error())
 		return err
 	}
 
-	end := time.Now()
-	elapsed := end.Sub(start)
-	c.metrics.ObserveUpdateDurationByType("UpdateState", elapsed)
-
-	if oldState != nil {
-		err := c.metrics.ObserveDurationByState(oldState)
-		if err != nil {
-			klog.Errorf("Failed to measure state '%+v': '%s'", oldState, err)
-		}
-	}
 	return nil
 }
 
@@ -270,7 +259,7 @@ func (c *Controller) syncHandler(key string) error {
 	if pipelineRunAPIObj == nil {
 		return nil
 	}
-	// fast exit
+	// fast exit - no finalizer cleanup needed
 	if pipelineRunAPIObj.Status.State == api.StateFinished && !utils.StringSliceContains(pipelineRunAPIObj.ObjectMeta.Finalizers, k8s.FinalizerName) {
 		return nil
 	}
@@ -286,38 +275,23 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
-	// Init state when undefined
-	if pipelineRun.GetStatus().State == api.StateUndefined {
-		err = pipelineRun.InitState()
-		if err != nil {
-			return err
-		}
+	// fast exit with finalizer cleanup
+	if pipelineRun.GetStatus().State == api.StateFinished {
+		return pipelineRun.DeleteFinalizerIfExists()
 	}
 
-	// Check if object has deletion timestamp
-	// If not, try to add finalizer if missing
+	// Check if object has deletion timestamp ...
 	if pipelineRun.HasDeletionTimestamp() {
 		runManager := c.createRunManager(pipelineRun)
-		if pipelineRun.GetStatus().State == api.StateFinished {
-			return pipelineRun.DeleteFinalizerIfExists()
-		}
 		err = runManager.Cleanup(pipelineRun)
-
-		if err == nil {
-			pipelineRun.UpdateResult(api.ResultDeleted)
-			err = c.finish(pipelineRun)
-			if err == nil {
-				c.metrics.CountResult(api.ResultDeleted)
-			}
+		if err != nil {
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
+			return err
 		}
-		return err
+		return c.updateStateAndResult(pipelineRun, api.StateFinished, api.ResultDeleted, metav1.Now())
 	}
+	// ... if not, try to add finalizer if missing
 	pipelineRun.AddFinalizer()
-
-	// Finished and no deletion timestamp, no need to process anything further
-	if pipelineRun.GetStatus().State == api.StateFinished {
-		return nil
-	}
 
 	// Check if pipeline run is aborted
 	if err := c.handleAborted(pipelineRun); err != nil {
@@ -326,9 +300,18 @@ func (c *Controller) syncHandler(key string) error {
 
 	// As soon as we have a result we can cleanup
 	if pipelineRun.GetStatus().Result != api.ResultUndefined && pipelineRun.GetStatus().State != api.StateCleaning {
-		err = c.changeState(pipelineRun, api.StateCleaning)
+		err = c.changeState(pipelineRun, api.StateCleaning, metav1.Now())
 		if err != nil {
 			klog.V(1).Infof("WARN: change state to cleaning failed with: %s", err.Error())
+		}
+	}
+
+	// Init state when undefined
+	if pipelineRun.GetStatus().State == api.StateUndefined {
+
+		err = pipelineRun.InitState()
+		if err != nil {
+			return err
 		}
 	}
 
@@ -343,7 +326,7 @@ func (c *Controller) syncHandler(key string) error {
 			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
 			return err
 		}
-		if err = c.changeState(pipelineRun, api.StatePreparing); err != nil {
+		if err = c.changeAndCommitStateAndMeter(pipelineRun, api.StatePreparing, metav1.Now()); err != nil {
 			return err
 		}
 		c.metrics.CountStart()
@@ -351,103 +334,118 @@ func (c *Controller) syncHandler(key string) error {
 
 	runManager := c.createRunManager(pipelineRun)
 
-	// the configuration should be loaded once per sync to avoid inconsistencies
-	// in case of concurrent configuration changes
-	pipelineRunsConfig, err := c.loadPipelineRunsConfig()
-	if err != nil {
-		if serrors.IsRecoverable(err) {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonLoadPipelineRunsConfigFailed, err.Error())
-			return err
-		}
-		pipelineRun.UpdateResult(api.ResultErrorInfra)
-		pipelineRun.StoreErrorAsMessage(err, "failed to load configuration for pipeline runs")
-		c.metrics.CountResult(pipelineRun.GetStatus().Result)
-		runManager.Cleanup(pipelineRun)
-		return c.finish(pipelineRun)
-	}
-
 	// Process pipeline run based on current state
 	switch state := pipelineRun.GetStatus().State; state {
 	case api.StatePreparing:
-		err = runManager.Start(pipelineRun, pipelineRunsConfig)
+		// the configuration should be loaded once per sync to avoid inconsistencies
+		// in case of concurrent configuration changes
+		pipelineRunsConfig, err := c.loadPipelineRunsConfig()
+		if err != nil {
+			return c.onGetRunError(pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
+		}
+		namespace, auxNamespace, err := runManager.Start(pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			resultClass := serrors.GetClass(err)
 			// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 			if resultClass != api.ResultUndefined {
 				pipelineRun.UpdateMessage(err.Error())
-				pipelineRun.UpdateResult(resultClass)
-				if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
-					return errClean
-				}
 				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
-				c.metrics.CountResult(pipelineRun.GetStatus().Result)
-				return nil
+				return c.updateStateAndResult(pipelineRun, api.StateCleaning, resultClass, metav1.Now())
 			}
 			return err
 		}
-		if err = c.changeState(pipelineRun, api.StateWaiting); err != nil {
+
+		pipelineRun.UpdateRunNamespace(namespace)
+		pipelineRun.UpdateAuxNamespace(auxNamespace)
+
+		if err = c.changeAndCommitStateAndMeter(pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
 			return err
 		}
 	case api.StateWaiting:
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
-			if serrors.IsRecoverable(err) {
-				return err
-			}
-			if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
-				return errClean
-			}
-			pipelineRun.StoreErrorAsMessage(err, "waiting failed")
-			pipelineRun.UpdateResult(api.ResultErrorInfra)
-			c.metrics.CountResult(api.ResultErrorInfra)
-			return nil
+			return c.onGetRunError(pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "waiting failed")
 		}
 		started := run.GetStartTime()
 		if started != nil {
-			if err = c.changeState(pipelineRun, api.StateRunning); err != nil {
+			if err := c.changeAndCommitStateAndMeter(pipelineRun, api.StateRunning, *started); err != nil {
 				return err
 			}
 		}
 	case api.StateRunning:
 		run, err := runManager.GetRun(pipelineRun)
 		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
-			if serrors.IsRecoverable(err) {
-				return err
-			}
-			if errClean := c.changeState(pipelineRun, api.StateCleaning); errClean != nil {
-				return errClean
-			}
-			pipelineRun.StoreErrorAsMessage(err, "running failed")
-			return nil
+			return c.onGetRunError(pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "running failed")
 		}
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
 		if finished, result := run.IsFinished(); finished {
-			msg := run.GetMessage()
-			pipelineRun.UpdateMessage(msg)
-			pipelineRun.UpdateResult(result)
-			if err = c.changeState(pipelineRun, api.StateCleaning); err != nil {
-				return err
-			}
-			c.metrics.CountResult(result)
+			pipelineRun.UpdateMessage(run.GetMessage())
+			return c.updateStateAndResult(pipelineRun, api.StateCleaning, result, *run.GetCompletionTime())
 		}
+		// commit container update
+		c.commitStatusAndMeter(pipelineRun)
+
 	case api.StateCleaning:
 		err = runManager.Cleanup(pipelineRun)
-		return c.finish(pipelineRun)
+		if err != nil {
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
+		}
+		if err := c.changeAndCommitStateAndMeter(pipelineRun, api.StateFinished, metav1.Now()); err != nil {
+			return err
+		}
+		return pipelineRun.DeleteFinalizerIfExists()
 	default:
 		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
 	return nil
 }
 
-func (c *Controller) finish(pipelineRun k8s.PipelineRun) error {
-	if err := c.changeState(pipelineRun, api.StateFinished); err != nil {
+func (c *Controller) onGetRunError(pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun, err error, state api.State, result api.Result, message string) error {
+	c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
+	if serrors.IsRecoverable(err) {
 		return err
 	}
-	return pipelineRun.DeleteFinalizerIfExists()
+	pipelineRun.StoreErrorAsMessage(err, message)
+	return c.updateStateAndResult(pipelineRun, state, result, metav1.Now())
+}
+
+func (c *Controller) changeAndCommitStateAndMeter(pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
+	if err := c.changeState(pipelineRun, state, ts); err != nil {
+		return err
+	}
+	return c.commitStatusAndMeter(pipelineRun)
+}
+
+func (c *Controller) updateStateAndResult(pipelineRun k8s.PipelineRun, state api.State, result api.Result, ts metav1.Time) error {
+	pipelineRun.UpdateResult(result, ts)
+	if err := c.changeAndCommitStateAndMeter(pipelineRun, state, ts); err != nil {
+		return err
+	}
+	c.metrics.CountResult(pipelineRun.GetStatus().Result)
+	if state == api.StateFinished {
+		return pipelineRun.DeleteFinalizerIfExists()
+	}
+	return nil
+}
+
+func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
+	start := time.Now()
+	finishedStates, err := pipelineRun.CommitStatus()
+	if err != nil {
+		return err
+	}
+	end := time.Now()
+	elapsed := end.Sub(start)
+	c.metrics.ObserveUpdateDurationByType("UpdateState", elapsed)
+	for _, finishedState := range finishedStates {
+		err := c.metrics.ObserveDurationByState(finishedState)
+		if err != nil {
+			klog.Errorf("Failed to measure state '%+v': '%s'", finishedState, err)
+		}
+	}
+	return nil
 }
 
 // handleAborted checks if pipeline run should be aborted.
@@ -457,8 +455,7 @@ func (c *Controller) handleAborted(pipelineRun k8s.PipelineRun) error {
 	intent := pipelineRun.GetSpec().Intent
 	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {
 		pipelineRun.UpdateMessage("Aborted")
-		pipelineRun.UpdateResult(api.ResultAborted)
-		return c.changeState(pipelineRun, api.StateCleaning)
+		return c.updateStateAndResult(pipelineRun, api.StateCleaning, api.ResultAborted, metav1.Now())
 	}
 	return nil
 }

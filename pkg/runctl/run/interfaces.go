@@ -10,7 +10,7 @@ import (
 
 // Manager manages runs
 type Manager interface {
-	Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) error
+	Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (string, string, error)
 	GetRun(pipelineRun k8s.PipelineRun) (Run, error)
 	Cleanup(pipelineRun k8s.PipelineRun) error
 }
@@ -19,6 +19,7 @@ type Manager interface {
 type Run interface {
 	GetStartTime() *metav1.Time
 	IsFinished() (bool, steward.Result)
+	GetCompletionTime() *metav1.Time
 	GetContainerInfo() *corev1.ContainerState
 	GetMessage() string
 }

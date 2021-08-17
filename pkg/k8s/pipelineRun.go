@@ -31,22 +31,28 @@ type PipelineRun interface {
 	GetPipelineRepoServerURL() (string, error)
 	HasDeletionTimestamp() bool
 	AddFinalizer() error
+	CommitStatus() ([]*api.StateItem, error)
 	DeleteFinalizerIfExists() error
 	InitState() error
-	UpdateState(api.State) (*api.StateItem, error)
-	UpdateResult(api.Result) error
-	UpdateContainer(*corev1.ContainerState) error
+	UpdateState(api.State, metav1.Time) error
+	UpdateResult(api.Result, metav1.Time)
+	UpdateContainer(*corev1.ContainerState)
 	StoreErrorAsMessage(error, string) error
-	UpdateRunNamespace(string) error
-	UpdateAuxNamespace(string) error
-	UpdateMessage(string) error
+	UpdateRunNamespace(string)
+	UpdateAuxNamespace(string)
+	UpdateMessage(string)
 }
 
 type pipelineRun struct {
-	client stewardv1alpha1.PipelineRunInterface
-	apiObj *api.PipelineRun
-	copied bool
+	client          stewardv1alpha1.PipelineRunInterface
+	apiObj          *api.PipelineRun
+	copied          bool
+	changes         []changeFunc
+	commitRecorders []commitRecorderFunc
 }
+
+type changeFunc func(*api.PipelineStatus) (commitRecorderFunc, error)
+type commitRecorderFunc func() *api.StateItem
 
 // NewPipelineRun creates a managed pipeline run object.
 // If a factory is provided a new version of the pipelinerun is fetched.
@@ -72,9 +78,11 @@ func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun
 		return nil, err
 	}
 	return &pipelineRun{
-		apiObj: obj,
-		copied: true,
-		client: client,
+		apiObj:          obj,
+		copied:          true,
+		client:          client,
+		changes:         []changeFunc{},
+		commitRecorders: []commitRecorderFunc{},
 	}, nil
 }
 
@@ -141,65 +149,60 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 func (r *pipelineRun) InitState() error {
 	r.ensureCopy()
 	klog.V(3).Infof("Init State [%s]", r.String())
-	return r.changeStatusAndUpdateSafely(func() error {
+	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 
-		if r.apiObj.Status.State != api.StateUndefined {
-			return fmt.Errorf("Cannot initialize multiple times")
+		if s.State != api.StateUndefined {
+			return nil, fmt.Errorf("Cannot initialize multiple times")
 		}
 
 		newStateDetails := api.StateItem{
 			State:     api.StateNew,
 			StartedAt: r.apiObj.ObjectMeta.CreationTimestamp,
 		}
-		r.apiObj.Status.StateDetails = newStateDetails
-		r.apiObj.Status.State = api.StateNew
-		return nil
+		s.StateDetails = newStateDetails
+		s.State = api.StateNew
+		return nil, nil
 	})
 }
 
 // UpdateState set end time of current (defined) state (A) and store it to the history.
 // if no current state is defined a new state (A) with cretiontime of the pipelinerun as start time is created.
 // It also creates a new current state (B) with start time.
-// Returns the state details of state A
-func (r *pipelineRun) UpdateState(state api.State) (*api.StateItem, error) {
+func (r *pipelineRun) UpdateState(state api.State, ts metav1.Time) error {
 	if r.apiObj.Status.State == api.StateUndefined {
-		return nil, fmt.Errorf("Cannot update uninitialize state")
+		if err := r.InitState(); err != nil {
+			return err
+		}
 	}
 	r.ensureCopy()
 	klog.V(3).Infof("Update State to %s [%s]", state, r.String())
-	now := metav1.Now()
 	oldStateDetails := r.apiObj.Status.StateDetails
 
-	err := r.changeStatusAndUpdateSafely(func() error {
-
-		currentStateDetails := r.apiObj.Status.StateDetails
+	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+		currentStateDetails := s.StateDetails
 		if currentStateDetails.State != oldStateDetails.State {
-			return fmt.Errorf("State cannot be updated as it was changed concurrently from %q to %q", oldStateDetails.State, currentStateDetails.State)
+			return nil, fmt.Errorf("State cannot be updated as it was changed concurrently from %q to %q", oldStateDetails.State, currentStateDetails.State)
 		}
 		if state == api.StatePreparing {
-			r.apiObj.Status.StartedAt = &now
+			s.StartedAt = &ts
 		}
-		currentStateDetails.FinishedAt = now
-		his := r.apiObj.Status.StateHistory
+		currentStateDetails.FinishedAt = ts
+		his := s.StateHistory
 		his = append(his, currentStateDetails)
 
-		newStateDetails := api.StateItem{State: state, StartedAt: now}
+		commitRecorderFunc := func() *api.StateItem {
+			return &currentStateDetails
+		}
+		newStateDetails := api.StateItem{State: state, StartedAt: ts}
 		if state == api.StateFinished {
-			newStateDetails.FinishedAt = now
+			newStateDetails.FinishedAt = ts
 		}
 
-		r.apiObj.Status.StateDetails = newStateDetails
-		r.apiObj.Status.StateHistory = his
-		r.apiObj.Status.State = state
-		return nil
+		s.StateDetails = newStateDetails
+		s.StateHistory = his
+		s.State = state
+		return commitRecorderFunc, nil
 	})
-
-	if err != nil {
-		return nil, err
-	}
-	his := r.apiObj.Status.StateHistory
-	hisLen := len(his)
-	return &his[hisLen-1], nil
 }
 
 // String returns the full qualified name of the pipeline run
@@ -208,25 +211,24 @@ func (r *pipelineRun) String() string {
 }
 
 // UpdateResult of the pipeline run
-func (r *pipelineRun) UpdateResult(result api.Result) error {
+func (r *pipelineRun) UpdateResult(result api.Result, ts metav1.Time) {
 	r.ensureCopy()
-	return r.changeStatusAndUpdateSafely(func() error {
-		r.apiObj.Status.Result = result
-		now := metav1.Now()
-		r.apiObj.Status.FinishedAt = &now
-		return nil
+	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+		s.Result = result
+		s.FinishedAt = &ts
+		return nil, nil
 	})
 }
 
 // UpdateContainer ...
-func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) error {
+func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) {
 	if c == nil {
-		return nil
+		return
 	}
 	r.ensureCopy()
-	return r.changeStatusAndUpdateSafely(func() error {
-		r.apiObj.Status.Container = *c
-		return nil
+	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+		s.Container = *c
+		return nil, nil
 	})
 }
 
@@ -235,44 +237,44 @@ func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
 	if err != nil {
 		text := fmt.Sprintf("ERROR: %s [%s]: %s", utils.Trim(message), r.String(), err.Error())
 		klog.V(3).Infof(text)
-		return r.UpdateMessage(text)
+		r.UpdateMessage(text)
 	}
 	return nil
 }
 
 // UpdateMessage stores string as message in the status
-func (r *pipelineRun) UpdateMessage(message string) error {
+func (r *pipelineRun) UpdateMessage(message string) {
 	r.ensureCopy()
 
-	return r.changeStatusAndUpdateSafely(func() error {
-		old := r.apiObj.Status.Message
+	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+		old := s.Message
 		if old != "" {
-			his := r.apiObj.Status.History
+			his := s.History
 			his = append(his, old)
-			r.apiObj.Status.History = his
+			s.History = his
 		}
-		r.apiObj.Status.Message = utils.Trim(message)
-		r.apiObj.Status.MessageShort = utils.ShortenMessage(message, 100)
-		return nil
+		s.Message = utils.Trim(message)
+		s.MessageShort = utils.ShortenMessage(message, 100)
+		return nil, nil
 	})
 }
 
 // UpdateRunNamespace overrides the namespace in which the builds happens
-func (r *pipelineRun) UpdateRunNamespace(ns string) error {
+func (r *pipelineRun) UpdateRunNamespace(ns string) {
 	r.ensureCopy()
-	return r.changeStatusAndUpdateSafely(func() error {
-		r.apiObj.Status.Namespace = ns
-		return nil
+	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+		s.Namespace = ns
+		return nil, nil
 	})
 }
 
 // UpdateAuxNamespace overrides the namespace hosting auxiliary services
 // for the pipeline run.
-func (r *pipelineRun) UpdateAuxNamespace(ns string) error {
+func (r *pipelineRun) UpdateAuxNamespace(ns string) {
 	r.ensureCopy()
-	return r.changeStatusAndUpdateSafely(func() error {
-		r.apiObj.Status.AuxiliaryNamespace = ns
-		return nil
+	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+		s.AuxiliaryNamespace = ns
+		return nil, nil
 	})
 }
 
@@ -301,6 +303,9 @@ func (r *pipelineRun) DeleteFinalizerIfExists() error {
 }
 
 func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
+	if len(r.changes) > 0 {
+		return fmt.Errorf("cannot add finalizers when we have uncommited status updates")
+	}
 	if r.client == nil {
 		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
 	}
@@ -319,7 +324,31 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 	return nil
 }
 
-// changeStatusAndUpdateSafely executes `change` and writes the
+// mustChangeStatusAndStoreForRetry calls changeStatusAndStoreForRetry and
+// panics in case of an error.
+func (r *pipelineRun) mustChangeStatusAndStoreForRetry(change changeFunc) {
+	err := r.changeStatusAndStoreForRetry((change))
+	if err != nil {
+		panic(err)
+	}
+}
+
+// changeStatusAndStoreForRetry receives a function applying changes to pipelinerun.Status
+// This function get executed on the current memory representation of the pipeline run
+// and remembered so that it can be re-applied later in case of a re-try. The change function
+// must only apply changes to pipelinerun.Status.
+//
+func (r *pipelineRun) changeStatusAndStoreForRetry(change changeFunc) error {
+	commitRecorder, err := change(r.GetStatus())
+	if err == nil {
+		r.changes = append(r.changes, change)
+		r.commitRecorders = append(r.commitRecorders, commitRecorder)
+	}
+
+	return err
+}
+
+// CommitStatus executes `change` and writes the
 // status of the underlying PipelineRun object to storage afterwards.
 // `change` is expected to mutate only the status of the underlying
 // object, not more.
@@ -338,13 +367,17 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 // that change _gets_ persisted in case there's _no_ update conflict, but
 // gets _lost_ in case there _is_ an update conflict! This is hard to find
 // by tests, as those typically do not encounter update conflicts.
-func (r *pipelineRun) changeStatusAndUpdateSafely(change func() error) error {
+func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 	if r.client == nil {
 		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
 	}
 
+	if len(r.changes) == 0 {
+		return nil, nil
+	}
+
 	isRetry := false
-	var changeError error = nil
+	var changeError error
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		var err error
 
@@ -356,13 +389,17 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func() error) error {
 			}
 			r.apiObj = new
 			r.copied = true
+			r.commitRecorders = []commitRecorderFunc{}
+			var commitRecorder func() *api.StateItem
+			for _, change := range r.changes {
+				commitRecorder, changeError = change(r.GetStatus())
+				if changeError != nil {
+					return nil
+				}
+				r.commitRecorders = append(r.commitRecorders, commitRecorder)
+			}
 		} else {
 			defer func() { isRetry = true }()
-		}
-
-		changeError = change()
-		if changeError != nil {
-			return nil
 		}
 
 		result, err := r.client.UpdateStatus(r.apiObj)
@@ -372,11 +409,17 @@ func (r *pipelineRun) changeStatusAndUpdateSafely(change func() error) error {
 		}
 		return err
 	})
+	r.changes = []changeFunc{}
 	if changeError != nil {
-		return changeError
+		return nil, changeError
 	}
-
-	return errors.Wrapf(err, "failed to update status [%s]", r.String())
+	result := []*api.StateItem{}
+	for _, recorder := range r.commitRecorders {
+		if recorder != nil {
+			result = append(result, recorder())
+		}
+	}
+	return result, errors.Wrapf(err, "failed to update status [%s]", r.String())
 }
 
 func (r *pipelineRun) ensureCopy() {

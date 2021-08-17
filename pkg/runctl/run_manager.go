@@ -64,8 +64,10 @@ type runManager struct {
 type runManagerTesting struct {
 	cleanupStub                               func(*runContext) error
 	copySecretsToRunNamespaceStub             func(*runContext) (string, []string, error)
+	createTektonTaskRunStub                   func(*runContext) error
 	getSecretManagerStub                      func(*runContext) runifc.SecretManager
 	getServiceAccountSecretNameStub           func(*runContext) string
+	prepareRunNamespaceStub                   func(*runContext) error
 	setupLimitRangeFromConfigStub             func(*runContext) error
 	setupNetworkPolicyFromConfigStub          func(*runContext) error
 	setupNetworkPolicyThatIsolatesAllPodsStub func(*runContext) error
@@ -94,33 +96,42 @@ func newRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvi
 
 // Start prepares the isolated environment for a new run and starts
 // the run in this environment.
-func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) error {
-	var err error
+func (c *runManager) Start(pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (namespace string, auxNamespace string, err error) {
+
 	ctx := &runContext{
 		pipelineRun:        pipelineRun,
 		pipelineRunsConfig: pipelineRunsConfig,
 		runNamespace:       pipelineRun.GetRunNamespace(),
 		auxNamespace:       pipelineRun.GetAuxNamespace(),
 	}
-	err = c.cleanup(ctx)
+	err = c.cleanupNamespaces(ctx)
 	if err != nil {
-		return err
-	}
-	err = c.prepareRunNamespace(ctx)
-	if err != nil {
-		return err
-	}
-	err = c.createTektonTaskRun(ctx)
-	if err != nil {
-		return err
+		return "", "", err
 	}
 
-	return nil
+	// If something goes wrong while creating objects inside the namespaces, we delete everything.
+	defer func() {
+		if err != nil {
+			c.cleanupNamespaces(ctx) // clean-up ignoring error
+		}
+	}()
+
+	err = c.prepareRunNamespace(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
+	return ctx.runNamespace, ctx.auxNamespace, c.createTektonTaskRun(ctx)
 }
 
 // prepareRunNamespace creates a new namespace for the pipeline run
 // and populates it with needed resources.
 func (c *runManager) prepareRunNamespace(ctx *runContext) error {
+
+	if c.testing != nil && c.testing.prepareRunNamespaceStub != nil {
+		return c.testing.prepareRunNamespaceStub(ctx)
+	}
+
 	var err error
 
 	randName, err := utils.RandomAlphaNumString(runNamespaceRandomLength)
@@ -130,25 +141,15 @@ func (c *runManager) prepareRunNamespace(ctx *runContext) error {
 
 	ctx.runNamespace, err = c.createNamespace(ctx, "main", randName)
 	if err != nil {
-		return errors.Wrap(err, "failed to create main run namespace")
+		return err
 	}
-	ctx.pipelineRun.UpdateRunNamespace(ctx.runNamespace)
 
 	if featureflag.CreateAuxNamespaceIfUnused.Enabled() {
 		ctx.auxNamespace, err = c.createNamespace(ctx, "aux", randName)
 		if err != nil {
-			return errors.Wrap(err, "failed to create auxiliary run namespace")
-		}
-		ctx.pipelineRun.UpdateAuxNamespace(ctx.auxNamespace)
-	}
-
-	// If something goes wrong while creating objects inside the namespaces, we delete everything.
-	cleanupOnError := func() {
-		if err != nil {
-			c.cleanup(ctx) // clean-up ignoring error
+			return err
 		}
 	}
-	defer cleanupOnError()
 
 	pipelineCloneSecretName, imagePullSecretNames, err := c.copySecretsToRunNamespace(ctx)
 	if err != nil {
@@ -460,6 +461,11 @@ func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
 }
 
 func (c *runManager) createTektonTaskRun(ctx *runContext) error {
+
+	if c.testing != nil && c.testing.createTektonTaskRunStub != nil {
+		return c.testing.createTektonTaskRunStub(ctx)
+	}
+
 	var err error
 
 	copyInt64Ptr := func(ptr *int64) *int64 {
@@ -660,10 +666,10 @@ func (c *runManager) Cleanup(pipelineRun k8s.PipelineRun) error {
 		runNamespace: pipelineRun.GetRunNamespace(),
 		auxNamespace: pipelineRun.GetAuxNamespace(),
 	}
-	return c.cleanup(ctx)
+	return c.cleanupNamespaces(ctx)
 }
 
-func (c *runManager) cleanup(ctx *runContext) error {
+func (c *runManager) cleanupNamespaces(ctx *runContext) error {
 	if c.testing != nil && c.testing.cleanupStub != nil {
 		return c.testing.cleanupStub(ctx)
 	}
@@ -675,9 +681,7 @@ func (c *runManager) cleanup(ctx *runContext) error {
 			PropagationPolicy: &deletePropagation,
 		}
 	}
-
-	var firstErr error
-
+	errors := []error{}
 	namespacesToDelete := []string{
 		ctx.runNamespace,
 		ctx.auxNamespace,
@@ -687,17 +691,21 @@ func (c *runManager) cleanup(ctx *runContext) error {
 			continue
 		}
 		err := c.deleteNamespace(name, deleteOptions)
-		if err != nil && firstErr == nil {
-			firstErr = err
+		if err != nil {
+			errors = append(errors, err)
 		}
 	}
-
-	if firstErr != nil {
-		// TODO Don't store on resource as message. Add it as event.
-		ctx.pipelineRun.StoreErrorAsMessage(firstErr, "cleanup failed")
+	if len(errors) == 0 {
+		return nil
 	}
-
-	return firstErr
+	if len(errors) == 1 {
+		return errors[0]
+	}
+	msg := []string{}
+	for _, e := range errors {
+		msg = append(msg, e.Error())
+	}
+	return fmt.Errorf("cannot delete all namespaces: %s", strings.Join(msg, ", "))
 }
 
 func (c *runManager) createNamespace(ctx *runContext, purpose, randName string) (string, error) {
