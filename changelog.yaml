@@ -52,6 +52,13 @@
   date: TBD
   changes:
 
+    - type: internal
+      impact: patch
+      title: Updated JenkinsfileRunner image to 210924_6ec1ff6
+      description: |-
+        JenkinsfileRunner image was updated to [210924_6ec1ff6](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/210924_6ec1ff6)
+      pullRequestNumber: 252
+
 - version: "0.13.0"
   date: 2021-08-17
   changes:
