@@ -148,7 +148,7 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 // Fails if a state is set already.
 func (r *pipelineRun) InitState() error {
 	r.ensureCopy()
-	klog.V(3).Infof("Init State [%s]", r.String())
+	klog.V(3).Infof("Set State to New [%s]", r.String())
 	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 
 		if s.State != api.StateUndefined {
@@ -315,7 +315,7 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 	result, err := r.client.Update(r.apiObj)
 	end := time.Now()
 	elapsed := end.Sub(start)
-	klog.V(3).Infof("finish update finalizer after %s in %s", elapsed, r.apiObj.Name)
+	klog.V(4).Infof("finish update finalizer after %s in %s", elapsed, r.apiObj.Name)
 	if err != nil {
 		return errors.Wrap(err,
 			fmt.Sprintf("Failed to update finalizers [%s]", r.String()))

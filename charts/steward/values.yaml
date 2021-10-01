@@ -10,7 +10,7 @@ runController:
     qps: 5
     burst: 10
     threadiness: 2
-    logVerbosity: 2
+    logVerbosity: 3
   image:
     repository: stewardci/stewardci-run-controller
     tag: "0.13.1" #Do not modify this line! RunController tag updated automatically
