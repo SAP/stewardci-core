@@ -52,6 +52,15 @@
   date: TBD
   changes:
 
+    - type: bug
+       impact: patch
+       title: Fix metering current durations in state new
+       description: |-
+         Observing the current duration of the pipelineruns failed in state new.
+         It could not determine the start timestamp and returned the error:
+         "cannot observe StateItem if StartedAt is not set"
+       pullRequestNumber: 255
+
 - version: "0.13.1"
   date: 2021-09-27
   changes:
