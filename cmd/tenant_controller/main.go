@@ -2,10 +2,6 @@ package main
 
 import (
 	"flag"
-	"os"
-	"os/signal"
-	"runtime"
-	"syscall"
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
@@ -36,18 +32,6 @@ func init() {
 }
 
 func main() {
-
-	go func() {
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, syscall.SIGQUIT)
-		buf := make([]byte, 1048576) // 2^20
-		for {
-			sig := <-sigs
-			stacklen := runtime.Stack(buf, true)
-			klog.Infof("=== received SIGQUIT (%s) ===\n*** goroutine dump...\n%s\n*** end\n", sig, buf[:stacklen])
-		}
-	}()
-
 	// creates the in-cluster config
 	var config *rest.Config
 	var err error

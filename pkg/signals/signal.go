@@ -21,6 +21,10 @@ package signals
 import (
 	"os"
 	"os/signal"
+	"runtime"
+	"syscall"
+
+	klog "k8s.io/klog/v2"
 )
 
 var onlyOneSignalHandler = make(chan struct{})
@@ -39,6 +43,16 @@ func SetupSignalHandler() (stopCh <-chan struct{}) {
 		close(stop)
 		<-c
 		os.Exit(1) // second signal. Exit directly.
+	}()
+	go func() {
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGQUIT)
+		buf := make([]byte, 1048576) // 2^20
+		for {
+			sig := <-sigs
+			stacklen := runtime.Stack(buf, true)
+			klog.Infof("=== received SIGQUIT (%s) ===\n*** goroutine dump...\n%s\n*** end\n", sig, buf[:stacklen])
+		}
 	}()
 
 	return stop
