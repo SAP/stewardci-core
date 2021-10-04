@@ -60,6 +60,18 @@
       pullRequestNumber: 254
       jiraIssueNumber: CLOUDCIFEAT1-173
 
+    - type: bug
+      impact: patch
+      title: Fix measuring ongoing state durations
+      description: |-
+        Measuring ongoing state duration failed for pipeline runs in state `new`
+        with error message:
+        
+        ```
+        cannot observe StateItem if StartedAt is not set
+        ```
+      pullRequestNumber: 255
+
 - version: "0.13.1"
   date: 2021-09-27
   changes:
