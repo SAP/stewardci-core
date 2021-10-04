@@ -120,7 +120,7 @@ func (metrics *metrics) ObserveDurationByState(state *api.StateItem) error {
 // ObserveOngoingStateDuration logs the duration of the current (unfinished) pipeline state.
 func (metrics *metrics) ObserveOngoingStateDuration(run *api.PipelineRun) error {
 	//state undefined is not processed yet and will be metered as new
-	if run.Status.State == api.StateUndefined {
+	if run.Status.State == api.StateUndefined || run.Status.State == api.StateNew {
 		if run.CreationTimestamp.IsZero() {
 			return fmt.Errorf("cannot observe pipeline run if creationTimestamp is not set")
 		}
