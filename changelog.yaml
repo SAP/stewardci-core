@@ -51,6 +51,14 @@
 - version: NEXT
   date: TBD
   changes:
+    - type: internal
+      impact: patch
+      title: Increase default log level
+      description: |-
+        Default log level was increaset to 3.
+        Small adjustments to log output.
+      pullRequestNumber: 254
+      jiraIssueNumber: CLOUDCIFEAT1-173
 
 - version: "0.13.1"
   date: 2021-09-27
