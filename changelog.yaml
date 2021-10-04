@@ -57,7 +57,7 @@
       description: |-
         Default log level was increaset to 3.
         Small adjustments to log output.
-      pullRequestNumber: 0
+      pullRequestNumber: 254
       jiraIssueNumber: CLOUDCIFEAT1-173
 
 - version: "0.13.1"
