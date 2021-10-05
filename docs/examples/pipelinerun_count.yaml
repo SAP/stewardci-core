@@ -6,7 +6,7 @@ spec:
   jenkinsFile:
     relativePath: counter/Jenkinsfile
     repoUrl: https://github.com/SAP-samples/stewardci-example-pipelines.git
-    revision: master
+    revision: main
   logging:
     elasticsearch:
       runID:

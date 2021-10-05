@@ -7,7 +7,7 @@ spec:
     network: unknown
   jenkinsFile:
     repoUrl: https://github.com/SAP-samples/stewardci-example-pipelines
-    revision: master
+    revision: main
     relativePath: success/Jenkinsfile
   logging:
     elasticsearch:
