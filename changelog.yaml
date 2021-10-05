@@ -51,6 +51,10 @@
 - version: NEXT
   date: TBD
   changes:
+
+- version: "0.13.2"
+  date: 2021-10-05
+  changes:
     - type: internal
       impact: patch
       title: Increase default log level
