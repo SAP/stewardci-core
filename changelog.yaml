@@ -52,9 +52,18 @@
   date: TBD
   changes:
 
+    - type: internal
+      impact: patch
+      title: Fix stewardci-example-pipelines repo branch name
+      description: |-
+        The `master` branch of repo `stewardci-example-pipelines`
+        has been renamed to `main` which made the examples fail.
+      pullRequestNumber: 257
+
 - version: "0.13.2"
   date: 2021-10-05
   changes:
+
     - type: internal
       impact: patch
       title: Increase default log level
