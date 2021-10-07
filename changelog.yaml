@@ -52,6 +52,14 @@
   date: TBD
   changes:
 
+    - type: hotfix
+      impact: patch
+      title: Fix nil pointer dereferece if tekton finished time is not set.
+      description: |-
+        Currently a nil pointer dereference error occures if a tekton task is finished but has no
+        finished time. This is fixed with this change.
+       pullRequestNumber: 0
+
     - type: internal
       impact: patch
       title: Fix stewardci-example-pipelines repo branch name
