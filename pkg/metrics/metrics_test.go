@@ -62,6 +62,13 @@ func Test_ObserveOngoingStateDuration_Success(t *testing.T) {
 			setStartedAt:  false,
 			expectedState: api.StateNew,
 		},
+		{
+			name:          "success_when_state_new",
+			state:         api.StateNew,
+			stateDuration: time.Hour * 2,
+			setStartedAt:  false,
+			expectedState: api.StateNew,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			// SETUP

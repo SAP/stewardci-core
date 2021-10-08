@@ -51,6 +51,28 @@
 - version: NEXT
   date: TBD
   changes:
+
+    - type: bug
+      impact: patch
+      title: Fix nil pointer dereference when Tekton task run failed to create pod
+      description: |-
+        Currently a nil pointer dereference error occures if a Tekton task is finished but has no
+        finished time. This is fixed with this change.
+      pullRequestNumber: 259
+      jiraIssueNumber: 179
+
+    - type: internal
+      impact: patch
+      title: Fix stewardci-example-pipelines repo branch name
+      description: |-
+        The `master` branch of repo `stewardci-example-pipelines`
+        has been renamed to `main` which made the examples fail.
+      pullRequestNumber: 257
+
+- version: "0.13.2"
+  date: 2021-10-05
+  changes:
+
     - type: internal
       impact: patch
       title: Increase default log level
@@ -59,6 +81,18 @@
         Small adjustments to log output.
       pullRequestNumber: 254
       jiraIssueNumber: CLOUDCIFEAT1-173
+
+    - type: bug
+      impact: patch
+      title: Fix measuring ongoing state durations
+      description: |-
+        Measuring ongoing state duration failed for pipeline runs in state `new`
+        with error message:
+        
+        ```
+        cannot observe StateItem if StartedAt is not set
+        ```
+      pullRequestNumber: 255
 
 - version: "0.13.1"
   date: 2021-09-27

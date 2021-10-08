@@ -5,11 +5,11 @@ metadata:
 spec:
   args:
     GIT_URL: https://github.com/SAP-samples/stewardci-example-pipelines
-    GIT_BRANCH: master
+    GIT_BRANCH: main
     FILE_TO_SHOW: gitscm/dummy.txt
   jenkinsFile:
     repoUrl: https://github.com/SAP-samples/stewardci-example-pipelines
-    revision: master
+    revision: main
     relativePath: gitscm/Jenkinsfile
   #secrets:
   #- secret-used-in-pipeline
