@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.13.3"
+  date: 2021-10-08
+  changes:
+
     - type: bug
       impact: patch
       title: Fix nil pointer dereference when Tekton task run failed to create pod
