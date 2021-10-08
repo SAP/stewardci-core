@@ -70,8 +70,9 @@ func main() {
 	klog.V(3).Infof("Create Controller")
 	controller := runctl.NewController(factory, metrics)
 
-	klog.V(3).Infof("Create Signal Handler")
-	stopCh := signals.SetupSignalHandler()
+	klog.V(3).Infof("Create Signal Handlers")
+	stopCh := signals.SetupShutdownSignalHandler()
+	signals.SetupThreadDumpSignalHandler()
 
 	klog.V(2).Infof("Start Informer")
 	factory.StewardInformerFactory().Start(stopCh)

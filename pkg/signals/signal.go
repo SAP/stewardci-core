@@ -27,24 +27,14 @@ import (
 	klog "k8s.io/klog/v2"
 )
 
-var onlyOneSignalHandler = make(chan struct{})
+var onlyOneShutdownSignalHandler = make(chan struct{})
+var onlyOneThreaddumpSignalHandler = make(chan struct{})
 
-// SetupSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned
+// SetupShutdownSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned
 // which is closed on one of these signals. If a second signal is caught, the program
 // is terminated with exit code 1.
-// Listens also to SIGQUIT. In case a SIGQUIT is received a thread dump is written.
-func SetupSignalHandler() (stopCh <-chan struct{}) {
-	close(onlyOneSignalHandler) // panics when called twice
-	go func() {
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, syscall.SIGQUIT)
-		buf := make([]byte, 1048576) // 2^20
-		for {
-			sig := <-sigs
-			stacklen := runtime.Stack(buf, true)
-			klog.Infof("=== received SIGQUIT (%s) ===\n*** goroutine dump...\n%s\n*** end\n", sig, buf[:stacklen])
-		}
-	}()
+func SetupShutdownSignalHandler() (stopCh <-chan struct{}) {
+	close(onlyOneShutdownSignalHandler) // panics when called twice
 	stop := make(chan struct{})
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, shutdownSignals...)
@@ -55,4 +45,20 @@ func SetupSignalHandler() (stopCh <-chan struct{}) {
 		os.Exit(1) // second signal. Exit directly.
 	}()
 	return stop
+}
+
+// SetupThreadDumpSignalHandler registers a handler for SIGQUIT.
+// In case a SIGQUIT is received a thread dump is written.
+func SetupThreadDumpSignalHandler() {
+	close(onlyOneThreaddumpSignalHandler) // panics when called twice
+	go func() {
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGQUIT)
+		buf := make([]byte, 1048576) // 2^20
+		for {
+			sig := <-sigs
+			stacklen := runtime.Stack(buf, true)
+			klog.Infof("=== received SIGQUIT (%s) ===\n*** goroutine dump...\n%s\n*** end\n", sig, buf[:stacklen])
+		}
+	}()
 }
