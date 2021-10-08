@@ -59,7 +59,7 @@
         Currently a nil pointer dereference error occures if a tekton task is finished but has no
         finished time. This is fixed with this change.
       pullRequestNumber: 259
-      jiraIssueNumber: 1110
+      jiraIssueNumber: 179
 
     - type: internal
       impact: patch
