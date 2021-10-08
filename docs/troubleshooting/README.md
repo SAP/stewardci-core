@@ -19,7 +19,7 @@ For issuing the command above in a Kubernetes cluster a suitable pod needs to be
 kubectl run -i -t busybox --image=busybox --restart=Never --overrides='{ "spec": { "hostPID" : true, "hostIPC" : false } }'
 ```
 
-With `hostPID` the pod contains shares the host process ID namespace.
+With `hostPID` the pod container shares the host process ID namespace.
 
 The logs can be accesses via:
 
