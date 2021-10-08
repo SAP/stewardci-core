@@ -32,6 +32,7 @@ var onlyOneSignalHandler = make(chan struct{})
 // SetupSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned
 // which is closed on one of these signals. If a second signal is caught, the program
 // is terminated with exit code 1.
+// Listens also to SIGQUIT. In case a SIGQUIT is received a thread dump is written.
 func SetupSignalHandler() (stopCh <-chan struct{}) {
 	close(onlyOneSignalHandler) // panics when called twice
 	go func() {
