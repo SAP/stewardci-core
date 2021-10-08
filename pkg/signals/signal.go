@@ -54,7 +54,7 @@ func SetupThreadDumpSignalHandler() {
 	go func() {
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, syscall.SIGQUIT)
-		buf := make([]byte, 1 * 1024 * 1024)
+		buf := make([]byte, 1*1024*1024)
 		for {
 			sig := <-sigs
 			stacklen := runtime.Stack(buf, true)
