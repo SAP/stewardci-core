@@ -85,6 +85,34 @@ const (
       message: %q
       startedAt: "2019-05-14T08:24:11Z"
 `
+	completionTimeSet = `status: 
+  completionTime: 2019-05-14T08:24:49Z
+  `
+	completionTimeNotSet = `status: {}`
+
+	conditionSuccessWithTransitionTime = `status:
+  conditions:
+  - lastTransitionTime: "2021-10-07T08:59:59Z"
+    message: 'foo'
+    reason: CouldntGetTask
+    status: "False"
+    type: Succeeded
+  `
+	conditionSuccessWithoutTransitionTime = `status:
+  conditions:
+  - message: 'bar'
+    reason: CouldntGetTask
+    status: "False"
+    type: Succeeded
+  `
+	noSuccessCondition = `status:
+  conditions:
+  - lastTransitionTime: "2021-10-07T08:59:59Z"
+    message: 'baz'
+    reason: CouldntGetTask
+    status: "False"
+    type: Foo
+  `
 )
 
 func generateTime(timeRFC3339String string) *metav1.Time {
@@ -157,6 +185,22 @@ func Test__IsFinished_Timeout(t *testing.T) {
 	assert.Assert(t, run.GetContainerInfo() == nil)
 	assert.Assert(t, finished == true)
 	assert.Equal(t, result, api.ResultTimeout)
+}
+
+func Test__GetCompletionTime(t *testing.T) {
+	for id, taskrun := range []string{
+		completionTimeSet,
+		completionTimeNotSet,
+		conditionSuccessWithTransitionTime,
+		conditionSuccessWithoutTransitionTime,
+		noSuccessCondition,
+	} {
+		t.Run(fmt.Sprintf("%d", id), func(t *testing.T) {
+			run := NewRun(fakeTektonTaskRunYaml(taskrun))
+			completionTime := run.GetCompletionTime()
+			assert.Assert(t, completionTime != nil)
+		})
+	}
 }
 
 func Test__GetMessage(t *testing.T) {
