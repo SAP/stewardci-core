@@ -34,16 +34,6 @@ var onlyOneSignalHandler = make(chan struct{})
 // is terminated with exit code 1.
 func SetupSignalHandler() (stopCh <-chan struct{}) {
 	close(onlyOneSignalHandler) // panics when called twice
-
-	stop := make(chan struct{})
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, shutdownSignals...)
-	go func() {
-		<-c
-		close(stop)
-		<-c
-		os.Exit(1) // second signal. Exit directly.
-	}()
 	go func() {
 		sigs := make(chan os.Signal, 1)
 		signal.Notify(sigs, syscall.SIGQUIT)
@@ -54,6 +44,14 @@ func SetupSignalHandler() (stopCh <-chan struct{}) {
 			klog.Infof("=== received SIGQUIT (%s) ===\n*** goroutine dump...\n%s\n*** end\n", sig, buf[:stacklen])
 		}
 	}()
-
+	stop := make(chan struct{})
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, shutdownSignals...)
+	go func() {
+		<-c
+		close(stop)
+		<-c
+		os.Exit(1) // second signal. Exit directly.
+	}()
 	return stop
 }
