@@ -13,7 +13,7 @@ pkill -QUIT -f '<PATTERN>'
 
 where `PATTERN` depicts the application (`steward-runctl`,`steward-tenantctl`).
 
-For issuing the command above in a kubernetes cluster a suitable pod needs to be launched, e.g.
+For issuing the command above in a Kubernetes cluster a suitable pod needs to be launched, e.g.
 
 ```bash
 kubectl run -i -t busybox --image=busybox --restart=Never --overrides='{ "spec": { "hostPID" : true, "hostIPC" : false } }'
