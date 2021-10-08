@@ -22,9 +22,7 @@ const (
 	completedFail             = `{"status": {"conditions": [{"message": "message1", "reason": "Failed", "status": "False", "type": "Succeeded"}], "steps": [{"name": "jenkinsfile-runner", "terminated": {"reason": "Error", "message": "ko", "exitCode": 1}}]}}`
 	completedValidationFailed = `{"status": {"conditions": [{"message": "message1", "reason": "TaskRunValidationFailed", "status": "False", "type": "Succeeded"}]}}`
 	//See issue https://github.com/SAP/stewardci-core/issues/? TODO: create public issue. internal: 21
-	timeout              = `{"status": {"conditions": [{"message": "TaskRun \"steward-jenkinsfile-runner\" failed to finish within \"10m0s\"", "reason": "TaskRunTimeout", "status": "False", "type": "Succeeded"}]}}`
-	completionTimeSet    = `{"status": { "completionTime": "2019-05-14T08:24:49Z" } }`
-	completionTimeNotSet = `{"status": {}}`
+	timeout = `{"status": {"conditions": [{"message": "TaskRun \"steward-jenkinsfile-runner\" failed to finish within \"10m0s\"", "reason": "TaskRunTimeout", "status": "False", "type": "Succeeded"}]}}`
 
 	realStartedBuild = `status:
   conditions:
@@ -87,6 +85,11 @@ const (
       message: %q
       startedAt: "2019-05-14T08:24:11Z"
 `
+	completionTimeSet = `status: 
+  completionTime: 2019-05-14T08:24:49Z
+  `
+	completionTimeNotSet = `status: {}`
+
 	conditionSuccessWithTransitionTime = `status:
   conditions:
   - lastTransitionTime: "2021-10-07T08:59:59Z"
@@ -185,15 +188,15 @@ func Test__IsFinished_Timeout(t *testing.T) {
 }
 
 func Test__GetCompletionTime(t *testing.T) {
-	for id, taskrun := range []*tekton.TaskRun{
-		fakeTektonTaskRun(completionTimeSet),
-		fakeTektonTaskRun(completionTimeNotSet),
-		fakeTektonTaskRunYaml(conditionSuccessWithTransitionTime),
-		fakeTektonTaskRunYaml(conditionSuccessWithoutTransitionTime),
-		fakeTektonTaskRunYaml(noSuccessCondition),
+	for id, taskrun := range []string{
+		completionTimeSet,
+		completionTimeNotSet,
+		conditionSuccessWithTransitionTime,
+		conditionSuccessWithoutTransitionTime,
+		noSuccessCondition,
 	} {
 		t.Run(fmt.Sprintf("%d", id), func(t *testing.T) {
-			run := NewRun(taskrun)
+			run := NewRun(fakeTektonTaskRunYaml(taskrun))
 			completionTime := run.GetCompletionTime()
 			assert.Assert(t, completionTime != nil)
 		})
