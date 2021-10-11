@@ -52,6 +52,19 @@
   date: TBD
   changes:
 
+- version: "0.13.3"
+  date: 2021-10-08
+  changes:
+
+    - type: bug
+      impact: patch
+      title: Fix nil pointer dereference when Tekton task run failed to create pod
+      description: |-
+        Currently a nil pointer dereference error occures if a Tekton task is finished but has no
+        finished time. This is fixed with this change.
+      pullRequestNumber: 259
+      jiraIssueNumber: 179
+
     - type: internal
       impact: patch
       title: Fix stewardci-example-pipelines repo branch name
