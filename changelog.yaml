@@ -52,6 +52,14 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: minor
+      title: Write stack dumps on sig quit
+      description: |-
+        Enable writing threaddumps. Similar to jstack for java. Makes troubleshooting easier.
+        On SIGQUIT (3) the dumps are written to the log with severity info.
+      pullRequestNumber: 256
+
     - type: bug
       impact: patch
       title: Fix nil pointer dereference when Tekton task run failed to create pod
