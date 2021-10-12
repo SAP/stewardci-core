@@ -16,7 +16,10 @@ where `PATTERN` depicts the application (`steward-runctl`,`steward-tenantctl`).
 For issuing the command above in a Kubernetes cluster a suitable pod needs to be launched, e.g.
 
 ```bash
-kubectl run -i -t busybox --image=busybox --restart=Never --overrides='{ "spec": { "hostPID" : true, "hostIPC" : false } }'
+kubectl run -i -t busybox \
+  --image=busybox \
+  --restart=Never \
+  --overrides='{ "spec": { "hostPID" : true, "hostIPC" : false } }'
 ```
 
 With `hostPID` the pod container shares the host process ID namespace.
