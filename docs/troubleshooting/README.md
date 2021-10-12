@@ -19,10 +19,13 @@ For issuing the command above in a Kubernetes cluster a suitable pod needs to be
 kubectl run -i -t busybox \
   --image=busybox \
   --restart=Never \
-  --overrides='{ "spec": { "hostPID" : true, "hostIPC" : false } }'
+  --overrides='{ "spec": { "hostPID" : true, "hostIPC" : false, "nodeSelector": { "<KEY>": "<VAL>" } } }'
 ```
 
 With `hostPID` the pod container shares the host process ID namespace.
+
+`nodeSelector` needs to be set accordingly in order to ensure the container for sending the signal resides on
+the same node like the run-controller/tenant-controller.
 
 The logs can be accesses via:
 
