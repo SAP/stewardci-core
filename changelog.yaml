@@ -81,6 +81,16 @@
         has been renamed to `main` which made the examples fail.
       pullRequestNumber: 257
 
+    - type: enhancement
+      impact: minor
+      title: Provide reasonable names for the binaries
+      description: |-
+        For troubleshooting cases we need to be able to send signals to
+        the processes which corresponds to the binaries (run controller,
+        tenant controller). In order to be able to send those signals we
+        need to be able to distinguish these processes.
+      pullRequestNumber: 260
+
 - version: "0.13.2"
   date: 2021-10-05
   changes:
