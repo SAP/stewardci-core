@@ -4,7 +4,7 @@ This page provides tips and tricks for troubleshooting
 
 ## Tenant Controller or Run Controller are unresponsible
 
-When either Run Controller or Tenant Controller are unresponsibe a thread dump can be triggered by
+When either Run Controller or Tenant Controller are unresponsive a thread dump can be triggered by
 sending `SIGQUIT` to the corresponding processes:
 
 ```bash
