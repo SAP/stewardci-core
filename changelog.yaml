@@ -23,8 +23,6 @@
 #                              before we remove it completely in the next months.
 # pullRequestNumber The number of this pull request.
 #                       A list is also possible in case more than one pull requests are involved in this change, e.g. [123, 456].
-# jiraIssueNumber   The number of the Jira issue.
-#                       A list is also possible in case more than one Jira issues are affected by this change, e.g. [123, 456].
 
 ## --------------------------------------------------------------------------------------------------
 ## For new change entries copy the template below to 'changes:' of the 'version: NEXT' array element.
@@ -41,7 +39,6 @@
 #      deprecations: |-
 #        <optional deprecation notes (markdown syntax)>
 #      pullRequestNumber: <pull request number(s)>
-#      jiraIssueNumber: <Jira issue number(s)>
 
 
 # Paste new changelog entries below 'changes:' of the 'version: NEXT' array element.

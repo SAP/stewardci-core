@@ -10,7 +10,6 @@
 ### Submitter checklist
 
 - [ ] Change has been tested (on a back-end cluster)
-- [ ] (If applicable) Jira backlog item ID added to the PR title and the [changelog.yaml] entry
 - [ ] [changelog.yaml] entry with upgrade notes is prepared and appropriate for the audience affected by the change (users or developer, depending on the change)
 - [ ] Semantic version diffed against [last release][releases] and updated accordingly. In this project the version has to be maintained here:
     - [/charts/steward/Chart.yaml](https://github.com/SAP/stewardci-core/blob/master/charts/steward/Chart.yaml) (`version` and `appVersion`)
