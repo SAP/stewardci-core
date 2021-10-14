@@ -57,7 +57,7 @@
       title: add additional logging for commitState 
       description: |-
         Logging of pipelineRun.CommitState() function is extended on log level 6.
-      pullRequestNumber: 0
+      pullRequestNumber: 268
 
 - version: "0.14.1"
   date: 2021-10-14
