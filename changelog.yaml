@@ -58,7 +58,7 @@
       description: |-
         In v0.14.0 the binary names has been changed. The binary names has not
         been adjusted on helm level. The binary names are adjusted now.
-      pullRequestNumber: 0
+      pullRequestNumber: 266
 
 - version: "0.14.0"
   date: 2021-10-13
