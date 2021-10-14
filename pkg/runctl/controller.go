@@ -434,7 +434,7 @@ func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
 	start := time.Now()
 	finishedStates, err := pipelineRun.CommitStatus()
 	if err != nil {
-		klog.V(6).Errorf("commitStatus failed with error %s", err.Error())
+		klog.V(6).Infof("commitStatus failed with error %s", err.Error())
 		return err
 	}
 	end := time.Now()
