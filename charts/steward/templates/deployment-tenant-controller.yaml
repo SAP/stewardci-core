@@ -41,7 +41,7 @@ spec:
         - {{ printf "-v=%d" ( .Values.tenantController.args.logVerbosity | int ) | quote }}
         {{- end }}
         command:
-        - /app/main
+        - /app/steward-tenantctl
         env:
         - name: SYSTEM_NAMESPACE
           valueFrom:
