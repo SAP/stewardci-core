@@ -41,7 +41,7 @@ spec:
         - {{ printf "-v=%d" ( .Values.runController.args.logVerbosity | int ) | quote }}
         {{- end }}
         command:
-        - /app/main
+        - /app/steward-runctl
         env:
         - name: SYSTEM_NAMESPACE
           valueFrom:
