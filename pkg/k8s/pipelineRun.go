@@ -398,7 +398,7 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 			for i, change := range r.changes {
 				commitRecorder, changeError = change(r.GetStatus())
 				if changeError != nil {
-					klog.V(6).Infof("applying change %d failed with error: %s", i, changeError.Error)
+					klog.V(6).Infof("applying change %d failed with error: %s", i, changeError.Error())
 					return nil
 				}
 				r.commitRecorders = append(r.commitRecorders, commitRecorder)
