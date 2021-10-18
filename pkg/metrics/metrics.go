@@ -20,6 +20,7 @@ type Metrics interface {
 	ObserveDurationByState(state *api.StateItem) error
 	ObserveOngoingStateDuration(state *api.PipelineRun) error
 	ObserveUpdateDurationByType(kind string, duration time.Duration)
+	ObserveRetryDurationByType(kind string, duration time.Duration)
 	StartServer()
 	SetQueueCount(int)
 }
@@ -30,6 +31,7 @@ type metrics struct {
 	StateDuration        *prometheus.HistogramVec
 	OngoingStateDuration *prometheus.HistogramVec
 	Update               *prometheus.HistogramVec
+	RetryDuration        *prometheus.HistogramVec
 	Queued               prometheus.Gauge
 	Total                prometheus.Gauge
 }
@@ -66,6 +68,12 @@ func NewMetrics() Metrics {
 			Name:    "steward_pipelinerun_update_seconds",
 			Help:    "pipeline run update duration",
 			Buckets: prometheus.ExponentialBuckets(0.001, 1.3, 30),
+		},
+			[]string{"type"}),
+		RetryDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "steward_retry_duration_seconds",
+			Help:    "duration of various retries",
+			Buckets: prometheus.ExponentialBuckets(0.5, 1.3, 30),
 		},
 			[]string{"type"}),
 		Total: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -145,6 +153,10 @@ func (metrics *metrics) ObserveOngoingStateDuration(run *api.PipelineRun) error 
 
 func (metrics *metrics) ObserveUpdateDurationByType(typ string, duration time.Duration) {
 	metrics.Update.With(prometheus.Labels{"type": typ}).Observe(duration.Seconds())
+}
+
+func (metrics *metrics) ObserveRetryDurationByType(typ string, duration time.Duration) {
+	metrics.RetryDuration.With(prometheus.Labels{"type": typ}).Observe(duration.Seconds())
 }
 
 // SetQueueCount logs queue count metric
