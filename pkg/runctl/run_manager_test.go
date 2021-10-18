@@ -20,6 +20,7 @@ import (
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	secretmocks "github.com/SAP/stewardci-core/pkg/k8s/secrets/mocks"
 	secretfake "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/fake"
+	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	runmocks "github.com/SAP/stewardci-core/pkg/runctl/run/mocks"
@@ -88,7 +89,7 @@ func Test__runManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
 			config := &cfg.PipelineRunsConfigStruct{}
 			secretProvider := secretfake.NewProvider(h.namespace1)
 
-			examinee := newRunManager(cf, secretProvider)
+			examinee := newRunManager(cf, secretProvider, metrics.NewMetrics())
 			examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
 			pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
@@ -141,7 +142,7 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 	pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
-	examinee := newRunManager(cf, secretProvider)
+	examinee := newRunManager(cf, secretProvider, metrics.NewMetrics())
 	examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
 	expectedError := errors.New("some error")
@@ -182,7 +183,7 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 	pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
-	examinee := newRunManager(cf, secretProvider)
+	examinee := newRunManager(cf, secretProvider, metrics.NewMetrics())
 	examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
 	expectedPipelineCloneSecretName := "pipelineCloneSecret1"
@@ -229,7 +230,7 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 	pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
-	examinee := newRunManager(cf, secretProvider)
+	examinee := newRunManager(cf, secretProvider, metrics.NewMetrics())
 	examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
 	expectedError := errors.New("some error")
@@ -1260,7 +1261,7 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	h.preparePredefinedClusterRole(mockFactory, mockPipelineRun)
 	config := &cfg.PipelineRunsConfigStruct{}
 
-	examinee := newRunManager(mockFactory, mockSecretProvider)
+	examinee := newRunManager(mockFactory, mockSecretProvider, metrics.NewMetrics())
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
@@ -1330,7 +1331,7 @@ func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
 			mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 			config := &cfg.PipelineRunsConfigStruct{}
 
-			examinee := newRunManager(mockFactory, mockSecretProvider)
+			examinee := newRunManager(mockFactory, mockSecretProvider, metrics.NewMetrics())
 			examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 			var cleanupCalled int
@@ -1475,7 +1476,7 @@ func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
 	h.preparePredefinedClusterRole(mockFactory, mockPipelineRun)
 	config := &cfg.PipelineRunsConfigStruct{}
 
-	examinee := newRunManager(mockFactory, mockSecretProvider)
+	examinee := newRunManager(mockFactory, mockSecretProvider, metrics.NewMetrics())
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
@@ -1539,7 +1540,7 @@ func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
 			config := &cfg.PipelineRunsConfigStruct{}
 			secretProvider := secretfake.NewProvider(h.namespace1)
 
-			examinee := newRunManager(cf, secretProvider)
+			examinee := newRunManager(cf, secretProvider, metrics.NewMetrics())
 			examinee.testing = newRunManagerTestingWithAllNoopStubs()
 			examinee.testing.cleanupStub = nil
 
@@ -1626,6 +1627,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 		examinee = newRunManager(
 			cf,
 			k8s.NewTenantNamespace(cf, pipelineRun.GetNamespace()).GetSecretProvider(),
+			metrics.NewMetrics(),
 		)
 		examinee.testing = newRunManagerTestingWithRequiredStubs()
 		runCtx = &runContext{

@@ -287,6 +287,10 @@ if is_generate_mocks; then
         "github.com/SAP/stewardci-core/pkg/runctl/run" \
         "Run,Manager,SecretManager" \
         "pkg/runctl/run/mocks/mocks.go"
+    generate_mocks \
+        "github.com/SAP/stewardci-core/pkg/metrics" \
+        "Metrics" \
+        "pkg/metrics/mocks/mocks.go"
 fi
 
 echo "${ACTION} successful"

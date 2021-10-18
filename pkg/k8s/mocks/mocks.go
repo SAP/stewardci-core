@@ -28,6 +28,8 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	v1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	v1alpha10 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	externalversions "github.com/SAP/stewardci-core/pkg/client/informers/externalversions"
@@ -40,33 +42,32 @@ import (
 	v11 "k8s.io/client-go/kubernetes/typed/core/v1"
 	v12 "k8s.io/client-go/kubernetes/typed/networking/v1"
 	v1beta10 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
-	reflect "reflect"
 )
 
-// MockClientFactory is a mock of ClientFactory interface
+// MockClientFactory is a mock of ClientFactory interface.
 type MockClientFactory struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientFactoryMockRecorder
 }
 
-// MockClientFactoryMockRecorder is the mock recorder for MockClientFactory
+// MockClientFactoryMockRecorder is the mock recorder for MockClientFactory.
 type MockClientFactoryMockRecorder struct {
 	mock *MockClientFactory
 }
 
-// NewMockClientFactory creates a new mock instance
+// NewMockClientFactory creates a new mock instance.
 func NewMockClientFactory(ctrl *gomock.Controller) *MockClientFactory {
 	mock := &MockClientFactory{ctrl: ctrl}
 	mock.recorder = &MockClientFactoryMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockClientFactory) EXPECT() *MockClientFactoryMockRecorder {
 	return m.recorder
 }
 
-// CoreV1 mocks base method
+// CoreV1 mocks base method.
 func (m *MockClientFactory) CoreV1() v11.CoreV1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CoreV1")
@@ -74,13 +75,13 @@ func (m *MockClientFactory) CoreV1() v11.CoreV1Interface {
 	return ret0
 }
 
-// CoreV1 indicates an expected call of CoreV1
+// CoreV1 indicates an expected call of CoreV1.
 func (mr *MockClientFactoryMockRecorder) CoreV1() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CoreV1", reflect.TypeOf((*MockClientFactory)(nil).CoreV1))
 }
 
-// Dynamic mocks base method
+// Dynamic mocks base method.
 func (m *MockClientFactory) Dynamic() dynamic.Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Dynamic")
@@ -88,13 +89,13 @@ func (m *MockClientFactory) Dynamic() dynamic.Interface {
 	return ret0
 }
 
-// Dynamic indicates an expected call of Dynamic
+// Dynamic indicates an expected call of Dynamic.
 func (mr *MockClientFactoryMockRecorder) Dynamic() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dynamic", reflect.TypeOf((*MockClientFactory)(nil).Dynamic))
 }
 
-// NetworkingV1 mocks base method
+// NetworkingV1 mocks base method.
 func (m *MockClientFactory) NetworkingV1() v12.NetworkingV1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NetworkingV1")
@@ -102,13 +103,13 @@ func (m *MockClientFactory) NetworkingV1() v12.NetworkingV1Interface {
 	return ret0
 }
 
-// NetworkingV1 indicates an expected call of NetworkingV1
+// NetworkingV1 indicates an expected call of NetworkingV1.
 func (mr *MockClientFactoryMockRecorder) NetworkingV1() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkingV1", reflect.TypeOf((*MockClientFactory)(nil).NetworkingV1))
 }
 
-// RbacV1beta1 mocks base method
+// RbacV1beta1 mocks base method.
 func (m *MockClientFactory) RbacV1beta1() v1beta10.RbacV1beta1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RbacV1beta1")
@@ -116,13 +117,13 @@ func (m *MockClientFactory) RbacV1beta1() v1beta10.RbacV1beta1Interface {
 	return ret0
 }
 
-// RbacV1beta1 indicates an expected call of RbacV1beta1
+// RbacV1beta1 indicates an expected call of RbacV1beta1.
 func (mr *MockClientFactoryMockRecorder) RbacV1beta1() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RbacV1beta1", reflect.TypeOf((*MockClientFactory)(nil).RbacV1beta1))
 }
 
-// StewardInformerFactory mocks base method
+// StewardInformerFactory mocks base method.
 func (m *MockClientFactory) StewardInformerFactory() externalversions.SharedInformerFactory {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StewardInformerFactory")
@@ -130,13 +131,13 @@ func (m *MockClientFactory) StewardInformerFactory() externalversions.SharedInfo
 	return ret0
 }
 
-// StewardInformerFactory indicates an expected call of StewardInformerFactory
+// StewardInformerFactory indicates an expected call of StewardInformerFactory.
 func (mr *MockClientFactoryMockRecorder) StewardInformerFactory() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StewardInformerFactory", reflect.TypeOf((*MockClientFactory)(nil).StewardInformerFactory))
 }
 
-// StewardV1alpha1 mocks base method
+// StewardV1alpha1 mocks base method.
 func (m *MockClientFactory) StewardV1alpha1() v1alpha10.StewardV1alpha1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StewardV1alpha1")
@@ -144,13 +145,13 @@ func (m *MockClientFactory) StewardV1alpha1() v1alpha10.StewardV1alpha1Interface
 	return ret0
 }
 
-// StewardV1alpha1 indicates an expected call of StewardV1alpha1
+// StewardV1alpha1 indicates an expected call of StewardV1alpha1.
 func (mr *MockClientFactoryMockRecorder) StewardV1alpha1() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StewardV1alpha1", reflect.TypeOf((*MockClientFactory)(nil).StewardV1alpha1))
 }
 
-// TektonInformerFactory mocks base method
+// TektonInformerFactory mocks base method.
 func (m *MockClientFactory) TektonInformerFactory() externalversions0.SharedInformerFactory {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TektonInformerFactory")
@@ -158,13 +159,13 @@ func (m *MockClientFactory) TektonInformerFactory() externalversions0.SharedInfo
 	return ret0
 }
 
-// TektonInformerFactory indicates an expected call of TektonInformerFactory
+// TektonInformerFactory indicates an expected call of TektonInformerFactory.
 func (mr *MockClientFactoryMockRecorder) TektonInformerFactory() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TektonInformerFactory", reflect.TypeOf((*MockClientFactory)(nil).TektonInformerFactory))
 }
 
-// TektonV1beta1 mocks base method
+// TektonV1beta1 mocks base method.
 func (m *MockClientFactory) TektonV1beta1() v1beta1.TektonV1beta1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TektonV1beta1")
@@ -172,36 +173,36 @@ func (m *MockClientFactory) TektonV1beta1() v1beta1.TektonV1beta1Interface {
 	return ret0
 }
 
-// TektonV1beta1 indicates an expected call of TektonV1beta1
+// TektonV1beta1 indicates an expected call of TektonV1beta1.
 func (mr *MockClientFactoryMockRecorder) TektonV1beta1() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TektonV1beta1", reflect.TypeOf((*MockClientFactory)(nil).TektonV1beta1))
 }
 
-// MockNamespaceManager is a mock of NamespaceManager interface
+// MockNamespaceManager is a mock of NamespaceManager interface.
 type MockNamespaceManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockNamespaceManagerMockRecorder
 }
 
-// MockNamespaceManagerMockRecorder is the mock recorder for MockNamespaceManager
+// MockNamespaceManagerMockRecorder is the mock recorder for MockNamespaceManager.
 type MockNamespaceManagerMockRecorder struct {
 	mock *MockNamespaceManager
 }
 
-// NewMockNamespaceManager creates a new mock instance
+// NewMockNamespaceManager creates a new mock instance.
 func NewMockNamespaceManager(ctrl *gomock.Controller) *MockNamespaceManager {
 	mock := &MockNamespaceManager{ctrl: ctrl}
 	mock.recorder = &MockNamespaceManagerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockNamespaceManager) EXPECT() *MockNamespaceManagerMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method
+// Create mocks base method.
 func (m *MockNamespaceManager) Create(arg0 string, arg1 map[string]string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0, arg1)
@@ -210,13 +211,13 @@ func (m *MockNamespaceManager) Create(arg0 string, arg1 map[string]string) (stri
 	return ret0, ret1
 }
 
-// Create indicates an expected call of Create
+// Create indicates an expected call of Create.
 func (mr *MockNamespaceManagerMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNamespaceManager)(nil).Create), arg0, arg1)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockNamespaceManager) Delete(arg0 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0)
@@ -224,36 +225,36 @@ func (m *MockNamespaceManager) Delete(arg0 string) error {
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockNamespaceManagerMockRecorder) Delete(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNamespaceManager)(nil).Delete), arg0)
 }
 
-// MockPipelineRun is a mock of PipelineRun interface
+// MockPipelineRun is a mock of PipelineRun interface.
 type MockPipelineRun struct {
 	ctrl     *gomock.Controller
 	recorder *MockPipelineRunMockRecorder
 }
 
-// MockPipelineRunMockRecorder is the mock recorder for MockPipelineRun
+// MockPipelineRunMockRecorder is the mock recorder for MockPipelineRun.
 type MockPipelineRunMockRecorder struct {
 	mock *MockPipelineRun
 }
 
-// NewMockPipelineRun creates a new mock instance
+// NewMockPipelineRun creates a new mock instance.
 func NewMockPipelineRun(ctrl *gomock.Controller) *MockPipelineRun {
 	mock := &MockPipelineRun{ctrl: ctrl}
 	mock.recorder = &MockPipelineRunMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPipelineRun) EXPECT() *MockPipelineRunMockRecorder {
 	return m.recorder
 }
 
-// AddFinalizer mocks base method
+// AddFinalizer mocks base method.
 func (m *MockPipelineRun) AddFinalizer() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddFinalizer")
@@ -261,13 +262,13 @@ func (m *MockPipelineRun) AddFinalizer() error {
 	return ret0
 }
 
-// AddFinalizer indicates an expected call of AddFinalizer
+// AddFinalizer indicates an expected call of AddFinalizer.
 func (mr *MockPipelineRunMockRecorder) AddFinalizer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddFinalizer", reflect.TypeOf((*MockPipelineRun)(nil).AddFinalizer))
 }
 
-// CommitStatus mocks base method
+// CommitStatus mocks base method.
 func (m *MockPipelineRun) CommitStatus() ([]*v1alpha1.StateItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CommitStatus")
@@ -276,13 +277,13 @@ func (m *MockPipelineRun) CommitStatus() ([]*v1alpha1.StateItem, error) {
 	return ret0, ret1
 }
 
-// CommitStatus indicates an expected call of CommitStatus
+// CommitStatus indicates an expected call of CommitStatus.
 func (mr *MockPipelineRunMockRecorder) CommitStatus() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitStatus", reflect.TypeOf((*MockPipelineRun)(nil).CommitStatus))
 }
 
-// DeleteFinalizerIfExists mocks base method
+// DeleteFinalizerIfExists mocks base method.
 func (m *MockPipelineRun) DeleteFinalizerIfExists() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteFinalizerIfExists")
@@ -290,13 +291,13 @@ func (m *MockPipelineRun) DeleteFinalizerIfExists() error {
 	return ret0
 }
 
-// DeleteFinalizerIfExists indicates an expected call of DeleteFinalizerIfExists
+// DeleteFinalizerIfExists indicates an expected call of DeleteFinalizerIfExists.
 func (mr *MockPipelineRunMockRecorder) DeleteFinalizerIfExists() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFinalizerIfExists", reflect.TypeOf((*MockPipelineRun)(nil).DeleteFinalizerIfExists))
 }
 
-// GetAPIObject mocks base method
+// GetAPIObject mocks base method.
 func (m *MockPipelineRun) GetAPIObject() *v1alpha1.PipelineRun {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAPIObject")
@@ -304,13 +305,13 @@ func (m *MockPipelineRun) GetAPIObject() *v1alpha1.PipelineRun {
 	return ret0
 }
 
-// GetAPIObject indicates an expected call of GetAPIObject
+// GetAPIObject indicates an expected call of GetAPIObject.
 func (mr *MockPipelineRunMockRecorder) GetAPIObject() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAPIObject", reflect.TypeOf((*MockPipelineRun)(nil).GetAPIObject))
 }
 
-// GetAuxNamespace mocks base method
+// GetAuxNamespace mocks base method.
 func (m *MockPipelineRun) GetAuxNamespace() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAuxNamespace")
@@ -318,13 +319,13 @@ func (m *MockPipelineRun) GetAuxNamespace() string {
 	return ret0
 }
 
-// GetAuxNamespace indicates an expected call of GetAuxNamespace
+// GetAuxNamespace indicates an expected call of GetAuxNamespace.
 func (mr *MockPipelineRunMockRecorder) GetAuxNamespace() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAuxNamespace", reflect.TypeOf((*MockPipelineRun)(nil).GetAuxNamespace))
 }
 
-// GetKey mocks base method
+// GetKey mocks base method.
 func (m *MockPipelineRun) GetKey() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetKey")
@@ -332,13 +333,13 @@ func (m *MockPipelineRun) GetKey() string {
 	return ret0
 }
 
-// GetKey indicates an expected call of GetKey
+// GetKey indicates an expected call of GetKey.
 func (mr *MockPipelineRunMockRecorder) GetKey() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKey", reflect.TypeOf((*MockPipelineRun)(nil).GetKey))
 }
 
-// GetName mocks base method
+// GetName mocks base method.
 func (m *MockPipelineRun) GetName() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetName")
@@ -346,13 +347,13 @@ func (m *MockPipelineRun) GetName() string {
 	return ret0
 }
 
-// GetName indicates an expected call of GetName
+// GetName indicates an expected call of GetName.
 func (mr *MockPipelineRunMockRecorder) GetName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetName", reflect.TypeOf((*MockPipelineRun)(nil).GetName))
 }
 
-// GetNamespace mocks base method
+// GetNamespace mocks base method.
 func (m *MockPipelineRun) GetNamespace() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetNamespace")
@@ -360,13 +361,13 @@ func (m *MockPipelineRun) GetNamespace() string {
 	return ret0
 }
 
-// GetNamespace indicates an expected call of GetNamespace
+// GetNamespace indicates an expected call of GetNamespace.
 func (mr *MockPipelineRunMockRecorder) GetNamespace() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNamespace", reflect.TypeOf((*MockPipelineRun)(nil).GetNamespace))
 }
 
-// GetPipelineRepoServerURL mocks base method
+// GetPipelineRepoServerURL mocks base method.
 func (m *MockPipelineRun) GetPipelineRepoServerURL() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPipelineRepoServerURL")
@@ -375,13 +376,13 @@ func (m *MockPipelineRun) GetPipelineRepoServerURL() (string, error) {
 	return ret0, ret1
 }
 
-// GetPipelineRepoServerURL indicates an expected call of GetPipelineRepoServerURL
+// GetPipelineRepoServerURL indicates an expected call of GetPipelineRepoServerURL.
 func (mr *MockPipelineRunMockRecorder) GetPipelineRepoServerURL() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPipelineRepoServerURL", reflect.TypeOf((*MockPipelineRun)(nil).GetPipelineRepoServerURL))
 }
 
-// GetRunNamespace mocks base method
+// GetRunNamespace mocks base method.
 func (m *MockPipelineRun) GetRunNamespace() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRunNamespace")
@@ -389,13 +390,13 @@ func (m *MockPipelineRun) GetRunNamespace() string {
 	return ret0
 }
 
-// GetRunNamespace indicates an expected call of GetRunNamespace
+// GetRunNamespace indicates an expected call of GetRunNamespace.
 func (mr *MockPipelineRunMockRecorder) GetRunNamespace() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRunNamespace", reflect.TypeOf((*MockPipelineRun)(nil).GetRunNamespace))
 }
 
-// GetSpec mocks base method
+// GetSpec mocks base method.
 func (m *MockPipelineRun) GetSpec() *v1alpha1.PipelineSpec {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSpec")
@@ -403,13 +404,13 @@ func (m *MockPipelineRun) GetSpec() *v1alpha1.PipelineSpec {
 	return ret0
 }
 
-// GetSpec indicates an expected call of GetSpec
+// GetSpec indicates an expected call of GetSpec.
 func (mr *MockPipelineRunMockRecorder) GetSpec() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSpec", reflect.TypeOf((*MockPipelineRun)(nil).GetSpec))
 }
 
-// GetStatus mocks base method
+// GetStatus mocks base method.
 func (m *MockPipelineRun) GetStatus() *v1alpha1.PipelineStatus {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetStatus")
@@ -417,13 +418,13 @@ func (m *MockPipelineRun) GetStatus() *v1alpha1.PipelineStatus {
 	return ret0
 }
 
-// GetStatus indicates an expected call of GetStatus
+// GetStatus indicates an expected call of GetStatus.
 func (mr *MockPipelineRunMockRecorder) GetStatus() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStatus", reflect.TypeOf((*MockPipelineRun)(nil).GetStatus))
 }
 
-// HasDeletionTimestamp mocks base method
+// HasDeletionTimestamp mocks base method.
 func (m *MockPipelineRun) HasDeletionTimestamp() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HasDeletionTimestamp")
@@ -431,13 +432,13 @@ func (m *MockPipelineRun) HasDeletionTimestamp() bool {
 	return ret0
 }
 
-// HasDeletionTimestamp indicates an expected call of HasDeletionTimestamp
+// HasDeletionTimestamp indicates an expected call of HasDeletionTimestamp.
 func (mr *MockPipelineRunMockRecorder) HasDeletionTimestamp() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDeletionTimestamp", reflect.TypeOf((*MockPipelineRun)(nil).HasDeletionTimestamp))
 }
 
-// InitState mocks base method
+// InitState mocks base method.
 func (m *MockPipelineRun) InitState() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InitState")
@@ -445,13 +446,13 @@ func (m *MockPipelineRun) InitState() error {
 	return ret0
 }
 
-// InitState indicates an expected call of InitState
+// InitState indicates an expected call of InitState.
 func (mr *MockPipelineRunMockRecorder) InitState() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitState", reflect.TypeOf((*MockPipelineRun)(nil).InitState))
 }
 
-// StoreErrorAsMessage mocks base method
+// StoreErrorAsMessage mocks base method.
 func (m *MockPipelineRun) StoreErrorAsMessage(arg0 error, arg1 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StoreErrorAsMessage", arg0, arg1)
@@ -459,13 +460,13 @@ func (m *MockPipelineRun) StoreErrorAsMessage(arg0 error, arg1 string) error {
 	return ret0
 }
 
-// StoreErrorAsMessage indicates an expected call of StoreErrorAsMessage
+// StoreErrorAsMessage indicates an expected call of StoreErrorAsMessage.
 func (mr *MockPipelineRunMockRecorder) StoreErrorAsMessage(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreErrorAsMessage", reflect.TypeOf((*MockPipelineRun)(nil).StoreErrorAsMessage), arg0, arg1)
 }
 
-// String mocks base method
+// String mocks base method.
 func (m *MockPipelineRun) String() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "String")
@@ -473,73 +474,73 @@ func (m *MockPipelineRun) String() string {
 	return ret0
 }
 
-// String indicates an expected call of String
+// String indicates an expected call of String.
 func (mr *MockPipelineRunMockRecorder) String() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "String", reflect.TypeOf((*MockPipelineRun)(nil).String))
 }
 
-// UpdateAuxNamespace mocks base method
+// UpdateAuxNamespace mocks base method.
 func (m *MockPipelineRun) UpdateAuxNamespace(arg0 string) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "UpdateAuxNamespace", arg0)
 }
 
-// UpdateAuxNamespace indicates an expected call of UpdateAuxNamespace
+// UpdateAuxNamespace indicates an expected call of UpdateAuxNamespace.
 func (mr *MockPipelineRunMockRecorder) UpdateAuxNamespace(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAuxNamespace", reflect.TypeOf((*MockPipelineRun)(nil).UpdateAuxNamespace), arg0)
 }
 
-// UpdateContainer mocks base method
+// UpdateContainer mocks base method.
 func (m *MockPipelineRun) UpdateContainer(arg0 *v1.ContainerState) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "UpdateContainer", arg0)
 }
 
-// UpdateContainer indicates an expected call of UpdateContainer
+// UpdateContainer indicates an expected call of UpdateContainer.
 func (mr *MockPipelineRunMockRecorder) UpdateContainer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateContainer", reflect.TypeOf((*MockPipelineRun)(nil).UpdateContainer), arg0)
 }
 
-// UpdateMessage mocks base method
+// UpdateMessage mocks base method.
 func (m *MockPipelineRun) UpdateMessage(arg0 string) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "UpdateMessage", arg0)
 }
 
-// UpdateMessage indicates an expected call of UpdateMessage
+// UpdateMessage indicates an expected call of UpdateMessage.
 func (mr *MockPipelineRunMockRecorder) UpdateMessage(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMessage", reflect.TypeOf((*MockPipelineRun)(nil).UpdateMessage), arg0)
 }
 
-// UpdateResult mocks base method
+// UpdateResult mocks base method.
 func (m *MockPipelineRun) UpdateResult(arg0 v1alpha1.Result, arg1 v10.Time) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "UpdateResult", arg0, arg1)
 }
 
-// UpdateResult indicates an expected call of UpdateResult
+// UpdateResult indicates an expected call of UpdateResult.
 func (mr *MockPipelineRunMockRecorder) UpdateResult(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResult", reflect.TypeOf((*MockPipelineRun)(nil).UpdateResult), arg0, arg1)
 }
 
-// UpdateRunNamespace mocks base method
+// UpdateRunNamespace mocks base method.
 func (m *MockPipelineRun) UpdateRunNamespace(arg0 string) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "UpdateRunNamespace", arg0)
 }
 
-// UpdateRunNamespace indicates an expected call of UpdateRunNamespace
+// UpdateRunNamespace indicates an expected call of UpdateRunNamespace.
 func (mr *MockPipelineRunMockRecorder) UpdateRunNamespace(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRunNamespace", reflect.TypeOf((*MockPipelineRun)(nil).UpdateRunNamespace), arg0)
 }
 
-// UpdateState mocks base method
+// UpdateState mocks base method.
 func (m *MockPipelineRun) UpdateState(arg0 v1alpha1.State, arg1 v10.Time) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateState", arg0, arg1)
@@ -547,36 +548,36 @@ func (m *MockPipelineRun) UpdateState(arg0 v1alpha1.State, arg1 v10.Time) error 
 	return ret0
 }
 
-// UpdateState indicates an expected call of UpdateState
+// UpdateState indicates an expected call of UpdateState.
 func (mr *MockPipelineRunMockRecorder) UpdateState(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateState", reflect.TypeOf((*MockPipelineRun)(nil).UpdateState), arg0, arg1)
 }
 
-// MockPipelineRunFetcher is a mock of PipelineRunFetcher interface
+// MockPipelineRunFetcher is a mock of PipelineRunFetcher interface.
 type MockPipelineRunFetcher struct {
 	ctrl     *gomock.Controller
 	recorder *MockPipelineRunFetcherMockRecorder
 }
 
-// MockPipelineRunFetcherMockRecorder is the mock recorder for MockPipelineRunFetcher
+// MockPipelineRunFetcherMockRecorder is the mock recorder for MockPipelineRunFetcher.
 type MockPipelineRunFetcherMockRecorder struct {
 	mock *MockPipelineRunFetcher
 }
 
-// NewMockPipelineRunFetcher creates a new mock instance
+// NewMockPipelineRunFetcher creates a new mock instance.
 func NewMockPipelineRunFetcher(ctrl *gomock.Controller) *MockPipelineRunFetcher {
 	mock := &MockPipelineRunFetcher{ctrl: ctrl}
 	mock.recorder = &MockPipelineRunFetcherMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPipelineRunFetcher) EXPECT() *MockPipelineRunFetcherMockRecorder {
 	return m.recorder
 }
 
-// ByKey mocks base method
+// ByKey mocks base method.
 func (m *MockPipelineRunFetcher) ByKey(arg0 string) (*v1alpha1.PipelineRun, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ByKey", arg0)
@@ -585,13 +586,13 @@ func (m *MockPipelineRunFetcher) ByKey(arg0 string) (*v1alpha1.PipelineRun, erro
 	return ret0, ret1
 }
 
-// ByKey indicates an expected call of ByKey
+// ByKey indicates an expected call of ByKey.
 func (mr *MockPipelineRunFetcherMockRecorder) ByKey(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ByKey", reflect.TypeOf((*MockPipelineRunFetcher)(nil).ByKey), arg0)
 }
 
-// ByName mocks base method
+// ByName mocks base method.
 func (m *MockPipelineRunFetcher) ByName(arg0, arg1 string) (*v1alpha1.PipelineRun, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ByName", arg0, arg1)
@@ -600,36 +601,36 @@ func (m *MockPipelineRunFetcher) ByName(arg0, arg1 string) (*v1alpha1.PipelineRu
 	return ret0, ret1
 }
 
-// ByName indicates an expected call of ByName
+// ByName indicates an expected call of ByName.
 func (mr *MockPipelineRunFetcherMockRecorder) ByName(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ByName", reflect.TypeOf((*MockPipelineRunFetcher)(nil).ByName), arg0, arg1)
 }
 
-// MockTenantFetcher is a mock of TenantFetcher interface
+// MockTenantFetcher is a mock of TenantFetcher interface.
 type MockTenantFetcher struct {
 	ctrl     *gomock.Controller
 	recorder *MockTenantFetcherMockRecorder
 }
 
-// MockTenantFetcherMockRecorder is the mock recorder for MockTenantFetcher
+// MockTenantFetcherMockRecorder is the mock recorder for MockTenantFetcher.
 type MockTenantFetcherMockRecorder struct {
 	mock *MockTenantFetcher
 }
 
-// NewMockTenantFetcher creates a new mock instance
+// NewMockTenantFetcher creates a new mock instance.
 func NewMockTenantFetcher(ctrl *gomock.Controller) *MockTenantFetcher {
 	mock := &MockTenantFetcher{ctrl: ctrl}
 	mock.recorder = &MockTenantFetcherMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTenantFetcher) EXPECT() *MockTenantFetcherMockRecorder {
 	return m.recorder
 }
 
-// ByKey mocks base method
+// ByKey mocks base method.
 func (m *MockTenantFetcher) ByKey(arg0 string) (*v1alpha1.Tenant, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ByKey", arg0)
@@ -638,7 +639,7 @@ func (m *MockTenantFetcher) ByKey(arg0 string) (*v1alpha1.Tenant, error) {
 	return ret0, ret1
 }
 
-// ByKey indicates an expected call of ByKey
+// ByKey indicates an expected call of ByKey.
 func (mr *MockTenantFetcherMockRecorder) ByKey(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ByKey", reflect.TypeOf((*MockTenantFetcher)(nil).ByKey), arg0)

@@ -229,7 +229,7 @@ func (c *Controller) newRunManager(workFactory k8s.ClientFactory, secretProvider
 		return c.testing.newRunManagerStub(workFactory, secretProvider)
 
 	}
-	return newRunManager(workFactory, secretProvider)
+	return newRunManager(workFactory, secretProvider, c.metrics)
 }
 
 func (c *Controller) loadPipelineRunsConfig() (*cfg.PipelineRunsConfigStruct, error) {

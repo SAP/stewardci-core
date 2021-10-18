@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -12,6 +13,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/featureflag"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
+	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	"github.com/SAP/stewardci-core/pkg/runctl/secretmgr"
@@ -57,6 +59,7 @@ const (
 type runManager struct {
 	factory        k8s.ClientFactory
 	secretProvider secrets.SecretProvider
+	metrics        metrics.Metrics
 
 	testing *runManagerTesting
 }
@@ -87,10 +90,11 @@ type runContext struct {
 }
 
 // newRunManager creates a new runManager.
-func newRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider) *runManager {
+func newRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider, metrics metrics.Metrics) *runManager {
 	return &runManager{
 		factory:        factory,
 		secretProvider: secretProvider,
+		metrics:        metrics,
 	}
 }
 
@@ -457,7 +461,14 @@ func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
 		return c.testing.getServiceAccountSecretNameStub(ctx)
 	}
 
-	return ctx.serviceAccount.GetHelper().GetServiceAccountSecretNameRepeat()
+	start := time.Now()
+	secretName := ctx.serviceAccount.GetHelper().GetServiceAccountSecretNameRepeat()
+	end := time.Now()
+	elapsed := end.Sub(start)
+	klog.V(6).Infof("getServiceAccountSecretName for %q took %v", ctx.pipelineRun.String(), elapsed)
+
+	c.metrics.ObserveRetryDurationByType("ServiceAccountSecret", elapsed)
+	return secretName
 }
 
 func (c *runManager) createTektonTaskRun(ctx *runContext) error {

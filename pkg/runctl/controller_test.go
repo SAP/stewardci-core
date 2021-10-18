@@ -873,7 +873,7 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 }
 
 func newTestRunManager(workFactory k8s.ClientFactory, secretProvider secrets.SecretProvider) run.Manager {
-	runManager := newRunManager(workFactory, secretProvider)
+	runManager := newRunManager(workFactory, secretProvider, metrics.NewMetrics())
 	runManager.testing = &runManagerTesting{
 		getServiceAccountSecretNameStub: func(ctx *runContext) string { return "foo" },
 	}
