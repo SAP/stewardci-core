@@ -151,10 +151,12 @@ func (metrics *metrics) ObserveOngoingStateDuration(run *api.PipelineRun) error 
 	return nil
 }
 
+// ObserveUpdateDurationByType logs the duration of updates by type
 func (metrics *metrics) ObserveUpdateDurationByType(typ string, duration time.Duration) {
 	metrics.Update.With(prometheus.Labels{"type": typ}).Observe(duration.Seconds())
 }
 
+// ObserveRetryDurationByType logs the duration of retries by type
 func (metrics *metrics) ObserveRetryDurationByType(typ string, duration time.Duration) {
 	metrics.RetryDuration.With(prometheus.Labels{"type": typ}).Observe(duration.Seconds())
 }

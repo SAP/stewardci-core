@@ -51,6 +51,13 @@
 - version: NEXT
   date: TBD
   changes:
+    - type: internal
+      impact: minor
+      title: add metric to measure retry durations
+      description: |-
+        Measure the following durations:
+        - wait for service account for runnamespaces
+      pullRequestNumber: 0
 
 - version: "0.14.2"
   date: 2021-10-14
