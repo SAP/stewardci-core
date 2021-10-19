@@ -57,6 +57,7 @@
       description: |-
         Measure the following durations:
         - wait for service account for runnamespaces
+        - commit status of pipelinerun when retry happens
       pullRequestNumber: 0
 
 - version: "0.14.2"

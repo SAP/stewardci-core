@@ -279,11 +279,11 @@ func Test_pipelineRun_UpdateState_HasAutomaticInitialization(t *testing.T) {
 	// EXERCISE
 	resultErr := examinee.UpdateState(api.StatePreparing, metav1.Now())
 	assert.NilError(t, resultErr)
-	results, resultErr := examinee.CommitStatus()
+	results, retry, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
-
+	assert.Assert(t, retry == false)
 	assert.Equal(t, api.StatePreparing, examinee.GetStatus().State)
 	assert.Equal(t, 1, len(examinee.GetStatus().StateHistory))
 	assert.Equal(t, api.StateNew, examinee.GetStatus().StateHistory[0].State)
@@ -310,11 +310,11 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	// EXERCISE
 	resultErr := examinee.UpdateState(api.StatePreparing, metav1.Now())
 	assert.NilError(t, resultErr)
-	results, resultErr := examinee.CommitStatus()
+	results, retry, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
-
+	assert.Assert(t, retry == false)
 	assert.Equal(t, api.StatePreparing, examinee.GetStatus().State)
 	assert.Equal(t, 1, len(examinee.GetStatus().StateHistory))
 	assert.Equal(t, api.StateNew, examinee.GetStatus().StateHistory[0].State)
@@ -345,10 +345,11 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	// EXERCISE
 	resultErr := examinee.UpdateState(api.StateRunning, metav1.Now()) // second call
 	assert.NilError(t, resultErr)
-	results, resultErr := examinee.CommitStatus()
+	results, retry, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
+	assert.Assert(t, retry == false)
 	status := examinee.GetStatus()
 	assert.Equal(t, 2, len(status.StateHistory))
 	assert.Equal(t, api.StateNew, examinee.GetStatus().StateHistory[0].State)
@@ -384,7 +385,7 @@ func Test_pipelineRun_UpdateStateToFinished_HistoryIfUpdateStateCalledBefore(t *
 
 	// EXERCISE
 	examinee.UpdateState(api.StateFinished, metav1.Now())
-	_, err = examinee.CommitStatus()
+	_, _, err = examinee.CommitStatus()
 	assert.NilError(t, err)
 
 	// VERIFY
@@ -489,7 +490,7 @@ func Test_pipelineRun_UpdateState_PropagatesError(t *testing.T) {
 
 	// EXCERCISE
 	examinee.UpdateState(api.StateWaiting, metav1.Now())
-	_, err = examinee.CommitStatus()
+	_, _, err = examinee.CommitStatus()
 
 	// VERIFY
 	assert.Assert(t, err != nil)
@@ -522,7 +523,7 @@ func Test_pipelineRun_CommitStatus_RetriesOnConflict(t *testing.T) {
 	assert.NilError(t, resultErr)
 
 	// EXCERCISE
-	_, resultErr = examinee.CommitStatus()
+	_, _, resultErr = examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -559,7 +560,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfNoConflict(
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	_, resultErr := examinee.CommitStatus()
+	_, _, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -637,7 +638,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfConflict(t 
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	_, resultErr := examinee.CommitStatus()
+	_, _, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -682,7 +683,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_FailsAfterTooManyConflicts(t *
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	_, resultErr := examinee.CommitStatus()
+	_, _, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.Assert(t, errors.Is(resultErr, errorOnUpdate))
@@ -728,7 +729,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_ReturnsErrorIfFetchFailed(t *t
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	_, resultErr := examinee.CommitStatus()
+	_, _, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.Assert(t, errors.Is(resultErr, errorOnGet))
