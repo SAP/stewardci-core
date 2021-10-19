@@ -28,61 +28,60 @@
 package mocks
 
 import (
-	reflect "reflect"
-	time "time"
-
 	v1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
+	time "time"
 )
 
-// MockMetrics is a mock of Metrics interface.
+// MockMetrics is a mock of Metrics interface
 type MockMetrics struct {
 	ctrl     *gomock.Controller
 	recorder *MockMetricsMockRecorder
 }
 
-// MockMetricsMockRecorder is the mock recorder for MockMetrics.
+// MockMetricsMockRecorder is the mock recorder for MockMetrics
 type MockMetricsMockRecorder struct {
 	mock *MockMetrics
 }
 
-// NewMockMetrics creates a new mock instance.
+// NewMockMetrics creates a new mock instance
 func NewMockMetrics(ctrl *gomock.Controller) *MockMetrics {
 	mock := &MockMetrics{ctrl: ctrl}
 	mock.recorder = &MockMetricsMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use.
+// EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockMetrics) EXPECT() *MockMetricsMockRecorder {
 	return m.recorder
 }
 
-// CountResult mocks base method.
+// CountResult mocks base method
 func (m *MockMetrics) CountResult(arg0 v1alpha1.Result) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "CountResult", arg0)
 }
 
-// CountResult indicates an expected call of CountResult.
+// CountResult indicates an expected call of CountResult
 func (mr *MockMetricsMockRecorder) CountResult(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountResult", reflect.TypeOf((*MockMetrics)(nil).CountResult), arg0)
 }
 
-// CountStart mocks base method.
+// CountStart mocks base method
 func (m *MockMetrics) CountStart() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "CountStart")
 }
 
-// CountStart indicates an expected call of CountStart.
+// CountStart indicates an expected call of CountStart
 func (mr *MockMetricsMockRecorder) CountStart() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountStart", reflect.TypeOf((*MockMetrics)(nil).CountStart))
 }
 
-// ObserveDurationByState mocks base method.
+// ObserveDurationByState mocks base method
 func (m *MockMetrics) ObserveDurationByState(arg0 *v1alpha1.StateItem) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ObserveDurationByState", arg0)
@@ -90,13 +89,13 @@ func (m *MockMetrics) ObserveDurationByState(arg0 *v1alpha1.StateItem) error {
 	return ret0
 }
 
-// ObserveDurationByState indicates an expected call of ObserveDurationByState.
+// ObserveDurationByState indicates an expected call of ObserveDurationByState
 func (mr *MockMetricsMockRecorder) ObserveDurationByState(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveDurationByState", reflect.TypeOf((*MockMetrics)(nil).ObserveDurationByState), arg0)
 }
 
-// ObserveOngoingStateDuration mocks base method.
+// ObserveOngoingStateDuration mocks base method
 func (m *MockMetrics) ObserveOngoingStateDuration(arg0 *v1alpha1.PipelineRun) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ObserveOngoingStateDuration", arg0)
@@ -104,55 +103,55 @@ func (m *MockMetrics) ObserveOngoingStateDuration(arg0 *v1alpha1.PipelineRun) er
 	return ret0
 }
 
-// ObserveOngoingStateDuration indicates an expected call of ObserveOngoingStateDuration.
+// ObserveOngoingStateDuration indicates an expected call of ObserveOngoingStateDuration
 func (mr *MockMetricsMockRecorder) ObserveOngoingStateDuration(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveOngoingStateDuration", reflect.TypeOf((*MockMetrics)(nil).ObserveOngoingStateDuration), arg0)
 }
 
-// ObserveRetryDurationByType mocks base method.
+// ObserveRetryDurationByType mocks base method
 func (m *MockMetrics) ObserveRetryDurationByType(arg0 string, arg1 time.Duration) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "ObserveRetryDurationByType", arg0, arg1)
 }
 
-// ObserveRetryDurationByType indicates an expected call of ObserveRetryDurationByType.
+// ObserveRetryDurationByType indicates an expected call of ObserveRetryDurationByType
 func (mr *MockMetricsMockRecorder) ObserveRetryDurationByType(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveRetryDurationByType", reflect.TypeOf((*MockMetrics)(nil).ObserveRetryDurationByType), arg0, arg1)
 }
 
-// ObserveUpdateDurationByType mocks base method.
+// ObserveUpdateDurationByType mocks base method
 func (m *MockMetrics) ObserveUpdateDurationByType(arg0 string, arg1 time.Duration) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "ObserveUpdateDurationByType", arg0, arg1)
 }
 
-// ObserveUpdateDurationByType indicates an expected call of ObserveUpdateDurationByType.
+// ObserveUpdateDurationByType indicates an expected call of ObserveUpdateDurationByType
 func (mr *MockMetricsMockRecorder) ObserveUpdateDurationByType(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveUpdateDurationByType", reflect.TypeOf((*MockMetrics)(nil).ObserveUpdateDurationByType), arg0, arg1)
 }
 
-// SetQueueCount mocks base method.
+// SetQueueCount mocks base method
 func (m *MockMetrics) SetQueueCount(arg0 int) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetQueueCount", arg0)
 }
 
-// SetQueueCount indicates an expected call of SetQueueCount.
+// SetQueueCount indicates an expected call of SetQueueCount
 func (mr *MockMetricsMockRecorder) SetQueueCount(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetQueueCount", reflect.TypeOf((*MockMetrics)(nil).SetQueueCount), arg0)
 }
 
-// StartServer mocks base method.
+// StartServer mocks base method
 func (m *MockMetrics) StartServer() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "StartServer")
 }
 
-// StartServer indicates an expected call of StartServer.
+// StartServer indicates an expected call of StartServer
 func (mr *MockMetricsMockRecorder) StartServer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartServer", reflect.TypeOf((*MockMetrics)(nil).StartServer))
