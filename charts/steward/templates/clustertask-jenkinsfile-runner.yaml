@@ -79,16 +79,22 @@ spec:
     default: "IfNotPresent"
     description: >
       The image pull policy for JFR_IMAGE. Defaults to 'IfNotPresent'.
+    # Workaround for Tekton being affected by registry rate limiting.
+    # Specifying the command here prevents Tekton from downloading the image
+    # manifest from the registry to obtain the entrypoint command from there.
+  - name: JFR_COMMAND
+    type: string
+    default: "/scripts/run.sh"
+    description: >
+      The command Jenkinsfile Runner executes. Specifying it here prevents Tekton from downloading the image 
+      manifest from the registry to obtain the entrypoint command from there.
   steps:
   - name: jenkinsfile-runner
     image: $(params.JFR_IMAGE)
     {{/*  Currently broken, see https://github.com/tektoncd/pipeline/issues/3423 */}}
     {{/*  imagePullPolicy: $(params.JFR_IMAGE_PULL_POLICY) */}}
     imagePullPolicy: IfNotPresent
-    # Workaround for Tekton being affected by registry rate limiting.
-    # Specifying the command here prevents Tekton from downloading the image
-    # manifest from the registry to obtain the entrypoint command from there.
-    command: ["/scripts/run.sh"]
+    command: [$(params.JFR_COMMAND)]
     env:
     - name: XDG_CONFIG_HOME
       value: /home/jenkins
