@@ -52,13 +52,27 @@
   date: TBD
   changes:
 
+    - type: bug
+      impact: patch
+      title: "Fix: Tekton fails to start JFR pod if container registry rate limit is exceeded"
+      description: |-
+        Steward uses Tekton to run JFR pods for pipeline runs.
+        The respective ClusterTask contains a pod template that does _not_ specify
+        the entrypoint of the JFR container.
+        Therefore Tekton tries to obtain the entrypoint by downloading the
+        container image manifest from the registry.
+        This may fail if the registry's rate limit is exceeded.
+        As a workaround, specify the JFR container entrypoint in the ClusterTask.
+      pullRequestNumber: 272
+      jiraIssueNumber: 1109
+
 - version: "0.14.2"
   date: 2021-10-14
   changes:
 
     - type: internal
       impact: patch
-      title: add additional logging for commitState 
+      title: add additional logging for commitState
       description: |-
         Logging of pipelineRun.CommitState() function is extended on log level 6.
       pullRequestNumber: 268
@@ -137,7 +151,7 @@
       description: |-
         Measuring ongoing state duration failed for pipeline runs in state `new`
         with error message:
-        
+
         ```
         cannot observe StateItem if StartedAt is not set
         ```
@@ -204,7 +218,7 @@
         The purpose of this metric is the detection of overly long processing times, caused by e.g. hanging controllers.
       pullRequestNumber: 236
       jiraIssueNumber: 719
-      
+
     - type: enhancement
       impact: incompatible
       title: Rename metric
