@@ -51,7 +51,7 @@
 - version: NEXT
   date: TBD
   changes:
-    - type: internal
+    - type: enhancement
       impact: minor
       title: add metric to measure retry durations
       description: |-

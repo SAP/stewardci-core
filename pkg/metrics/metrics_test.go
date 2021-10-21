@@ -30,12 +30,12 @@ func Test_Duration_End_Before_Beginning(t *testing.T) {
 
 func Test_ObserveUpdateDurationByType(t *testing.T) {
 	m := NewMetrics()
-	m.ObserveUpdateDurationByType("foo", 1)
+	m.ObserveUpdateDurationByType("foo", 1*time.Second)
 }
 
 func Test_ObserveRetryDurationByType(t *testing.T) {
 	m := NewMetrics()
-	m.ObserveRetryDurationByType("foo", 1)
+	m.ObserveRetryDurationByType("foo", 1*time.Second)
 }
 
 func Test_ObserveOngoingStateDuration_Success(t *testing.T) {
