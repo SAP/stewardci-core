@@ -463,8 +463,7 @@ func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
 
 	start := time.Now()
 	secretName := ctx.serviceAccount.GetHelper().GetServiceAccountSecretNameRepeat()
-	end := time.Now()
-	elapsed := end.Sub(start)
+	elapsed := time.Since(start)
 	klog.V(6).Infof("getServiceAccountSecretName for %q took %v", ctx.pipelineRun.String(), elapsed)
 
 	c.metrics.ObserveRetryDurationByType("RunNamespaceServiceAccountSecretCreation", elapsed)

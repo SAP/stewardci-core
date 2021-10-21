@@ -437,8 +437,7 @@ func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
 		klog.V(6).Infof("commitStatus failed with error %s", err.Error())
 		return err
 	}
-	end := time.Now()
-	elapsed := end.Sub(start)
+	elapsed := time.Since(start)
 	klog.V(6).Infof("commit of %q took %v", pipelineRun.String(), elapsed)
 	if retryDone {
 		c.metrics.ObserveRetryDurationByType("UpdateState", elapsed)
