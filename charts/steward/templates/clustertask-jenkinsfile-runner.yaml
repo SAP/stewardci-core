@@ -88,7 +88,7 @@ spec:
     # Workaround for Tekton being affected by registry rate limiting.
     # Specifying the command here prevents Tekton from downloading the image
     # manifest from the registry to obtain the entrypoint command from there.
-    command: ["/scripts/run.sh"]
+    command: ["/steward-interface/entrypoint"]
     env:
     - name: XDG_CONFIG_HOME
       value: /home/jenkins
