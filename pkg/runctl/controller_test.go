@@ -922,7 +922,7 @@ func getPipelineRun(t *testing.T, name string, namespace string, cf *fake.Client
 	if err != nil {
 		t.Fatalf("could not get pipeline run: %s", err.Error())
 	}
-	wrapper, err := k8s.NewPipelineRun(pipelineRun, cf)
+	wrapper, err := k8s.NewPipelineRun(pipelineRun, cf, nil)
 	if err != nil {
 		t.Fatalf("could not get pipeline run: %s", err.Error())
 	}

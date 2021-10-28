@@ -59,7 +59,7 @@ func Test_GetServiceAccountSecretNameRepeat_delayedRef_works(t *testing.T) {
 	}(t, acc)
 	duration, _ := time.ParseDuration("500ms")
 	time.Sleep(duration)
-	localAccountManager := NewServiceAccountManager(factory, ns1)
+	localAccountManager := NewServiceAccountManager(factory, ns1, nil)
 	localAccount, err := localAccountManager.GetServiceAccount(accountName)
 	assert.NilError(t, err)
 	localAccount.AttachSecrets("a-secret", secretName, "z-secret")

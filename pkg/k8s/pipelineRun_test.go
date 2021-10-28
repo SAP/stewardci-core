@@ -28,7 +28,7 @@ func Test_pipelineRun_GetRunNamespace(t *testing.T) {
 			Namespace: "foo",
 		},
 	}
-	examinee, err := NewPipelineRun(run, nil)
+	examinee, err := NewPipelineRun(run, nil, nil)
 	assert.NilError(t, err)
 
 	// EXERCISE
@@ -43,7 +43,7 @@ func Test_pipelineRun_GetKey(t *testing.T) {
 
 	// SETUP
 	run := newPipelineRunWithEmptySpec("ns1", "foo")
-	examinee, err := NewPipelineRun(run, nil)
+	examinee, err := NewPipelineRun(run, nil, nil)
 	assert.NilError(t, err)
 
 	// EXERCISE
@@ -58,7 +58,7 @@ func Test_pipelineRun_GetNamespace(t *testing.T) {
 
 	// SETUP
 	run := newPipelineRunWithEmptySpec("ns1", "foo")
-	examinee, err := NewPipelineRun(run, nil)
+	examinee, err := NewPipelineRun(run, nil, nil)
 	assert.NilError(t, err)
 
 	// EXERCISE
@@ -73,7 +73,7 @@ func Test_pipelineRun_GetName(t *testing.T) {
 
 	// SETUP
 	run := newPipelineRunWithEmptySpec("ns1", "foo")
-	examinee, err := NewPipelineRun(run, nil)
+	examinee, err := NewPipelineRun(run, nil, nil)
 	assert.NilError(t, err)
 
 	// EXERCISE
@@ -92,7 +92,7 @@ func Test_NewPipelineRun_IsCopy(t *testing.T) {
 	factory := fake.NewClientFactory(run)
 
 	// EXERCISE
-	examinee, err := NewPipelineRun(run, factory)
+	examinee, err := NewPipelineRun(run, factory, nil)
 
 	// VERIFY
 	assert.NilError(t, err)
@@ -109,7 +109,7 @@ func Test_NewPipelineRun_NotFound(t *testing.T) {
 	factory := fake.NewClientFactory()
 
 	// EXERCISE
-	examinee, err := NewPipelineRun(run, factory)
+	examinee, err := NewPipelineRun(run, factory, nil)
 
 	// VERIFY
 	assert.NilError(t, err)
@@ -126,7 +126,7 @@ func Test_NewPipelineRun_Error(t *testing.T) {
 	factory.StewardClientset().PrependReactor("get", "*", fake.NewErrorReactor(expectedError))
 
 	// EXERCISE
-	examinee, err := NewPipelineRun(run, factory)
+	examinee, err := NewPipelineRun(run, factory, nil)
 
 	// VERIFY
 	assert.Assert(t, expectedError == err)
@@ -139,7 +139,7 @@ func Test_pipelineRun_StoreErrorAsMessage(t *testing.T) {
 	// SETUP
 	run := newPipelineRunWithEmptySpec(ns1, "foo")
 	factory := fake.NewClientFactory(run)
-	examinee, err := NewPipelineRun(run, factory)
+	examinee, err := NewPipelineRun(run, factory, nil)
 	examinee.GetStatus().State = api.StateRunning
 	assert.NilError(t, err)
 	errorToStore := fmt.Errorf("error1")
@@ -161,7 +161,7 @@ func Test_pipelineRun_HasDeletionTimestamp_false(t *testing.T) {
 
 	// SETUP
 	run := newPipelineRunWithEmptySpec("ns1", "foo")
-	examinee, err := NewPipelineRun(run, nil)
+	examinee, err := NewPipelineRun(run, nil, nil)
 	assert.NilError(t, err)
 
 	// EXERCISE
@@ -178,7 +178,7 @@ func Test_pipelineRun_HasDeletionTimestamp_true(t *testing.T) {
 	run := newPipelineRunWithEmptySpec("ns1", "foo")
 	now := metav1.Now()
 	run.SetDeletionTimestamp(&now)
-	examinee, err := NewPipelineRun(run, nil)
+	examinee, err := NewPipelineRun(run, nil, nil)
 	assert.NilError(t, err)
 
 	// EXERCISE
@@ -194,7 +194,7 @@ func Test_pipelineRun_UpdateMessage_GoodCase(t *testing.T) {
 	// SETUP
 	run := newPipelineRunWithEmptySpec(ns1, run1)
 	factory := fake.NewClientFactory(run)
-	examinee, err := NewPipelineRun(run, factory)
+	examinee, err := NewPipelineRun(run, factory, nil)
 	assert.NilError(t, err)
 
 	// EXERCISE
@@ -212,7 +212,7 @@ func Test_pipelineRun_InitState(t *testing.T) {
 	creationTimestamp := metav1.Now()
 	pipelineRun.ObjectMeta.CreationTimestamp = creationTimestamp
 	factory := fake.NewClientFactory(pipelineRun)
-	examinee, err := NewPipelineRun(pipelineRun, factory)
+	examinee, err := NewPipelineRun(pipelineRun, factory, nil)
 	assert.NilError(t, err)
 
 	// EXERCISE
@@ -249,7 +249,7 @@ func Test_pipelineRun_InitState_ReturnsErrorIfCalledMultipleTimes(t *testing.T) 
 			pipelineRun.ObjectMeta.CreationTimestamp = creationTimestamp
 			factory := fake.NewClientFactory(pipelineRun)
 
-			examinee, err := NewPipelineRun(pipelineRun, factory)
+			examinee, err := NewPipelineRun(pipelineRun, factory, nil)
 			assert.NilError(t, err)
 			resultErr := examinee.InitState()
 			assert.NilError(t, resultErr)
@@ -273,17 +273,16 @@ func Test_pipelineRun_UpdateState_HasAutomaticInitialization(t *testing.T) {
 	// SETUP
 	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
 	factory := fake.NewClientFactory(pipelineRun)
-	examinee, err := NewPipelineRun(pipelineRun, factory)
+	examinee, err := NewPipelineRun(pipelineRun, factory, nil)
 	assert.NilError(t, err)
 
 	// EXERCISE
 	resultErr := examinee.UpdateState(api.StatePreparing, metav1.Now())
 	assert.NilError(t, resultErr)
-	results, retry, resultErr := examinee.CommitStatus()
+	results, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
-	assert.Assert(t, retry == false)
 	assert.Equal(t, api.StatePreparing, examinee.GetStatus().State)
 	assert.Equal(t, 1, len(examinee.GetStatus().StateHistory))
 	assert.Equal(t, api.StateNew, examinee.GetStatus().StateHistory[0].State)
@@ -302,7 +301,7 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	creationTimestamp := metav1.Now()
 	pipelineRun.ObjectMeta.CreationTimestamp = creationTimestamp
 	factory := fake.NewClientFactory(pipelineRun)
-	examinee, err := NewPipelineRun(pipelineRun, factory)
+	examinee, err := NewPipelineRun(pipelineRun, factory, nil)
 	assert.NilError(t, err)
 	err = examinee.InitState()
 	assert.NilError(t, err)
@@ -310,11 +309,10 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	// EXERCISE
 	resultErr := examinee.UpdateState(api.StatePreparing, metav1.Now())
 	assert.NilError(t, resultErr)
-	results, retry, resultErr := examinee.CommitStatus()
+	results, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
-	assert.Assert(t, retry == false)
 	assert.Equal(t, api.StatePreparing, examinee.GetStatus().State)
 	assert.Equal(t, 1, len(examinee.GetStatus().StateHistory))
 	assert.Equal(t, api.StateNew, examinee.GetStatus().StateHistory[0].State)
@@ -334,7 +332,7 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	// SETUP
 	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
 	factory := fake.NewClientFactory(pipelineRun)
-	examinee, err := NewPipelineRun(pipelineRun, factory)
+	examinee, err := NewPipelineRun(pipelineRun, factory, nil)
 	assert.NilError(t, err)
 	err = examinee.InitState()
 	assert.NilError(t, err)
@@ -345,11 +343,10 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	// EXERCISE
 	resultErr := examinee.UpdateState(api.StateRunning, metav1.Now()) // second call
 	assert.NilError(t, resultErr)
-	results, retry, resultErr := examinee.CommitStatus()
+	results, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
-	assert.Assert(t, retry == false)
 	status := examinee.GetStatus()
 	assert.Equal(t, 2, len(status.StateHistory))
 	assert.Equal(t, api.StateNew, examinee.GetStatus().StateHistory[0].State)
@@ -375,7 +372,7 @@ func Test_pipelineRun_UpdateStateToFinished_HistoryIfUpdateStateCalledBefore(t *
 	// SETUP
 	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
 	factory := fake.NewClientFactory(pipelineRun)
-	examinee, err := NewPipelineRun(pipelineRun, factory)
+	examinee, err := NewPipelineRun(pipelineRun, factory, nil)
 	assert.NilError(t, err)
 	err = examinee.InitState()
 	assert.NilError(t, err)
@@ -385,7 +382,7 @@ func Test_pipelineRun_UpdateStateToFinished_HistoryIfUpdateStateCalledBefore(t *
 
 	// EXERCISE
 	examinee.UpdateState(api.StateFinished, metav1.Now())
-	_, _, err = examinee.CommitStatus()
+	_, err = examinee.CommitStatus()
 	assert.NilError(t, err)
 
 	// VERIFY
@@ -407,7 +404,7 @@ func Test_pipelineRun_UpdateResult(t *testing.T) {
 	// SETUP
 	pipelineRun := newPipelineRunWithEmptySpec(ns1, run1)
 	factory := fake.NewClientFactory(pipelineRun)
-	examinee, err := NewPipelineRun(pipelineRun, factory)
+	examinee, err := NewPipelineRun(pipelineRun, factory, nil)
 	assert.NilError(t, err)
 	assert.Assert(t, examinee.GetStatus().FinishedAt.IsZero())
 
@@ -436,7 +433,7 @@ func Test_pipelineRun_GetPipelineRepoServerURL_CorrectURLs(t *testing.T) {
 		t.Run(test.url, func(t *testing.T) {
 			// SETUP
 			run := newPipelineRunWithPipelineRepoURL(ns1, run1, test.url)
-			r, err := NewPipelineRun(run, nil)
+			r, err := NewPipelineRun(run, nil, nil)
 			assert.NilError(t, err)
 
 			// EXERCISE
@@ -461,7 +458,7 @@ func Test_pipelineRun_GetPipelineRepoServerURL_WrongURLs(t *testing.T) {
 		t.Run(test.url, func(t *testing.T) {
 			// SETUP
 			run := newPipelineRunWithPipelineRepoURL(ns1, run1, test.url)
-			r, err := NewPipelineRun(run, nil)
+			r, err := NewPipelineRun(run, nil, nil)
 			assert.NilError(t, err)
 
 			// EXERCISE
@@ -481,7 +478,7 @@ func Test_pipelineRun_UpdateState_PropagatesError(t *testing.T) {
 	run := newPipelineRunWithEmptySpec(ns1, "foo")
 	factory := fake.NewClientFactory(run)
 
-	examinee, err := NewPipelineRun(run, factory)
+	examinee, err := NewPipelineRun(run, factory, nil)
 	assert.NilError(t, err)
 	err = examinee.InitState()
 	assert.NilError(t, err)
@@ -490,7 +487,7 @@ func Test_pipelineRun_UpdateState_PropagatesError(t *testing.T) {
 
 	// EXCERCISE
 	examinee.UpdateState(api.StateWaiting, metav1.Now())
-	_, _, err = examinee.CommitStatus()
+	_, err = examinee.CommitStatus()
 
 	// VERIFY
 	assert.Assert(t, err != nil)
@@ -515,7 +512,7 @@ func Test_pipelineRun_CommitStatus_RetriesOnConflict(t *testing.T) {
 		},
 	)
 
-	examinee, err := NewPipelineRun(run, factory)
+	examinee, err := NewPipelineRun(run, factory, nil)
 	assert.NilError(t, err)
 	err = examinee.InitState()
 	assert.NilError(t, err)
@@ -523,7 +520,7 @@ func Test_pipelineRun_CommitStatus_RetriesOnConflict(t *testing.T) {
 	assert.NilError(t, resultErr)
 
 	// EXCERCISE
-	_, _, resultErr = examinee.CommitStatus()
+	_, resultErr = examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -560,7 +557,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfNoConflict(
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	_, _, resultErr := examinee.CommitStatus()
+	_, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -638,7 +635,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_SetsUpdateResult_IfConflict(t 
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	_, _, resultErr := examinee.CommitStatus()
+	_, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -683,7 +680,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_FailsAfterTooManyConflicts(t *
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	_, _, resultErr := examinee.CommitStatus()
+	_, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.Assert(t, errors.Is(resultErr, errorOnUpdate))
@@ -729,7 +726,7 @@ func Test_pipelineRun_changeStatusAndUpdateSafely_ReturnsErrorIfFetchFailed(t *t
 
 	// EXCERCISE
 	examinee.changeStatusAndStoreForRetry(changeFunc)
-	_, _, resultErr := examinee.CommitStatus()
+	_, resultErr := examinee.CommitStatus()
 
 	// VERIFY
 	assert.Assert(t, errors.Is(resultErr, errorOnGet))
@@ -744,7 +741,7 @@ func Test_pipelineRun_CommitStatus_PanicsIfNoClientFactory(t *testing.T) {
 
 	// SETUP
 	run := newPipelineRunWithEmptySpec(ns1, run1)
-	examinee, err := NewPipelineRun(run, nil /* client factory */)
+	examinee, err := NewPipelineRun(run, nil /* client factory */, nil)
 	assert.NilError(t, err)
 	examinee2 := examinee.(*pipelineRun)
 	examinee2.changeStatusAndStoreForRetry(func(*api.PipelineStatus) (commitRecorderFunc, error) { /* foo */ return nil, nil })

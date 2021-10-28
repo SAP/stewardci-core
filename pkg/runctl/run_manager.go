@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -185,7 +184,7 @@ func (c *runManager) setupServiceAccount(ctx *runContext, pipelineCloneSecretNam
 		return c.testing.setupServiceAccountStub(ctx, pipelineCloneSecretName, imagePullSecrets)
 	}
 
-	accountManager := k8s.NewServiceAccountManager(c.factory, ctx.runNamespace)
+	accountManager := k8s.NewServiceAccountManager(c.factory, ctx.runNamespace, c.metrics)
 	serviceAccount, err := accountManager.CreateServiceAccount(serviceAccountName, pipelineCloneSecretName, imagePullSecrets)
 	if err != nil {
 		if !k8serrors.IsAlreadyExists(err) {
@@ -461,12 +460,7 @@ func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
 		return c.testing.getServiceAccountSecretNameStub(ctx)
 	}
 
-	start := time.Now()
 	secretName := ctx.serviceAccount.GetHelper().GetServiceAccountSecretNameRepeat()
-	elapsed := time.Since(start)
-	klog.V(6).Infof("getServiceAccountSecretName for %q took %v", ctx.pipelineRun.String(), elapsed)
-
-	c.metrics.ObserveRetryDurationByType("RunNamespaceServiceAccountSecretCreation", elapsed)
 	return secretName
 }
 

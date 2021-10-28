@@ -20,7 +20,7 @@ const (
 
 func setupAccountManager(objects ...runtime.Object) {
 	factory = fake.NewClientFactory(objects...)
-	accountManager = NewServiceAccountManager(factory, ns1)
+	accountManager = NewServiceAccountManager(factory, ns1, nil)
 }
 
 func fakeServiceAccount() *v1.ServiceAccount {

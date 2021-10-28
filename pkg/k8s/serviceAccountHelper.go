@@ -8,15 +8,17 @@ import (
 )
 
 type serviceAccountHelper struct {
-	factory ClientFactory
-	cache   *v1.ServiceAccount
+	factory  ClientFactory
+	cache    *v1.ServiceAccount
+	observer RetryDurationByTypeObserver
 }
 
 //newServiceAccountHelper creates ServiceAccountManager
-func newServiceAccountHelper(factory ClientFactory, cache *v1.ServiceAccount) *serviceAccountHelper {
+func newServiceAccountHelper(factory ClientFactory, cache *v1.ServiceAccount, observer RetryDurationByTypeObserver) *serviceAccountHelper {
 	return &serviceAccountHelper{
-		factory: factory,
-		cache:   cache,
+		factory:  factory,
+		cache:    cache,
+		observer: observer,
 	}
 }
 
@@ -34,12 +36,19 @@ func (a *serviceAccountHelper) Reload() error {
 
 // GetServiceAccountSecretNameRepeat returns the name of the default-token of the service account
 func (a *serviceAccountHelper) GetServiceAccountSecretNameRepeat() string {
+	var isRetry bool
+	defer func(start time.Time) {
+		if isRetry && a.observer != nil {
+			a.observer.ObserveRetryDurationByType("RunNamespaceServiceAccountSecretCreation", time.Since(start))
+		}
+	}(time.Now())
 	duration, _ := time.ParseDuration("100ms")
 	for {
 		result := a.GetServiceAccountSecretName()
 		if result != "" {
 			return result
 		}
+		isRetry = true
 		time.Sleep(duration)
 		a.Reload()
 	}

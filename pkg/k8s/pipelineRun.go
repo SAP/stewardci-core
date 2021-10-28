@@ -31,7 +31,7 @@ type PipelineRun interface {
 	GetPipelineRepoServerURL() (string, error)
 	HasDeletionTimestamp() bool
 	AddFinalizer() error
-	CommitStatus() ([]*api.StateItem, bool, error)
+	CommitStatus() ([]*api.StateItem, error)
 	DeleteFinalizerIfExists() error
 	InitState() error
 	UpdateState(api.State, metav1.Time) error
@@ -49,6 +49,7 @@ type pipelineRun struct {
 	copied          bool
 	changes         []changeFunc
 	commitRecorders []commitRecorderFunc
+	observer        RetryDurationByTypeObserver
 }
 
 type changeFunc func(*api.PipelineStatus) (commitRecorderFunc, error)
@@ -62,11 +63,12 @@ type commitRecorderFunc func() *api.StateItem
 // If you call with factory nil you can only use the Get* functions
 // If you use functions changing the pipeline run without factroy set you will get an error.
 // The provided PipelineRun object is never modified and copied as late as possible.
-func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun, error) {
+func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory, observer RetryDurationByTypeObserver) (PipelineRun, error) {
 	if factory == nil {
 		return &pipelineRun{
-			apiObj: apiObj,
-			copied: false,
+			apiObj:   apiObj,
+			copied:   false,
+			observer: observer,
 		}, nil
 	}
 	client := factory.StewardV1alpha1().PipelineRuns(apiObj.GetNamespace())
@@ -83,6 +85,7 @@ func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun
 		client:          client,
 		changes:         []changeFunc{},
 		commitRecorders: []commitRecorderFunc{},
+		observer:        observer,
 	}, nil
 }
 
@@ -367,7 +370,7 @@ func (r *pipelineRun) changeStatusAndStoreForRetry(change changeFunc) error {
 // that change _gets_ persisted in case there's _no_ update conflict, but
 // gets _lost_ in case there _is_ an update conflict! This is hard to find
 // by tests, as those typically do not encounter update conflicts.
-func (r *pipelineRun) CommitStatus() ([]*api.StateItem, bool, error) {
+func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 	if r.client == nil {
 		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
 	}
@@ -375,17 +378,20 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, bool, error) {
 	klog.V(6).Infof("enter commitStatus for pipeline run %q ...", r.String())
 	if len(r.changes) == 0 {
 		klog.V(6).Infof("commitStatus no changes found for pipeline run %q.", r.String())
-		return nil, false, nil
+		return nil, nil
 	}
 
 	isRetry := false
-	retryDone := false
+	defer func(start time.Time) {
+		if isRetry && r.observer != nil {
+			r.observer.ObserveRetryDurationByType("UpdateState", time.Since(start))
+		}
+	}(time.Now())
 	var changeError error
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		var err error
 
 		if isRetry {
-			retryDone = true
 			klog.V(6).Infof("commitStatus reload pipeline run for retry %q ...", r.String())
 			new, err := r.client.Get(r.apiObj.GetName(), metav1.GetOptions{})
 			if err != nil {
@@ -418,7 +424,7 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, bool, error) {
 	})
 	r.changes = []changeFunc{}
 	if changeError != nil {
-		return nil, retryDone, changeError
+		return nil, changeError
 	}
 	result := []*api.StateItem{}
 	for _, recorder := range r.commitRecorders {
@@ -426,7 +432,7 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, bool, error) {
 			result = append(result, recorder())
 		}
 	}
-	return result, retryDone, errors.Wrapf(err, "failed to update status [%s]", r.String())
+	return result, errors.Wrapf(err, "failed to update status [%s]", r.String())
 }
 
 func (r *pipelineRun) ensureCopy() {

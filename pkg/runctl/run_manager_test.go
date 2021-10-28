@@ -65,7 +65,7 @@ func newRunManagerTestingWithRequiredStubs() *runManagerTesting {
 
 func contextWithSpec(t *testing.T, runNamespaceName string, spec api.PipelineSpec) *runContext {
 	pipelineRun := fake.PipelineRun("run1", "ns1", spec)
-	k8sPipelineRun, err := k8s.NewPipelineRun(pipelineRun, nil)
+	k8sPipelineRun, err := k8s.NewPipelineRun(pipelineRun, nil, nil)
 	assert.NilError(t, err)
 	return &runContext{runNamespace: runNamespaceName,
 		pipelineRun: k8sPipelineRun,
@@ -92,7 +92,7 @@ func Test__runManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
 			examinee := newRunManager(cf, secretProvider, metrics.NewMetrics())
 			examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
-			pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
+			pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf, nil)
 			assert.NilError(t, err)
 			runCtx := &runContext{
 				pipelineRun:        pipelineRunHelper,
@@ -139,7 +139,7 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 
 	config := &cfg.PipelineRunsConfigStruct{}
 	secretProvider := secretfake.NewProvider(h.namespace1)
-	pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
+	pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf, nil)
 	assert.NilError(t, err)
 
 	examinee := newRunManager(cf, secretProvider, metrics.NewMetrics())
@@ -180,7 +180,7 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 
 	config := &cfg.PipelineRunsConfigStruct{}
 	secretProvider := secretfake.NewProvider(h.namespace1)
-	pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
+	pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf, nil)
 	assert.NilError(t, err)
 
 	examinee := newRunManager(cf, secretProvider, metrics.NewMetrics())
@@ -227,7 +227,7 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 
 	config := &cfg.PipelineRunsConfigStruct{}
 	secretProvider := secretfake.NewProvider(h.namespace1)
-	pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
+	pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf, nil)
 	assert.NilError(t, err)
 
 	examinee := newRunManager(cf, secretProvider, metrics.NewMetrics())
@@ -1544,7 +1544,7 @@ func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
 			examinee.testing = newRunManagerTestingWithAllNoopStubs()
 			examinee.testing.cleanupStub = nil
 
-			pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
+			pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf, nil)
 			assert.NilError(t, err)
 
 			runCtx := &runContext{
@@ -1555,7 +1555,7 @@ func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
 			assert.NilError(t, err)
 			runCtx.pipelineRun.UpdateRunNamespace(runCtx.runNamespace)
 			runCtx.pipelineRun.UpdateAuxNamespace(runCtx.auxNamespace)
-			_, _, err = runCtx.pipelineRun.CommitStatus()
+			_, err = runCtx.pipelineRun.CommitStatus()
 			assert.NilError(t, err)
 			{
 				pipelineRun1 := h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1)
@@ -1621,7 +1621,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 			k8sfake.Namespace("namespace1"),
 			pipelineRun,
 		)
-		k8sPipelineRun, err := k8s.NewPipelineRun(pipelineRun, cf)
+		k8sPipelineRun, err := k8s.NewPipelineRun(pipelineRun, cf, nil)
 		assert.NilError(t, err)
 		config := &cfg.PipelineRunsConfigStruct{}
 		examinee = newRunManager(

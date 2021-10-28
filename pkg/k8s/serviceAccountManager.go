@@ -20,24 +20,27 @@ type ServiceAccountManager interface {
 }
 
 type serviceAccountManager struct {
-	factory ClientFactory
-	client  corev1.ServiceAccountInterface
+	factory  ClientFactory
+	client   corev1.ServiceAccountInterface
+	observer RetryDurationByTypeObserver
 }
 
 // ServiceAccountWrap wraps a Service Account and enriches it with futher things
 type ServiceAccountWrap struct {
-	factory ClientFactory
-	cache   *v1.ServiceAccount
+	factory  ClientFactory
+	cache    *v1.ServiceAccount
+	observer RetryDurationByTypeObserver
 }
 
 // RoleName to be attached
 type RoleName string
 
 //NewServiceAccountManager creates ServiceAccountManager
-func NewServiceAccountManager(factory ClientFactory, namespace string) ServiceAccountManager {
+func NewServiceAccountManager(factory ClientFactory, namespace string, observer RetryDurationByTypeObserver) ServiceAccountManager {
 	return &serviceAccountManager{
-		factory: factory,
-		client:  factory.CoreV1().ServiceAccounts(namespace),
+		factory:  factory,
+		client:   factory.CoreV1().ServiceAccounts(namespace),
+		observer: observer,
 	}
 }
 
@@ -45,11 +48,13 @@ func NewServiceAccountManager(factory ClientFactory, namespace string) ServiceAc
 //   name					name of the service account
 //   pipelineCloneSecretName		(optional) the name of the secret to be used to authenticate at the Git repository hosting the pipeline definition.
 //   imagePullSecretNames		(optional) a list of image pull secrets to attach to this service account (e.g. for pulling the Jenkinsfile Runner image)
+// 	 observer        a RetryDurationByTypeObserver to observe retries
 func (c *serviceAccountManager) CreateServiceAccount(name string, pipelineCloneSecretName string, imagePullSecretNames []string) (*ServiceAccountWrap, error) {
 	serviceAccount := &v1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	serviceAccountWrap := &ServiceAccountWrap{
-		factory: c.factory,
-		cache:   serviceAccount,
+		factory:  c.factory,
+		cache:    serviceAccount,
+		observer: c.observer,
 	}
 
 	if pipelineCloneSecretName != "" {
@@ -218,5 +223,5 @@ type ServiceAccountHelper interface {
 
 // GetHelper returns a ServiceAccountHelper
 func (a *ServiceAccountWrap) GetHelper() ServiceAccountHelper {
-	return newServiceAccountHelper(a.factory, a.cache.DeepCopy())
+	return newServiceAccountHelper(a.factory, a.cache.DeepCopy(), a.observer)
 }
