@@ -460,8 +460,7 @@ func (c *runManager) getServiceAccountSecretName(ctx *runContext) string {
 		return c.testing.getServiceAccountSecretNameStub(ctx)
 	}
 
-	secretName := ctx.serviceAccount.GetHelper().GetServiceAccountSecretNameRepeat()
-	return secretName
+	return ctx.serviceAccount.GetHelper().GetServiceAccountSecretNameRepeat()
 }
 
 func (c *runManager) createTektonTaskRun(ctx *runContext) error {
