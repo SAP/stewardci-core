@@ -438,6 +438,7 @@ func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
 		return err
 	}
 	elapsed := time.Since(start)
+	klog.V(5).Infof("commit of %q took %v", pipelineRun.String(), elapsed)
 	c.metrics.ObserveUpdateDurationByType("UpdateState", elapsed)
 	for _, finishedState := range finishedStates {
 		err := c.metrics.ObserveDurationByState(finishedState)
