@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.14.3"
+  date: 2021-10-29
+  changes:
+
     - type: bug
       impact: patch
       title: "Fix: Tekton fails to start JFR pod if container registry rate limit is exceeded"
