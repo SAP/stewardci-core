@@ -44,12 +44,12 @@ type PipelineRun interface {
 }
 
 type pipelineRun struct {
-	client          stewardv1alpha1.PipelineRunInterface
-	apiObj          *api.PipelineRun
-	copied          bool
-	changes         []changeFunc
-	commitRecorders []commitRecorderFunc
-	observer        RetryDurationByTypeObserver
+	client                 stewardv1alpha1.PipelineRunInterface
+	apiObj                 *api.PipelineRun
+	copied                 bool
+	changes                []changeFunc
+	commitRecorders        []commitRecorderFunc
+	durationByTypeObserver DurationByTypeObserver
 }
 
 type changeFunc func(*api.PipelineStatus) (commitRecorderFunc, error)
@@ -63,12 +63,12 @@ type commitRecorderFunc func() *api.StateItem
 // If you call with factory nil you can only use the Get* functions
 // If you use functions changing the pipeline run without factroy set you will get an error.
 // The provided PipelineRun object is never modified and copied as late as possible.
-func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory, observer RetryDurationByTypeObserver) (PipelineRun, error) {
+func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory, durationByTypeObserver DurationByTypeObserver) (PipelineRun, error) {
 	if factory == nil {
 		return &pipelineRun{
-			apiObj:   apiObj,
-			copied:   false,
-			observer: observer,
+			apiObj:                 apiObj,
+			copied:                 false,
+			durationByTypeObserver: durationByTypeObserver,
 		}, nil
 	}
 	client := factory.StewardV1alpha1().PipelineRuns(apiObj.GetNamespace())
@@ -80,12 +80,12 @@ func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory, observer Ret
 		return nil, err
 	}
 	return &pipelineRun{
-		apiObj:          obj,
-		copied:          true,
-		client:          client,
-		changes:         []changeFunc{},
-		commitRecorders: []commitRecorderFunc{},
-		observer:        observer,
+		apiObj:                 obj,
+		copied:                 true,
+		client:                 client,
+		changes:                []changeFunc{},
+		commitRecorders:        []commitRecorderFunc{},
+		durationByTypeObserver: durationByTypeObserver,
 	}, nil
 }
 
@@ -383,8 +383,14 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 
 	isRetry := false
 	defer func(start time.Time) {
-		if isRetry && r.observer != nil {
-			r.observer.ObserveRetryDurationByType("UpdateState", time.Since(start))
+		if r.durationByTypeObserver != nil {
+			elapsed := time.Since(start)
+			klog.V(5).Infof("commit of %q took %v", r.String(), elapsed)
+			r.durationByTypeObserver.ObserveUpdateDurationByType("UpdateState", elapsed)
+
+			if isRetry {
+				r.durationByTypeObserver.ObserveRetryDurationByType("UpdateState", time.Since(start))
+			}
 		}
 	}(time.Now())
 	var changeError error

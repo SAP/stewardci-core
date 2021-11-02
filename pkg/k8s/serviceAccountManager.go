@@ -20,41 +20,41 @@ type ServiceAccountManager interface {
 }
 
 type serviceAccountManager struct {
-	factory  ClientFactory
-	client   corev1.ServiceAccountInterface
-	observer RetryDurationByTypeObserver
+	factory                ClientFactory
+	client                 corev1.ServiceAccountInterface
+	durationByTypeObserver DurationByTypeObserver
 }
 
 // ServiceAccountWrap wraps a Service Account and enriches it with futher things
 type ServiceAccountWrap struct {
-	factory  ClientFactory
-	cache    *v1.ServiceAccount
-	observer RetryDurationByTypeObserver
+	factory                ClientFactory
+	cache                  *v1.ServiceAccount
+	durationByTypeObserver DurationByTypeObserver
 }
 
 // RoleName to be attached
 type RoleName string
 
 //NewServiceAccountManager creates ServiceAccountManager
-func NewServiceAccountManager(factory ClientFactory, namespace string, observer RetryDurationByTypeObserver) ServiceAccountManager {
+func NewServiceAccountManager(factory ClientFactory, namespace string, durationByTypeObserver DurationByTypeObserver) ServiceAccountManager {
 	return &serviceAccountManager{
-		factory:  factory,
-		client:   factory.CoreV1().ServiceAccounts(namespace),
-		observer: observer,
+		factory:                factory,
+		client:                 factory.CoreV1().ServiceAccounts(namespace),
+		durationByTypeObserver: durationByTypeObserver,
 	}
 }
 
 // CreateServiceAccount creates a service account on the cluster
 //   name					name of the service account
-//   pipelineCloneSecretName		(optional) the name of the secret to be used to authenticate at the Git repository hosting the pipeline definition.
+//   pipelineCloneSecretName	(optional) the name of the secret to be used to authenticate at the Git repository hosting the pipeline definition.
 //   imagePullSecretNames		(optional) a list of image pull secrets to attach to this service account (e.g. for pulling the Jenkinsfile Runner image)
-// 	 observer        a RetryDurationByTypeObserver to observe retries
+// 	 durationByTypeObserver     a RetryDurationByTypeObserver to observe retries
 func (c *serviceAccountManager) CreateServiceAccount(name string, pipelineCloneSecretName string, imagePullSecretNames []string) (*ServiceAccountWrap, error) {
 	serviceAccount := &v1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	serviceAccountWrap := &ServiceAccountWrap{
-		factory:  c.factory,
-		cache:    serviceAccount,
-		observer: c.observer,
+		factory:                c.factory,
+		cache:                  serviceAccount,
+		durationByTypeObserver: c.durationByTypeObserver,
 	}
 
 	if pipelineCloneSecretName != "" {
@@ -223,5 +223,5 @@ type ServiceAccountHelper interface {
 
 // GetHelper returns a ServiceAccountHelper
 func (a *ServiceAccountWrap) GetHelper() ServiceAccountHelper {
-	return newServiceAccountHelper(a.factory, a.cache.DeepCopy(), a.observer)
+	return newServiceAccountHelper(a.factory, a.cache.DeepCopy(), a.durationByTypeObserver)
 }

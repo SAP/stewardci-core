@@ -431,15 +431,11 @@ func (c *Controller) updateStateAndResult(pipelineRun k8s.PipelineRun, state api
 }
 
 func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
-	start := time.Now()
 	finishedStates, err := pipelineRun.CommitStatus()
 	if err != nil {
 		klog.V(6).Infof("commitStatus failed with error %s", err.Error())
 		return err
 	}
-	elapsed := time.Since(start)
-	klog.V(5).Infof("commit of %q took %v", pipelineRun.String(), elapsed)
-	c.metrics.ObserveUpdateDurationByType("UpdateState", elapsed)
 	for _, finishedState := range finishedStates {
 		err := c.metrics.ObserveDurationByState(finishedState)
 		if err != nil {

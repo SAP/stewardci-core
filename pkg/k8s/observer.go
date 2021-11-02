@@ -2,7 +2,8 @@ package k8s
 
 import "time"
 
-// RetryDurationByTypeObserver observes retries
-type RetryDurationByTypeObserver interface {
-	ObserveRetryDurationByType(typ string, duration time.Duration)
+// DurationByTypeObserver observes durations by type
+type DurationByTypeObserver interface {
+	ObserveRetryDurationByType(string, time.Duration)
+	ObserveUpdateDurationByType(string, time.Duration)
 }
