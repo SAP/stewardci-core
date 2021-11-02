@@ -53,11 +53,11 @@
   changes:
     - type: enhancement
       impact: minor
-      title: add metric to measure retry durations
+      title: Add metric to measure the duration of retries
       description: |-
-        Measure the following durations:
-        - wait for service account for runnamespaces
-        - commit status of pipelinerun when retry happens
+        Measure the duration of the following actions:
+        - wait for service account for run namespaces
+        - commit status of pipeline run when retry happens
       pullRequestNumber: 271
 
 - version: "0.14.2"
