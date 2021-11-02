@@ -375,9 +375,9 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
 	}
 
-	klog.V(6).Infof("enter commitStatus for pipeline run %q ...", r.String())
+	klog.V(5).Infof("enter commitStatus for pipeline run %q ...", r.String())
 	if len(r.changes) == 0 {
-		klog.V(6).Infof("commitStatus no changes found for pipeline run %q.", r.String())
+		klog.V(5).Infof("commitStatus no changes found for pipeline run %q.", r.String())
 		return nil, nil
 	}
 
@@ -398,7 +398,7 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 		var err error
 
 		if isRetry {
-			klog.V(6).Infof("commitStatus reload pipeline run for retry %q ...", r.String())
+			klog.V(5).Infof("commitStatus reload pipeline run for retry %q ...", r.String())
 			new, err := r.client.Get(r.apiObj.GetName(), metav1.GetOptions{})
 			if err != nil {
 				return errors.Wrap(err,
@@ -408,11 +408,11 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 			r.copied = true
 			r.commitRecorders = []commitRecorderFunc{}
 			var commitRecorder func() *api.StateItem
-			klog.V(6).Infof("commitStatus applies %d change(s)", len(r.changes))
+			klog.V(5).Infof("commitStatus applies %d change(s)", len(r.changes))
 			for i, change := range r.changes {
 				commitRecorder, changeError = change(r.GetStatus())
 				if changeError != nil {
-					klog.V(6).Infof("applying change %d failed with error: %s", i, changeError.Error())
+					klog.V(5).Infof("applying change %d failed with error: %s", i, changeError.Error())
 					return nil
 				}
 				r.commitRecorders = append(r.commitRecorders, commitRecorder)

@@ -5,6 +5,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	klog "k8s.io/klog/v2"
 )
 
 type serviceAccountHelper struct {
@@ -39,7 +40,9 @@ func (a *serviceAccountHelper) GetServiceAccountSecretNameRepeat() string {
 	var isRetry bool
 	defer func(start time.Time) {
 		if isRetry && a.durationByTypeObserver != nil {
-			a.durationByTypeObserver.ObserveRetryDurationByType("RunNamespaceServiceAccountSecretCreation", time.Since(start))
+			elapsed := time.Since(start)
+			klog.V(5).Infof("retry of service acount secret retrieving took %v for %s/%s", elapsed, a.cache.GetNamespace(), a.cache.GetName())
+			a.durationByTypeObserver.ObserveRetryDurationByType("RunNamespaceServiceAccountSecretCreation", elapsed)
 		}
 	}(time.Now())
 	duration, _ := time.ParseDuration("100ms")
