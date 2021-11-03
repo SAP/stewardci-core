@@ -9,17 +9,17 @@ import (
 )
 
 type serviceAccountHelper struct {
-	factory                ClientFactory
-	cache                  *v1.ServiceAccount
-	durationByTypeObserver DurationByTypeObserver
+	factory          ClientFactory
+	cache            *v1.ServiceAccount
+	durationObserver DurationObserver
 }
 
 //newServiceAccountHelper creates ServiceAccountManager
-func newServiceAccountHelper(factory ClientFactory, cache *v1.ServiceAccount, durationByTypeObserver DurationByTypeObserver) *serviceAccountHelper {
+func newServiceAccountHelper(factory ClientFactory, cache *v1.ServiceAccount, durationObserver DurationObserver) *serviceAccountHelper {
 	return &serviceAccountHelper{
-		factory:                factory,
-		cache:                  cache,
-		durationByTypeObserver: durationByTypeObserver,
+		factory:          factory,
+		cache:            cache,
+		durationObserver: durationObserver,
 	}
 }
 
@@ -39,10 +39,10 @@ func (a *serviceAccountHelper) Reload() error {
 func (a *serviceAccountHelper) GetServiceAccountSecretNameRepeat() string {
 	var isRetry bool
 	defer func(start time.Time) {
-		if isRetry && a.durationByTypeObserver != nil {
+		if a.durationObserver != nil {
 			elapsed := time.Since(start)
-			klog.V(5).Infof("retry of service acount secret retrieving took %v for %s/%s", elapsed, a.cache.GetNamespace(), a.cache.GetName())
-			a.durationByTypeObserver.ObserveRetryDurationByType("RunNamespaceServiceAccountSecretCreation", elapsed)
+			klog.V(5).Infof("service acount secret retrieving took %v for %s/%s (retry: %t)", elapsed, a.cache.GetNamespace(), a.cache.GetName(), isRetry)
+			a.durationObserver.ObserveDuration(elapsed, isRetry)
 		}
 	}(time.Now())
 	duration, _ := time.ParseDuration("100ms")

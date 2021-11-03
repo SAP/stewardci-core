@@ -81,6 +81,18 @@ func (mr *MockMetricsMockRecorder) CountStart() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountStart", reflect.TypeOf((*MockMetrics)(nil).CountStart))
 }
 
+// ObserveDuration mocks base method
+func (m *MockMetrics) ObserveDuration(arg0 time.Duration, arg1 bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ObserveDuration", arg0, arg1)
+}
+
+// ObserveDuration indicates an expected call of ObserveDuration
+func (mr *MockMetricsMockRecorder) ObserveDuration(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveDuration", reflect.TypeOf((*MockMetrics)(nil).ObserveDuration), arg0, arg1)
+}
+
 // ObserveDurationByState mocks base method
 func (m *MockMetrics) ObserveDurationByState(arg0 *v1alpha1.StateItem) error {
 	m.ctrl.T.Helper()
@@ -107,30 +119,6 @@ func (m *MockMetrics) ObserveOngoingStateDuration(arg0 *v1alpha1.PipelineRun) er
 func (mr *MockMetricsMockRecorder) ObserveOngoingStateDuration(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveOngoingStateDuration", reflect.TypeOf((*MockMetrics)(nil).ObserveOngoingStateDuration), arg0)
-}
-
-// ObserveRetryDurationByType mocks base method
-func (m *MockMetrics) ObserveRetryDurationByType(arg0 string, arg1 time.Duration) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ObserveRetryDurationByType", arg0, arg1)
-}
-
-// ObserveRetryDurationByType indicates an expected call of ObserveRetryDurationByType
-func (mr *MockMetricsMockRecorder) ObserveRetryDurationByType(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveRetryDurationByType", reflect.TypeOf((*MockMetrics)(nil).ObserveRetryDurationByType), arg0, arg1)
-}
-
-// ObserveUpdateDurationByType mocks base method
-func (m *MockMetrics) ObserveUpdateDurationByType(arg0 string, arg1 time.Duration) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ObserveUpdateDurationByType", arg0, arg1)
-}
-
-// ObserveUpdateDurationByType indicates an expected call of ObserveUpdateDurationByType
-func (mr *MockMetricsMockRecorder) ObserveUpdateDurationByType(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObserveUpdateDurationByType", reflect.TypeOf((*MockMetrics)(nil).ObserveUpdateDurationByType), arg0, arg1)
 }
 
 // SetQueueCount mocks base method

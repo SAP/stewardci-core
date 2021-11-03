@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -28,17 +29,8 @@ func Test_Duration_End_Before_Beginning(t *testing.T) {
 	assert.Equal(t, "cannot observe StateItem if FinishedAt is before StartedAt", e.Error())
 }
 
-func Test_ObserveUpdateDurationByType(t *testing.T) {
-	m := NewMetrics()
-	m.ObserveUpdateDurationByType("foo", 1*time.Second)
-}
-
-func Test_ObserveRetryDurationByType(t *testing.T) {
-	m := NewMetrics()
-	m.ObserveRetryDurationByType("foo", 1*time.Second)
-}
-
 func Test_ObserveOngoingStateDuration_Success(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name          string
 		state         api.State
@@ -111,6 +103,7 @@ func Test_ObserveOngoingStateDuration_Success(t *testing.T) {
 }
 
 func Test_ObserveOngoingStateDuration_Failures(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name          string
 		state         api.State
@@ -166,6 +159,48 @@ func Test_ObserveOngoingStateDuration_Failures(t *testing.T) {
 			assert.Equal(t, len(metricFamily), 0)
 		})
 	}
+}
+
+func Test_ObserveDuration(t *testing.T) {
+	t.Parallel()
+	duration, err := time.ParseDuration("1s")
+	assert.NilError(t, err)
+
+	for _, retry := range []bool{true, false} {
+
+		t.Run(fmt.Sprintf("retry_%t", retry), func(t *testing.T) {
+			// SETUP
+			m := NewMetrics().(*metrics)
+			reg := prometheus.NewPedanticRegistry()
+			reg.MustRegister(m.Duration)
+
+			// EXERCISE
+
+			m.ObserveDuration(duration, retry)
+
+			// VERIFY
+			metricFamily, err := reg.Gather()
+			assert.NilError(t, err)
+			assert.Equal(t, len(metricFamily), 1)
+			assert.Equal(t, len(metricFamily[0].GetMetric()), 1)
+
+			ioMetric := metricFamily[0].GetMetric()[0]
+			assert.Equal(t, ioMetric.Label[0].GetName(), "caller")
+			assert.Equal(t, ioMetric.Label[0].GetValue(), "github.com/SAP/stewardci-core/pkg/metrics.Test_ObserveDuration.func1")
+			assert.Equal(t, ioMetric.Label[1].GetName(), "retry")
+			assert.Equal(t, ioMetric.Label[1].GetValue(), fmt.Sprintf("%t", retry))
+		})
+	}
+}
+
+func Test_Caller(t *testing.T) {
+	name := callerFunctionName(0, 1)
+	assert.Equal(t, "github.com/SAP/stewardci-core/pkg/metrics.Test_Caller", name)
+}
+
+func Test_Callers(t *testing.T) {
+	name := callerFunctionName(0, 2)
+	assert.Equal(t, "github.com/SAP/stewardci-core/pkg/metrics.Test_Callers->testing.tRunner", name)
 }
 
 func fakeStateItem(state api.State, duration time.Duration) *api.StateItem {

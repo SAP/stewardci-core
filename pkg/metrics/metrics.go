@@ -3,6 +3,8 @@ package metrics
 import (
 	"fmt"
 	"net/http"
+	"runtime"
+	"strings"
 	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -19,8 +21,7 @@ type Metrics interface {
 	CountResult(api.Result)
 	ObserveDurationByState(state *api.StateItem) error
 	ObserveOngoingStateDuration(state *api.PipelineRun) error
-	ObserveUpdateDurationByType(kind string, duration time.Duration)
-	ObserveRetryDurationByType(kind string, duration time.Duration)
+	ObserveDuration(duration time.Duration, retry bool)
 	StartServer()
 	SetQueueCount(int)
 }
@@ -30,8 +31,7 @@ type metrics struct {
 	Completed            *prometheus.CounterVec
 	StateDuration        *prometheus.HistogramVec
 	OngoingStateDuration *prometheus.HistogramVec
-	Update               *prometheus.HistogramVec
-	RetryDuration        *prometheus.HistogramVec
+	Duration             *prometheus.HistogramVec
 	Queued               prometheus.Gauge
 	Total                prometheus.Gauge
 }
@@ -64,18 +64,13 @@ func NewMetrics() Metrics {
 			Name: "steward_queued_total",
 			Help: "total queue count of pipelineruns",
 		}),
-		Update: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Duration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Name:    "steward_pipelinerun_update_seconds",
 			Help:    "pipeline run update duration",
-			Buckets: prometheus.ExponentialBuckets(0.001, 1.3, 30),
+			Buckets: prometheus.ExponentialBuckets(0.01, 1.5, 35),
 		},
-			[]string{"type"}),
-		RetryDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Name:    "steward_retry_duration_seconds",
-			Help:    "duration of various retries",
-			Buckets: prometheus.ExponentialBuckets(0.5, 1.3, 30),
-		},
-			[]string{"type"}),
+			[]string{"caller", "retry"}),
+
 		Total: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "steward_pipelineruns_total",
 			Help: "total number of pipelineruns",
@@ -89,7 +84,7 @@ func (metrics *metrics) StartServer() {
 	prometheus.MustRegister(metrics.Completed)
 	prometheus.MustRegister(metrics.StateDuration)
 	prometheus.MustRegister(metrics.OngoingStateDuration)
-	prometheus.MustRegister(metrics.Update)
+	prometheus.MustRegister(metrics.Duration)
 	prometheus.MustRegister(metrics.Queued)
 	go provideMetrics()
 }
@@ -151,17 +146,37 @@ func (metrics *metrics) ObserveOngoingStateDuration(run *api.PipelineRun) error 
 	return nil
 }
 
-// ObserveUpdateDurationByType logs the duration of updates by type
-func (metrics *metrics) ObserveUpdateDurationByType(typ string, duration time.Duration) {
-	metrics.Update.With(prometheus.Labels{"type": typ}).Observe(duration.Seconds())
-}
-
-// ObserveRetryDurationByType logs the duration of retries by type
-func (metrics *metrics) ObserveRetryDurationByType(typ string, duration time.Duration) {
-	metrics.RetryDuration.With(prometheus.Labels{"type": typ}).Observe(duration.Seconds())
+// ObserveDuration logs the duration of updates by type
+func (metrics *metrics) ObserveDuration(duration time.Duration, retry bool) {
+	caller := callerFunctionName(1, 1)
+	metrics.Duration.With(prometheus.Labels{"caller": caller, "retry": fmt.Sprintf("%t", retry)}).Observe(duration.Seconds())
 }
 
 // SetQueueCount logs queue count metric
 func (metrics *metrics) SetQueueCount(count int) {
 	metrics.Queued.Set(float64(count))
+}
+
+func callerFunctionName(skip, depth int) string {
+	pc := make([]uintptr, 10)
+	skipRuntimeCallerAndThisFunction := 2
+	entryCount := runtime.Callers(skip+skipRuntimeCallerAndThisFunction, pc)
+	if entryCount == 0 {
+		return ""
+	}
+	frames := runtime.CallersFrames(pc[:entryCount])
+	var result strings.Builder
+	for {
+		frame, more := frames.Next()
+		result.WriteString(frame.Function)
+		if !more {
+			break
+		}
+		depth = depth - 1
+		if depth == 0 {
+			break
+		}
+		result.WriteString("->")
+	}
+	return result.String()
 }

@@ -20,27 +20,27 @@ type ServiceAccountManager interface {
 }
 
 type serviceAccountManager struct {
-	factory                ClientFactory
-	client                 corev1.ServiceAccountInterface
-	durationByTypeObserver DurationByTypeObserver
+	factory          ClientFactory
+	client           corev1.ServiceAccountInterface
+	durationObserver DurationObserver
 }
 
 // ServiceAccountWrap wraps a Service Account and enriches it with futher things
 type ServiceAccountWrap struct {
-	factory                ClientFactory
-	cache                  *v1.ServiceAccount
-	durationByTypeObserver DurationByTypeObserver
+	factory          ClientFactory
+	cache            *v1.ServiceAccount
+	durationObserver DurationObserver
 }
 
 // RoleName to be attached
 type RoleName string
 
 //NewServiceAccountManager creates ServiceAccountManager
-func NewServiceAccountManager(factory ClientFactory, namespace string, durationByTypeObserver DurationByTypeObserver) ServiceAccountManager {
+func NewServiceAccountManager(factory ClientFactory, namespace string, durationObserver DurationObserver) ServiceAccountManager {
 	return &serviceAccountManager{
-		factory:                factory,
-		client:                 factory.CoreV1().ServiceAccounts(namespace),
-		durationByTypeObserver: durationByTypeObserver,
+		factory:          factory,
+		client:           factory.CoreV1().ServiceAccounts(namespace),
+		durationObserver: durationObserver,
 	}
 }
 
@@ -52,9 +52,9 @@ func NewServiceAccountManager(factory ClientFactory, namespace string, durationB
 func (c *serviceAccountManager) CreateServiceAccount(name string, pipelineCloneSecretName string, imagePullSecretNames []string) (*ServiceAccountWrap, error) {
 	serviceAccount := &v1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	serviceAccountWrap := &ServiceAccountWrap{
-		factory:                c.factory,
-		cache:                  serviceAccount,
-		durationByTypeObserver: c.durationByTypeObserver,
+		factory:          c.factory,
+		cache:            serviceAccount,
+		durationObserver: c.durationObserver,
 	}
 
 	if pipelineCloneSecretName != "" {
@@ -223,5 +223,5 @@ type ServiceAccountHelper interface {
 
 // GetHelper returns a ServiceAccountHelper
 func (a *ServiceAccountWrap) GetHelper() ServiceAccountHelper {
-	return newServiceAccountHelper(a.factory, a.cache.DeepCopy(), a.durationByTypeObserver)
+	return newServiceAccountHelper(a.factory, a.cache.DeepCopy(), a.durationObserver)
 }
