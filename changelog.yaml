@@ -51,6 +51,14 @@
 - version: NEXT
   date: TBD
   changes:
+    - type: bug
+      impact: patch
+      title: fix heartbeat
+      description: |-
+        Heartbeat was not working correctly. It was only working if items were queued or processed.
+        This change is fixing the heartbeat.
+      pullRequestNumber: 0
+      jiraIssueNumber: 1131
 
 - version: "0.14.3"
   date: 2021-10-29
