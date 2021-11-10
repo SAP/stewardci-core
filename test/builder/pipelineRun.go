@@ -43,11 +43,11 @@ func PipelineRunSpec(ops ...PipelineRunSpecOp) PipelineRunOp {
 }
 
 // JenkinsFileSpec creates a JenkinsFileSpec
-func JenkinsFileSpec(url, path string, ops ...JenkinsFileOp) PipelineRunSpecOp {
+func JenkinsFileSpec(url, path, revision string, ops ...JenkinsFileOp) PipelineRunSpecOp {
 	return func(spec api.PipelineSpec) api.PipelineSpec {
 		spec.JenkinsFile = api.JenkinsFile{
 			URL:      url,
-			Revision: "master",
+			Revision: revision,
 			Path:     path,
 		}
 		for _, op := range ops {
