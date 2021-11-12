@@ -33,8 +33,10 @@ import (
 const kind = "PipelineRuns"
 
 // Used for logging (control loop) "still alive" messages
-var heartbeatIntervalSeconds int64 = 60
-var heartbeatTimer int64
+var heartbeatInterval = time.Minute * 1
+
+// use key which is no valid k8s name to avoid conflict with real pipeline runs
+const heartbeatKey = "heart_beat"
 
 // Interval for histogram creation set to prometheus default scrape interval
 var meteringInterval = time.Minute * 1
@@ -116,6 +118,10 @@ func (c *Controller) meterPipelineRuns() {
 	}
 }
 
+func (c *Controller) heartbeat() {
+	c.workqueue.Add(heartbeatKey)
+}
+
 // Run runs the controller
 func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer utilruntime.HandleCrash()
@@ -127,6 +133,9 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 
 	klog.V(2).Infof("Starting metering of pipeline runs with interval %v", meteringInterval)
 	go wait.Until(c.meterPipelineRuns, meteringInterval, stopCh)
+
+	klog.V(2).Infof("Starting heartbeat with interval %v", heartbeatInterval)
+	go wait.Until(c.heartbeat, heartbeatInterval, stopCh)
 
 	klog.V(2).Infof("Start workers")
 	for i := 0; i < threadiness; i++ {
@@ -140,11 +149,6 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 
 func (c *Controller) runWorker() {
 	for c.processNextWorkItem() {
-		now := time.Now().Unix()
-		if heartbeatTimer <= now-heartbeatIntervalSeconds {
-			heartbeatTimer = now
-			klog.V(3).Infof("Run Controller still alive")
-		}
 	}
 }
 
@@ -180,6 +184,13 @@ func (c *Controller) processNextWorkItem() bool {
 			utilruntime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
 			return nil
 		}
+
+		if key == heartbeatKey {
+			klog.V(3).Infof("Run Controller still alive")
+			c.workqueue.Forget(key)
+			return nil
+		}
+
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
 		klog.V(4).Infof("process %s queue length: %d", key, c.workqueue.Len())
