@@ -58,7 +58,7 @@
       description: |-
         If an unfinished pipelinerun is in a state other than 'running' for a longer time,
         a log message is written.
-      pullRequestNumber: 0
+      pullRequestNumber: 276
 
     - type: bug
       impact: patch
