@@ -51,6 +51,15 @@
 - version: NEXT
   date: TBD
   changes:
+
+    - type: enhancement
+      impact: minor
+      title: add logging for long duration of short states
+      description: |-
+        If an unfinished pipelinerun is in a state other than 'running' for a longer time,
+        a log message is written.
+      pullRequestNumber: 0
+
     - type: bug
       impact: patch
       title: fix heartbeat

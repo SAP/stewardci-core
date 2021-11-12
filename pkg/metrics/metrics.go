@@ -120,6 +120,7 @@ func (metrics *metrics) ObserveDurationByState(state *api.StateItem) error {
 // ObserveOngoingStateDuration logs the duration of the current (unfinished) pipeline state.
 func (metrics *metrics) ObserveOngoingStateDuration(run *api.PipelineRun) error {
 	//state undefined is not processed yet and will be metered as new
+	logDuration := time.Minute * 5
 	if run.Status.State == api.StateUndefined || run.Status.State == api.StateNew {
 		if run.CreationTimestamp.IsZero() {
 			return fmt.Errorf("cannot observe pipeline run if creationTimestamp is not set")
@@ -127,6 +128,9 @@ func (metrics *metrics) ObserveOngoingStateDuration(run *api.PipelineRun) error 
 		duration := time.Now().Sub(run.CreationTimestamp.Time)
 		if duration < 0 {
 			return fmt.Errorf("cannot observe pipeline run if creationTimestamp is in future")
+		}
+		if duration > logDuration {
+			klog.V(3).Infof("pipeline run '%s/%s' in state %s for %s", run.GetNamespace(), run.GetName(), run.Status.State, duration)
 		}
 		metrics.OngoingStateDuration.With(prometheus.Labels{"state": string(api.StateNew)}).Observe(duration.Seconds())
 		return nil
@@ -138,6 +142,9 @@ func (metrics *metrics) ObserveOngoingStateDuration(run *api.PipelineRun) error 
 	duration := time.Now().Sub(run.Status.StartedAt.Time)
 	if duration < 0 {
 		return fmt.Errorf("cannot observe StateItem if StartedAt is in the future")
+	}
+	if duration > logDuration && run.Status.State != api.StateRunning {
+		klog.V(3).Infof("pipeline run '%s/%s' in state %s for %s", run.GetNamespace(), run.GetName(), run.Status.State, duration)
 	}
 	metrics.OngoingStateDuration.With(prometheus.Labels{"state": string(run.Status.State)}).Observe(duration.Seconds())
 	return nil
