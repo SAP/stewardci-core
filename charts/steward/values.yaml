@@ -13,7 +13,7 @@ runController:
     logVerbosity: 3
   image:
     repository: stewardci/stewardci-run-controller
-    tag: "0.14.2" #Do not modify this line! RunController tag updated automatically
+    tag: "0.14.3" #Do not modify this line! RunController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -44,7 +44,7 @@ tenantController:
     logVerbosity: 2
   image:
     repository: stewardci/stewardci-tenant-controller
-    tag: "0.14.2" #Do not modify this line! TenantController tag updated automatically
+    tag: "0.14.3" #Do not modify this line! TenantController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -86,7 +86,7 @@ pipelineRuns:
       # Example: http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc
       indexURL: ""
   jenkinsfileRunner:
-    image: "stewardci/stewardci-jenkinsfile-runner:210924_6ec1ff6"
+    image: "stewardci/stewardci-jenkinsfile-runner:211027_9496f6b"
     imagePullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0

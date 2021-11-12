@@ -85,7 +85,10 @@ spec:
     {{/*  Currently broken, see https://github.com/tektoncd/pipeline/issues/3423 */}}
     {{/*  imagePullPolicy: $(params.JFR_IMAGE_PULL_POLICY) */}}
     imagePullPolicy: IfNotPresent
-    args: []
+    # Workaround for Tekton being affected by registry rate limiting.
+    # Specifying the command here prevents Tekton from downloading the image
+    # manifest from the registry to obtain the entrypoint command from there.
+    command: ["/steward-interface/entrypoint"]
     env:
     - name: XDG_CONFIG_HOME
       value: /home/jenkins
