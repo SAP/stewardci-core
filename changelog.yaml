@@ -61,7 +61,7 @@
       jiraIssueNumber: 1131
     - type: security
       impact: patch
-      title: update go version
+      title: update go version 1.16.9
       description: |-
         Update go version to [1.16.9](https://golang.org/doc/go1.16) to fix [CVE-2021-38297](https://nvd.nist.gov/vuln/detail/CVE-2021-38297)
       pullRequestNumber: 277
