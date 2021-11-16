@@ -51,11 +51,11 @@
 - version: NEXT
   date: TBD
   changes:
-    - type: enhancement
+    - type: internal
       impact: patch
-      title: Prepare `build.sh` for Go 1.16+
+      title: Prepare `build.sh` for Go v1.16+
       description: |-
-        Adjust build.sh script to be compatible with Go v1.16+.
+        Adjust 'build.sh' script to be compatible with Go v1.16+.
       pullRequestNumber: 0
       jiraIssueNumber: 1131
 
