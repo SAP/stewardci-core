@@ -51,6 +51,15 @@
 - version: NEXT
   date: TBD
   changes:
+    - type: enhancement
+      impact: patch
+      title: improve build script
+      description: |-
+        We create a dummy project to get golint rather than using gopath. 
+        This will be compatible with the next go version.
+      pullRequestNumber: 0
+      jiraIssueNumber: 1131
+
     - type: bug
       impact: patch
       title: fix heartbeat
