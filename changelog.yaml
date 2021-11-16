@@ -55,8 +55,7 @@
       impact: patch
       title: improve build script
       description: |-
-        We create a dummy project to get golint rather than using gopath. 
-        This will be compatible with the next go version.
+        Adjust build.sh script to be compatible with Go v1.16+.
       pullRequestNumber: 0
       jiraIssueNumber: 1131
 
