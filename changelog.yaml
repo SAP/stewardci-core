@@ -68,6 +68,13 @@
       pullRequestNumber: 275
       jiraIssueNumber: 1131
 
+    - type: internal
+      impact: patch
+      title: Use Go v1.16.10
+      description: |-
+        Use Go [v1.16.10](https://golang.org/doc/go1.16) to build the project.
+      pullRequestNumber: 277
+
 - version: "0.14.3"
   date: 2021-10-29
   changes:
