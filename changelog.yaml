@@ -51,6 +51,14 @@
 - version: NEXT
   date: TBD
   changes:
+    - type: internal
+      impact: patch
+      title: Prepare `build.sh` for Go v1.16+
+      description: |-
+        Adjust 'build.sh' script to be compatible with Go v1.16+.
+      pullRequestNumber: 0
+      jiraIssueNumber: 1131
+
     - type: bug
       impact: patch
       title: fix heartbeat
