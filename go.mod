@@ -22,9 +22,7 @@ require (
 	github.com/prometheus/common v0.10.0 // indirect
 	github.com/prometheus/procfs v0.1.3 // indirect
 	github.com/tektoncd/pipeline v0.14.3
-	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
-	golang.org/x/tools v0.1.7 // indirect
 	google.golang.org/genproto v0.0.0-20200612171551-7676ae05be11 // indirect
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.18.3
