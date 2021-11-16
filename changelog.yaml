@@ -58,7 +58,7 @@
     description: |-
       Updated JFR to [211116_03f24d5](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/211116_03f24d5)
       with latest dependencies and fixed vulnerabilities.
-    pullRequestNumber: 
+    pullRequestNumber: 280
     jiraIssueNumber: 1182
 
     - type: internal
