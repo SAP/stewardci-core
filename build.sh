@@ -180,18 +180,16 @@ function check_golint_or_install() {
     GOLINT_EXE=$(which golint) || rc=$?
     (( rc > 1 )) && die
     if [[ $rc == 1 || ! $GOLINT_EXE ]]; then
-        # don't run go list from current directory, because it would modify our go.mod file
+        # don't run go get/list from current directory, because it would modify our go.mod file
+        echo "golint not found. Installing golint into current GOPATH ..."
+	DUMMY_PROJECT=$(mktemp -d)
+	( cd "$DUMMY_PROJECT" && go mod init foo 2>/dev/null) || die
+        ( cd "$DUMMY_PROJECT" && go get -u 'golang.org/x/lint/golint' ) || die
         rc=0
-        GOLINT_EXE=$(cd "$GOPATH_1" && go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null) || rc=$?
-        if [[ $rc != 0 || ! $GOLINT_EXE || ! -f $GOLINT_EXE ]]; then
-            echo "golint not found. Installing golint into current GOPATH ..."
-            # don't run go get/list from current directory, because it would modify our go.mod file
-            ( cd "$GOPATH_1" && go get -u 'golang.org/x/lint/golint' ) || die
-            rc=0
-            GOLINT_EXE=$(cd "$GOPATH_1" && go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null) || rc=$?
-            if [[ $rc != 0 || ! $GOLINT_EXE || ! -f $GOLINT_EXE ]]; then
-                die "error: could not install golint"
-            fi
+        GOLINT_EXE=$(cd "$DUMMY_PROJECT" && go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null) || rc=$?
+        rm -rf "${DUMMY_PROJECT}"
+	if [[ $rc != 0 || ! $GOLINT_EXE || ! -f $GOLINT_EXE ]]; then
+            die "error: could not install golint"
         fi
     fi
 }
