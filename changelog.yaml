@@ -53,7 +53,7 @@
   changes:
     - type: enhancement
       impact: patch
-      title: improve build script
+      title: Prepare `build.sh` for Go 1.16+
       description: |-
         Adjust build.sh script to be compatible with Go v1.16+.
       pullRequestNumber: 0
