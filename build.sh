@@ -182,13 +182,13 @@ function check_golint_or_install() {
     if [[ $rc == 1 || ! $GOLINT_EXE ]]; then
         # don't run go list from current directory, because it would modify our go.mod file
         rc=0
-        GOLINT_EXE=$(cd "$GOPATH_1" && go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null) || rc=$?
+        GOLINT_EXE=$(cd "$GOPATH_1" && GO111MODULE=auto go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null) || rc=$?
         if [[ $rc != 0 || ! $GOLINT_EXE || ! -f $GOLINT_EXE ]]; then
             echo "golint not found. Installing golint into current GOPATH ..."
             # don't run go get/list from current directory, because it would modify our go.mod file
-            ( cd "$GOPATH_1" && go get -u 'golang.org/x/lint/golint' ) || die
+            ( cd "$GOPATH_1" && GO111MODULE=auto go get -u 'golang.org/x/lint/golint' ) || die
             rc=0
-            GOLINT_EXE=$(cd "$GOPATH_1" && go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null) || rc=$?
+            GOLINT_EXE=$(cd "$GOPATH_1" && GO111MODULE=auto go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null) || rc=$?
             if [[ $rc != 0 || ! $GOLINT_EXE || ! -f $GOLINT_EXE ]]; then
                 die "error: could not install golint"
             fi

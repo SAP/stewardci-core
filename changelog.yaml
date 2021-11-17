@@ -61,6 +61,23 @@
         - commit status of pipeline run when retry happens
       pullRequestNumber: 271
 
+    - type: security
+      impact: patch
+      title: Updated JFR to 211116_03f24d5
+      description: |-
+        Updated JFR to [211116_03f24d5](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/211116_03f24d5)
+        with latest dependencies and fixed vulnerabilities.
+      pullRequestNumber: 280
+      jiraIssueNumber: 1182
+
+    - type: internal
+      impact: patch
+      title: Prepare `build.sh` for Go v1.16+
+      description: |-
+        Adjust 'build.sh' script to be compatible with Go v1.16+.
+      pullRequestNumber: 278
+      jiraIssueNumber: 1131
+
     - type: bug
       impact: patch
       title: fix heartbeat
@@ -69,6 +86,13 @@
         This change is fixing the heartbeat.
       pullRequestNumber: 275
       jiraIssueNumber: 1131
+
+    - type: internal
+      impact: patch
+      title: Use Go v1.16.10
+      description: |-
+        Use Go [v1.16.10](https://golang.org/doc/go1.16) to build the project.
+      pullRequestNumber: 277
 
 - version: "0.14.3"
   date: 2021-10-29
