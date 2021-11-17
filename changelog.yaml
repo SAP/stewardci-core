@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.14.4"
+  date: 2021-11-17
+  changes:
+
     - type: security
       impact: patch
       title: Updated JFR to 211116_03f24d5
