@@ -11,9 +11,8 @@ import (
 	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
-	metrics "github.com/SAP/stewardci-core/pkg/metrics"
-	metricsmocks "github.com/SAP/stewardci-core/pkg/metrics/mocks"
 	cfg "github.com/SAP/stewardci-core/pkg/runctl/cfg"
+	metricstesting "github.com/SAP/stewardci-core/pkg/runctl/metrics/testing"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
 	runmocks "github.com/SAP/stewardci-core/pkg/runctl/run/mocks"
 	gomock "github.com/golang/mock/gomock"
@@ -29,20 +28,21 @@ import (
 	klog "k8s.io/klog/v2"
 )
 
-func Test_meterCurrentPipelineStatus(t *testing.T) {
-	t.Parallel()
+func Test_meterAllPipelineRunsPeriodic(t *testing.T) {
+	// no parallel: patching global state
 
 	// SETUP
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockMetric := metricstesting.NewMockPipelineRunsMetric(mockCtrl)
+	defer metricstesting.PatchPipelineRunsPeriodic(mockMetric)()
+
 	cf := newFakeClientFactory(
 		fake.SecretOpaque("secret1", "ns1"),
 		fake.ClusterRole(string(runClusterRoleName)),
 	)
-
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	metrics := metricsmocks.NewMockMetrics(mockCtrl)
-	c := NewController(cf, metrics)
+	c := NewController(cf)
 
 	run := fake.PipelineRun("r1", "ns1", api.PipelineSpec{})
 	c.pipelineRunStore.Add(run)
@@ -53,10 +53,10 @@ func Test_meterCurrentPipelineStatus(t *testing.T) {
 	c.pipelineRunStore.Add(deletedRun)
 
 	// VERIFY
-	metrics.EXPECT().ObserveOngoingStateDuration(run)
+	mockMetric.EXPECT().Observe(run).Times(1)
 
 	// EXERCISE
-	c.meterPipelineRuns()
+	c.meterAllPipelineRunsPeriodic()
 }
 
 func Test_Controller_Success(t *testing.T) {
@@ -158,7 +158,7 @@ func Test_Controller_syncHandler_givesUp_onPipelineRunNotFound(t *testing.T) {
 	mockPipelineRunFetcher.EXPECT().
 		ByKey(gomock.Any()).
 		Return(nil, nil)
-	examinee := NewController(cf, metrics.NewMetrics())
+	examinee := NewController(cf)
 	examinee.pipelineRunFetcher = mockPipelineRunFetcher
 
 	// EXERCISE
@@ -174,8 +174,7 @@ func newController(runs ...*api.PipelineRun) (*Controller, *fake.ClientFactory) 
 	for _, run := range runs {
 		client.PipelineRuns(run.GetNamespace()).Create(run)
 	}
-	metrics := metrics.NewMetrics()
-	controller := NewController(cf, metrics)
+	controller := NewController(cf)
 	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(client)
 	controller.recorder = record.NewFakeRecorder(20)
 	return controller, cf
@@ -781,7 +780,7 @@ func Test_Controller_syncHandler_initiatesRetrying_on500DuringPipelineRunFetch(t
 		ByKey(gomock.Any()).
 		Return(nil, k8serrors.NewInternalError(fmt.Errorf(message)))
 
-	examinee := NewController(cf, metrics.NewMetrics())
+	examinee := NewController(cf)
 	examinee.pipelineRunFetcher = mockPipelineRunFetcher
 
 	// EXERCISE
@@ -882,8 +881,7 @@ func newTestRunManager(workFactory k8s.ClientFactory, secretProvider secrets.Sec
 
 func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 	stopCh := make(chan struct{}, 0)
-	metrics := metrics.NewMetrics()
-	controller := NewController(cf, metrics)
+	controller := NewController(cf)
 	controller.testing = &controllerTesting{
 		newRunManagerStub:          newTestRunManager,
 		loadPipelineRunsConfigStub: newEmptyRunsConfig,

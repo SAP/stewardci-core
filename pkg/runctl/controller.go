@@ -15,8 +15,8 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/maintenancemode"
-	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
+	"github.com/SAP/stewardci-core/pkg/runctl/metrics"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
 	"github.com/SAP/stewardci-core/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -48,7 +48,6 @@ type Controller struct {
 	pipelineRunSynced    cache.InformerSynced
 	tektonTaskRunsSynced cache.InformerSynced
 	workqueue            workqueue.RateLimitingInterface
-	metrics              metrics.Metrics
 	testing              *controllerTesting
 	recorder             record.EventRecorder
 	pipelineRunLister    v1alpha1.PipelineRunLister
@@ -63,7 +62,7 @@ type controllerTesting struct {
 }
 
 // NewController creates new Controller
-func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controller {
+func NewController(factory k8s.ClientFactory) *Controller {
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
 	pipelineRunLister := pipelineRunInformer.Lister()
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
@@ -81,7 +80,6 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 
 		tektonTaskRunsSynced: tektonTaskRunInformer.Informer().HasSynced,
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
-		metrics:              metrics,
 		recorder:             recorder,
 		pipelineRunStore:     pipelineRunInformer.Informer().GetStore(),
 	}
@@ -101,8 +99,8 @@ func NewController(factory k8s.ClientFactory, metrics metrics.Metrics) *Controll
 	return controller
 }
 
-// meterPipelineRuns observes certain metrics of all existing pipeline runs (in the informer cache).
-func (c *Controller) meterPipelineRuns() {
+// meterAllPipelineRunsPeriodic observes certain metrics of all existing pipeline runs (in the informer cache).
+func (c *Controller) meterAllPipelineRunsPeriodic() {
 	klog.V(4).Infof("metering all pipeline runs")
 	objs := c.pipelineRunStore.List()
 	for _, obj := range objs {
@@ -110,10 +108,7 @@ func (c *Controller) meterPipelineRuns() {
 
 		// do not meter delays caused by finalizers
 		if pipelineRun.DeletionTimestamp.IsZero() {
-			err := c.metrics.ObserveOngoingStateDuration(pipelineRun)
-			if err != nil {
-				klog.Errorf("metrics observation of PipelineRun %v failed: %v", pipelineRun, err)
-			}
+			metrics.PipelineRunsPeriodic.Observe(pipelineRun)
 		}
 	}
 }
@@ -132,7 +127,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	}
 
 	klog.V(2).Infof("Starting metering of pipeline runs with interval %v", meteringInterval)
-	go wait.Until(c.meterPipelineRuns, meteringInterval, stopCh)
+	go wait.Until(c.meterAllPipelineRunsPeriodic, meteringInterval, stopCh)
 
 	klog.V(2).Infof("Starting heartbeat with interval %v", heartbeatInterval)
 	go wait.Until(c.heartbeat, heartbeatInterval, stopCh)
@@ -194,7 +189,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
 		klog.V(4).Infof("process %s queue length: %d", key, c.workqueue.Len())
-		c.metrics.SetQueueCount(c.workqueue.Len())
+		metrics.WorkqueueLength.Set(float64(c.workqueue.Len()))
 
 		if err := c.syncHandler(key); err != nil {
 			// Put the item back on the workqueue to handle any transient errors.
@@ -340,7 +335,7 @@ func (c *Controller) syncHandler(key string) error {
 		if err = c.changeAndCommitStateAndMeter(pipelineRun, api.StatePreparing, metav1.Now()); err != nil {
 			return err
 		}
-		c.metrics.CountStart()
+		metrics.PipelineRunsStarted.Inc()
 	}
 
 	runManager := c.createRunManager(pipelineRun)
@@ -434,7 +429,7 @@ func (c *Controller) updateStateAndResult(pipelineRun k8s.PipelineRun, state api
 	if err := c.changeAndCommitStateAndMeter(pipelineRun, state, ts); err != nil {
 		return err
 	}
-	c.metrics.CountResult(pipelineRun.GetStatus().Result)
+	metrics.PipelineRunsResult.Observe(pipelineRun.GetStatus().Result)
 	if state == api.StateFinished {
 		return pipelineRun.DeleteFinalizerIfExists()
 	}
@@ -451,12 +446,9 @@ func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
 	end := time.Now()
 	elapsed := end.Sub(start)
 	klog.V(6).Infof("commit of %q took %v", pipelineRun.String(), elapsed)
-	c.metrics.ObserveUpdateDurationByType("UpdateState", elapsed)
+	metrics.UpdatesLatency.Observe("UpdateState", elapsed)
 	for _, finishedState := range finishedStates {
-		err := c.metrics.ObserveDurationByState(finishedState)
-		if err != nil {
-			klog.Errorf("Failed to measure state '%+v': '%s'", finishedState, err)
-		}
+		metrics.PipelineRunsStateFinished.Observe(finishedState)
 	}
 	return nil
 }

@@ -13,6 +13,7 @@ import (
 	listers "github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
 	slabels "github.com/SAP/stewardci-core/pkg/stewardlabels"
+	"github.com/SAP/stewardci-core/pkg/tenantctl/metrics"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -42,7 +43,6 @@ type Controller struct {
 	tenantSynced cache.InformerSynced
 	tenantLister listers.TenantLister
 	workqueue    workqueue.RateLimitingInterface
-	metrics      Metrics
 	syncCount    int64
 	testing      *controllerTesting
 }
@@ -56,7 +56,7 @@ type controllerTesting struct {
 }
 
 // NewController creates new Controller
-func NewController(factory k8s.ClientFactory, metrics Metrics) *Controller {
+func NewController(factory k8s.ClientFactory) *Controller {
 	informer := factory.StewardInformerFactory().Steward().V1alpha1().Tenants()
 	fetcher := k8s.NewListerBasedTenantFetcher(informer.Lister())
 	controller := &Controller{
@@ -65,7 +65,6 @@ func NewController(factory k8s.ClientFactory, metrics Metrics) *Controller {
 		tenantSynced: informer.Informer().HasSynced,
 		tenantLister: informer.Lister(),
 		workqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
-		metrics:      metrics,
 	}
 	informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.onTenantAdd,
@@ -658,7 +657,7 @@ func (c *Controller) updateMetrics() {
 		klog.Errorf("Cannot update tenant metrics: %s", err.Error())
 	}
 	count := len(list)
-	c.metrics.SetTenantNumber(float64(count))
+	metrics.TenantCount.Set(float64(count))
 }
 
 func (c *Controller) onTenantAdd(obj interface{}) {
