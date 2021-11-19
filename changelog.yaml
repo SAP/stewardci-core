@@ -71,6 +71,14 @@
         instead.
       pullRequestNumber: 282
 
+    - type: enhancement
+      impact: minor
+      title: Embed client-go rest client metrics
+      description: |-
+        Embed metrics provided by package `k8s.io/client-go/util/rest` into
+        Steward Core metrics.
+      pullRequestNumber: 282
+
 - version: "0.14.4"
   date: 2021-11-17
   changes:
