@@ -30,8 +30,6 @@ import (
 	klog "k8s.io/klog/v2"
 )
 
-const kind = "PipelineRuns"
-
 // Used for logging (control loop) "still alive" messages
 var heartbeatInterval = time.Minute * 1
 
@@ -79,7 +77,7 @@ func NewController(factory k8s.ClientFactory) *Controller {
 		pipelineRunSynced:  pipelineRunInformer.Informer().HasSynced,
 
 		tektonTaskRunsSynced: tektonTaskRunInformer.Informer().HasSynced,
-		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
+		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), metrics.WorkqueueName),
 		recorder:             recorder,
 		pipelineRunStore:     pipelineRunInformer.Informer().GetStore(),
 	}
@@ -188,9 +186,6 @@ func (c *Controller) processNextWorkItem() bool {
 
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
-		klog.V(4).Infof("process %s queue length: %d", key, c.workqueue.Len())
-		metrics.WorkqueueLength.Set(float64(c.workqueue.Len()))
-
 		if err := c.syncHandler(key); err != nil {
 			// Put the item back on the workqueue to handle any transient errors.
 			c.workqueue.AddRateLimited(key)

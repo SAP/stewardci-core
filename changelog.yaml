@@ -59,6 +59,18 @@
         The metric support code needs refactoring.
       pullRequestNumber: 282
 
+    - type: enhancement
+      impact: minor
+      title: Embed workqueue metrics
+      description: |-
+        Embed metrics provided by package `k8s.io/client-go/util/workqueue` into
+        Steward Core metrics.
+      upgradeNotes:
+        Metric `steward_queued_total` has been removed.
+        Change existing monitoring tools to use `steward_piperuns_workqueue_depth`
+        instead.
+      pullRequestNumber: 282
+
 - version: "0.14.4"
   date: 2021-11-17
   changes:

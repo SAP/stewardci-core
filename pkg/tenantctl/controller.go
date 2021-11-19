@@ -31,8 +31,6 @@ import (
 )
 
 const (
-	kind = "Tenants"
-
 	tenantNamespaceRoleBindingNamePrefix = steward.GroupName + "--tenant-role-binding-"
 )
 
@@ -64,7 +62,7 @@ func NewController(factory k8s.ClientFactory) *Controller {
 		fetcher:      fetcher,
 		tenantSynced: informer.Informer().HasSynced,
 		tenantLister: informer.Lister(),
-		workqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
+		workqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), metrics.WorkqueueName),
 	}
 	informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.onTenantAdd,
