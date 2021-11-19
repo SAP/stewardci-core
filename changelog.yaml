@@ -95,6 +95,14 @@
             Use `steward_tenants_count_total` instead.
       pullRequestNumber: 282
 
+    - type: enhancement
+      impact: minor
+      title: Add metrics for retry loops
+      description: |-
+        For the analysis of performance issues it can be helpful to have metrics
+        for retry loops (number of retries, latency).
+      pullRequestNumber: 282
+
 - version: "0.14.4"
   date: 2021-11-17
   changes:

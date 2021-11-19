@@ -43,7 +43,7 @@ func NewServiceAccountManager(factory ClientFactory, namespace string) ServiceAc
 
 // CreateServiceAccount creates a service account on the cluster
 //   name					name of the service account
-//   pipelineCloneSecretName		(optional) the name of the secret to be used to authenticate at the Git repository hosting the pipeline definition.
+//   pipelineCloneSecretName	(optional) the name of the secret to be used to authenticate at the Git repository hosting the pipeline definition.
 //   imagePullSecretNames		(optional) a list of image pull secrets to attach to this service account (e.g. for pulling the Jenkinsfile Runner image)
 func (c *serviceAccountManager) CreateServiceAccount(name string, pipelineCloneSecretName string, imagePullSecretNames []string) (*ServiceAccountWrap, error) {
 	serviceAccount := &v1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name}}
