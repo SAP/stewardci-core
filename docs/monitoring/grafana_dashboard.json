@@ -295,7 +295,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(steward_pipelinerun_state_duration_seconds_sum[1m])/rate(steward_pipelinerun_state_duration_seconds_count[1m])",
+          "expr": "rate(steward_pipelineruns_state_duration_seconds_sum[1m])/rate(steward_pipelineruns_state_duration_seconds_count[1m])",
           "legendFormat": "{{state}}",
           "refId": "A"
         }
@@ -385,22 +385,22 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "histogram_quantile(0.5,sum(rate(steward_pipelinerun_state_duration_seconds_bucket{}[1m])) by (le))",
+          "expr": "histogram_quantile(0.5,sum(rate(steward_pipelineruns_state_duration_seconds_bucket{}[1m])) by (le))",
           "legendFormat": "50%",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.8,sum(rate(steward_pipelinerun_state_duration_seconds_bucket{}[1m])) by (le))",
+          "expr": "histogram_quantile(0.8,sum(rate(steward_pipelineruns_state_duration_seconds_bucket{}[1m])) by (le))",
           "legendFormat": "80%",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.9,sum(rate(steward_pipelinerun_state_duration_seconds_bucket{}[1m])) by (le))",
+          "expr": "histogram_quantile(0.9,sum(rate(steward_pipelineruns_state_duration_seconds_bucket{}[1m])) by (le))",
           "legendFormat": "90%",
           "refId": "C"
         },
         {
-          "expr": "histogram_quantile(0.99,sum(rate(steward_pipelinerun_state_duration_seconds_bucket{}[1m])) by (le))",
+          "expr": "histogram_quantile(0.99,sum(rate(steward_pipelineruns_state_duration_seconds_bucket{}[1m])) by (le))",
           "legendFormat": "99%",
           "refId": "D"
         }
@@ -493,7 +493,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum by (le)(increase(steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds_bucket{state=\"new\"}[1m])) ",
+          "expr": "sum by (le)(increase(steward_pipelineruns_ongoing_state_duration_periodic_observations_seconds_bucket{state=\"new\"}[1m])) ",
           "format": "heatmap",
           "instant": false,
           "interval": "1m",
@@ -561,7 +561,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum by (le)(increase(steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds_bucket{state=\"preparing\"}[1m])) ",
+          "expr": "sum by (le)(increase(steward_pipelineruns_ongoing_state_duration_periodic_observations_seconds_bucket{state=\"preparing\"}[1m])) ",
           "format": "heatmap",
           "instant": false,
           "interval": "1m",
@@ -629,7 +629,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum by (le)(increase(steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds_bucket{state=\"waiting\"}[1m])) ",
+          "expr": "sum by (le)(increase(steward_pipelineruns_ongoing_state_duration_periodic_observations_seconds_bucket{state=\"waiting\"}[1m])) ",
           "format": "heatmap",
           "instant": false,
           "interval": "1m",
@@ -697,7 +697,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum by (le)(increase(steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds_bucket{state=\"cleaning\"}[1m])) ",
+          "expr": "sum by (le)(increase(steward_pipelineruns_ongoing_state_duration_periodic_observations_seconds_bucket{state=\"cleaning\"}[1m])) ",
           "format": "heatmap",
           "instant": false,
           "interval": "1m",

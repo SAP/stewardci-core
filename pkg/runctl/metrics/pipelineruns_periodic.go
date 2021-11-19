@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"sync"
 
 	stewardapi "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -24,6 +25,8 @@ type pipelineRunsPeriodic struct {
 	clock          clock.Clock
 	initOnlyOnce   sync.Once
 	durationMetric *prometheus.HistogramVec
+	// TODO remove when deprecated long enough
+	durationMetricOld *prometheus.HistogramVec
 }
 
 func (m *pipelineRunsPeriodic) init() {
@@ -34,10 +37,8 @@ func (m *pipelineRunsPeriodic) init() {
 
 		m.durationMetric = prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
-				// TODO use metric name prefixes consistently
-				//Subsystem: subsystem,
-				//Name:      "ongoing_state_duration_periodic_observations_seconds",
-				Name: "steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds",
+				Subsystem: subsystem,
+				Name:      "ongoing_state_duration_periodic_observations_seconds",
 				Help: "A histogram vector partitioned by pipeline run states that counts the number of periodic observations of pipeline runs in a state grouped by the duration of the state at the time of the observation." +
 					"\n\nThe purpose of this metric is the detection of overly long processing times, caused by e.g. hanging controllers." +
 					"\n\nThere's one histogram per pipeline run state (label `state`)." +
@@ -53,6 +54,18 @@ func (m *pipelineRunsPeriodic) init() {
 			},
 		)
 		metrics.Registerer().MustRegister(m.durationMetric)
+
+		m.durationMetricOld = prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds",
+				Help:    fmt.Sprintf("Deprecated! Use '%s_ongoing_state_duration_periodic_observations_seconds' instead.", subsystem),
+				Buckets: prometheus.ExponentialBuckets(60, 2, 7),
+			},
+			[]string{
+				"state",
+			},
+		)
+		metrics.Registerer().MustRegister(m.durationMetricOld)
 	})
 }
 
@@ -78,6 +91,7 @@ func (m *pipelineRunsPeriodic) observe(state stewardapi.State, since metav1.Time
 		"state": string(state),
 	}
 	m.durationMetric.With(labels).Observe(duration.Seconds())
+	m.durationMetricOld.With(labels).Observe(duration.Seconds())
 }
 
 func (m *pipelineRunsPeriodic) isNewRun(run *stewardapi.PipelineRun) bool {

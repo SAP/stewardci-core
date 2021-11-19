@@ -46,8 +46,9 @@ func Test_pipelineRunsStateFinished_Valid(t *testing.T) {
 	// VERIFY
 	metricFamily, err := reg.Gather()
 	assert.NilError(t, err)
-	assert.Equal(t, len(metricFamily), 1)
+	assert.Equal(t, len(metricFamily), 2)
 
+	// current metric
 	{
 		assert.Equal(t, len(metricFamily[0].GetMetric()), 1)
 
@@ -67,6 +68,14 @@ func Test_pipelineRunsStateFinished_Valid(t *testing.T) {
 				assert.Equal(t, *bucket.CumulativeCount, uint64(0))
 			}
 		}
+	}
+
+	// deprecated metric
+	{
+		assert.Equal(t, len(metricFamily[1].GetMetric()), 1)
+
+		ioMetric := metricFamily[1].GetMetric()[0]
+		assert.DeepEqual(t, ioMetric, metricFamily[0].GetMetric()[0])
 	}
 }
 

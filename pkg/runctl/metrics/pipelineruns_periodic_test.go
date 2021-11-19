@@ -211,8 +211,9 @@ func doTestPipelineRunsPeriodic(
 	assert.NilError(t, err)
 
 	if expectObservation {
-		assert.Equal(t, len(metricFamily), 1)
+		assert.Equal(t, len(metricFamily), 2)
 
+		// current metric
 		{
 			assert.Equal(t, len(metricFamily[0].GetMetric()), 1)
 
@@ -231,6 +232,14 @@ func doTestPipelineRunsPeriodic(
 					assert.Equal(t, *bucket.CumulativeCount, uint64(0))
 				}
 			}
+		}
+
+		// deprecated metric
+		{
+			assert.Equal(t, len(metricFamily[1].GetMetric()), 1)
+
+			ioMetric := metricFamily[1].GetMetric()[0]
+			assert.DeepEqual(t, ioMetric, metricFamily[0].GetMetric()[0])
 		}
 	} else {
 		assert.Equal(t, len(metricFamily), 0)
