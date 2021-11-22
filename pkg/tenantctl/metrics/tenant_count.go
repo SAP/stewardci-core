@@ -36,7 +36,7 @@ func (m *tenantCount) init() {
 
 		m.metricOld = prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "steward_tenants_total",
-			Help: fmt.Sprintf("Deprecated! Use '%s_count' instead.", subsystem),
+			Help: fmt.Sprintf("Deprecated! Use '%s_count_total' instead.", subsystem),
 		})
 		metrics.Registerer().MustRegister(m.metricOld)
 	})

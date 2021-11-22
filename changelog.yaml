@@ -103,6 +103,16 @@
         for retry loops (number of retries, latency).
       pullRequestNumber: 282
 
+    - type: enhancement
+      impact: patch
+      title: Deprecate metric `steward_pipelinerun_update_seconds`
+      description: |-
+        Besides the deprecation nothing has been changed.
+      deprecations: |-
+        -   Metric `steward_pipelinerun_update_seconds` is deprecated.
+            Use REST client metrics and retries metrics instead.
+      pullRequestNumber: 282
+
 - version: "0.14.4"
   date: 2021-11-17
   changes:

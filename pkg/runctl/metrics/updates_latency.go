@@ -36,8 +36,9 @@ func (m *updatesLatency) init() {
 				// TODO use better name
 				//Subsystem: subsystem,
 				//Name:      "updates_latency_seconds",
-				Name:    "steward_pipelinerun_update_seconds",
-				Help:    "A histogram vector of the duration of update operations.",
+				Name: "steward_pipelinerun_update_seconds",
+				Help: "Deprecated! Use REST client metrics and retries metrics instead." +
+					"\n\nA histogram vector of the duration of update operations.",
 				Buckets: prometheus.ExponentialBuckets(0.001, 1.3, 30),
 			},
 			[]string{
