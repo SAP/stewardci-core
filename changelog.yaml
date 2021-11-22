@@ -113,6 +113,14 @@
             Use REST client metrics and retries metrics instead.
       pullRequestNumber: 282
 
+    - type: documentation
+      impact: patch
+      title: Add metrics reference documentation
+      description: |-
+        A new page `docs/monitoring/Metrics Reference.md` describes all metrics
+        exposed by Steward binaries.
+      pullRequestNumber: 282
+
 - version: "0.14.4"
   date: 2021-11-17
   changes:
