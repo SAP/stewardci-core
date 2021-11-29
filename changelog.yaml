@@ -129,6 +129,20 @@
         because they are completely independent of it.
       pullRequestNumber: 284
 
+    - type: internal
+      impact: minor
+      title: Update Go build dependencies
+      description: |-
+        Most noteworthy:
+
+        - Kubernetes libraries to v1.21.7
+        - Tekton to v0.30.0
+      upgradeNotes: |-
+        Steward should still _run_ with lower versions of Kubernetes and Tekton.
+        However, this has not been tested.
+        Therefore, test your setup carefully.
+      pullRequestNumber: 284
+
 - version: "0.14.4"
   date: 2021-11-17
   changes:

@@ -25,7 +25,7 @@ import (
 // ClientFactory is a factory for fake clients.
 type ClientFactory struct {
 	kubernetesClientset    *kubernetes.Clientset
-	dynamicClient          *dynamicfake.FakeDynamicClient
+	DynamicClient          *dynamicfake.FakeDynamicClient
 	stewardClientset       *steward.Clientset
 	stewardInformerFactory stewardinformer.SharedInformerFactory
 	tektonClientset        *tektonclientfake.Clientset
@@ -37,18 +37,18 @@ type ClientFactory struct {
 func NewClientFactory(objects ...runtime.Object) *ClientFactory {
 	stewardObjects, tektonObjects, kubernetesObjects := groupObjectsByAPI(objects)
 	stewardClientset := steward.NewSimpleClientset(stewardObjects...)
-	stewardInformerFactory := stewardinformer.NewSharedInformerFactory(stewardClientset, time.Minute*10)
+	stewardInformerFactory := stewardinformer.NewSharedInformerFactory(stewardClientset, 10*time.Minute)
 	tektonClientset := tektonclientfake.NewSimpleClientset(tektonObjects...)
-	tektonInformerFactory := tektoninformers.NewSharedInformerFactory(tektonClientset, time.Minute*10)
-	sleepDuration, _ := time.ParseDuration("300ms")
+	tektonInformerFactory := tektoninformers.NewSharedInformerFactory(tektonClientset, 10*time.Minute)
+
 	return &ClientFactory{
 		kubernetesClientset:    kubernetes.NewSimpleClientset(kubernetesObjects...),
-		dynamicClient:          dynamicfake.NewSimpleDynamicClient(runtime.NewScheme()),
+		DynamicClient:          dynamicfake.NewSimpleDynamicClient(runtime.NewScheme()),
 		stewardClientset:       stewardClientset,
 		stewardInformerFactory: stewardInformerFactory,
 		tektonClientset:        tektonClientset,
 		tektonInformerFactory:  tektonInformerFactory,
-		sleepDuration:          sleepDuration,
+		sleepDuration:          300 * time.Millisecond,
 	}
 }
 
@@ -100,12 +100,12 @@ func (f *ClientFactory) CoreV1() corev1.CoreV1Interface {
 
 // Dynamic implements interface "github.com/SAP/stewardci-core/pkg/k8s".ClientFactory
 func (f *ClientFactory) Dynamic() dynamic.Interface {
-	return f.dynamicClient
+	return f.DynamicClient
 }
 
 // DynamicFake returns the dynamic Kubernetes fake client.
 func (f *ClientFactory) DynamicFake() *dynamicfake.FakeDynamicClient {
-	return f.dynamicClient
+	return f.DynamicClient
 }
 
 // NetworkingV1 implements interface "github.com/SAP/stewardci-core/pkg/k8s".ClientFactory

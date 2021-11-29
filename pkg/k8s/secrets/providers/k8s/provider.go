@@ -1,6 +1,8 @@
 package k8s
 
 import (
+	"context"
+
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets/providers"
 	"github.com/pkg/errors"
@@ -24,8 +26,8 @@ func NewProvider(secretsClient corev1.SecretInterface, namespace string) secrets
 }
 
 // GetSecret returns secret with the given name from the defined namespace if existing.
-func (p *provider) GetSecret(name string) (*v1.Secret, error) {
-	secret, err := p.secretsClient.Get(name, metav1.GetOptions{})
+func (p *provider) GetSecret(ctx context.Context, name string) (*v1.Secret, error) {
+	secret, err := p.secretsClient.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, nil

@@ -1,6 +1,7 @@
 package k8srestclient
 
 import (
+	"context"
 	"sync"
 
 	"github.com/SAP/stewardci-core/pkg/metrics"
@@ -42,7 +43,7 @@ func (m *requestResults) init() {
 	})
 }
 
-func (m *requestResults) Increment(code string, method string, host string) {
+func (m *requestResults) Increment(ctx context.Context, code string, method string, host string) {
 	labels := prometheus.Labels{
 		"host":   host,
 		"method": method,

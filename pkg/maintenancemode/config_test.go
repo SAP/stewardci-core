@@ -1,6 +1,7 @@
 package maintenancemode
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -20,13 +21,16 @@ import (
 
 func Test_IsMaintenanceMode_getError_(t *testing.T) {
 	t.Parallel()
+
 	// SETUP
+	ctx := context.Background()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	cf, configMapIfce := newFactoryWithConfigMapIfce(mockCtrl)
 	expectErrorOnGetConfigMap(configMapIfce, api.MaintenanceModeConfigMapName, errors.New("some error"))
+
 	// EXERCISE
-	_, resultErr := IsMaintenanceMode(cf)
+	_, resultErr := IsMaintenanceMode(ctx, cf)
 
 	// VERIFY
 	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-maintenance-mode" in namespace "knative-testing": some error`)
@@ -34,14 +38,16 @@ func Test_IsMaintenanceMode_getError_(t *testing.T) {
 
 func Test_IsMaintenanceMode_get_NotFoundError(t *testing.T) {
 	t.Parallel()
+
 	// SETUP
+	ctx := context.Background()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	cf, configMapIfce := newFactoryWithConfigMapIfce(mockCtrl)
 	expectErrorOnGetConfigMap(configMapIfce, api.MaintenanceModeConfigMapName, k8serrors.NewNotFound(api.Resource("pipelineruns"), ""))
 
 	// EXERCISE
-	result, resultErr := IsMaintenanceMode(cf)
+	result, resultErr := IsMaintenanceMode(ctx, cf)
 
 	// VERIFY
 	assert.Assert(t, result == false)
@@ -50,7 +56,9 @@ func Test_IsMaintenanceMode_get_NotFoundError(t *testing.T) {
 
 func Test_IsMaintenanceMode_configMapHasDeletionTimestamp(t *testing.T) {
 	t.Parallel()
+
 	// SETUP
+	ctx := context.Background()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	cm := newMaintenanceModeConfigMap(map[string]string{
@@ -58,8 +66,9 @@ func Test_IsMaintenanceMode_configMapHasDeletionTimestamp(t *testing.T) {
 	})
 	cm.ObjectMeta.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 	cf := fake.NewClientFactory(cm)
+
 	// EXERCISE
-	result, resultErr := IsMaintenanceMode(cf)
+	result, resultErr := IsMaintenanceMode(ctx, cf)
 
 	// VERIFY
 	assert.Assert(t, result == false)
@@ -68,6 +77,7 @@ func Test_IsMaintenanceMode_configMapHasDeletionTimestamp(t *testing.T) {
 
 func Test_loadControllerConfig(t *testing.T) {
 	t.Parallel()
+
 	for _, tc := range []struct {
 		name       string
 		configData map[string]string
@@ -96,13 +106,15 @@ func Test_loadControllerConfig(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc := tc // capture current value before going parallel
 			t.Parallel()
+
 			// SETUP
+			ctx := context.Background()
 			cf := fake.NewClientFactory(
 				newMaintenanceModeConfigMap(tc.configData),
 			)
 
 			// EXERCISE
-			result, resultErr := IsMaintenanceMode(cf)
+			result, resultErr := IsMaintenanceMode(ctx, cf)
 
 			// VERIFY
 			assert.NilError(t, resultErr)
@@ -133,7 +145,7 @@ func newFactoryWithConfigMapIfce(mockCtrl *gomock.Controller) (*mocks.MockClient
 
 func expectErrorOnGetConfigMap(configMapIfce *corev1clientmocks.MockConfigMapInterface, configMapName string, expectedError error) {
 	configMapIfce.EXPECT().
-		Get(configMapName, gomock.Any()).
+		Get(gomock.Any(), configMapName, gomock.Any()).
 		Return(nil, expectedError).
 		Times(1)
 }

@@ -1,6 +1,7 @@
 package tenantctl
 
 import (
+	"context"
 	"math"
 	"strconv"
 	"testing"
@@ -56,6 +57,7 @@ func Test_getClientConfig_ReturnsValuesFromAnnotations(t *testing.T) {
 	// SETUP
 	const configuredRandomLength int64 = 10
 
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -70,7 +72,7 @@ func Test_getClientConfig_ReturnsValuesFromAnnotations(t *testing.T) {
 	)
 
 	// EXERCISE
-	config, err := getClientConfig(cf, "Client1")
+	config, err := getClientConfig(ctx, cf, "Client1")
 
 	// VERIFY
 	assert.NilError(t, err)
@@ -85,6 +87,7 @@ func Test_getClientConfig_NamespaceParameterIsZeroLengthString(t *testing.T) {
 	// SETUP
 	const emptyNameString = ""
 
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -100,12 +103,13 @@ func Test_getClientConfig_NamespaceParameterIsZeroLengthString(t *testing.T) {
 
 	// EXERCISE
 	assert.Assert(t, cmp.Panics(func() {
-		getClientConfig(cf, emptyNameString)
+		getClientConfig(ctx, cf, emptyNameString)
 	}))
 }
 
 func Test_getClientConfig_ClientNamespaceNotExisting(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -116,7 +120,7 @@ func Test_getClientConfig_ClientNamespaceNotExisting(t *testing.T) {
 	)
 
 	// EXERCISE
-	_, err := getClientConfig(cf, "NotExistingClientNamespace")
+	_, err := getClientConfig(ctx, cf, "NotExistingClientNamespace")
 
 	// VERIFY
 	assert.Assert(t, err != nil)
@@ -125,6 +129,7 @@ func Test_getClientConfig_ClientNamespaceNotExisting(t *testing.T) {
 
 func Test_getClientConfig_AnnotationTenantNamespacePrefix_Missing(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -139,7 +144,7 @@ func Test_getClientConfig_AnnotationTenantNamespacePrefix_Missing(t *testing.T) 
 	)
 
 	// EXERCISE
-	_, err := getClientConfig(cf, "Client1")
+	_, err := getClientConfig(ctx, cf, "Client1")
 
 	// VERIFY
 	assert.Assert(t, err != nil)
@@ -152,6 +157,7 @@ func Test_getClientConfig_AnnotationTenantNamespacePrefix_Missing(t *testing.T) 
 
 func Test_getClientConfig_AnnotationTenantNamespacePrefix_EmptyValue(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -166,7 +172,7 @@ func Test_getClientConfig_AnnotationTenantNamespacePrefix_EmptyValue(t *testing.
 	)
 
 	// EXERCISE
-	_, err := getClientConfig(cf, "Client1")
+	_, err := getClientConfig(ctx, cf, "Client1")
 
 	// VERIFY
 	assert.Assert(t, err != nil)
@@ -179,6 +185,7 @@ func Test_getClientConfig_AnnotationTenantNamespacePrefix_EmptyValue(t *testing.
 
 func Test_getClientConfig_AnnotationTenantRole_Missing(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -193,7 +200,7 @@ func Test_getClientConfig_AnnotationTenantRole_Missing(t *testing.T) {
 	)
 
 	// EXERCISE
-	_, err := getClientConfig(cf, "Client1")
+	_, err := getClientConfig(ctx, cf, "Client1")
 
 	// VERIFY
 	assert.Assert(t, err != nil)
@@ -202,6 +209,7 @@ func Test_getClientConfig_AnnotationTenantRole_Missing(t *testing.T) {
 
 func Test_getClientConfig_AnnotationTenantRole_EmptyValue(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -216,7 +224,7 @@ func Test_getClientConfig_AnnotationTenantRole_EmptyValue(t *testing.T) {
 	)
 
 	// EXERCISE
-	_, err := getClientConfig(cf, "Client1")
+	_, err := getClientConfig(ctx, cf, "Client1")
 
 	// VERIFY
 	assert.Assert(t, err != nil)
@@ -229,6 +237,7 @@ func Test_getClientConfig_AnnotationTenantRole_EmptyValue(t *testing.T) {
 
 func Test_getClientConfig_AnnotationTenantNamespaceSuffixLength_Missing(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -243,7 +252,7 @@ func Test_getClientConfig_AnnotationTenantNamespaceSuffixLength_Missing(t *testi
 	)
 
 	// EXERCISE
-	config, _ := getClientConfig(cf, "Client1")
+	config, _ := getClientConfig(ctx, cf, "Client1")
 
 	// VERIFY
 	value := config.(*clientConfigImpl).tenantNamespaceSuffixLength
@@ -264,6 +273,7 @@ func Test_getClientConfig_AnnotationTenantNamespaceSuffixLength_InvalidValue(t *
 	} {
 		t.Run(strconv.Itoa(num)+"_"+value, func(t *testing.T) {
 			// SETUP
+			ctx := context.Background()
 			cf := fake.NewClientFactory(
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
@@ -278,7 +288,7 @@ func Test_getClientConfig_AnnotationTenantNamespaceSuffixLength_InvalidValue(t *
 			)
 
 			// EXERCISE
-			_, err := getClientConfig(cf, "Client1")
+			_, err := getClientConfig(ctx, cf, "Client1")
 
 			// VERIFY
 			assert.Assert(t, err != nil)
@@ -308,6 +318,7 @@ func Test_getClientConfig_AnnotationTenantNamespaceSuffixLength_ValidValue(t *te
 	} {
 		t.Run(strconv.Itoa(num)+"_"+tc.value, func(t *testing.T) {
 			// SETUP
+			ctx := context.Background()
 			cf := fake.NewClientFactory(
 				&corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{
@@ -322,7 +333,7 @@ func Test_getClientConfig_AnnotationTenantNamespaceSuffixLength_ValidValue(t *te
 			)
 
 			// EXERCISE
-			config, err := getClientConfig(cf, "Client1")
+			config, err := getClientConfig(ctx, cf, "Client1")
 
 			// VERIFY
 			assert.NilError(t, err)
@@ -333,6 +344,7 @@ func Test_getClientConfig_AnnotationTenantNamespaceSuffixLength_ValidValue(t *te
 
 func Test_getClientConfig_TwoClients(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -357,8 +369,8 @@ func Test_getClientConfig_TwoClients(t *testing.T) {
 	)
 
 	// EXERCISE
-	config1, err1 := getClientConfig(cf, "Client1")
-	config2, err2 := getClientConfig(cf, "Client2")
+	config1, err1 := getClientConfig(ctx, cf, "Client1")
+	config2, err2 := getClientConfig(ctx, cf, "Client2")
 
 	// VERIFY
 	prefix1 := config1.GetTenantNamespacePrefix()

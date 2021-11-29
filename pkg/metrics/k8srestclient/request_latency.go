@@ -1,6 +1,7 @@
 package k8srestclient
 
 import (
+	"context"
 	"net/url"
 	"sync"
 	"time"
@@ -56,7 +57,7 @@ func (m *requestLatency) init() {
 	})
 }
 
-func (m *requestLatency) Observe(method string, u url.URL, latency time.Duration) {
+func (m *requestLatency) Observe(ctx context.Context, method string, u url.URL, latency time.Duration) {
 	labels := prometheus.Labels{
 		"scheme":   u.Scheme,
 		"hostname": u.Hostname(),

@@ -1,17 +1,19 @@
 package secrets
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 // SecretHelper copies secrets
 type SecretHelper interface {
-	CopySecrets(secretNames []string, filter SecretFilter, transformers ...SecretTransformer) ([]string, error)
-	CreateSecret(secret *v1.Secret) (*v1.Secret, error)
+	CopySecrets(ctx context.Context, secretNames []string, filter SecretFilter, transformers ...SecretTransformer) ([]string, error)
+	CreateSecret(ctx context.Context, secret *v1.Secret) (*v1.Secret, error)
 	IsNotFound(err error) bool
 }
 
@@ -23,7 +25,7 @@ type secretHelper struct {
 }
 
 type secretHelperTesting struct {
-	createSecretStub func(secret *v1.Secret) (*v1.Secret, error)
+	createSecretStub func(ctx context.Context, secret *v1.Secret) (*v1.Secret, error)
 }
 
 // NewSecretHelper creates a secret helper
@@ -41,10 +43,10 @@ func NewSecretHelper(provider SecretProvider, namespace string, client corev1.Se
 // returns a list of the secret names (after transformation) which were stored
 // In case of an error the copying is stopped. The result list contains the secrets already copied
 // before the error occured. There is no rollback done by this function.
-func (h *secretHelper) CopySecrets(secretNames []string, filter SecretFilter, transformers ...SecretTransformer) ([]string, error) {
+func (h *secretHelper) CopySecrets(ctx context.Context, secretNames []string, filter SecretFilter, transformers ...SecretTransformer) ([]string, error) {
 	var storedSecretNames []string
 	for _, secretName := range secretNames {
-		secret, err := h.provider.GetSecret(secretName)
+		secret, err := h.provider.GetSecret(ctx, secretName)
 		if err != nil {
 			return storedSecretNames, err
 		}
@@ -57,7 +59,7 @@ func (h *secretHelper) CopySecrets(secretNames []string, filter SecretFilter, tr
 		for _, transformer := range transformers {
 			transformer(secret)
 		}
-		storedSecret, err := h.CreateSecret(secret)
+		storedSecret, err := h.CreateSecret(ctx, secret)
 		if err != nil {
 			return storedSecretNames, err
 		}
@@ -97,9 +99,9 @@ func (h *secretHelper) IsNotFound(err error) bool {
 }
 
 // CreateSecret creates the given secret in the storage the underlying client is connected to.
-func (h *secretHelper) CreateSecret(secret *v1.Secret) (*v1.Secret, error) {
+func (h *secretHelper) CreateSecret(ctx context.Context, secret *v1.Secret) (*v1.Secret, error) {
 	if h.testing != nil && h.testing.createSecretStub != nil {
-		return h.testing.createSecretStub(secret)
+		return h.testing.createSecretStub(ctx, secret)
 	}
 	newSecret := &v1.Secret{Data: secret.Data, StringData: secret.StringData, Type: secret.Type}
 	newSecret.SetName(secret.GetName())
@@ -107,5 +109,5 @@ func (h *secretHelper) CreateSecret(secret *v1.Secret) (*v1.Secret, error) {
 	newSecret.SetNamespace(h.namespace)
 	newSecret.SetLabels(secret.GetLabels())
 	newSecret.SetAnnotations(secret.GetAnnotations())
-	return h.client.Create(newSecret)
+	return h.client.Create(ctx, newSecret, metav1.CreateOptions{})
 }

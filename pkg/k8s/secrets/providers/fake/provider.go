@@ -1,6 +1,8 @@
 package fake
 
 import (
+	"context"
+
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets/providers"
 	v1 "k8s.io/api/core/v1"
 )
@@ -20,7 +22,7 @@ func NewProvider(namespace string, secrets ...*v1.Secret) *SecretProviderImpl {
 }
 
 // GetSecret fulfills the SecretProvider interface.
-func (p *SecretProviderImpl) GetSecret(name string) (*v1.Secret, error) {
+func (p *SecretProviderImpl) GetSecret(ctx context.Context, name string) (*v1.Secret, error) {
 	for _, secret := range p.secrets {
 		if secret.GetName() == name {
 			if !secret.ObjectMeta.DeletionTimestamp.IsZero() {

@@ -1,6 +1,7 @@
 package fake
 
 import (
+	"context"
 	"strconv"
 	"testing"
 
@@ -85,6 +86,7 @@ func Test_GenerateNameReactor_PanicsIfActionIsNotACreateAction(t *testing.T) {
 
 func Test_CreationTimeReactor(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	namespace := &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "foo",
@@ -94,10 +96,12 @@ func Test_CreationTimeReactor(t *testing.T) {
 	cs := factory.KubernetesClientset()
 	cs.PrependReactor("create", "*", NewCreationTimestampReactor())
 	client := cs.CoreV1().Namespaces()
+
 	// EXERCISE
-	client.Create(namespace)
+	client.Create(ctx, namespace, metav1.CreateOptions{})
+
 	// VERIFY
-	ns, err := client.Get("foo", metav1.GetOptions{})
+	ns, err := client.Get(ctx, "foo", metav1.GetOptions{})
 	assert.NilError(t, err)
 	created := ns.GetCreationTimestamp()
 	assert.Assert(t, false == (&created).IsZero())
@@ -132,6 +136,7 @@ func Test_GenerateNameReactor_PanicsIfObjectHasNoMetadata(t *testing.T) {
 
 func Test_GenerateNameReactor_ExampleUsageOnFakeClientset(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	clientset := kubernetes.NewSimpleClientset()
 
 	// attach reactor to fake clientset
@@ -145,13 +150,13 @@ func Test_GenerateNameReactor_ExampleUsageOnFakeClientset(t *testing.T) {
 	client := clientset.CoreV1().Namespaces()
 
 	// EXERCISE
-	resultObj, resultErr := client.Create(origObj)
+	resultObj, resultErr := client.Create(ctx, origObj, metav1.CreateOptions{})
 
 	// VERIFY
 	assert.NilError(t, resultErr)
 	assert.Assert(t, is.Regexp(`^prefix1-[0-9a-z]{5}$`, resultObj.GetName()))
 
-	storedObj, err := client.Get(resultObj.GetName(), metav1.GetOptions{})
+	storedObj, err := client.Get(ctx, resultObj.GetName(), metav1.GetOptions{})
 	assert.NilError(t, err)
 
 	assert.DeepEqual(t, resultObj, storedObj)

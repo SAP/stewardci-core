@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -15,8 +16,8 @@ import (
 
 //NamespaceManager manages namespaces
 type NamespaceManager interface {
-	Create(name string, annotations map[string]string) (string, error)
-	Delete(name string) error
+	Create(ctx context.Context, name string, annotations map[string]string) (string, error)
+	Delete(ctx context.Context, name string) error
 }
 
 type namespaceManager struct {
@@ -42,7 +43,7 @@ const (
 //Create creates a new namespace.
 //    nameCustomPart	the namespace name will be <prefix>-<nameCustomPart>-<random>
 //    annotations       annotations to create on the namespace
-func (m *namespaceManager) Create(nameCustomPart string, annotations map[string]string) (string, error) {
+func (m *namespaceManager) Create(ctx context.Context, nameCustomPart string, annotations map[string]string) (string, error) {
 	name, err := m.generateName(nameCustomPart)
 	if err != nil {
 		klog.V(2).Infof("Namespace creation failed %s", err)
@@ -58,7 +59,7 @@ func (m *namespaceManager) Create(nameCustomPart string, annotations map[string]
 	}
 
 	namespace := &v1.Namespace{ObjectMeta: meta}
-	createdNamespace, err := m.nsInterface.Create(namespace)
+	createdNamespace, err := m.nsInterface.Create(ctx, namespace, metav1.CreateOptions{})
 	if err != nil {
 		klog.V(2).Infof("Namespace creation failed: %s", err)
 		return "", err
@@ -69,11 +70,11 @@ func (m *namespaceManager) Create(nameCustomPart string, annotations map[string]
 
 // Delete removes a namespace if existing
 // returns nil error if deletion was successful or namespace did not exist before
-func (m *namespaceManager) Delete(name string) error {
+func (m *namespaceManager) Delete(ctx context.Context, name string) error {
 	if !strings.HasPrefix(name, m.prefix) {
 		return errors.Errorf("refused to delete namespace '%s': name does not start with '%s'", name, m.prefix)
 	}
-	namespace, err := m.nsInterface.Get(name, metav1.GetOptions{})
+	namespace, err := m.nsInterface.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil
@@ -84,7 +85,7 @@ func (m *namespaceManager) Delete(name string) error {
 		return errors.Errorf("refused to delete namespace '%s': not a Steward namespace (label mismatch)", name)
 	}
 	uid := namespace.GetObjectMeta().GetUID()
-	err = m.nsInterface.Delete(name, &metav1.DeleteOptions{
+	err = m.nsInterface.Delete(ctx, name, metav1.DeleteOptions{
 		Preconditions: &metav1.Preconditions{UID: &uid},
 	})
 	if err != nil {

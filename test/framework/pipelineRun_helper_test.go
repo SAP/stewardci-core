@@ -53,12 +53,14 @@ func Test_ExecutePipelineRunTests(t *testing.T) {
 		},
 	}
 	ctx := setupTestContext()
+
 	//EXERCISE
 	executePipelineRunTests(ctx, t, test...)
+
 	//VERIFY
 	assert.NilError(t, ctx.Err())
 	pipelineRunInterface := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
-	pipelineRuns, err := pipelineRunInterface.List(metav1.ListOptions{})
+	pipelineRuns, err := pipelineRunInterface.List(ctx, metav1.ListOptions{})
 	assert.NilError(t, err)
 	assert.Equal(t, 15, len(pipelineRuns.Items))
 }
@@ -78,7 +80,7 @@ func Test_ExecutePipelineRunTestAndCleanupAfterwards(t *testing.T) {
 	//VERIFY
 	assert.NilError(t, ctx.Err())
 	pipelineRunInterface := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
-	pipelineRuns, err := pipelineRunInterface.List(metav1.ListOptions{})
+	pipelineRuns, err := pipelineRunInterface.List(ctx, metav1.ListOptions{})
 	assert.NilError(t, err)
 	assert.Equal(t, 0, len(pipelineRuns.Items))
 }
@@ -102,7 +104,7 @@ func Test_ExecutePipelineRunTestAndDoNotCleanupAfterwards(t *testing.T) {
 	//VERIFY
 	assert.NilError(t, ctx.Err())
 	pipelineRunInterface := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
-	pipelineRuns, err := pipelineRunInterface.List(metav1.ListOptions{})
+	pipelineRuns, err := pipelineRunInterface.List(ctx, metav1.ListOptions{})
 	assert.NilError(t, err)
 	assert.Equal(t, 2, len(pipelineRuns.Items))
 }
@@ -180,19 +182,19 @@ func Test_CreatePipelineRunTest(t *testing.T) {
 			} else {
 				assert.NilError(t, testRun.result)
 				secretInterface := GetClientFactory(ctx).CoreV1().Secrets(GetNamespace(ctx))
-				secretList, err := secretInterface.List(metav1.ListOptions{})
+				secretList, err := secretInterface.List(ctx, metav1.ListOptions{})
 				assert.NilError(t, err)
 
 				assert.Equal(t, len(test.expectedSecretsByName), len(secretList.Items))
 				for _, secretName := range test.expectedSecretsByName {
-					secret, err := secretInterface.Get(secretName, metav1.GetOptions{})
+					secret, err := secretInterface.Get(ctx, secretName, metav1.GetOptions{})
 					assert.NilError(t, err)
 					assert.Equal(t, secret.GetName(), secretName)
 				}
 				pipelineRunInterface := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
 				pipelineRunName := GetPipelineRun(testRun.ctx).GetName()
 
-				pipelineRun, err := pipelineRunInterface.Get(pipelineRunName, metav1.GetOptions{})
+				pipelineRun, err := pipelineRunInterface.Get(ctx, pipelineRunName, metav1.GetOptions{})
 				assert.NilError(t, err)
 				assert.Equal(t, pipelineRunName, pipelineRun.GetName())
 			}

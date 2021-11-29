@@ -15,7 +15,7 @@ type PipelineRunCheck func(*api.PipelineRun) (bool, error)
 func CreatePipelineRunCondition(pipelineRunToFind *api.PipelineRun, check PipelineRunCheck) WaitConditionFunc {
 	return func(ctx context.Context) (bool, error) {
 		fetcher := k8s.NewClientBasedPipelineRunFetcher(GetClientFactory(ctx).StewardV1alpha1())
-		pipelineRun, err := fetcher.ByName(pipelineRunToFind.GetNamespace(), pipelineRunToFind.GetName())
+		pipelineRun, err := fetcher.ByName(ctx, pipelineRunToFind.GetNamespace(), pipelineRunToFind.GetName())
 		if err != nil {
 			return true, err
 		}

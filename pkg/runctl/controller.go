@@ -5,6 +5,7 @@ based on sample-controller from https://github.com/kubernetes/sample-controller/
 package runctl
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -53,10 +54,10 @@ type Controller struct {
 }
 
 type controllerTesting struct {
-	runManagerStub             run.Manager
+	createRunManagerStub       run.Manager
 	newRunManagerStub          func(k8s.ClientFactory, secrets.SecretProvider) run.Manager
-	loadPipelineRunsConfigStub func() (*cfg.PipelineRunsConfigStruct, error)
-	isMaintenanceModeStub      func() (bool, error)
+	loadPipelineRunsConfigStub func(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error)
+	isMaintenanceModeStub      func(ctx context.Context) (bool, error)
 }
 
 // NewController creates new Controller
@@ -217,8 +218,8 @@ func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State, t
 }
 
 func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) run.Manager {
-	if c.testing != nil && c.testing.runManagerStub != nil {
-		return c.testing.runManagerStub
+	if c.testing != nil && c.testing.createRunManagerStub != nil {
+		return c.testing.createRunManagerStub
 	}
 	tenant := k8s.NewTenantNamespace(c.factory, pipelineRun.GetNamespace())
 	workFactory := tenant.TargetClientFactory()
@@ -233,26 +234,28 @@ func (c *Controller) newRunManager(workFactory k8s.ClientFactory, secretProvider
 	return newRunManager(workFactory, secretProvider)
 }
 
-func (c *Controller) loadPipelineRunsConfig() (*cfg.PipelineRunsConfigStruct, error) {
+func (c *Controller) loadPipelineRunsConfig(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error) {
 	if c.testing != nil && c.testing.loadPipelineRunsConfigStub != nil {
-		return c.testing.loadPipelineRunsConfigStub()
+		return c.testing.loadPipelineRunsConfigStub(ctx)
 	}
-	return cfg.LoadPipelineRunsConfig(c.factory)
+	return cfg.LoadPipelineRunsConfig(ctx, c.factory)
 }
 
-func (c *Controller) isMaintenanceMode() (bool, error) {
+func (c *Controller) isMaintenanceMode(ctx context.Context) (bool, error) {
 	if c.testing != nil && c.testing.isMaintenanceModeStub != nil {
-		return c.testing.isMaintenanceModeStub()
+		return c.testing.isMaintenanceModeStub(ctx)
 	}
-	return maintenancemode.IsMaintenanceMode(c.factory)
+	return maintenancemode.IsMaintenanceMode(ctx, c.factory)
 }
 
 // syncHandler compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Foo resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
+	ctx := context.Background()
+
 	// Initial checks on cached pipelineRun
-	pipelineRunAPIObj, err := c.pipelineRunFetcher.ByKey(key)
+	pipelineRunAPIObj, err := c.pipelineRunFetcher.ByKey(ctx, key)
 	if err != nil {
 		return err
 	}
@@ -266,7 +269,7 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	// Get real pipelineRun bypassing cache
-	pipelineRun, err := k8s.NewPipelineRun(pipelineRunAPIObj, c.factory)
+	pipelineRun, err := k8s.NewPipelineRun(ctx, pipelineRunAPIObj, c.factory)
 	if err != nil {
 		return err
 	}
@@ -278,24 +281,24 @@ func (c *Controller) syncHandler(key string) error {
 
 	// fast exit with finalizer cleanup
 	if pipelineRun.GetStatus().State == api.StateFinished {
-		return pipelineRun.DeleteFinalizerIfExists()
+		return pipelineRun.DeleteFinalizerIfExists(ctx)
 	}
 
 	// Check if object has deletion timestamp ...
 	if pipelineRun.HasDeletionTimestamp() {
 		runManager := c.createRunManager(pipelineRun)
-		err = runManager.Cleanup(pipelineRun)
+		err = runManager.Cleanup(ctx, pipelineRun)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
 			return err
 		}
-		return c.updateStateAndResult(pipelineRun, api.StateFinished, api.ResultDeleted, metav1.Now())
+		return c.updateStateAndResult(ctx, pipelineRun, api.StateFinished, api.ResultDeleted, metav1.Now())
 	}
 	// ... if not, try to add finalizer if missing
-	pipelineRun.AddFinalizer()
+	pipelineRun.AddFinalizer(ctx)
 
 	// Check if pipeline run is aborted
-	if err := c.handleAborted(pipelineRun); err != nil {
+	if err := c.handleAborted(ctx, pipelineRun); err != nil {
 		return err
 	}
 
@@ -317,7 +320,7 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	if pipelineRun.GetStatus().State == api.StateNew {
-		maintenanceMode, err := c.isMaintenanceMode()
+		maintenanceMode, err := c.isMaintenanceMode(ctx)
 		if err != nil {
 			return err
 		}
@@ -327,7 +330,7 @@ func (c *Controller) syncHandler(key string) error {
 			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
 			return err
 		}
-		if err = c.changeAndCommitStateAndMeter(pipelineRun, api.StatePreparing, metav1.Now()); err != nil {
+		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StatePreparing, metav1.Now()); err != nil {
 			return err
 		}
 		metrics.PipelineRunsStarted.Inc()
@@ -340,11 +343,11 @@ func (c *Controller) syncHandler(key string) error {
 	case api.StatePreparing:
 		// the configuration should be loaded once per sync to avoid inconsistencies
 		// in case of concurrent configuration changes
-		pipelineRunsConfig, err := c.loadPipelineRunsConfig()
+		pipelineRunsConfig, err := c.loadPipelineRunsConfig(ctx)
 		if err != nil {
-			return c.onGetRunError(pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
+			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
 		}
-		namespace, auxNamespace, err := runManager.Start(pipelineRun, pipelineRunsConfig)
+		namespace, auxNamespace, err := runManager.Start(ctx, pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			resultClass := serrors.GetClass(err)
@@ -352,7 +355,7 @@ func (c *Controller) syncHandler(key string) error {
 			if resultClass != api.ResultUndefined {
 				pipelineRun.UpdateMessage(err.Error())
 				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
-				return c.updateStateAndResult(pipelineRun, api.StateCleaning, resultClass, metav1.Now())
+				return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, resultClass, metav1.Now())
 			}
 			return err
 		}
@@ -360,80 +363,80 @@ func (c *Controller) syncHandler(key string) error {
 		pipelineRun.UpdateRunNamespace(namespace)
 		pipelineRun.UpdateAuxNamespace(auxNamespace)
 
-		if err = c.changeAndCommitStateAndMeter(pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
+		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
 			return err
 		}
 	case api.StateWaiting:
-		run, err := runManager.GetRun(pipelineRun)
+		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
-			return c.onGetRunError(pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "waiting failed")
+			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "waiting failed")
 		}
 		started := run.GetStartTime()
 		if started != nil {
-			if err := c.changeAndCommitStateAndMeter(pipelineRun, api.StateRunning, *started); err != nil {
+			if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateRunning, *started); err != nil {
 				return err
 			}
 		}
 	case api.StateRunning:
-		run, err := runManager.GetRun(pipelineRun)
+		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
-			return c.onGetRunError(pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "running failed")
+			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "running failed")
 		}
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
 		if finished, result := run.IsFinished(); finished {
 			pipelineRun.UpdateMessage(run.GetMessage())
-			return c.updateStateAndResult(pipelineRun, api.StateCleaning, result, *run.GetCompletionTime())
+			return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, *run.GetCompletionTime())
 		}
 		// commit container update
-		c.commitStatusAndMeter(pipelineRun)
+		c.commitStatusAndMeter(ctx, pipelineRun)
 
 	case api.StateCleaning:
-		err = runManager.Cleanup(pipelineRun)
+		err = runManager.Cleanup(ctx, pipelineRun)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
 		}
-		if err := c.changeAndCommitStateAndMeter(pipelineRun, api.StateFinished, metav1.Now()); err != nil {
+		if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateFinished, metav1.Now()); err != nil {
 			return err
 		}
-		return pipelineRun.DeleteFinalizerIfExists()
+		return pipelineRun.DeleteFinalizerIfExists(ctx)
 	default:
 		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
 	return nil
 }
 
-func (c *Controller) onGetRunError(pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun, err error, state api.State, result api.Result, message string) error {
+func (c *Controller) onGetRunError(ctx context.Context, pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun, err error, state api.State, result api.Result, message string) error {
 	c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
 	if serrors.IsRecoverable(err) {
 		return err
 	}
 	pipelineRun.StoreErrorAsMessage(err, message)
-	return c.updateStateAndResult(pipelineRun, state, result, metav1.Now())
+	return c.updateStateAndResult(ctx, pipelineRun, state, result, metav1.Now())
 }
 
-func (c *Controller) changeAndCommitStateAndMeter(pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
+func (c *Controller) changeAndCommitStateAndMeter(ctx context.Context, pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
 	if err := c.changeState(pipelineRun, state, ts); err != nil {
 		return err
 	}
-	return c.commitStatusAndMeter(pipelineRun)
+	return c.commitStatusAndMeter(ctx, pipelineRun)
 }
 
-func (c *Controller) updateStateAndResult(pipelineRun k8s.PipelineRun, state api.State, result api.Result, ts metav1.Time) error {
+func (c *Controller) updateStateAndResult(ctx context.Context, pipelineRun k8s.PipelineRun, state api.State, result api.Result, ts metav1.Time) error {
 	pipelineRun.UpdateResult(result, ts)
-	if err := c.changeAndCommitStateAndMeter(pipelineRun, state, ts); err != nil {
+	if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, state, ts); err != nil {
 		return err
 	}
 	metrics.PipelineRunsResult.Observe(pipelineRun.GetStatus().Result)
 	if state == api.StateFinished {
-		return pipelineRun.DeleteFinalizerIfExists()
+		return pipelineRun.DeleteFinalizerIfExists(ctx)
 	}
 	return nil
 }
 
-func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
+func (c *Controller) commitStatusAndMeter(ctx context.Context, pipelineRun k8s.PipelineRun) error {
 	start := time.Now()
-	finishedStates, err := pipelineRun.CommitStatus()
+	finishedStates, err := pipelineRun.CommitStatus(ctx)
 	if err != nil {
 		klog.V(6).Infof("commitStatus failed with error %s", err.Error())
 		return err
@@ -451,11 +454,11 @@ func (c *Controller) commitStatusAndMeter(pipelineRun k8s.PipelineRun) error {
 // handleAborted checks if pipeline run should be aborted.
 // If the user requested abortion it updates message, result and state
 // to trigger a cleanup.
-func (c *Controller) handleAborted(pipelineRun k8s.PipelineRun) error {
+func (c *Controller) handleAborted(ctx context.Context, pipelineRun k8s.PipelineRun) error {
 	intent := pipelineRun.GetSpec().Intent
 	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {
 		pipelineRun.UpdateMessage("Aborted")
-		return c.updateStateAndResult(pipelineRun, api.StateCleaning, api.ResultAborted, metav1.Now())
+		return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, api.ResultAborted, metav1.Now())
 	}
 	return nil
 }

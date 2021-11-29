@@ -1,6 +1,7 @@
 package cfg
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"testing"
@@ -25,6 +26,7 @@ func Test_loadPipelineRunsConfig_NoMainConfig(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		/* no main configmap defined here */
 		newNetworkPolicyConfigMap(map[string]string{
@@ -34,7 +36,7 @@ func Test_loadPipelineRunsConfig_NoMainConfig(t *testing.T) {
 	)
 
 	// EXERCISE
-	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
+	resultConfig, resultErr := LoadPipelineRunsConfig(ctx, cf)
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -51,6 +53,7 @@ func Test_loadPipelineRunsConfig_EmptyMainConfig(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		newMainConfigMap( /* no data here */ nil),
 		newNetworkPolicyConfigMap(map[string]string{
@@ -60,7 +63,7 @@ func Test_loadPipelineRunsConfig_EmptyMainConfig(t *testing.T) {
 	)
 
 	// EXERCISE
-	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
+	resultConfig, resultErr := LoadPipelineRunsConfig(ctx, cf)
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -77,12 +80,13 @@ func Test_loadPipelineRunsConfig_NoNetworkConfig(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		newMainConfigMap(nil),
 	)
 
 	// EXERCISE
-	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
+	resultConfig, resultErr := LoadPipelineRunsConfig(ctx, cf)
 
 	// VERIFY
 	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "knative-testing": is missing`)
@@ -93,12 +97,13 @@ func Test_loadPipelineRunsConfig_EmptyNetworkConfig(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		newNetworkPolicyConfigMap( /* no data here */ nil),
 	)
 
 	// EXERCISE
-	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
+	resultConfig, resultErr := LoadPipelineRunsConfig(ctx, cf)
 
 	// VERIFY
 	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "knative-testing": key "_default" is missing`)
@@ -109,6 +114,7 @@ func Test_loadPipelineRunsConfig_ErrorOnGetMainConfigMap(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -120,13 +126,13 @@ func Test_loadPipelineRunsConfig_ErrorOnGetMainConfigMap(t *testing.T) {
 		configMapIfce := corev1clientmocks.NewMockConfigMapInterface(mockCtrl)
 		coreV1Ifce.EXPECT().ConfigMaps(gomock.Any()).Return(configMapIfce).AnyTimes()
 		configMapIfce.EXPECT().
-			Get(mainConfigMapName, gomock.Any()).
+			Get(ctx, mainConfigMapName, gomock.Any()).
 			Return(nil, expectedError).
 			Times(1)
 	}
 
 	// EXERCISE
-	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
+	resultConfig, resultErr := LoadPipelineRunsConfig(ctx, cf)
 
 	// VERIFY
 	assert.Assert(t, serrors.IsRecoverable(resultErr))
@@ -138,6 +144,7 @@ func Test_loadPipelineRunsConfig_ErrorOnGetNetworkPoliciesConfigMap(t *testing.T
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -149,17 +156,17 @@ func Test_loadPipelineRunsConfig_ErrorOnGetNetworkPoliciesConfigMap(t *testing.T
 		configMapIfce := corev1clientmocks.NewMockConfigMapInterface(mockCtrl)
 		coreV1Ifce.EXPECT().ConfigMaps(gomock.Any()).Return(configMapIfce).AnyTimes()
 		configMapIfce.EXPECT().
-			Get(mainConfigMapName, gomock.Any()).
+			Get(ctx, mainConfigMapName, gomock.Any()).
 			Return(nil, nil).
 			Times(1)
 		configMapIfce.EXPECT().
-			Get(networkPoliciesConfigMapName, gomock.Any()).
+			Get(ctx, networkPoliciesConfigMapName, gomock.Any()).
 			Return(nil, expectedError).
 			Times(1)
 	}
 
 	// EXERCISE
-	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
+	resultConfig, resultErr := LoadPipelineRunsConfig(ctx, cf)
 
 	// VERIFY
 	assert.Assert(t, serrors.IsRecoverable(resultErr))
@@ -171,6 +178,7 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		newMainConfigMap(
 			map[string]string{
@@ -196,7 +204,7 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 	)
 
 	// EXERCISE
-	resultConfig, resultErr := LoadPipelineRunsConfig(cf)
+	resultConfig, resultErr := LoadPipelineRunsConfig(ctx, cf)
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -273,6 +281,7 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 			t.Parallel()
 
 			// SETUP
+			ctx := context.Background()
 			cf := fake.NewClientFactory(
 				newMainConfigMap(
 					map[string]string{tc.key: tc.val},
@@ -281,7 +290,7 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 			)
 
 			// EXERCISE
-			resultConfig, resultErr := LoadPipelineRunsConfig(cf)
+			resultConfig, resultErr := LoadPipelineRunsConfig(ctx, cf)
 
 			// VERIFY
 			assert.Assert(t, resultErr != nil)
