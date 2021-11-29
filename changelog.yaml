@@ -121,6 +121,14 @@
         exposed by Steward binaries.
       pullRequestNumber: 282
 
+    - type: internal
+      impact: patch
+      title: Own Go module for Helm chart tests
+      description: |-
+        The tests for the Helm chart should not belong to the main Go module,
+        because they are completely independent of it.
+      pullRequestNumber: 284
+
 - version: "0.14.4"
   date: 2021-11-17
   changes:

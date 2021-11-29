@@ -11,7 +11,6 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/mock v1.4.3
 	github.com/google/uuid v1.1.1
-	github.com/gruntwork-io/terratest v0.27.4
 	github.com/imdario/mergo v0.3.9 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/lithammer/dedent v1.1.0
