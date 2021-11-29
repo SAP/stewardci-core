@@ -52,6 +52,75 @@
   date: TBD
   changes:
 
+    - type: internal
+      impact: patch
+      title: Refactor metric support
+      description: |-
+        The metric support code needs refactoring.
+      pullRequestNumber: 282
+
+    - type: enhancement
+      impact: minor
+      title: Embed workqueue metrics
+      description: |-
+        Embed metrics provided by package `k8s.io/client-go/util/workqueue` into
+        Steward Core metrics.
+      upgradeNotes:
+        Metric `steward_queued_total` has been removed.
+        Change existing monitoring tools to use `steward_piperuns_workqueue_depth`
+        instead.
+      pullRequestNumber: 282
+
+    - type: enhancement
+      impact: minor
+      title: Embed client-go rest client metrics
+      description: |-
+        Embed metrics provided by package `k8s.io/client-go/util/rest` into
+        Steward Core metrics.
+      pullRequestNumber: 282
+
+    - type: enhancement
+      impact: minor
+      title: Use consistent metric names
+      description: |-
+        Steward Core metrics had inconsistent names.
+        New metrics with consistent names have been added, while old ones have
+        been deprecated.
+      deprecations: |-
+        -   Metric `steward_pipelinerun_ongoing_state_duration_periodic_observations_seconds` is deprecated.
+            Use `steward_pipelineruns_ongoing_state_duration_periodic_observations_seconds` instead.
+        -   Metric `steward_pipelinerun_state_duration_seconds` is deprecated.
+            Use `steward_pipelineruns_state_duration_seconds` instead.
+        -   Metric `steward_tenants_total` is deprecated.
+            Use `steward_tenants_count_total` instead.
+      pullRequestNumber: 282
+
+    - type: enhancement
+      impact: minor
+      title: Add metrics for retry loops
+      description: |-
+        For the analysis of performance issues it can be helpful to have metrics
+        for retry loops (number of retries, latency).
+      pullRequestNumber: 282
+
+    - type: enhancement
+      impact: patch
+      title: Deprecate metric `steward_pipelinerun_update_seconds`
+      description: |-
+        Besides the deprecation nothing has been changed.
+      deprecations: |-
+        -   Metric `steward_pipelinerun_update_seconds` is deprecated.
+            Use REST client metrics and retries metrics instead.
+      pullRequestNumber: 282
+
+    - type: documentation
+      impact: patch
+      title: Add metrics reference documentation
+      description: |-
+        A new page `docs/monitoring/Metrics Reference.md` describes all metrics
+        exposed by Steward binaries.
+      pullRequestNumber: 282
+
 - version: "0.14.4"
   date: 2021-11-17
   changes:

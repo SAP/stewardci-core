@@ -43,7 +43,7 @@ function read_args() {
         esac
         shift
     done
-    
+
     if [[ ! ( ${GENERATE_MOCKS-} || ${GENERATE_CLIENTS-} ) ]]; then
         GENERATE_MOCKS=1
         GENERATE_CLIENTS=1
@@ -287,6 +287,10 @@ if is_generate_mocks; then
         "github.com/SAP/stewardci-core/pkg/runctl/run" \
         "Run,Manager,SecretManager" \
         "pkg/runctl/run/mocks/mocks.go"
+    generate_mocks \
+        "github.com/SAP/stewardci-core/pkg/runctl/metrics" \
+        "CounterMetric,PipelineRunsMetric,StateItemsMetric,ResultsMetric" \
+        "pkg/runctl/metrics/testing/mocks.go"
 fi
 
 echo "${ACTION} successful"
