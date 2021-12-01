@@ -57,7 +57,7 @@
       description: |-
         The run-controller and the tenant-controller paniced at several places.
         With this fix the exit with return code 255 now.
-      pullRequestNumber: 0
+      pullRequestNumber: 285
 
     - type: internal
       impact: patch
