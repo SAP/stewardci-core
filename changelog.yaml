@@ -51,6 +51,13 @@
 - version: NEXT
   date: TBD
   changes:
+    - type: enhancement
+      impact: patch
+      title: Replace panic with exit in controllers.
+      description: |-
+        The run-controller and the tenant-controller paniced at several places.
+        With this fix the exit with return code 255 now.
+      pullRequestNumber: 0
 
     - type: internal
       impact: patch
