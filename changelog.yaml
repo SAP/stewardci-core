@@ -143,6 +143,17 @@
         Therefore, test your setup carefully.
       pullRequestNumber: 284
 
+    - type: internal
+      impact: minor
+      title: Increase Go language version to 1.16
+      description: |-
+        Steward now needs Go 1.16 to build.
+      upgradeNotes: |-
+        When using Steward as a Go dependency (which should not be the case
+        as Steward is not designed as a library), make sure it still can be
+        built in your context.
+      pullRequestNumber: 284
+
 - version: "0.14.4"
   date: 2021-11-17
   changes:
