@@ -11,6 +11,7 @@ import (
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativeapis "knative.dev/pkg/apis"
 )
 
@@ -35,16 +36,18 @@ func Test_CreateTenantCondition(t *testing.T) {
 			tenant := builder.TenantFixName("foo", "bar")
 			clientFactory := fake.NewClientFactory()
 			if test.found {
-				_, err := clientFactory.StewardV1alpha1().Tenants("bar").Create(tenant)
+				_, err := clientFactory.StewardV1alpha1().Tenants("bar").Create(ctx, tenant, metav1.CreateOptions{})
 				assert.NilError(t, err, "Setup error")
 			}
 			ctx = SetClientFactory(ctx, clientFactory)
 			check := func(*api.Tenant) bool {
 				return test.checkResult
 			}
+
 			// EXERCISE
 			condition := CreateTenantCondition(tenant, check)
 			result, err := condition(ctx)
+
 			// VERIFY
 			if test.error == "" {
 				assert.NilError(t, err)

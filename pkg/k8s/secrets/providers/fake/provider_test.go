@@ -1,6 +1,7 @@
 package fake
 
 import (
+	"context"
 	"testing"
 
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
@@ -13,6 +14,7 @@ import (
 
 func Test_provider_GetSecret_Existing(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	now := metav1.Now()
 	var grace int64 = 1
 	storedSecret := &v1.Secret{
@@ -26,7 +28,7 @@ func Test_provider_GetSecret_Existing(t *testing.T) {
 			Generation:                 1,
 			CreationTimestamp:          now,
 			DeletionGracePeriodSeconds: &grace,
-			OwnerReferences:            []metav1.OwnerReference{metav1.OwnerReference{}},
+			OwnerReferences:            []metav1.OwnerReference{{}},
 			Finalizers:                 []string{"dummy"},
 			ClusterName:                "dummy",
 			Labels: map[string]string{
@@ -42,7 +44,7 @@ func Test_provider_GetSecret_Existing(t *testing.T) {
 	examinee := initProvider("ns1", storedSecret.DeepCopy())
 
 	// EXERCISE
-	resultSecret, resultErr := examinee.GetSecret(storedSecret.GetName())
+	resultSecret, resultErr := examinee.GetSecret(ctx, storedSecret.GetName())
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -62,6 +64,7 @@ func Test_provider_GetSecret_Existing(t *testing.T) {
 
 func Test_provider_GetSecret_InDeletion(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	storedSecret := fake.SecretOpaque("foo", "ns1")
 	now := metav1.Now()
 	storedSecret.SetDeletionTimestamp(&now)
@@ -69,7 +72,7 @@ func Test_provider_GetSecret_InDeletion(t *testing.T) {
 	examinee := initProvider("ns1", storedSecret)
 
 	// EXERCISE
-	resultSecret, resultErr := examinee.GetSecret("foo")
+	resultSecret, resultErr := examinee.GetSecret(ctx, "foo")
 
 	// VERIFY
 	assert.Assert(t, resultErr == nil)
@@ -78,10 +81,11 @@ func Test_provider_GetSecret_InDeletion(t *testing.T) {
 
 func Test_provider_GetSecret_NotExisting(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	examinee := initProvider("ns1" /* no secret exists */)
 
 	// EXERCISE
-	resultSecret, resultErr := examinee.GetSecret("foo")
+	resultSecret, resultErr := examinee.GetSecret(ctx, "foo")
 
 	// VERIFY
 	assert.Assert(t, resultErr == nil)

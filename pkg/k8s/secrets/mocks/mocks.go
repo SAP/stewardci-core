@@ -28,6 +28,7 @@
 package mocks
 
 import (
+	context "context"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 	reflect "reflect"
@@ -57,10 +58,10 @@ func (m *MockSecretHelper) EXPECT() *MockSecretHelperMockRecorder {
 }
 
 // CopySecrets mocks base method
-func (m *MockSecretHelper) CopySecrets(arg0 []string, arg1 func(*v1.Secret) bool, arg2 ...func(*v1.Secret)) ([]string, error) {
+func (m *MockSecretHelper) CopySecrets(arg0 context.Context, arg1 []string, arg2 func(*v1.Secret) bool, arg3 ...func(*v1.Secret)) ([]string, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []interface{}{arg0, arg1, arg2}
+	for _, a := range arg3 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CopySecrets", varargs...)
@@ -70,25 +71,25 @@ func (m *MockSecretHelper) CopySecrets(arg0 []string, arg1 func(*v1.Secret) bool
 }
 
 // CopySecrets indicates an expected call of CopySecrets
-func (mr *MockSecretHelperMockRecorder) CopySecrets(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *MockSecretHelperMockRecorder) CopySecrets(arg0, arg1, arg2 interface{}, arg3 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopySecrets", reflect.TypeOf((*MockSecretHelper)(nil).CopySecrets), varargs...)
 }
 
 // CreateSecret mocks base method
-func (m *MockSecretHelper) CreateSecret(arg0 *v1.Secret) (*v1.Secret, error) {
+func (m *MockSecretHelper) CreateSecret(arg0 context.Context, arg1 *v1.Secret) (*v1.Secret, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateSecret", arg0)
+	ret := m.ctrl.Call(m, "CreateSecret", arg0, arg1)
 	ret0, _ := ret[0].(*v1.Secret)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateSecret indicates an expected call of CreateSecret
-func (mr *MockSecretHelperMockRecorder) CreateSecret(arg0 interface{}) *gomock.Call {
+func (mr *MockSecretHelperMockRecorder) CreateSecret(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecret", reflect.TypeOf((*MockSecretHelper)(nil).CreateSecret), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecret", reflect.TypeOf((*MockSecretHelper)(nil).CreateSecret), arg0, arg1)
 }
 
 // IsNotFound mocks base method
@@ -129,16 +130,16 @@ func (m *MockSecretProvider) EXPECT() *MockSecretProviderMockRecorder {
 }
 
 // GetSecret mocks base method
-func (m *MockSecretProvider) GetSecret(arg0 string) (*v1.Secret, error) {
+func (m *MockSecretProvider) GetSecret(arg0 context.Context, arg1 string) (*v1.Secret, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSecret", arg0)
+	ret := m.ctrl.Call(m, "GetSecret", arg0, arg1)
 	ret0, _ := ret[0].(*v1.Secret)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetSecret indicates an expected call of GetSecret
-func (mr *MockSecretProviderMockRecorder) GetSecret(arg0 interface{}) *gomock.Call {
+func (mr *MockSecretProviderMockRecorder) GetSecret(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockSecretProvider)(nil).GetSecret), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockSecretProvider)(nil).GetSecret), arg0, arg1)
 }

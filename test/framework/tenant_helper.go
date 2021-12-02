@@ -30,7 +30,7 @@ func TenantSuccessTest(ctx context.Context) TenantTest {
 
 // CreateTenant creates a Tenant resource on a client
 func CreateTenant(ctx context.Context, tenant *api.Tenant) (*api.Tenant, error) {
-	return getTenantInterface(ctx).Create(tenant)
+	return getTenantInterface(ctx).Create(ctx, tenant, metav1.CreateOptions{})
 }
 
 // CreateTenantFromJSON creates a Tenant resource on a client
@@ -51,7 +51,7 @@ func createTenantFromString(ctx context.Context, tenantString string, contentTyp
 		Resource("tenants").
 		Body([]byte(tenantString)).
 		SetHeader("Content-Type", contentType).
-		Do().
+		Do(ctx).
 		Into(result)
 	if err != nil {
 		result = nil
@@ -61,7 +61,7 @@ func createTenantFromString(ctx context.Context, tenantString string, contentTyp
 
 // GetTenant returns a Tenant resource from a client
 func GetTenant(ctx context.Context, tenant *api.Tenant) (*api.Tenant, error) {
-	return getTenantInterface(ctx).Get(tenant.GetName(), metav1.GetOptions{})
+	return getTenantInterface(ctx).Get(ctx, tenant.GetName(), metav1.GetOptions{})
 }
 
 // DeleteTenant deletes a Tenant resource from a client
@@ -71,7 +71,7 @@ func DeleteTenant(ctx context.Context, tenant *api.Tenant) error {
 	}
 	stewardClient := getTenantInterface(ctx)
 	uid := tenant.GetObjectMeta().GetUID()
-	return stewardClient.Delete(tenant.GetName(), &metav1.DeleteOptions{
+	return stewardClient.Delete(ctx, tenant.GetName(), metav1.DeleteOptions{
 		Preconditions: &metav1.Preconditions{UID: &uid},
 	})
 }

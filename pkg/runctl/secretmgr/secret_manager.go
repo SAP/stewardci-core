@@ -1,6 +1,8 @@
 package secretmgr
 
 import (
+	"context"
+
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/k8s"
@@ -23,18 +25,18 @@ func NewSecretManager(secretHelper secrets.SecretHelper) SecretManager {
 }
 
 // CopyAll copies the required secrets of a pipeline run to the respective run namespace.
-func (s SecretManager) CopyAll(pipelineRun k8s.PipelineRun) (string, []string, error) {
-	imagePullSecretNames, err := s.copyImagePullSecretsToRunNamespace(pipelineRun)
+func (s SecretManager) CopyAll(ctx context.Context, pipelineRun k8s.PipelineRun) (string, []string, error) {
+	imagePullSecretNames, err := s.copyImagePullSecretsToRunNamespace(ctx, pipelineRun)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to copy image pull secrets")
 	}
 
-	pipelineCloneSecretName, err := s.copyPipelineCloneSecretToRunNamespace(pipelineRun)
+	pipelineCloneSecretName, err := s.copyPipelineCloneSecretToRunNamespace(ctx, pipelineRun)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to copy pipeline clone secret")
 	}
 
-	_, err = s.copyPipelineSecretsToRunNamespace(pipelineRun)
+	_, err = s.copyPipelineSecretsToRunNamespace(ctx, pipelineRun)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "failed to copy pipeline secrets")
 	}
@@ -42,7 +44,7 @@ func (s SecretManager) CopyAll(pipelineRun k8s.PipelineRun) (string, []string, e
 	return pipelineCloneSecretName, imagePullSecretNames, nil
 }
 
-func (s SecretManager) copyImagePullSecretsToRunNamespace(pipelineRun k8s.PipelineRun) ([]string, error) {
+func (s SecretManager) copyImagePullSecretsToRunNamespace(ctx context.Context, pipelineRun k8s.PipelineRun) ([]string, error) {
 	secretNames := pipelineRun.GetSpec().ImagePullSecrets
 	transformers := []secrets.SecretTransformer{
 		secrets.StripAnnotationsTransformer("tekton.dev/"),
@@ -50,10 +52,10 @@ func (s SecretManager) copyImagePullSecretsToRunNamespace(pipelineRun k8s.Pipeli
 		secrets.StripLabelsTransformer("jenkins.io/"),
 		secrets.UniqueNameTransformer(),
 	}
-	return s.copySecrets(pipelineRun, secretNames, secrets.DockerOnly, transformers...)
+	return s.copySecrets(ctx, pipelineRun, secretNames, secrets.DockerOnly, transformers...)
 }
 
-func (s SecretManager) copyPipelineCloneSecretToRunNamespace(pipelineRun k8s.PipelineRun) (string, error) {
+func (s SecretManager) copyPipelineCloneSecretToRunNamespace(ctx context.Context, pipelineRun k8s.PipelineRun) (string, error) {
 	secretName := pipelineRun.GetSpec().JenkinsFile.RepoAuthSecret
 	if secretName == "" {
 		return "", nil
@@ -68,24 +70,24 @@ func (s SecretManager) copyPipelineCloneSecretToRunNamespace(pipelineRun k8s.Pip
 		secrets.UniqueNameTransformer(),
 		secrets.SetAnnotationTransformer("tekton.dev/git-0", repoServerURL),
 	}
-	names, err := s.copySecrets(pipelineRun, []string{secretName}, nil, transformers...)
+	names, err := s.copySecrets(ctx, pipelineRun, []string{secretName}, nil, transformers...)
 	if err != nil {
 		return "", err
 	}
 	return names[0], nil
 }
 
-func (s SecretManager) copyPipelineSecretsToRunNamespace(pipelineRun k8s.PipelineRun) ([]string, error) {
+func (s SecretManager) copyPipelineSecretsToRunNamespace(ctx context.Context, pipelineRun k8s.PipelineRun) ([]string, error) {
 	secretNames := pipelineRun.GetSpec().Secrets
 	transformers := []secrets.SecretTransformer{
 		secrets.StripAnnotationsTransformer("tekton.dev/"),
 		secrets.RenameByAnnotationTransformer(v1alpha1.AnnotationSecretRename),
 	}
-	return s.copySecrets(pipelineRun, secretNames, nil, transformers...)
+	return s.copySecrets(ctx, pipelineRun, secretNames, nil, transformers...)
 }
 
-func (s SecretManager) copySecrets(pipelineRun k8s.PipelineRun, secretNames []string, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
-	storedSecretNames, err := s.secretHelper.CopySecrets(secretNames, filter, transformers...)
+func (s SecretManager) copySecrets(ctx context.Context, pipelineRun k8s.PipelineRun, secretNames []string, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
+	storedSecretNames, err := s.secretHelper.CopySecrets(ctx, secretNames, filter, transformers...)
 	if err != nil {
 		klog.Errorf("Cannot copy secrets %s for [%s]. Error: %s", secretNames, pipelineRun.String(), err)
 		if s.secretHelper.IsNotFound(err) || k8serrors.IsInvalid(err) || k8serrors.IsAlreadyExists(err) {

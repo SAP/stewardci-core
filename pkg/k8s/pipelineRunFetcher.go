@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -22,14 +23,14 @@ type PipelineRunFetcher interface {
 type PipelineRunByKeyFetcher interface {
 	// ByKey fetches PipelineRun resource from Kubernetes
 	// Return nil,nil if pipeline with key does not exist
-	ByKey(key string) (*api.PipelineRun, error)
+	ByKey(ctx context.Context, key string) (*api.PipelineRun, error)
 }
 
 // PipelineRunByNameFetcher provides a function to fetch PipelineRuns by their name
 type PipelineRunByNameFetcher interface {
 	// ByName fetches PipelineRun resource from Kubernetes by name and namespace
 	// Return nil,nil if specified pipeline does not exist
-	ByName(namespace, name string) (*api.PipelineRun, error)
+	ByName(ctx context.Context, namespace, name string) (*api.PipelineRun, error)
 }
 
 type listerBasedPipelineRunFetcher struct {
@@ -48,15 +49,15 @@ func NewListerBasedPipelineRunFetcher(lister stewardLister.PipelineRunLister) Pi
 }
 
 // ByName implements interface PipelineRunByNameFetcher
-func (f *listerBasedPipelineRunFetcher) ByName(namespace, name string) (*api.PipelineRun, error) {
+func (f *listerBasedPipelineRunFetcher) ByName(ctx context.Context, namespace, name string) (*api.PipelineRun, error) {
 	lister := f.lister.PipelineRuns(namespace)
 	run, err := lister.Get(name)
 	return returnNilOnNotFound(run, err, fmt.Sprintf("Failed to fetch PipelineRun '%s' in namespace '%s'", name, namespace))
 }
 
 // ByKey implements interface PipelineRunByKeyFetcher
-func (f *listerBasedPipelineRunFetcher) ByKey(key string) (*api.PipelineRun, error) {
-	return byKey(f, key)
+func (f *listerBasedPipelineRunFetcher) ByKey(ctx context.Context, key string) (*api.PipelineRun, error) {
+	return byKey(ctx, f, key)
 }
 
 type clientBasedPipelineRunFetcher struct {
@@ -70,23 +71,23 @@ func NewClientBasedPipelineRunFetcher(client stewardv1alpha1.StewardV1alpha1Inte
 }
 
 // ByName implements interface PipelineRunByNameFetcher
-func (rf *clientBasedPipelineRunFetcher) ByName(namespace string, name string) (*api.PipelineRun, error) {
+func (rf *clientBasedPipelineRunFetcher) ByName(ctx context.Context, namespace string, name string) (*api.PipelineRun, error) {
 	client := rf.client.PipelineRuns(namespace)
-	run, err := client.Get(name, metav1.GetOptions{})
+	run, err := client.Get(ctx, name, metav1.GetOptions{})
 	return returnNilOnNotFound(run, err, fmt.Sprintf("Failed to fetch PipelineRun '%s' in namespace '%s'", name, namespace))
 }
 
 // ByKey implements interface PipelineRunByKeyFetcher
-func (rf *clientBasedPipelineRunFetcher) ByKey(key string) (*api.PipelineRun, error) {
-	return byKey(rf, key)
+func (rf *clientBasedPipelineRunFetcher) ByKey(ctx context.Context, key string) (*api.PipelineRun, error) {
+	return byKey(ctx, rf, key)
 }
 
-func byKey(rf PipelineRunByNameFetcher, key string) (*api.PipelineRun, error) {
+func byKey(ctx context.Context, rf PipelineRunByNameFetcher, key string) (*api.PipelineRun, error) {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return nil, err
 	}
-	return rf.ByName(namespace, name)
+	return rf.ByName(ctx, namespace, name)
 }
 
 func returnNilOnNotFound(run *api.PipelineRun, err error, message string) (*api.PipelineRun, error) {

@@ -7,5 +7,5 @@ You need to have _Helm 3_ installed.
 ### Run tests
 
 ```bash
-go test -count=1 -tags=helm
+go test -count=1
 ```

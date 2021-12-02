@@ -1,6 +1,7 @@
 package secretmgr
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 
 type testHelper struct {
 	t                                *testing.T
+	ctx                              context.Context
 	pipelineSecretTransormerMatcher  gomock.Matcher
 	imagePullSecretFilterMatcher     gomock.Matcher
 	imagePullSecretTransormerMatcher gomock.Matcher
@@ -24,6 +26,7 @@ type testHelper struct {
 func newTestHelper(t *testing.T) *testHelper {
 	return &testHelper{
 		t:                                t,
+		ctx:                              context.Background(),
 		pipelineSecretTransormerMatcher:  gomock.Len(2),
 		imagePullSecretFilterMatcher:     gomock.Any(),
 		imagePullSecretTransormerMatcher: gomock.Len(4),
@@ -56,7 +59,6 @@ func mockPipelineRunWithSpec(th *testHelper) (*gomock.Controller, SecretManager,
 	mockPipelineRun.EXPECT().GetSpec().Return(th.spec).AnyTimes()
 	mockPipelineRun.EXPECT().String().AnyTimes() //logging
 	return mockCtrl, examinee, mockPipelineRun, mockSecretHelper
-
 }
 
 func Test_copyImagePullSecretsToRunNamespace(t *testing.T) {
@@ -69,13 +71,15 @@ func Test_copyImagePullSecretsToRunNamespace(t *testing.T) {
 
 	// EXPECT
 	mockSecretHelper.EXPECT().
-		CopySecrets([]string{"imagePullSecret1", "imagePullSecret2"},
+		CopySecrets(
+			th.ctx,
+			[]string{"imagePullSecret1", "imagePullSecret2"},
 			th.imagePullSecretFilterMatcher,
 			th.imagePullSecretTransormerMatcher).
 		Return([]string{"imagePullSecret1", "imagePullSecret2"}, nil)
 
 	// EXERCISE
-	names, err := examinee.copyImagePullSecretsToRunNamespace(mockPipelineRun)
+	names, err := examinee.copyImagePullSecretsToRunNamespace(th.ctx, mockPipelineRun)
 
 	// VERIFY
 	assert.NilError(t, err)
@@ -93,11 +97,11 @@ func Test_copyPipelineCloneSecretToRunNamespace_Success(t *testing.T) {
 	// VERIFY
 	mockPipelineRun.EXPECT().GetPipelineRepoServerURL().Return("server", nil).AnyTimes()
 	mockSecretHelper.EXPECT().
-		CopySecrets([]string{"scm_secret1"}, nil, th.cloneSecretTransormerMatcher).
+		CopySecrets(th.ctx, []string{"scm_secret1"}, nil, th.cloneSecretTransormerMatcher).
 		Return([]string{"scm_secret1"}, nil)
 
 	// EXERCISE
-	examinee.copyPipelineCloneSecretToRunNamespace(mockPipelineRun)
+	examinee.copyPipelineCloneSecretToRunNamespace(th.ctx, mockPipelineRun)
 }
 
 func Test_copyPipelineCloneSecretToRunNamespace_FailsWithContentErrorOnGetPipelineRepoServerURLError(t *testing.T) {
@@ -112,7 +116,7 @@ func Test_copyPipelineCloneSecretToRunNamespace_FailsWithContentErrorOnGetPipeli
 	mockPipelineRun.EXPECT().GetPipelineRepoServerURL().Return("", fmt.Errorf("err1")).AnyTimes()
 
 	// EXERCISE
-	_, err := examinee.copyPipelineCloneSecretToRunNamespace(mockPipelineRun)
+	_, err := examinee.copyPipelineCloneSecretToRunNamespace(th.ctx, mockPipelineRun)
 	assert.Assert(t, err != nil)
 	assert.Equal(t, "err1", err.Error())
 	assert.Equal(t, stewardv1alpha1.ResultErrorContent, serrors.GetClass(err))
@@ -128,11 +132,11 @@ func Test_copyPipelineSecretsToRunNamespace(t *testing.T) {
 
 	// VERIFY
 	mockSecretHelper.EXPECT().
-		CopySecrets([]string{"secret1", "secret2"}, nil, th.pipelineSecretTransormerMatcher).
+		CopySecrets(th.ctx, []string{"secret1", "secret2"}, nil, th.pipelineSecretTransormerMatcher).
 		Return([]string{"secret1", "secret2"}, nil)
 
 	// EXERCISE
-	examinee.copyPipelineSecretsToRunNamespace(mockPipelineRun)
+	examinee.copyPipelineSecretsToRunNamespace(th.ctx, mockPipelineRun)
 
 }
 
@@ -147,12 +151,12 @@ func Test_copySecrets_FailsWithContentErrorOnNotFound(t *testing.T) {
 	expectedError := fmt.Errorf("err1")
 	// EXPECT
 	mockSecretHelper.EXPECT().
-		CopySecrets([]string{"foo"}, nil, nil).Return(nil, expectedError)
+		CopySecrets(th.ctx, []string{"foo"}, nil, nil).Return(nil, expectedError)
 	mockSecretHelper.EXPECT().
 		IsNotFound(expectedError).Return(true)
 
 	// EXERCISE
-	_, err := examinee.copySecrets(mockPipelineRun, []string{"foo"}, nil, nil)
+	_, err := examinee.copySecrets(th.ctx, mockPipelineRun, []string{"foo"}, nil, nil)
 
 	// VERIFY
 	assert.Assert(t, err != nil)
@@ -171,12 +175,12 @@ func Test_copySecrets_FailsWithInfraErrorOnOtherError(t *testing.T) {
 	expectedError := fmt.Errorf("err1")
 	// EXPECT
 	mockSecretHelper.EXPECT().
-		CopySecrets([]string{"foo"}, nil, nil).Return(nil, expectedError)
+		CopySecrets(th.ctx, []string{"foo"}, nil, nil).Return(nil, expectedError)
 	mockSecretHelper.EXPECT().
 		IsNotFound(expectedError).Return(false)
 
 	// EXERCISE
-	_, err := examinee.copySecrets(mockPipelineRun, []string{"foo"}, nil, nil)
+	_, err := examinee.copySecrets(th.ctx, mockPipelineRun, []string{"foo"}, nil, nil)
 
 	// VERIFY
 	assert.Assert(t, err != nil)

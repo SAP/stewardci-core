@@ -43,7 +43,7 @@ func Test_CreatePipelineRunCondition(t *testing.T) {
 			pipelineRun := pipelineRun("foo", "bar")
 			clientFactory := fake.NewClientFactory()
 			if test.found {
-				_, err := clientFactory.StewardV1alpha1().PipelineRuns("bar").Create(pipelineRun)
+				_, err := clientFactory.StewardV1alpha1().PipelineRuns("bar").Create(ctx, pipelineRun, metav1.CreateOptions{})
 				assert.NilError(t, err, "Setup error")
 			}
 			ctx = SetClientFactory(ctx, clientFactory)

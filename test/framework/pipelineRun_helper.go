@@ -131,14 +131,14 @@ func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
 	Namespace := PipelineRun.GetNamespace()
 	secretInterface := factory.CoreV1().Secrets(Namespace)
 	for _, secret := range pipelineTest.Secrets {
-		_, err := secretInterface.Create(secret)
+		_, err := secretInterface.Create(ctx, secret, metav1.CreateOptions{})
 		if err != nil {
 			run.result = fmt.Errorf("secret creation failed: %q", err.Error())
 			return run
 		}
 	}
 	stewardClient := factory.StewardV1alpha1().PipelineRuns(Namespace)
-	pr, err := stewardClient.Create(PipelineRun)
+	pr, err := stewardClient.Create(ctx, PipelineRun, metav1.CreateOptions{})
 	if err != nil {
 		run.result = fmt.Errorf("pipeline run creation failed: %q", err.Error())
 		return run
@@ -167,7 +167,7 @@ func createPipelineRunFromString(ctx context.Context, pipelineRunString string, 
 		Resource("pipelineruns").
 		Body([]byte(pipelineRunString)).
 		SetHeader("Content-Type", contentType).
-		Do().
+		Do(ctx).
 		Into(result)
 	if err != nil {
 		result = nil
@@ -182,7 +182,7 @@ func DeletePipelineRun(ctx context.Context, pipelineRun *api.PipelineRun) error 
 	}
 	stewardClient := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetTenantNamespace(ctx))
 	uid := pipelineRun.GetObjectMeta().GetUID()
-	return stewardClient.Delete(pipelineRun.GetName(), &metav1.DeleteOptions{
+	return stewardClient.Delete(ctx, pipelineRun.GetName(), metav1.DeleteOptions{
 		Preconditions: &metav1.Preconditions{UID: &uid},
 	})
 }

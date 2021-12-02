@@ -1,6 +1,7 @@
 package tenantctl
 
 import (
+	"context"
 	"math"
 	"strconv"
 
@@ -28,7 +29,7 @@ type clientConfigImpl struct {
 }
 
 // getClientConfig returns the configurartion of the Steward client.
-func getClientConfig(factory k8s.ClientFactory, clientNamespace string) (clientConfig, error) {
+func getClientConfig(ctx context.Context, factory k8s.ClientFactory, clientNamespace string) (clientConfig, error) {
 	if clientNamespace == "" {
 		panic("must provide a client namespace")
 	}
@@ -37,7 +38,7 @@ func getClientConfig(factory k8s.ClientFactory, clientNamespace string) (clientC
 		tenantNamespaceSuffixLength: -1,
 	}
 
-	namespace, err := factory.CoreV1().Namespaces().Get(clientNamespace, metav1.GetOptions{})
+	namespace, err := factory.CoreV1().Namespaces().Get(ctx, clientNamespace, metav1.GetOptions{})
 	if err != nil {
 		return nil, errors.WithMessagef(err, "could not get namespace '%s'", clientNamespace)
 	}
