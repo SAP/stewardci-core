@@ -53,9 +53,9 @@
   changes:
     - type: enhancement
       impact: patch
-      title: Don't panic but exit gracefully.
+      title: Don't panic but exit gracefully
       description: |-
-        Instead of panic (which prints stack dumps), just exit with error message.
+        Instead of panicking (which prints stack dumps), just exit with error message.
       pullRequestNumber: 285
 
     - type: internal
