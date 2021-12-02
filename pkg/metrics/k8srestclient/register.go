@@ -6,8 +6,9 @@ func init() {
 	// TODO map more metrics
 	k8sclientmetrics.Register(
 		k8sclientmetrics.RegisterOpts{
-			RequestLatency: requestLatencyInstance,
-			RequestResult:  requestResultsInstance,
+			RateLimiterLatency: rateLimitLatencyInstance,
+			RequestLatency:     requestLatencyInstance,
+			RequestResult:      requestResultsInstance,
 		},
 	)
 }
