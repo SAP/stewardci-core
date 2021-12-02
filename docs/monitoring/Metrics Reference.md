@@ -7,6 +7,7 @@
       - [`steward_retries_latency_seconds`](#steward_retries_latency_seconds)
   - [Kubernetes API Calls](#kubernetes-api-calls)
     - [REST Client](#rest-client)
+      - [`steward_k8sclient_rest_ratelimit_latency_millis`](#steward_k8sclient_rest_ratelimit_latency_millis)
       - [`steward_k8sclient_rest_request_latency_millis`](#steward_k8sclient_rest_request_latency_millis)
       - [`steward_k8sclient_rest_request_results`](#steward_k8sclient_rest_request_results)
   - [Steward Pipeline Run Controller](#steward-pipeline-run-controller)
@@ -76,18 +77,51 @@ Labels:
 Steward uses the Go module `k8s.io/client-go` to call Kubernetes APIs calls.
 This library contains a generic REST client, that provides some metrics.
 
+#### `steward_k8sclient_rest_ratelimit_latency_millis`
+
+A histogram vector of client-side late limit latency partitioned by URL scheme, hostname, port, URL path and HTTP method.
+
+Type: Histogram Vector
+
+Labels:
+
+| Name | Description |
+|---|---|
+| `scheme` | The URL scheme. |
+| `hostname` | The destination hostname. |
+| `port` | The destination port number. |
+| `path` | The URL path. |
+| `method` | The HTTP method. |
+
 #### `steward_k8sclient_rest_request_latency_millis`
 
 A histogram vector of request latency partitioned by URL scheme, hostname, port, URL path and HTTP method.
 
 Type: Histogram Vector
 
+Labels:
+
+| Name | Description |
+|---|---|
+| `scheme` | The URL scheme. |
+| `hostname` | The destination hostname. |
+| `port` | The destination port number. |
+| `path` | The URL path. |
+| `method` | The HTTP method. |
 
 #### `steward_k8sclient_rest_request_results`
 
 The number of finished requests partitioned by host, HTTP method and status code.
 
 Type: Counter Vector
+
+Labels:
+
+| Name | Description |
+|---|---|
+| `host` | The destination hostname. |
+| `method` | The HTTP method. |
+| `status` | The HTTP status code. |
 
 
 ## Steward Pipeline Run Controller

@@ -12,22 +12,22 @@ import (
 )
 
 var (
-	_ k8sclientmetrics.LatencyMetric = (*requestLatency)(nil)
+	_ k8sclientmetrics.LatencyMetric = (*rateLimitLatency)(nil)
 
-	requestLatencyInstance *requestLatency = &requestLatency{}
+	rateLimitLatencyInstance *rateLimitLatency = &rateLimitLatency{}
 )
 
 func init() {
-	requestLatencyInstance.init()
+	rateLimitLatencyInstance.init()
 }
 
-// requestLatency is the adapter for the `RequestLatency` metric of client-go.
-type requestLatency struct {
+// rateLimitLatency is the adapter for the `RequestLatency` metric of client-go.
+type rateLimitLatency struct {
 	metric       *prometheus.HistogramVec
 	initOnlyOnce sync.Once
 }
 
-func (m *requestLatency) init() {
+func (m *rateLimitLatency) init() {
 	m.initOnlyOnce.Do(func() {
 
 		buckets := func() []float64 {
@@ -41,8 +41,8 @@ func (m *requestLatency) init() {
 		m.metric = prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Subsystem: subsystem,
-				Name:      "request_latency_millis",
-				Help:      "A histogram vector of request latency partitioned by URL scheme, hostname, port, URL path and HTTP method.",
+				Name:      "ratelimit_latency_millis",
+				Help:      "A histogram vector of client-side late limit latency partitioned by URL scheme, hostname, port, URL path and HTTP method.",
 				Buckets:   buckets(),
 			},
 			[]string{
@@ -57,7 +57,7 @@ func (m *requestLatency) init() {
 	})
 }
 
-func (m *requestLatency) Observe(ctx context.Context, method string, u url.URL, latency time.Duration) {
+func (m *rateLimitLatency) Observe(ctx context.Context, method string, u url.URL, latency time.Duration) {
 	labels := prometheus.Labels{
 		"scheme":   u.Scheme,
 		"hostname": u.Hostname(),
