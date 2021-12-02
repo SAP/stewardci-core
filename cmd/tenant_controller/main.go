@@ -48,13 +48,13 @@ func main() {
 		klog.Infof("In cluster")
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			klog.Fatalf("Hint: You can use parameter '-kubeconfig' for local testing. See --help. %s", err.Error())
+			klog.Exitf("Hint: You can use parameter '-kubeconfig' for local testing. See --help. %s", err.Error())
 		}
 	} else {
 		klog.Infof("Outside cluster")
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
-			klog.Fatalf("%s", err.Error())
+			klog.Exitln(err.Error())
 		}
 	}
 
@@ -79,11 +79,6 @@ func main() {
 	factory.StewardInformerFactory().Start(stopCh)
 
 	klog.V(2).Infof("Run controller (threadiness=%d)", threadiness)
-	defer func() {
-		if r := recover(); r != nil {
-			klog.Fatalf("Error running controller: %q", r)
-		}
-	}()
 	if err = controller.Run(threadiness, stopCh); err != nil {
 		klog.Fatalf("Error running controller: %s", err.Error())
 	}

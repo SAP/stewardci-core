@@ -51,15 +51,13 @@ func main() {
 		klog.Infof("In cluster")
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			klog.Errorf("failed to load kubeconfig: %s; Hint: You can use parameter '-kubeconfig' for local testing", err.Error())
-			os.Exit(1)
+			klog.Exitf("failed to load kubeconfig: %s; Hint: You can use parameter '-kubeconfig' for local testing", err.Error())
 		}
 	} else {
 		klog.Infof("Outside cluster")
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
-			klog.Error(err.Error())
-			os.Exit(1)
+			klog.Exitln(err.Error())
 		}
 	}
 
@@ -85,11 +83,6 @@ func main() {
 	factory.TektonInformerFactory().Start(stopCh)
 
 	klog.V(2).Infof("Run controller (threadiness=%d)", threadiness)
-	defer func() {
-		if r := recover(); r != nil {
-			klog.Fatalf("%s", r)
-		}
-	}()
 	if err = controller.Run(threadiness, stopCh); err != nil {
 		klog.Fatalf("Error running controller: %s", err.Error())
 	}
