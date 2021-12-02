@@ -51,14 +51,13 @@ func main() {
 		klog.Infof("In cluster")
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			klog.Infof("Hint: You can use parameter '-kubeconfig' for local testing. See --help")
-			panic(err.Error())
+			klog.Exitf("failed to load kubeconfig: %s; Hint: You can use parameter '-kubeconfig' for local testing", err.Error())
 		}
 	} else {
 		klog.Infof("Outside cluster")
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
-			panic(err.Error())
+			klog.Exitln(err.Error())
 		}
 	}
 
