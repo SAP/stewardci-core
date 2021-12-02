@@ -53,10 +53,9 @@
   changes:
     - type: enhancement
       impact: patch
-      title: Replace panic with exit in controllers.
+      title: Don't panic but exit gracefully.
       description: |-
-        The run-controller and the tenant-controller paniced at several places.
-        With this fix the exit with return code 255 now.
+        Instead of panic (which prints stack dumps), just exit with error message.
       pullRequestNumber: 285
 
     - type: internal
