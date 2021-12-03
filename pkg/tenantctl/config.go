@@ -2,6 +2,7 @@ package tenantctl
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"strconv"
 
@@ -31,7 +32,7 @@ type clientConfigImpl struct {
 // getClientConfig returns the configurartion of the Steward client.
 func getClientConfig(ctx context.Context, factory k8s.ClientFactory, clientNamespace string) (clientConfig, error) {
 	if clientNamespace == "" {
-		panic("must provide a client namespace")
+		return nil, fmt.Errorf("invalid client namespace name: '%s'", clientNamespace)
 	}
 
 	newConfig := clientConfigImpl{
