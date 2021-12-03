@@ -50,9 +50,10 @@ func Test_serviceAccountHelper_GetServiceAccountSecretName_works(t *testing.T) {
 	examinee := account.GetHelper()
 
 	// EXERCISE
-	result := examinee.GetServiceAccountSecretName(ctx)
+	result, resultErr := examinee.GetServiceAccountSecretName(ctx)
 
 	// VERIFY
+	assert.NilError(t, resultErr)
 	assert.Equal(t, secretName, result)
 }
 
@@ -114,9 +115,10 @@ func Test_serviceAccountHelper_GetServiceAccountSecretNameRepeat_delayedRef_work
 	}()
 
 	// EXERCISE
-	result := examinee.GetServiceAccountSecretNameRepeat(ctx)
+	result, resultErr := examinee.GetServiceAccountSecretNameRepeat(ctx)
 
 	// VERIFY
+	assert.NilError(t, resultErr)
 	assert.Equal(t, secretName, result)
 
 	waitGroup.Wait()
@@ -175,9 +177,10 @@ func Test_serviceAccountHelper_GetServiceAccountSecretNameRepeat_delayedSecret_w
 	}()
 
 	// EXERCISE
-	result := examinee.GetServiceAccountSecretNameRepeat(ctx)
+	result, resultErr := examinee.GetServiceAccountSecretNameRepeat(ctx)
 
 	// VERIFY
+	assert.NilError(t, resultErr)
 	assert.Equal(t, secretName, result)
 
 	waitGroup.Wait()
@@ -222,10 +225,11 @@ func Test_serviceAccountHelper_GetServiceAccountSecretName_wrongType(t *testing.
 	examinee := account.GetHelper()
 
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName(ctx)
+	result, resultErr := examinee.GetServiceAccountSecretName(ctx)
 
 	// VERIFY
-	assert.Equal(t, "", resultName)
+	assert.NilError(t, resultErr)
+	assert.Equal(t, "", result)
 }
 
 func Test_serviceAccountHelper_GetServiceAccountSecretName_refMissing(t *testing.T) {
@@ -266,10 +270,11 @@ func Test_serviceAccountHelper_GetServiceAccountSecretName_refMissing(t *testing
 	examinee := account.GetHelper()
 
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName(ctx)
+	result, resultErr := examinee.GetServiceAccountSecretName(ctx)
 
 	// VERIFY
-	assert.Equal(t, "", resultName)
+	assert.NilError(t, resultErr)
+	assert.Equal(t, "", result)
 }
 
 func Test_serviceAccountHelper_GetServiceAccountSecretName_secretMissing(t *testing.T) {
@@ -304,8 +309,9 @@ func Test_serviceAccountHelper_GetServiceAccountSecretName_secretMissing(t *test
 	examinee := account.GetHelper()
 
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName(ctx)
+	result, resultErr := examinee.GetServiceAccountSecretName(ctx)
 
 	// VERIFY
-	assert.Equal(t, "", resultName)
+	assert.NilError(t, resultErr)
+	assert.Equal(t, "", result)
 }

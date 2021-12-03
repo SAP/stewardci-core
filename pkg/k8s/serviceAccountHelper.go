@@ -6,6 +6,7 @@ import (
 
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	v1 "k8s.io/api/core/v1"
+	errorsk8s "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klog "k8s.io/klog/v2"
 )
@@ -38,7 +39,7 @@ func (h *serviceAccountHelper) Reload(ctx context.Context) error {
 // GetServiceAccountSecretNameRepeat retrieves the name of the service account
 // token secret.
 // If no token is available, it retries until there is one.
-func (h *serviceAccountHelper) GetServiceAccountSecretNameRepeat(ctx context.Context) string {
+func (h *serviceAccountHelper) GetServiceAccountSecretNameRepeat(ctx context.Context) (string, error) {
 	retryInterval := 100 * time.Millisecond
 	retryCount := uint64(0)
 
@@ -59,27 +60,37 @@ func (h *serviceAccountHelper) GetServiceAccountSecretNameRepeat(ctx context.Con
 	}(time.Now())
 
 	for {
-		result := h.GetServiceAccountSecretName(ctx)
+		result, err := h.GetServiceAccountSecretName(ctx)
+		if err != nil {
+			return "", err
+		}
 		if result != "" {
-			return result
+			return result, nil
 		}
 		retryCount++
 		time.Sleep(retryInterval)
-		h.Reload(ctx)
+		err = h.Reload(ctx)
+		if err != nil {
+			return "", err
+		}
 	}
 }
 
 // GetServiceAccountSecretName retrieves the name of the service account
 // token secret.
-func (h *serviceAccountHelper) GetServiceAccountSecretName(ctx context.Context) string {
+func (h *serviceAccountHelper) GetServiceAccountSecretName(ctx context.Context) (string, error) {
+	client := h.factory.CoreV1().Secrets(h.cache.GetNamespace())
 	for _, secretRef := range h.cache.Secrets {
-		client := h.factory.CoreV1().Secrets(h.cache.GetNamespace())
 		secret, err := client.Get(ctx, secretRef.Name, metav1.GetOptions{})
-		if err == nil &&
-			secret != nil &&
-			secret.Type == v1.SecretTypeServiceAccountToken {
-			return secret.Name
+		if err != nil {
+			if errorsk8s.IsNotFound(err) {
+				continue
+			}
+			return "", err
+		}
+		if secret.Type == v1.SecretTypeServiceAccountToken {
+			return secret.Name, nil
 		}
 	}
-	return ""
+	return "", nil
 }
