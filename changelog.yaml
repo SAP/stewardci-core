@@ -170,6 +170,15 @@
         errors that can occur when performing K8s API calls.
       pullRequestNumber: 287
 
+    - type: bug
+      impact: patch
+      title: Fix improper error handling
+      description: |-
+        The run controller did not put back a pipeline run into its work queue
+        for later retry if it was in state `running` but updating the resource
+        status failed.
+      pullRequestNumber: 288
+
 - version: "0.14.4"
   date: 2021-11-17
   changes:

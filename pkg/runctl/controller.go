@@ -389,7 +389,10 @@ func (c *Controller) syncHandler(key string) error {
 			return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, *run.GetCompletionTime())
 		}
 		// commit container update
-		c.commitStatusAndMeter(ctx, pipelineRun)
+		err = c.commitStatusAndMeter(ctx, pipelineRun)
+		if err != nil {
+			return err
+		}
 
 	case api.StateCleaning:
 		err = runManager.Cleanup(ctx, pipelineRun)
