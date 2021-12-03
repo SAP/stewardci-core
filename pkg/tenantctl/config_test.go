@@ -104,7 +104,7 @@ func Test_getClientConfig_NamespaceParameterIsZeroLengthString(t *testing.T) {
 	result, resultErr := getClientConfig(ctx, cf, emptyNameString)
 
 	// VERIFY
-	assert.ErrorContains(t, resultErr, "invalid client namespace name: ''")
+	assert.ErrorContains(t, resultErr, "client namespace must not be empty")
 	assert.Assert(t, result == nil)
 }
 
