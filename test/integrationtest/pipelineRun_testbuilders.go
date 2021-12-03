@@ -15,7 +15,7 @@ var AllTestBuilders = []f.PipelineRunTestBuilder{
 	PipelineRunSleep,
 	PipelineRunFail,
 	PipelineRunOK,
-	// PipelineRunK8SPlugin,
+	PipelineRunK8SPlugin,
 	PipelineRunWithSecret,
 	PipelineRunWithSecretRename,
 	PipelineRunWithSecretInvalidRename,
