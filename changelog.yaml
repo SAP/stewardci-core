@@ -52,6 +52,14 @@
   date: TBD
   changes:
 
+    - type: bug
+      impact: patch
+      title: "Fix: Integration tests are failing because of changed revision"
+      description: |-
+        The revision of the pipelines used in the integration tests changed.
+        It is adjusted with this pull request.
+      pullRequestNumber: 290
+
 - version: "0.14.3"
   date: 2021-10-29
   changes:
