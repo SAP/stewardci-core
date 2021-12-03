@@ -213,8 +213,8 @@ func (a *ServiceAccountWrap) GetServiceAccount() *v1.ServiceAccount {
 
 // ServiceAccountHelper implements functions to get service account secret
 type ServiceAccountHelper interface {
-	GetServiceAccountSecretNameRepeat(ctx context.Context) string
-	GetServiceAccountSecretName(ctx context.Context) string
+	GetServiceAccountSecretNameRepeat(ctx context.Context) (string, error)
+	GetServiceAccountSecretName(ctx context.Context) (string, error)
 }
 
 // GetHelper returns a ServiceAccountHelper

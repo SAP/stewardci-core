@@ -45,7 +45,7 @@ func newRunManagerTestingWithAllNoopStubs() *runManagerTesting {
 	return &runManagerTesting{
 		cleanupStub:                               func(context.Context, *runContext) error { return nil },
 		copySecretsToRunNamespaceStub:             func(context.Context, *runContext) (string, []string, error) { return "", []string{}, nil },
-		getServiceAccountSecretNameStub:           func(context.Context, *runContext) string { return "" },
+		getServiceAccountSecretNameStub:           func(context.Context, *runContext) (string, error) { return "", nil },
 		setupLimitRangeFromConfigStub:             func(context.Context, *runContext) error { return nil },
 		setupNetworkPolicyFromConfigStub:          func(context.Context, *runContext) error { return nil },
 		setupNetworkPolicyThatIsolatesAllPodsStub: func(context.Context, *runContext) error { return nil },
@@ -59,7 +59,7 @@ func newRunManagerTestingWithAllNoopStubs() *runManagerTesting {
 
 func newRunManagerTestingWithRequiredStubs() *runManagerTesting {
 	return &runManagerTesting{
-		getServiceAccountSecretNameStub: func(context.Context, *runContext) string { return "" },
+		getServiceAccountSecretNameStub: func(context.Context, *runContext) (string, error) { return "", nil },
 	}
 }
 
@@ -1234,8 +1234,8 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 		factory: cf,
 		testing: newRunManagerTestingWithAllNoopStubs(),
 	}
-	examinee.testing.getServiceAccountSecretNameStub = func(_ context.Context, ctx *runContext) string {
-		return serviceAccountSecretName
+	examinee.testing.getServiceAccountSecretNameStub = func(_ context.Context, ctx *runContext) (string, error) {
+		return serviceAccountSecretName, nil
 	}
 
 	// EXERCISE

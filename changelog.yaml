@@ -160,6 +160,16 @@
         built in your context.
       pullRequestNumber: 284
 
+    - type: bug
+      impact: patch
+      title: Fix improper error handling
+      description: |-
+        In `pkg.k8s` the functions
+        `(*serviceAccountHelper) GetServiceAccountSecretName` and
+        `(*serviceAccountHelper) GetServiceAccountSecretNameRepeat` swallow
+        errors that can occur when performing K8s API calls.
+      pullRequestNumber: 287
+
 - version: "0.14.4"
   date: 2021-11-17
   changes:
