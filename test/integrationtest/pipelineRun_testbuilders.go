@@ -25,17 +25,20 @@ var AllTestBuilders = []f.PipelineRunTestBuilder{
 	PipelineRunWrongJenkinsfileRepoWithUser,
 }
 
-const pipelineRepoURL = "https://github.com/SAP-samples/stewardci-example-pipelines"
+const (
+	pipelineRepoURL = "https://github.com/SAP-samples/stewardci-example-pipelines"
+	pipelineRepoRevision = "main"
+)
 
 // PipelineRunAbort is a PipelineRunTestBuilder to build a PipelineRunTest with aborted pipeline
 func PipelineRunAbort(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
-		PipelineRun: builder.PipelineRun("sleep-", Namespace,
+		PipelineRun: builder.PipelineRun("abort-", Namespace,
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
 				builder.Abort(),
 				builder.JenkinsFileSpec(pipelineRepoURL,
-					"sleep/Jenkinsfile"),
+					"sleep/Jenkinsfile", pipelineRepoRevision),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultAborted),
 		Timeout: 15 * time.Second,
@@ -50,7 +53,7 @@ func PipelineRunSleep(Namespace string, runID *api.CustomJSON) f.PipelineRunTest
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
-					"sleep/Jenkinsfile"),
+					"sleep/Jenkinsfile", pipelineRepoRevision),
 				builder.ArgSpec("SLEEP_FOR_SECONDS", "1"),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultSuccess),
@@ -65,7 +68,7 @@ func PipelineRunFail(Namespace string, runID *api.CustomJSON) f.PipelineRunTest 
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
-					"error/Jenkinsfile"),
+					"error/Jenkinsfile", pipelineRepoRevision),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
 		Timeout: 600 * time.Second,
@@ -79,7 +82,7 @@ func PipelineRunOK(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
-					"success/Jenkinsfile"),
+					"success/Jenkinsfile", pipelineRepoRevision),
 
 				builder.RunDetails("myJobName1", "myCause1", 17),
 			)),
@@ -95,7 +98,7 @@ func PipelineRunK8SPlugin(Namespace string, runID *api.CustomJSON) f.PipelineRun
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
-					"k8sPlugin/Jenkinsfile"),
+					"k8sPlugin/Jenkinsfile", pipelineRepoRevision),
 
 				builder.RunDetails("myK8SJob1", "myCause1", 18),
 			)),
@@ -111,7 +114,7 @@ func PipelineRunWithSecret(Namespace string, runID *api.CustomJSON) f.PipelineRu
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
-					"secret/Jenkinsfile"),
+					"secret/Jenkinsfile", pipelineRepoRevision),
 				builder.ArgSpec("SECRETID", "with-secret-foo"),
 				builder.ArgSpec("EXPECTEDUSER", "bar"),
 				builder.ArgSpec("EXPECTEDPWD", "baz"),
@@ -126,11 +129,11 @@ func PipelineRunWithSecret(Namespace string, runID *api.CustomJSON) f.PipelineRu
 // PipelineRunWithSecretRename is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets with rename annotation
 func PipelineRunWithSecretRename(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
-		PipelineRun: builder.PipelineRun("with-secret-", Namespace,
+		PipelineRun: builder.PipelineRun("with-secret-rename-", Namespace,
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
-					"secret/Jenkinsfile"),
+					"secret/Jenkinsfile", pipelineRepoRevision),
 				builder.ArgSpec("SECRETID", "renamed-secret-new-name"),
 				builder.ArgSpec("EXPECTEDUSER", "bar"),
 				builder.ArgSpec("EXPECTEDPWD", "baz"),
@@ -146,11 +149,11 @@ func PipelineRunWithSecretRename(Namespace string, runID *api.CustomJSON) f.Pipe
 // PipelineRunWithSecretInvalidRename is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets with an invalid rename annotation
 func PipelineRunWithSecretInvalidRename(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
-		PipelineRun: builder.PipelineRun("with-secret-", Namespace,
+		PipelineRun: builder.PipelineRun("with-secret-invalid-rename-", Namespace,
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
-					"secret/Jenkinsfile"),
+					"secret/Jenkinsfile", pipelineRepoRevision),
 				builder.ArgSpec("SECRETID", "InvalidName"),
 				builder.ArgSpec("EXPECTEDUSER", "bar"),
 				builder.ArgSpec("EXPECTEDPWD", "baz"),
@@ -166,11 +169,11 @@ func PipelineRunWithSecretInvalidRename(Namespace string, runID *api.CustomJSON)
 // PipelineRunWithSecretRenameDuplicate is a PipelineRunTestBuilder to build PipelineRunTest which uses Secrets with an invalid rename annotation
 func PipelineRunWithSecretRenameDuplicate(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
-		PipelineRun: builder.PipelineRun("with-secret-", Namespace,
+		PipelineRun: builder.PipelineRun("with-secret-duplicate-", Namespace,
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
-					"secret/Jenkinsfile"),
+					"secret/Jenkinsfile",pipelineRepoRevision),
 				builder.ArgSpec("SECRETID", "duplicate"),
 				builder.ArgSpec("EXPECTEDUSER", "bar"),
 				builder.ArgSpec("EXPECTEDPWD", "baz"),
@@ -194,7 +197,7 @@ func PipelineRunMissingSecret(Namespace string, runID *api.CustomJSON) f.Pipelin
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
-					"secret/Jenkinsfile"),
+					"secret/Jenkinsfile", pipelineRepoRevision),
 				builder.ArgSpec("SECRETID", "foo"),
 				builder.ArgSpec("EXPECTEDUSER", "bar"),
 				builder.ArgSpec("EXPECTEDPWD", "baz"),
@@ -212,7 +215,7 @@ func PipelineRunWrongJenkinsfileRepo(Namespace string, runID *api.CustomJSON) f.
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec("https://github.com/SAP/steward-foo",
-					"Jenkinsfile"),
+					"Jenkinsfile", pipelineRepoRevision),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
 		Timeout: 300 * time.Second,
@@ -226,7 +229,7 @@ func PipelineRunWrongJenkinsfileRepoWithUser(Namespace string, runID *api.Custom
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec("https://github.com/SAP/steward-foo",
-					"Jenkinsfile",
+					"Jenkinsfile", pipelineRepoRevision,
 					builder.RepoAuthSecret("repo-auth"),
 				),
 			)),
@@ -243,7 +246,7 @@ func PipelineRunWrongJenkinsfilePath(Namespace string, runID *api.CustomJSON) f.
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
 				builder.JenkinsFileSpec(pipelineRepoURL,
-					"not_existing_path/Jenkinsfile"),
+					"not_existing_path/Jenkinsfile", pipelineRepoRevision),
 			)),
 		Check: f.PipelineRunMessageOnFinished(`Command ['/app/bin/jenkinsfile-runner' '-w' '/app/jenkins' '-p' '/usr/share/jenkins/ref/plugins' '--runHome' '/jenkins_home' '--no-sandbox' '--build-number' '1' '-f' 'not_existing_path/Jenkinsfile'] failed with exit code 255
 Error output:

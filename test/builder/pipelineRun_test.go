@@ -12,17 +12,16 @@ import (
 func Test_PipelineRunBuilder_Jenkinsfile(t *testing.T) {
 	pipelineRun := PipelineRun("prefix1", "namespace1",
 		PipelineRunSpec(
-			JenkinsFileSpec("https://foo.bar", "path1")))
+			JenkinsFileSpec("https://foo.bar", "path1", "revision1")))
 	assert.Equal(t, "https://foo.bar", pipelineRun.Spec.JenkinsFile.URL)
-	assert.Equal(t, "master", pipelineRun.Spec.JenkinsFile.Revision)
+	assert.Equal(t, "revision1", pipelineRun.Spec.JenkinsFile.Revision)
 	assert.Equal(t, "path1", pipelineRun.Spec.JenkinsFile.Path)
 }
 
 func Test_PipelineRunBuilder_JenkinsfileWithOps(t *testing.T) {
 	pipelineRun := PipelineRun("prefix1", "namespace1",
 		PipelineRunSpec(
-			JenkinsFileSpec("https://foo.bar", "path1",
-				Revision("revision1"),
+			JenkinsFileSpec("https://foo.bar", "path1", "revision1",
 				RepoAuthSecret("secret1"),
 			),
 		),
