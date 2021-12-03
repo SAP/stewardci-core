@@ -32,7 +32,7 @@ type clientConfigImpl struct {
 // getClientConfig returns the configurartion of the Steward client.
 func getClientConfig(ctx context.Context, factory k8s.ClientFactory, clientNamespace string) (clientConfig, error) {
 	if clientNamespace == "" {
-		return nil, fmt.Errorf("invalid client namespace name: '%s'", clientNamespace)
+		return nil, errors.New("client namespace must not be empty")
 	}
 
 	newConfig := clientConfigImpl{
