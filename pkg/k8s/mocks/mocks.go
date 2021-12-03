@@ -28,6 +28,7 @@
 package mocks
 
 import (
+	context "context"
 	v1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	v1alpha10 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	externalversions "github.com/SAP/stewardci-core/pkg/client/informers/externalversions"
@@ -202,32 +203,32 @@ func (m *MockNamespaceManager) EXPECT() *MockNamespaceManagerMockRecorder {
 }
 
 // Create mocks base method
-func (m *MockNamespaceManager) Create(arg0 string, arg1 map[string]string) (string, error) {
+func (m *MockNamespaceManager) Create(arg0 context.Context, arg1 string, arg2 map[string]string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0, arg1)
+	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create
-func (mr *MockNamespaceManagerMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockNamespaceManagerMockRecorder) Create(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNamespaceManager)(nil).Create), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockNamespaceManager)(nil).Create), arg0, arg1, arg2)
 }
 
 // Delete mocks base method
-func (m *MockNamespaceManager) Delete(arg0 string) error {
+func (m *MockNamespaceManager) Delete(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0)
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete
-func (mr *MockNamespaceManagerMockRecorder) Delete(arg0 interface{}) *gomock.Call {
+func (mr *MockNamespaceManagerMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNamespaceManager)(nil).Delete), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockNamespaceManager)(nil).Delete), arg0, arg1)
 }
 
 // MockPipelineRun is a mock of PipelineRun interface
@@ -254,46 +255,46 @@ func (m *MockPipelineRun) EXPECT() *MockPipelineRunMockRecorder {
 }
 
 // AddFinalizer mocks base method
-func (m *MockPipelineRun) AddFinalizer() error {
+func (m *MockPipelineRun) AddFinalizer(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddFinalizer")
+	ret := m.ctrl.Call(m, "AddFinalizer", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddFinalizer indicates an expected call of AddFinalizer
-func (mr *MockPipelineRunMockRecorder) AddFinalizer() *gomock.Call {
+func (mr *MockPipelineRunMockRecorder) AddFinalizer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddFinalizer", reflect.TypeOf((*MockPipelineRun)(nil).AddFinalizer))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddFinalizer", reflect.TypeOf((*MockPipelineRun)(nil).AddFinalizer), arg0)
 }
 
 // CommitStatus mocks base method
-func (m *MockPipelineRun) CommitStatus() ([]*v1alpha1.StateItem, error) {
+func (m *MockPipelineRun) CommitStatus(arg0 context.Context) ([]*v1alpha1.StateItem, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CommitStatus")
+	ret := m.ctrl.Call(m, "CommitStatus", arg0)
 	ret0, _ := ret[0].([]*v1alpha1.StateItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CommitStatus indicates an expected call of CommitStatus
-func (mr *MockPipelineRunMockRecorder) CommitStatus() *gomock.Call {
+func (mr *MockPipelineRunMockRecorder) CommitStatus(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitStatus", reflect.TypeOf((*MockPipelineRun)(nil).CommitStatus))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CommitStatus", reflect.TypeOf((*MockPipelineRun)(nil).CommitStatus), arg0)
 }
 
 // DeleteFinalizerIfExists mocks base method
-func (m *MockPipelineRun) DeleteFinalizerIfExists() error {
+func (m *MockPipelineRun) DeleteFinalizerIfExists(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteFinalizerIfExists")
+	ret := m.ctrl.Call(m, "DeleteFinalizerIfExists", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteFinalizerIfExists indicates an expected call of DeleteFinalizerIfExists
-func (mr *MockPipelineRunMockRecorder) DeleteFinalizerIfExists() *gomock.Call {
+func (mr *MockPipelineRunMockRecorder) DeleteFinalizerIfExists(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFinalizerIfExists", reflect.TypeOf((*MockPipelineRun)(nil).DeleteFinalizerIfExists))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFinalizerIfExists", reflect.TypeOf((*MockPipelineRun)(nil).DeleteFinalizerIfExists), arg0)
 }
 
 // GetAPIObject mocks base method
@@ -577,33 +578,33 @@ func (m *MockPipelineRunFetcher) EXPECT() *MockPipelineRunFetcherMockRecorder {
 }
 
 // ByKey mocks base method
-func (m *MockPipelineRunFetcher) ByKey(arg0 string) (*v1alpha1.PipelineRun, error) {
+func (m *MockPipelineRunFetcher) ByKey(arg0 context.Context, arg1 string) (*v1alpha1.PipelineRun, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ByKey", arg0)
+	ret := m.ctrl.Call(m, "ByKey", arg0, arg1)
 	ret0, _ := ret[0].(*v1alpha1.PipelineRun)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ByKey indicates an expected call of ByKey
-func (mr *MockPipelineRunFetcherMockRecorder) ByKey(arg0 interface{}) *gomock.Call {
+func (mr *MockPipelineRunFetcherMockRecorder) ByKey(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ByKey", reflect.TypeOf((*MockPipelineRunFetcher)(nil).ByKey), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ByKey", reflect.TypeOf((*MockPipelineRunFetcher)(nil).ByKey), arg0, arg1)
 }
 
 // ByName mocks base method
-func (m *MockPipelineRunFetcher) ByName(arg0, arg1 string) (*v1alpha1.PipelineRun, error) {
+func (m *MockPipelineRunFetcher) ByName(arg0 context.Context, arg1, arg2 string) (*v1alpha1.PipelineRun, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ByName", arg0, arg1)
+	ret := m.ctrl.Call(m, "ByName", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1alpha1.PipelineRun)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ByName indicates an expected call of ByName
-func (mr *MockPipelineRunFetcherMockRecorder) ByName(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockPipelineRunFetcherMockRecorder) ByName(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ByName", reflect.TypeOf((*MockPipelineRunFetcher)(nil).ByName), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ByName", reflect.TypeOf((*MockPipelineRunFetcher)(nil).ByName), arg0, arg1, arg2)
 }
 
 // MockTenantFetcher is a mock of TenantFetcher interface
@@ -630,16 +631,16 @@ func (m *MockTenantFetcher) EXPECT() *MockTenantFetcherMockRecorder {
 }
 
 // ByKey mocks base method
-func (m *MockTenantFetcher) ByKey(arg0 string) (*v1alpha1.Tenant, error) {
+func (m *MockTenantFetcher) ByKey(arg0 context.Context, arg1 string) (*v1alpha1.Tenant, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ByKey", arg0)
+	ret := m.ctrl.Call(m, "ByKey", arg0, arg1)
 	ret0, _ := ret[0].(*v1alpha1.Tenant)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ByKey indicates an expected call of ByKey
-func (mr *MockTenantFetcherMockRecorder) ByKey(arg0 interface{}) *gomock.Call {
+func (mr *MockTenantFetcherMockRecorder) ByKey(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ByKey", reflect.TypeOf((*MockTenantFetcher)(nil).ByKey), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ByKey", reflect.TypeOf((*MockTenantFetcher)(nil).ByKey), arg0, arg1)
 }

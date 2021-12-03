@@ -25,6 +25,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -45,7 +47,7 @@ var tenantsResource = schema.GroupVersionResource{Group: "steward.sap.com", Vers
 var tenantsKind = schema.GroupVersionKind{Group: "steward.sap.com", Version: "v1alpha1", Kind: "Tenant"}
 
 // Get takes name of the tenant, and returns the corresponding tenant object, and an error if there is any.
-func (c *FakeTenants) Get(name string, options v1.GetOptions) (result *v1alpha1.Tenant, err error) {
+func (c *FakeTenants) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Tenant, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(tenantsResource, c.ns, name), &v1alpha1.Tenant{})
 
@@ -56,7 +58,7 @@ func (c *FakeTenants) Get(name string, options v1.GetOptions) (result *v1alpha1.
 }
 
 // List takes label and field selectors, and returns the list of Tenants that match those selectors.
-func (c *FakeTenants) List(opts v1.ListOptions) (result *v1alpha1.TenantList, err error) {
+func (c *FakeTenants) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.TenantList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(tenantsResource, tenantsKind, c.ns, opts), &v1alpha1.TenantList{})
 
@@ -78,14 +80,14 @@ func (c *FakeTenants) List(opts v1.ListOptions) (result *v1alpha1.TenantList, er
 }
 
 // Watch returns a watch.Interface that watches the requested tenants.
-func (c *FakeTenants) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeTenants) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(tenantsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a tenant and creates it.  Returns the server's representation of the tenant, and an error, if there is any.
-func (c *FakeTenants) Create(tenant *v1alpha1.Tenant) (result *v1alpha1.Tenant, err error) {
+func (c *FakeTenants) Create(ctx context.Context, tenant *v1alpha1.Tenant, opts v1.CreateOptions) (result *v1alpha1.Tenant, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(tenantsResource, c.ns, tenant), &v1alpha1.Tenant{})
 
@@ -96,7 +98,7 @@ func (c *FakeTenants) Create(tenant *v1alpha1.Tenant) (result *v1alpha1.Tenant, 
 }
 
 // Update takes the representation of a tenant and updates it. Returns the server's representation of the tenant, and an error, if there is any.
-func (c *FakeTenants) Update(tenant *v1alpha1.Tenant) (result *v1alpha1.Tenant, err error) {
+func (c *FakeTenants) Update(ctx context.Context, tenant *v1alpha1.Tenant, opts v1.UpdateOptions) (result *v1alpha1.Tenant, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(tenantsResource, c.ns, tenant), &v1alpha1.Tenant{})
 
@@ -108,7 +110,7 @@ func (c *FakeTenants) Update(tenant *v1alpha1.Tenant) (result *v1alpha1.Tenant, 
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeTenants) UpdateStatus(tenant *v1alpha1.Tenant) (*v1alpha1.Tenant, error) {
+func (c *FakeTenants) UpdateStatus(ctx context.Context, tenant *v1alpha1.Tenant, opts v1.UpdateOptions) (*v1alpha1.Tenant, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(tenantsResource, "status", c.ns, tenant), &v1alpha1.Tenant{})
 
@@ -119,7 +121,7 @@ func (c *FakeTenants) UpdateStatus(tenant *v1alpha1.Tenant) (*v1alpha1.Tenant, e
 }
 
 // Delete takes name of the tenant and deletes it. Returns an error if one occurs.
-func (c *FakeTenants) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeTenants) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(tenantsResource, c.ns, name), &v1alpha1.Tenant{})
 
@@ -127,15 +129,15 @@ func (c *FakeTenants) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeTenants) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(tenantsResource, c.ns, listOptions)
+func (c *FakeTenants) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(tenantsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.TenantList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched tenant.
-func (c *FakeTenants) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Tenant, err error) {
+func (c *FakeTenants) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Tenant, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(tenantsResource, c.ns, name, pt, data, subresources...), &v1alpha1.Tenant{})
 

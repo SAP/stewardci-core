@@ -1,12 +1,14 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
+	"github.com/SAP/stewardci-core/pkg/metrics"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -30,9 +32,9 @@ type PipelineRun interface {
 	GetNamespace() string
 	GetPipelineRepoServerURL() (string, error)
 	HasDeletionTimestamp() bool
-	AddFinalizer() error
-	CommitStatus() ([]*api.StateItem, error)
-	DeleteFinalizerIfExists() error
+	AddFinalizer(ctx context.Context) error
+	CommitStatus(ctx context.Context) ([]*api.StateItem, error)
+	DeleteFinalizerIfExists(ctx context.Context) error
 	InitState() error
 	UpdateState(api.State, metav1.Time) error
 	UpdateResult(api.Result, metav1.Time)
@@ -62,7 +64,7 @@ type commitRecorderFunc func() *api.StateItem
 // If you call with factory nil you can only use the Get* functions
 // If you use functions changing the pipeline run without factroy set you will get an error.
 // The provided PipelineRun object is never modified and copied as late as possible.
-func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun, error) {
+func NewPipelineRun(ctx context.Context, apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun, error) {
 	if factory == nil {
 		return &pipelineRun{
 			apiObj: apiObj,
@@ -70,7 +72,7 @@ func NewPipelineRun(apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun
 		}, nil
 	}
 	client := factory.StewardV1alpha1().PipelineRuns(apiObj.GetNamespace())
-	obj, err := client.Get(apiObj.GetName(), metav1.GetOptions{})
+	obj, err := client.Get(ctx, apiObj.GetName(), metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, nil
@@ -284,25 +286,25 @@ func (r *pipelineRun) HasDeletionTimestamp() bool {
 }
 
 // AddFinalizer adds a finalizer to pipeline run
-func (r *pipelineRun) AddFinalizer() error {
+func (r *pipelineRun) AddFinalizer(ctx context.Context) error {
 	changed, finalizerList := utils.AddStringIfMissing(r.apiObj.ObjectMeta.Finalizers, FinalizerName)
 	if changed {
-		err := r.updateFinalizers(finalizerList)
+		err := r.updateFinalizers(ctx, finalizerList)
 		return err
 	}
 	return nil
 }
 
 // DeleteFinalizerIfExists deletes a finalizer from pipeline run
-func (r *pipelineRun) DeleteFinalizerIfExists() error {
+func (r *pipelineRun) DeleteFinalizerIfExists(ctx context.Context) error {
 	changed, finalizerList := utils.RemoveString(r.apiObj.ObjectMeta.Finalizers, FinalizerName)
 	if changed {
-		return r.updateFinalizers(finalizerList)
+		return r.updateFinalizers(ctx, finalizerList)
 	}
 	return nil
 }
 
-func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
+func (r *pipelineRun) updateFinalizers(ctx context.Context, finalizerList []string) error {
 	if len(r.changes) > 0 {
 		return fmt.Errorf("cannot add finalizers when we have uncommited status updates")
 	}
@@ -312,7 +314,7 @@ func (r *pipelineRun) updateFinalizers(finalizerList []string) error {
 	r.ensureCopy()
 	start := time.Now()
 	r.apiObj.ObjectMeta.Finalizers = finalizerList
-	result, err := r.client.Update(r.apiObj)
+	result, err := r.client.Update(ctx, r.apiObj, metav1.UpdateOptions{})
 	end := time.Now()
 	elapsed := end.Sub(start)
 	klog.V(4).Infof("finish update finalizer after %s in %s", elapsed, r.apiObj.Name)
@@ -367,25 +369,41 @@ func (r *pipelineRun) changeStatusAndStoreForRetry(change changeFunc) error {
 // that change _gets_ persisted in case there's _no_ update conflict, but
 // gets _lost_ in case there _is_ an update conflict! This is hard to find
 // by tests, as those typically do not encounter update conflicts.
-func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
+func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error) {
 	if r.client == nil {
 		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
 	}
 
-	klog.V(6).Infof("enter commitStatus for pipeline run %q ...", r.String())
+	klog.V(5).Infof("enter commitStatus for pipeline run %q ...", r.String())
 	if len(r.changes) == 0 {
-		klog.V(6).Infof("commitStatus no changes found for pipeline run %q.", r.String())
+		klog.V(5).Infof("commitStatus no changes found for pipeline run %q.", r.String())
 		return nil, nil
 	}
 
-	isRetry := false
+	retryCount := uint64(0)
+	defer func(start time.Time) {
+		if retryCount > 0 {
+			codeLocationSkipFrames := uint16(1)
+			codeLocation := metrics.CodeLocation(codeLocationSkipFrames)
+			latency := time.Since(start)
+			metrics.Retries.Observe(codeLocation, retryCount, latency)
+			klog.V(5).InfoS("retry was required",
+				"location", codeLocation,
+				"count", retryCount,
+				"latency", latency,
+				"namespace", r.GetNamespace(),
+				"pipelineRun", r.GetName(),
+			)
+		}
+	}(time.Now())
+
 	var changeError error
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		var err error
 
-		if isRetry {
-			klog.V(6).Infof("commitStatus reload pipeline run for retry %q ...", r.String())
-			new, err := r.client.Get(r.apiObj.GetName(), metav1.GetOptions{})
+		if retryCount > 0 {
+			klog.V(5).Infof("commitStatus reload pipeline run for retry %q ...", r.String())
+			new, err := r.client.Get(ctx, r.apiObj.GetName(), metav1.GetOptions{})
 			if err != nil {
 				return errors.Wrap(err,
 					"failed to fetch pipeline after update conflict")
@@ -394,24 +412,23 @@ func (r *pipelineRun) CommitStatus() ([]*api.StateItem, error) {
 			r.copied = true
 			r.commitRecorders = []commitRecorderFunc{}
 			var commitRecorder func() *api.StateItem
-			klog.V(6).Infof("commitStatus applies %d change(s)", len(r.changes))
+			klog.V(5).Infof("commitStatus applies %d change(s)", len(r.changes))
 			for i, change := range r.changes {
 				commitRecorder, changeError = change(r.GetStatus())
 				if changeError != nil {
-					klog.V(6).Infof("applying change %d failed with error: %s", i, changeError.Error())
+					klog.V(5).Infof("applying change %d failed with error: %s", i, changeError.Error())
 					return nil
 				}
 				r.commitRecorders = append(r.commitRecorders, commitRecorder)
 			}
-		} else {
-			defer func() { isRetry = true }()
 		}
 
-		result, err := r.client.UpdateStatus(r.apiObj)
+		result, err := r.client.UpdateStatus(ctx, r.apiObj, metav1.UpdateOptions{})
 		if err == nil {
 			r.apiObj = result
 			return nil
 		}
+		retryCount++
 		return err
 	})
 	r.changes = []changeFunc{}

@@ -5,6 +5,7 @@ based on sample-controller from https://github.com/kubernetes/sample-controller/
 package tenantctl
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	listers "github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
 	slabels "github.com/SAP/stewardci-core/pkg/stewardlabels"
+	"github.com/SAP/stewardci-core/pkg/tenantctl/metrics"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -30,8 +32,6 @@ import (
 )
 
 const (
-	kind = "Tenants"
-
 	tenantNamespaceRoleBindingNamePrefix = steward.GroupName + "--tenant-role-binding-"
 )
 
@@ -42,7 +42,6 @@ type Controller struct {
 	tenantSynced cache.InformerSynced
 	tenantLister listers.TenantLister
 	workqueue    workqueue.RateLimitingInterface
-	metrics      Metrics
 	syncCount    int64
 	testing      *controllerTesting
 }
@@ -56,7 +55,7 @@ type controllerTesting struct {
 }
 
 // NewController creates new Controller
-func NewController(factory k8s.ClientFactory, metrics Metrics) *Controller {
+func NewController(factory k8s.ClientFactory) *Controller {
 	informer := factory.StewardInformerFactory().Steward().V1alpha1().Tenants()
 	fetcher := k8s.NewListerBasedTenantFetcher(informer.Lister())
 	controller := &Controller{
@@ -64,8 +63,7 @@ func NewController(factory k8s.ClientFactory, metrics Metrics) *Controller {
 		fetcher:      fetcher,
 		tenantSynced: informer.Informer().HasSynced,
 		tenantLister: informer.Lister(),
-		workqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), kind),
-		metrics:      metrics,
+		workqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), metrics.WorkqueueName),
 	}
 	informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.onTenantAdd,
@@ -174,7 +172,9 @@ func (c *Controller) processNextWorkItem() bool {
 // converge the two. It then updates the Status block of the tenant resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
-	origTenant, err := c.fetcher.ByKey(key)
+	ctx := context.Background()
+
+	origTenant, err := c.fetcher.ByKey(ctx, key)
 	if err != nil {
 		return err
 	}
@@ -192,7 +192,7 @@ func (c *Controller) syncHandler(key string) error {
 
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
-	config, err := c.getClientConfig(c.factory, tenant.GetNamespace())
+	config, err := c.getClientConfig(ctx, c.factory, tenant.GetNamespace())
 	if err != nil {
 		klog.Infof(c.formatLog(tenant), err)
 		return err
@@ -204,29 +204,29 @@ func (c *Controller) syncHandler(key string) error {
 			klog.V(3).Infof(c.formatLog(tenant, "dependent resources cleaned already, nothing to do"))
 			return nil
 		}
-		err = c.deleteTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config)
+		err = c.deleteTenantNamespace(ctx, tenant.Status.TenantNamespaceName, tenant, config)
 		if err != nil {
 			return err
 		}
-		_, err = c.removeFinalizerAndUpdate(tenant)
+		_, err = c.removeFinalizerAndUpdate(ctx, tenant)
 		if err == nil {
 			c.syncCount++
 		}
 		return err
 	}
 
-	tenant, err = c.addFinalizerAndUpdate(tenant)
+	tenant, err = c.addFinalizerAndUpdate(ctx, tenant)
 	if err != nil {
 		return err
 	}
 
-	reconcileErr := c.reconcile(config, tenant)
+	reconcileErr := c.reconcile(ctx, config, tenant)
 
 	// do not update the status if there's no change
 	if !equality.Semantic.DeepEqual(origTenant.Status, tenant.Status) {
-		if _, err := c.updateStatus(tenant); err != nil {
+		if _, err := c.updateStatus(ctx, tenant); err != nil {
 			if !c.isInitialized(origTenant) && c.isInitialized(tenant) {
-				c.deleteTenantNamespace(tenant.Status.TenantNamespaceName, tenant, config) // clean-up ignoring error
+				c.deleteTenantNamespace(ctx, tenant.Status.TenantNamespaceName, tenant, config) // clean-up ignoring error
 			}
 			return err
 		}
@@ -245,19 +245,19 @@ func (c *Controller) isInitialized(tenant *api.Tenant) bool {
 	return tenant.Status.TenantNamespaceName != ""
 }
 
-func (c *Controller) reconcile(config clientConfig, tenant *api.Tenant) (err error) {
+func (c *Controller) reconcile(ctx context.Context, config clientConfig, tenant *api.Tenant) (err error) {
 	if c.isInitialized(tenant) {
-		err = c.reconcileInitialized(config, tenant)
+		err = c.reconcileInitialized(ctx, config, tenant)
 	} else {
-		err = c.reconcileUninitialized(config, tenant)
+		err = c.reconcileUninitialized(ctx, config, tenant)
 	}
 	return
 }
 
-func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Tenant) error {
+func (c *Controller) reconcileUninitialized(ctx context.Context, config clientConfig, tenant *api.Tenant) error {
 	klog.V(3).Infof(c.formatLog(tenant, "tenant not initialized yet"))
 
-	nsName, err := c.createTenantNamespace(config, tenant)
+	nsName, err := c.createTenantNamespace(ctx, config, tenant)
 	if err != nil {
 		condMsg := "Failed to create a new tenant namespace."
 		tenant.Status.SetCondition(&knativeapis.Condition{
@@ -269,7 +269,7 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 		return err
 	}
 
-	_, err = c.reconcileTenantRoleBinding(tenant, nsName, config)
+	_, err = c.reconcileTenantRoleBinding(ctx, tenant, nsName, config)
 	if err != nil {
 		condMsg := "Failed to initialize a new tenant namespace because the RoleBinding could not be created."
 		tenant.Status.SetCondition(&knativeapis.Condition{
@@ -278,7 +278,7 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 			Reason:  api.StatusReasonFailed,
 			Message: condMsg,
 		})
-		c.deleteTenantNamespace(nsName, tenant, config) // clean-up ignoring error
+		c.deleteTenantNamespace(ctx, nsName, tenant, config) // clean-up ignoring error
 		return err
 	}
 
@@ -292,12 +292,12 @@ func (c *Controller) reconcileUninitialized(config clientConfig, tenant *api.Ten
 	return nil
 }
 
-func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenant) error {
+func (c *Controller) reconcileInitialized(ctx context.Context, config clientConfig, tenant *api.Tenant) error {
 	klog.V(4).Infof(c.formatLog(tenant, "tenant is initialized already"))
 
 	nsName := tenant.Status.TenantNamespaceName
 
-	exists, err := c.checkNamespaceExists(nsName)
+	exists, err := c.checkNamespaceExists(ctx, nsName)
 	if err != nil {
 		klog.Infof(c.formatLog(tenant), err)
 		return err
@@ -320,7 +320,7 @@ func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenan
 		return err
 	}
 
-	needForUpdateDetected, err := c.reconcileTenantRoleBinding(tenant, nsName, config)
+	needForUpdateDetected, err := c.reconcileTenantRoleBinding(ctx, tenant, nsName, config)
 	if err != nil {
 		if needForUpdateDetected {
 			condMsg := fmt.Sprintf(
@@ -345,42 +345,42 @@ func (c *Controller) reconcileInitialized(config clientConfig, tenant *api.Tenan
 	return nil
 }
 
-func (c *Controller) getClientConfig(factory k8s.ClientFactory, clientNamespace string) (clientConfig, error) {
+func (c *Controller) getClientConfig(ctx context.Context, factory k8s.ClientFactory, clientNamespace string) (clientConfig, error) {
 	if c.testing != nil && c.testing.getClientConfigStub != nil {
 		return c.testing.getClientConfigStub(factory, clientNamespace)
 	}
-	return getClientConfig(factory, clientNamespace)
+	return getClientConfig(ctx, factory, clientNamespace)
 }
 
 func (c *Controller) hasFinalizer(tenant *api.Tenant) bool {
 	return utils.StringSliceContains(tenant.GetFinalizers(), k8s.FinalizerName)
 }
 
-func (c *Controller) addFinalizerAndUpdate(tenant *api.Tenant) (*api.Tenant, error) {
+func (c *Controller) addFinalizerAndUpdate(ctx context.Context, tenant *api.Tenant) (*api.Tenant, error) {
 	changed, finalizerList := utils.AddStringIfMissing(tenant.GetFinalizers(), k8s.FinalizerName)
 	if changed {
 		tenant.SetFinalizers(finalizerList)
-		return c.update(tenant)
+		return c.update(ctx, tenant)
 	}
 	return tenant, nil
 }
 
-func (c *Controller) removeFinalizerAndUpdate(tenant *api.Tenant) (*api.Tenant, error) {
+func (c *Controller) removeFinalizerAndUpdate(ctx context.Context, tenant *api.Tenant) (*api.Tenant, error) {
 	changed, finalizerList := utils.RemoveString(tenant.GetFinalizers(), k8s.FinalizerName)
 	if changed {
 		tenant.SetFinalizers(finalizerList)
-		return c.update(tenant)
+		return c.update(ctx, tenant)
 	}
 	return tenant, nil
 }
 
-func (c *Controller) updateStatus(tenant *api.Tenant) (*api.Tenant, error) {
+func (c *Controller) updateStatus(ctx context.Context, tenant *api.Tenant) (*api.Tenant, error) {
 	if c.testing != nil && c.testing.updateStatusStub != nil {
 		return c.testing.updateStatusStub(tenant)
 	}
 
 	client := c.factory.StewardV1alpha1().Tenants(tenant.GetNamespace())
-	updatedTenant, err := client.UpdateStatus(tenant)
+	updatedTenant, err := client.UpdateStatus(ctx, tenant, metav1.UpdateOptions{})
 	if err != nil {
 		err = errors.WithMessage(err, "failed to update resource status")
 		klog.V(3).Infof(c.formatLog(tenant), err)
@@ -389,9 +389,9 @@ func (c *Controller) updateStatus(tenant *api.Tenant) (*api.Tenant, error) {
 	return updatedTenant, nil
 }
 
-func (c *Controller) update(tenant *api.Tenant) (*api.Tenant, error) {
+func (c *Controller) update(ctx context.Context, tenant *api.Tenant) (*api.Tenant, error) {
 	client := c.factory.StewardV1alpha1().Tenants(tenant.GetNamespace())
-	result, err := client.Update(tenant)
+	result, err := client.Update(ctx, tenant, metav1.UpdateOptions{})
 	if err != nil {
 		err = errors.WithMessagef(err,
 			"failed to update tenant %q in namespace %q",
@@ -403,9 +403,9 @@ func (c *Controller) update(tenant *api.Tenant) (*api.Tenant, error) {
 	return result, nil
 }
 
-func (c *Controller) checkNamespaceExists(name string) (bool, error) {
+func (c *Controller) checkNamespaceExists(ctx context.Context, name string) (bool, error) {
 	namespaces := c.factory.CoreV1().Namespaces()
-	namespace, err := namespaces.Get(name, metav1.GetOptions{})
+	namespace, err := namespaces.Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return false, nil
@@ -416,10 +416,10 @@ func (c *Controller) checkNamespaceExists(name string) (bool, error) {
 	return namespace.GetDeletionTimestamp().IsZero(), nil
 }
 
-func (c *Controller) createTenantNamespace(config clientConfig, tenant *api.Tenant) (string, error) {
+func (c *Controller) createTenantNamespace(ctx context.Context, config clientConfig, tenant *api.Tenant) (string, error) {
 	klog.V(4).Infof(c.formatLog(tenant, "creating new tenant namespace"))
 	namespaceManager := c.getNamespaceManager(config)
-	nsName, err := namespaceManager.Create(tenant.GetName(), nil)
+	nsName, err := namespaceManager.Create(ctx, tenant.GetName(), nil)
 	if err != nil {
 		err = errors.WithMessage(err, "failed to create new tenant namespace")
 		klog.V(4).Infof(c.formatLog(tenant), err)
@@ -428,13 +428,13 @@ func (c *Controller) createTenantNamespace(config clientConfig, tenant *api.Tena
 	return nsName, err
 }
 
-func (c *Controller) deleteTenantNamespace(namespace string, tenant *api.Tenant, config clientConfig) error {
+func (c *Controller) deleteTenantNamespace(ctx context.Context, namespace string, tenant *api.Tenant, config clientConfig) error {
 	if namespace == "" {
 		return nil
 	}
 	klog.V(4).Infof(c.formatLogf(tenant, "rolling back tenant namespace %q", namespace))
 	namespaceManager := c.getNamespaceManager(config)
-	err := namespaceManager.Delete(namespace)
+	err := namespaceManager.Delete(ctx, namespace)
 	if err != nil {
 		err = errors.WithMessagef(err, "failed to delete tenant namespace %q", namespace)
 		klog.V(4).Infof(c.formatLog(tenant), err)
@@ -457,7 +457,7 @@ indicates that an update _would have_ to be performed (and maybe has been
 done partially), while a value of `false` indicates that _it is unknown_
 whether an update is necessary (due to the error).
 */
-func (c *Controller) reconcileTenantRoleBinding(tenant *api.Tenant, namespace string, config clientConfig) (needForUpdateDetected bool, err error) {
+func (c *Controller) reconcileTenantRoleBinding(ctx context.Context, tenant *api.Tenant, namespace string, config clientConfig) (needForUpdateDetected bool, err error) {
 	if c.testing != nil && c.testing.reconcileTenantRoleBindingStub != nil {
 		return c.testing.reconcileTenantRoleBindingStub(tenant, namespace, config)
 	}
@@ -480,7 +480,7 @@ func (c *Controller) reconcileTenantRoleBinding(tenant *api.Tenant, namespace st
 	*/
 
 	err = func() error {
-		rbList, err := c.listManagedRoleBindings(namespace)
+		rbList, err := c.listManagedRoleBindings(ctx, namespace)
 		if err != nil {
 			return err
 		}
@@ -494,11 +494,11 @@ func (c *Controller) reconcileTenantRoleBinding(tenant *api.Tenant, namespace st
 
 		if needForUpdateDetected {
 			klog.V(4).Infof(c.formatLogf(tenant, "updating RoleBinding in tenant namespace %q", namespace))
-			_, err = c.createRoleBinding(expectedTenantRB)
+			_, err = c.createRoleBinding(ctx, expectedTenantRB)
 			if err != nil {
 				return err
 			}
-			err = c.deleteRoleBindingsFromList(rbList)
+			err = c.deleteRoleBindingsFromList(ctx, rbList)
 			if err != nil {
 				return err
 			}
@@ -567,7 +567,7 @@ func (c *Controller) isTenantRoleBindingUpToDate(current *rbacv1beta1.RoleBindin
 		equality.Semantic.DeepEqual(expected.Subjects, current.Subjects)
 }
 
-func (c *Controller) listManagedRoleBindings(namespace string) (*rbacv1beta1.RoleBindingList, error) {
+func (c *Controller) listManagedRoleBindings(ctx context.Context, namespace string) (*rbacv1beta1.RoleBindingList, error) {
 	if c.testing != nil && c.testing.listManagedRoleBindingsStub != nil {
 		return c.testing.listManagedRoleBindingsStub(namespace)
 	}
@@ -576,7 +576,7 @@ func (c *Controller) listManagedRoleBindings(namespace string) (*rbacv1beta1.Rol
 	listOptions := metav1.ListOptions{
 		LabelSelector: api.LabelSystemManaged,
 	}
-	roleBindingList, err := roleBindingIfc.List(listOptions)
+	roleBindingList, err := roleBindingIfc.List(ctx, listOptions)
 	if err != nil {
 		err = errors.WithMessagef(err,
 			"failed to get all managed RoleBindings from namespace %q",
@@ -587,14 +587,14 @@ func (c *Controller) listManagedRoleBindings(namespace string) (*rbacv1beta1.Rol
 	return roleBindingList, nil
 }
 
-func (c *Controller) createRoleBinding(roleBinding *rbacv1beta1.RoleBinding) (*rbacv1beta1.RoleBinding, error) {
+func (c *Controller) createRoleBinding(ctx context.Context, roleBinding *rbacv1beta1.RoleBinding) (*rbacv1beta1.RoleBinding, error) {
 	if c.testing != nil && c.testing.createRoleBindingStub != nil {
 		return c.testing.createRoleBindingStub(roleBinding)
 	}
 
 	namespace := roleBinding.GetNamespace()
 	roleBindingIfc := c.factory.RbacV1beta1().RoleBindings(namespace)
-	resultingRoleBinding, err := roleBindingIfc.Create(roleBinding)
+	resultingRoleBinding, err := roleBindingIfc.Create(ctx, roleBinding, metav1.CreateOptions{})
 	if err != nil {
 		err = errors.WithMessagef(err,
 			"failed to create a RoleBinding in namespace %q",
@@ -605,9 +605,9 @@ func (c *Controller) createRoleBinding(roleBinding *rbacv1beta1.RoleBinding) (*r
 	return resultingRoleBinding, nil
 }
 
-func (c *Controller) deleteRoleBindingsFromList(roleBindingList *rbacv1beta1.RoleBindingList) error {
+func (c *Controller) deleteRoleBindingsFromList(ctx context.Context, roleBindingList *rbacv1beta1.RoleBindingList) error {
 	for _, roleBinding := range roleBindingList.Items {
-		err := c.deleteRoleBinding(&roleBinding)
+		err := c.deleteRoleBinding(ctx, &roleBinding)
 		if err != nil {
 			return err
 		}
@@ -615,7 +615,7 @@ func (c *Controller) deleteRoleBindingsFromList(roleBindingList *rbacv1beta1.Rol
 	return nil
 }
 
-func (c *Controller) deleteRoleBinding(roleBinding *rbacv1beta1.RoleBinding) error {
+func (c *Controller) deleteRoleBinding(ctx context.Context, roleBinding *rbacv1beta1.RoleBinding) error {
 	if roleBinding.GetName() == "" || roleBinding.GetUID() == "" {
 		// object is not uniquely identified
 		// treat as if not found
@@ -625,7 +625,7 @@ func (c *Controller) deleteRoleBinding(roleBinding *rbacv1beta1.RoleBinding) err
 	roleBindingIfc := c.factory.RbacV1beta1().RoleBindings(namespace)
 	deleteOptions := metav1.NewDeleteOptions(0)
 	deleteOptions.Preconditions = metav1.NewUIDPreconditions(string(roleBinding.GetUID()))
-	err := roleBindingIfc.Delete(roleBinding.GetName(), deleteOptions)
+	err := roleBindingIfc.Delete(ctx, roleBinding.GetName(), *deleteOptions)
 	if k8serrors.IsNotFound(err) {
 		return nil
 	}
@@ -658,7 +658,7 @@ func (c *Controller) updateMetrics() {
 		klog.Errorf("Cannot update tenant metrics: %s", err.Error())
 	}
 	count := len(list)
-	c.metrics.SetTenantNumber(float64(count))
+	metrics.TenantCount.Set(float64(count))
 }
 
 func (c *Controller) onTenantAdd(obj interface{}) {

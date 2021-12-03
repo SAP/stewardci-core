@@ -25,6 +25,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"context"
 	time "time"
 
 	versioned "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned"
@@ -66,13 +67,13 @@ func NewFilteredClusterTaskInformer(client versioned.Interface, resyncPeriod tim
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.TektonV1beta1().ClusterTasks().List(options)
+				return client.TektonV1beta1().ClusterTasks().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.TektonV1beta1().ClusterTasks().Watch(options)
+				return client.TektonV1beta1().ClusterTasks().Watch(context.TODO(), options)
 			},
 		},
 		&pipelinev1beta1.ClusterTask{},

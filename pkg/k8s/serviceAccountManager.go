@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
@@ -15,8 +16,8 @@ const (
 
 //ServiceAccountManager manages serviceAccounts
 type ServiceAccountManager interface {
-	CreateServiceAccount(name string, pipelineCloneSecretName string, imagePullSecretNames []string) (*ServiceAccountWrap, error)
-	GetServiceAccount(name string) (*ServiceAccountWrap, error)
+	CreateServiceAccount(ctx context.Context, name string, pipelineCloneSecretName string, imagePullSecretNames []string) (*ServiceAccountWrap, error)
+	GetServiceAccount(ctx context.Context, name string) (*ServiceAccountWrap, error)
 }
 
 type serviceAccountManager struct {
@@ -43,9 +44,9 @@ func NewServiceAccountManager(factory ClientFactory, namespace string) ServiceAc
 
 // CreateServiceAccount creates a service account on the cluster
 //   name					name of the service account
-//   pipelineCloneSecretName		(optional) the name of the secret to be used to authenticate at the Git repository hosting the pipeline definition.
+//   pipelineCloneSecretName	(optional) the name of the secret to be used to authenticate at the Git repository hosting the pipeline definition.
 //   imagePullSecretNames		(optional) a list of image pull secrets to attach to this service account (e.g. for pulling the Jenkinsfile Runner image)
-func (c *serviceAccountManager) CreateServiceAccount(name string, pipelineCloneSecretName string, imagePullSecretNames []string) (*ServiceAccountWrap, error) {
+func (c *serviceAccountManager) CreateServiceAccount(ctx context.Context, name string, pipelineCloneSecretName string, imagePullSecretNames []string) (*ServiceAccountWrap, error) {
 	serviceAccount := &v1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	serviceAccountWrap := &ServiceAccountWrap{
 		factory: c.factory,
@@ -57,15 +58,15 @@ func (c *serviceAccountManager) CreateServiceAccount(name string, pipelineCloneS
 	}
 	serviceAccountWrap.AttachImagePullSecrets(imagePullSecretNames...)
 
-	serviceAccount, err := c.client.Create(serviceAccount)
+	serviceAccount, err := c.client.Create(ctx, serviceAccount, metav1.CreateOptions{})
 	serviceAccountWrap.cache = serviceAccount
 	return serviceAccountWrap, err
 }
 
 // GetServiceAccount gets a ServiceAccount from the cluster
-func (c *serviceAccountManager) GetServiceAccount(name string) (serviceAccount *ServiceAccountWrap, err error) {
+func (c *serviceAccountManager) GetServiceAccount(ctx context.Context, name string) (serviceAccount *ServiceAccountWrap, err error) {
 	var account *v1.ServiceAccount
-	if account, err = c.client.Get(name, metav1.GetOptions{}); err != nil {
+	if account, err = c.client.Get(ctx, name, metav1.GetOptions{}); err != nil {
 		return
 	}
 	serviceAccount = &ServiceAccountWrap{
@@ -157,9 +158,9 @@ func (a ServiceAccountWrap) SetDoAutomountServiceAccountToken(doAutomount bool) 
 
 // Update performs an update of the service account resource object
 // via the underlying client.
-func (a *ServiceAccountWrap) Update() error {
+func (a *ServiceAccountWrap) Update(ctx context.Context) error {
 	client := a.factory.CoreV1().ServiceAccounts(a.cache.GetNamespace())
-	updatedObj, err := client.Update(a.cache)
+	updatedObj, err := client.Update(ctx, a.cache, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -168,11 +169,11 @@ func (a *ServiceAccountWrap) Update() error {
 }
 
 // AddRoleBinding creates a role binding in the targetNamespace connecting the service account with the specified cluster role
-func (a *ServiceAccountWrap) AddRoleBinding(clusterRole RoleName, targetNamespace string) (*v1beta1.RoleBinding, error) {
+func (a *ServiceAccountWrap) AddRoleBinding(ctx context.Context, clusterRole RoleName, targetNamespace string) (*v1beta1.RoleBinding, error) {
 
 	//Check if cluster role exists
 	if checkRoleExistence {
-		clusterRole, err := a.factory.RbacV1beta1().ClusterRoles().Get(string(clusterRole), metav1.GetOptions{})
+		clusterRole, err := a.factory.RbacV1beta1().ClusterRoles().Get(ctx, string(clusterRole), metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -202,7 +203,7 @@ func (a *ServiceAccountWrap) AddRoleBinding(clusterRole RoleName, targetNamespac
 		},
 	}
 
-	return roleBindingClient.Create(roleBinding)
+	return roleBindingClient.Create(ctx, roleBinding, metav1.CreateOptions{})
 }
 
 // GetServiceAccount returns *v1.ServiceAccount
@@ -212,8 +213,8 @@ func (a *ServiceAccountWrap) GetServiceAccount() *v1.ServiceAccount {
 
 // ServiceAccountHelper implements functions to get service account secret
 type ServiceAccountHelper interface {
-	GetServiceAccountSecretNameRepeat() string
-	GetServiceAccountSecretName() string
+	GetServiceAccountSecretNameRepeat(ctx context.Context) (string, error)
+	GetServiceAccountSecretName(ctx context.Context) (string, error)
 }
 
 // GetHelper returns a ServiceAccountHelper

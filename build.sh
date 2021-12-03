@@ -6,16 +6,13 @@ declare -r -a GO_PACKAGES_TEST=(
     "./test/..."
 )
 
-declare -r -a GO_PACKAGES_HELM_TEST=(
-    "./charts/steward/test/..."
-)
-
 declare -r -a GO_PACKAGES_ALL=(
     "./cmd/..."
     "./pkg/..."
     "${GO_PACKAGES_TEST[@]}"
-    "${GO_PACKAGES_HELM_TEST[@]}"
 )
+
+declare -r HELM_TEST_DIR="charts/steward/test"
 
 HERE=$(cd "$(dirname "$BASH_SOURCE")" && pwd) || {
     echo "error: could not determine script location" >&2
@@ -53,13 +50,20 @@ function main() {
     go build "${GO_PACKAGES_ALL[@]}" || die "" "FAILED"
 
     banner1 "go vet"
-    go vet "${GO_PACKAGES_ALL[@]}" || {
+    (
+        local rc=0
+        go vet "${GO_PACKAGES_ALL[@]}" || rc=1
+        ( cd "$HELM_TEST_DIR" && go vet "./..." ) || rc=1
+        exit $rc
+    ) || {
         echo $'\n'"Check whether the issues above are real issues that must be fixed!"
     }
 
     banner1 "go test"
     go test -coverprofile coverage.txt "${GO_PACKAGES_ALL[@]}" || die "" "FAILED"
     go tool cover -html=coverage.txt -o coverage.html || die "" "FAILED"
+
+    ( cd "$HELM_TEST_DIR" && go test "./..." ) || die "" "FAILED"
 
     if [[ $P_FULL ]]; then
         # compile tests in ./test/.. without running them
@@ -71,22 +75,18 @@ function main() {
                 err=1
             }
         done
-        for tags in "helm"; do
-            info "" "compiling '${GO_PACKAGES_HELM_TEST[@]}' with tags '$tags'"
-            test_compile_only "$(go list "${GO_PACKAGES_HELM_TEST[@]}")" -tags="$tags" || {
-                info "" "failed to compile '${GO_PACKAGES_HELM_TEST[@]}' with tags '$tags'"
-                err=1
-            }
-        done
         [[ ! $err ]] || die "" "FAILED"
     fi
 
     banner1 "golint"
     "$GOLINT_EXE" -set_exit_status "${GO_PACKAGES_ALL[@]}" || die "" "FAILED"
+    ( cd "$HELM_TEST_DIR" && "$GOLINT_EXE" -set_exit_status "./..." ) || die "" "FAILED"
 
     banner1 "gofmt"
-    gofmt -l -d "${GO_PACKAGES_ALL[@]%/...}" || die "" "FAILED"
-    gofmt -d "${GO_PACKAGES_ALL[@]%/...}" > fmt_diff.txt || die "" "FAILED"
+    gofmt -l -d "${GO_PACKAGES_ALL[@]%/...}" | tee fmt_diff.txt || die "" "FAILED"
+    [[ -s fmt_diff.txt ]] && die "" "FAILED"
+
+    gofmt -l -d "$HELM_TEST_DIR" | tee fmt_diff.txt || die "" "FAILED"
     [[ -s fmt_diff.txt ]] && die "" "FAILED"
 
     echo $'\n'"SUCCESS"
@@ -182,13 +182,13 @@ function check_golint_or_install() {
     if [[ $rc == 1 || ! $GOLINT_EXE ]]; then
         # don't run go list from current directory, because it would modify our go.mod file
         rc=0
-        GOLINT_EXE=$(cd "$GOPATH_1" && go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null) || rc=$?
+        GOLINT_EXE=$(cd "$GOPATH_1" && GO111MODULE=auto go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null) || rc=$?
         if [[ $rc != 0 || ! $GOLINT_EXE || ! -f $GOLINT_EXE ]]; then
             echo "golint not found. Installing golint into current GOPATH ..."
             # don't run go get/list from current directory, because it would modify our go.mod file
-            ( cd "$GOPATH_1" && go get -u 'golang.org/x/lint/golint' ) || die
+            ( cd "$GOPATH_1" && GO111MODULE=auto go get -u 'golang.org/x/lint/golint' ) || die
             rc=0
-            GOLINT_EXE=$(cd "$GOPATH_1" && go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null) || rc=$?
+            GOLINT_EXE=$(cd "$GOPATH_1" && GO111MODULE=auto go list -f '{{.Target}}' 'golang.org/x/lint/golint' 2>/dev/null) || rc=$?
             if [[ $rc != 0 || ! $GOLINT_EXE || ! -f $GOLINT_EXE ]]; then
                 die "error: could not install golint"
             fi

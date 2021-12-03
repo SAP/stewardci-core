@@ -1,6 +1,7 @@
 package cfg
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -80,7 +81,7 @@ type PipelineRunsConfigStruct struct {
 }
 
 // LoadPipelineRunsConfig loads the pipelineruns configuration and returns it.
-func LoadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*PipelineRunsConfigStruct, error) {
+func LoadPipelineRunsConfig(ctx context.Context, clientFactory k8s.ClientFactory) (*PipelineRunsConfigStruct, error) {
 	dest := &PipelineRunsConfigStruct{}
 
 	for _, p := range []struct {
@@ -100,6 +101,7 @@ func LoadPipelineRunsConfig(clientFactory k8s.ClientFactory) (*PipelineRunsConfi
 		},
 	} {
 		err := processConfigMap(
+			ctx,
 			p.configMapName, p.optional, p.processFunc,
 			dest, clientFactory,
 		)
@@ -125,6 +127,7 @@ with contextual information.
 It gets passed to `processFunc`.
 */
 func processConfigMap(
+	ctx context.Context,
 	configMapName string,
 	optional bool,
 	processFunc func(map[string]string, *PipelineRunsConfigStruct) error,
@@ -143,7 +146,7 @@ func processConfigMap(
 	configMapIfce := clientFactory.CoreV1().ConfigMaps(system.Namespace())
 
 	var err error
-	configMap, err := configMapIfce.Get(configMapName, metav1.GetOptions{})
+	configMap, err := configMapIfce.Get(ctx, configMapName, metav1.GetOptions{})
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return withRecoverability(wrapError(err), true)
 	}

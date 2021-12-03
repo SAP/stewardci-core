@@ -1,6 +1,7 @@
 package runctl
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"sort"
@@ -42,29 +43,30 @@ import (
 
 func newRunManagerTestingWithAllNoopStubs() *runManagerTesting {
 	return &runManagerTesting{
-		cleanupStub:                               func(*runContext) error { return nil },
-		copySecretsToRunNamespaceStub:             func(*runContext) (string, []string, error) { return "", []string{}, nil },
-		getServiceAccountSecretNameStub:           func(*runContext) string { return "" },
-		setupLimitRangeFromConfigStub:             func(*runContext) error { return nil },
-		setupNetworkPolicyFromConfigStub:          func(*runContext) error { return nil },
-		setupNetworkPolicyThatIsolatesAllPodsStub: func(*runContext) error { return nil },
-		setupResourceQuotaFromConfigStub:          func(*runContext) error { return nil },
-		setupServiceAccountStub:                   func(*runContext, string, []string) error { return nil },
-		setupStaticLimitRangeStub:                 func(*runContext) error { return nil },
-		setupStaticNetworkPoliciesStub:            func(*runContext) error { return nil },
-		setupStaticResourceQuotaStub:              func(*runContext) error { return nil },
+		cleanupStub:                               func(context.Context, *runContext) error { return nil },
+		copySecretsToRunNamespaceStub:             func(context.Context, *runContext) (string, []string, error) { return "", []string{}, nil },
+		getServiceAccountSecretNameStub:           func(context.Context, *runContext) (string, error) { return "", nil },
+		setupLimitRangeFromConfigStub:             func(context.Context, *runContext) error { return nil },
+		setupNetworkPolicyFromConfigStub:          func(context.Context, *runContext) error { return nil },
+		setupNetworkPolicyThatIsolatesAllPodsStub: func(context.Context, *runContext) error { return nil },
+		setupResourceQuotaFromConfigStub:          func(context.Context, *runContext) error { return nil },
+		setupServiceAccountStub:                   func(context.Context, *runContext, string, []string) error { return nil },
+		setupStaticLimitRangeStub:                 func(context.Context, *runContext) error { return nil },
+		setupStaticNetworkPoliciesStub:            func(context.Context, *runContext) error { return nil },
+		setupStaticResourceQuotaStub:              func(context.Context, *runContext) error { return nil },
 	}
 }
 
 func newRunManagerTestingWithRequiredStubs() *runManagerTesting {
 	return &runManagerTesting{
-		getServiceAccountSecretNameStub: func(*runContext) string { return "" },
+		getServiceAccountSecretNameStub: func(context.Context, *runContext) (string, error) { return "", nil },
 	}
 }
 
 func contextWithSpec(t *testing.T, runNamespaceName string, spec api.PipelineSpec) *runContext {
+	ctx := context.Background()
 	pipelineRun := fake.PipelineRun("run1", "ns1", spec)
-	k8sPipelineRun, err := k8s.NewPipelineRun(pipelineRun, nil)
+	k8sPipelineRun, err := k8s.NewPipelineRun(ctx, pipelineRun, nil)
 	assert.NilError(t, err)
 	return &runContext{runNamespace: runNamespaceName,
 		pipelineRun: k8sPipelineRun,
@@ -91,7 +93,7 @@ func Test__runManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
 			examinee := newRunManager(cf, secretProvider)
 			examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
-			pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
+			pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 			assert.NilError(t, err)
 			runCtx := &runContext{
 				pipelineRun:        pipelineRunHelper,
@@ -99,7 +101,7 @@ func Test__runManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
 			}
 
 			// EXERCISE
-			resultErr := examinee.prepareRunNamespace(runCtx)
+			resultErr := examinee.prepareRunNamespace(h.ctx, runCtx)
 
 			// VERIFY
 			assert.NilError(t, resultErr)
@@ -138,7 +140,7 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 
 	config := &cfg.PipelineRunsConfigStruct{}
 	secretProvider := secretfake.NewProvider(h.namespace1)
-	pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
+	pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
 	examinee := newRunManager(cf, secretProvider)
@@ -146,10 +148,10 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 
 	expectedError := errors.New("some error")
 	var methodCalled bool
-	examinee.testing.copySecretsToRunNamespaceStub = func(ctx *runContext) (string, []string, error) {
+	examinee.testing.copySecretsToRunNamespaceStub = func(_ context.Context, runCtx *runContext) (string, []string, error) {
 		methodCalled = true
-		assert.Assert(t, ctx.pipelineRun == pipelineRunHelper)
-		assert.Assert(t, ctx.runNamespace != "")
+		assert.Assert(t, runCtx.pipelineRun == pipelineRunHelper)
+		assert.Assert(t, runCtx.runNamespace != "")
 		return "", nil, expectedError
 	}
 
@@ -159,7 +161,7 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 	}
 
 	// EXERCISE
-	resultErr := examinee.prepareRunNamespace(runCtx)
+	resultErr := examinee.prepareRunNamespace(h.ctx, runCtx)
 
 	// VERIFY
 	assert.Equal(t, expectedError, resultErr)
@@ -179,7 +181,7 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 
 	config := &cfg.PipelineRunsConfigStruct{}
 	secretProvider := secretfake.NewProvider(h.namespace1)
-	pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
+	pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
 	examinee := newRunManager(cf, secretProvider)
@@ -189,14 +191,14 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 	expectedImagePullSecretNames := []string{"imagePullSecret1"}
 	expectedError := errors.New("some error")
 	var methodCalled bool
-	examinee.testing.setupServiceAccountStub = func(ctx *runContext, pipelineCloneSecretName string, imagePullSecretNames []string) error {
+	examinee.testing.setupServiceAccountStub = func(_ context.Context, runCtx *runContext, pipelineCloneSecretName string, imagePullSecretNames []string) error {
 		methodCalled = true
-		assert.Assert(t, ctx.runNamespace != "")
+		assert.Assert(t, runCtx.runNamespace != "")
 		assert.Equal(t, expectedPipelineCloneSecretName, pipelineCloneSecretName)
 		assert.DeepEqual(t, expectedImagePullSecretNames, imagePullSecretNames)
 		return expectedError
 	}
-	examinee.testing.copySecretsToRunNamespaceStub = func(ctx *runContext) (string, []string, error) {
+	examinee.testing.copySecretsToRunNamespaceStub = func(_ context.Context, runCtx *runContext) (string, []string, error) {
 		return expectedPipelineCloneSecretName, expectedImagePullSecretNames, nil
 	}
 
@@ -206,7 +208,7 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 	}
 
 	// EXERCISE
-	resultErr := examinee.prepareRunNamespace(runCtx)
+	resultErr := examinee.prepareRunNamespace(h.ctx, runCtx)
 
 	// VERIFY
 	assert.Equal(t, expectedError, resultErr)
@@ -226,7 +228,7 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 
 	config := &cfg.PipelineRunsConfigStruct{}
 	secretProvider := secretfake.NewProvider(h.namespace1)
-	pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
+	pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
 	examinee := newRunManager(cf, secretProvider)
@@ -234,9 +236,9 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 
 	expectedError := errors.New("some error")
 	var methodCalled bool
-	examinee.testing.setupStaticNetworkPoliciesStub = func(ctx *runContext) error {
+	examinee.testing.setupStaticNetworkPoliciesStub = func(_ context.Context, runCtx *runContext) error {
 		methodCalled = true
-		assert.Assert(t, ctx.runNamespace != "")
+		assert.Assert(t, runCtx.runNamespace != "")
 		return expectedError
 	}
 
@@ -246,7 +248,7 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 	}
 
 	// EXERCISE
-	resultErr := examinee.prepareRunNamespace(runCtx)
+	resultErr := examinee.prepareRunNamespace(h.ctx, runCtx)
 
 	// VERIFY
 	assert.Equal(t, expectedError, resultErr)
@@ -257,6 +259,7 @@ func Test__runManager_setupStaticNetworkPolicies__Succeeds(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	runCtx := &runContext{}
 	examinee := runManager{
 		testing: newRunManagerTestingWithAllNoopStubs(),
@@ -264,7 +267,7 @@ func Test__runManager_setupStaticNetworkPolicies__Succeeds(t *testing.T) {
 	examinee.testing.setupStaticNetworkPoliciesStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupStaticNetworkPolicies(runCtx)
+	resultError := examinee.setupStaticNetworkPolicies(ctx, runCtx)
 
 	// VERIFY
 	assert.NilError(t, resultError)
@@ -283,14 +286,14 @@ func Test__runManager_setupStaticNetworkPolicies__Calls_setupNetworkPolicyThatIs
 
 	var methodCalled bool
 	expectedError := errors.New("some error")
-	examinee.testing.setupNetworkPolicyThatIsolatesAllPodsStub = func(ctx *runContext) error {
+	examinee.testing.setupNetworkPolicyThatIsolatesAllPodsStub = func(_ context.Context, ctx *runContext) error {
 		methodCalled = true
 		assert.Equal(t, h.namespace1, ctx.runNamespace)
 		return expectedError
 	}
 
 	// EXERCISE
-	resultError := examinee.setupStaticNetworkPolicies(runCtx)
+	resultError := examinee.setupStaticNetworkPolicies(h.ctx, runCtx)
 
 	// VERIFY
 	assert.ErrorContains(t, resultError, "failed to set up the network policy isolating all pods in namespace \""+h.namespace1+"\": ")
@@ -311,14 +314,14 @@ func Test__runManager_setupStaticNetworkPolicies__Calls_setupNetworkPolicyFromCo
 
 	var methodCalled bool
 	expectedError := errors.New("some error")
-	examinee.testing.setupNetworkPolicyFromConfigStub = func(ctx *runContext) error {
+	examinee.testing.setupNetworkPolicyFromConfigStub = func(_ context.Context, ctx *runContext) error {
 		methodCalled = true
 		assert.Equal(t, h.namespace1, ctx.runNamespace)
 		return expectedError
 	}
 
 	// EXERCISE
-	resultError := examinee.setupStaticNetworkPolicies(runCtx)
+	resultError := examinee.setupStaticNetworkPolicies(h.ctx, runCtx)
 
 	// VERIFY
 	assert.ErrorContains(t, resultError, "failed to set up the configured network policy in namespace \""+h.namespace1+"\": ")
@@ -345,11 +348,11 @@ func Test__runManager_setupNetworkPolicyThatIsolatesAllPods(t *testing.T) {
 	examinee.testing.setupNetworkPolicyThatIsolatesAllPodsStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupNetworkPolicyThatIsolatesAllPods(runCtx)
+	resultError := examinee.setupNetworkPolicyThatIsolatesAllPods(h.ctx, runCtx)
 	assert.NilError(t, resultError)
 
 	// VERIFY
-	actualPolicies, err := cf.NetworkingV1().NetworkPolicies(h.namespace1).List(metav1.ListOptions{})
+	actualPolicies, err := cf.NetworkingV1().NetworkPolicies(h.namespace1).List(h.ctx, metav1.ListOptions{})
 	assert.NilError(t, err)
 	assert.Assert(t, len(actualPolicies.Items) == 1)
 	{
@@ -386,7 +389,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__NoPolicyConfigured(t *testin
 	examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupNetworkPolicyFromConfig(runCtx)
+	resultError := examinee.setupNetworkPolicyFromConfig(h.ctx, runCtx)
 
 	// VERIFY
 	assert.NilError(t, resultError)
@@ -400,6 +403,12 @@ func Test__runManager_setupNetworkPolicyFromConfig__SetsMetadataAndLeavesOtherTh
 		expectedNamePrefix = "steward.sap.com--configured-"
 	)
 	h := newTestHelper1(t)
+
+	gvr := schema.GroupVersionResource{
+		Group:    "networking.k8s.io",
+		Version:  "v123",
+		Resource: "networkpolicies",
+	}
 
 	runCtx := contextWithSpec(t, h.namespace1, api.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
@@ -428,7 +437,13 @@ func Test__runManager_setupNetworkPolicyFromConfig__SetsMetadataAndLeavesOtherTh
 	}
 
 	cf := fake.NewClientFactory()
-	cf.DynamicFake().PrependReactor("create", "*", fake.GenerateNameReactor(0))
+	cf.DynamicClient = dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
+		runtime.NewScheme(),
+		map[schema.GroupVersionResource]string{
+			gvr: "NetworkPolicyList",
+		},
+	)
+	cf.DynamicClient.PrependReactor("create", "*", fake.GenerateNameReactor(0))
 
 	examinee := runManager{
 		factory: cf,
@@ -437,16 +452,11 @@ func Test__runManager_setupNetworkPolicyFromConfig__SetsMetadataAndLeavesOtherTh
 	examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupNetworkPolicyFromConfig(runCtx)
+	resultError := examinee.setupNetworkPolicyFromConfig(h.ctx, runCtx)
 	assert.NilError(t, resultError)
 
 	// VERIFY
-	gvr := schema.GroupVersionResource{
-		Group:    "networking.k8s.io",
-		Version:  "v123",
-		Resource: "networkpolicies",
-	}
-	actualPolicies, err := cf.Dynamic().Resource(gvr).List(metav1.ListOptions{})
+	actualPolicies, err := cf.Dynamic().Resource(gvr).List(h.ctx, metav1.ListOptions{})
 	assert.NilError(t, err)
 	assert.Equal(t, 1, len(actualPolicies.Items))
 	{
@@ -489,6 +499,13 @@ func Test__runManager_setupNetworkPolicyFromConfig__ReplacesAllMetadata(t *testi
 	)
 	h := newTestHelper1(t)
 	runCtx := contextWithSpec(t, h.namespace1, api.PipelineSpec{})
+
+	gvr := schema.GroupVersionResource{
+		Group:    "networking.k8s.io",
+		Version:  "v123",
+		Resource: "networkpolicies",
+	}
+
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
 		DefaultNetworkProfile: "key1",
 		NetworkPolicies: map[string]string{
@@ -515,8 +532,15 @@ func Test__runManager_setupNetworkPolicyFromConfig__ReplacesAllMetadata(t *testi
 				`),
 		},
 	}
+
 	cf := fake.NewClientFactory()
-	cf.DynamicFake().PrependReactor("create", "*", fake.GenerateNameReactor(0))
+	cf.DynamicClient = dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
+		runtime.NewScheme(),
+		map[schema.GroupVersionResource]string{
+			gvr: "NetworkPolicyList",
+		},
+	)
+	cf.DynamicClient.PrependReactor("create", "*", fake.GenerateNameReactor(0))
 
 	examinee := runManager{
 		factory: cf,
@@ -525,16 +549,11 @@ func Test__runManager_setupNetworkPolicyFromConfig__ReplacesAllMetadata(t *testi
 	examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupNetworkPolicyFromConfig(runCtx)
+	resultError := examinee.setupNetworkPolicyFromConfig(h.ctx, runCtx)
 	assert.NilError(t, resultError)
 
 	// VERIFY
-	gvr := schema.GroupVersionResource{
-		Group:    "networking.k8s.io",
-		Version:  "v123",
-		Resource: "networkpolicies",
-	}
-	actualPolicies, err := cf.Dynamic().Resource(gvr).List(metav1.ListOptions{})
+	actualPolicies, err := cf.Dynamic().Resource(gvr).List(h.ctx, metav1.ListOptions{})
 	assert.NilError(t, err)
 	assert.Equal(t, 1, len(actualPolicies.Items))
 	{
@@ -607,8 +626,20 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 			t.Parallel()
 
 			// SETUP
+			ctx := context.Background()
+			gvr := schema.GroupVersionResource{
+				Group:    "networking.k8s.io",
+				Version:  "v123",
+				Resource: "networkpolicies",
+			}
 			cf := fake.NewClientFactory()
-			cf.DynamicFake().PrependReactor("create", "*", fake.GenerateNameReactor(0))
+			cf.DynamicClient = dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
+				runtime.NewScheme(),
+				map[schema.GroupVersionResource]string{
+					gvr: "NetworkPolicyList",
+				},
+			)
+			cf.DynamicClient.PrependReactor("create", "*", fake.GenerateNameReactor(0))
 
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
@@ -646,10 +677,9 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 			examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
 			// EXERCISE
-			resultError := examinee.setupNetworkPolicyFromConfig(runCtx)
+			resultError := examinee.setupNetworkPolicyFromConfig(ctx, runCtx)
 
 			// VERIFY
-
 			if tc.expectError {
 				assert.Assert(t, resultError != nil)
 				if tc.result != api.ResultUndefined {
@@ -657,12 +687,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 				}
 			} else {
 				assert.NilError(t, resultError)
-				gvr := schema.GroupVersionResource{
-					Group:    "networking.k8s.io",
-					Version:  "v123",
-					Resource: "networkpolicies",
-				}
-				actualPolicies, err := cf.Dynamic().Resource(gvr).List(metav1.ListOptions{})
+				actualPolicies, err := cf.Dynamic().Resource(gvr).List(ctx, metav1.ListOptions{})
 
 				assert.NilError(t, err)
 				assert.Equal(t, 1, len(actualPolicies.Items))
@@ -701,7 +726,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_MalformedPolicy(t *testing.T) 
 	examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupNetworkPolicyFromConfig(runCtx)
+	resultError := examinee.setupNetworkPolicyFromConfig(h.ctx, runCtx)
 
 	// VERIFY
 	assert.ErrorContains(t, resultError, "failed to decode configured network policy: ")
@@ -736,7 +761,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__UnexpectedGroup(t *testing.T
 	examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupNetworkPolicyFromConfig(runCtx)
+	resultError := examinee.setupNetworkPolicyFromConfig(h.ctx, runCtx)
 
 	// VERIFY
 	assert.Error(t, resultError,
@@ -774,7 +799,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__UnexpectedKind(t *testing.T)
 	examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupNetworkPolicyFromConfig(runCtx)
+	resultError := examinee.setupNetworkPolicyFromConfig(h.ctx, runCtx)
 
 	// VERIFY
 	assert.Error(t, resultError,
@@ -796,14 +821,14 @@ func Test__runManager_setupStaticLimitRange__Calls__setupLimitRangeFromConfig__A
 
 	var methodCalled bool
 	expectedError := errors.New("some error")
-	examinee.testing.setupLimitRangeFromConfigStub = func(ctx *runContext) error {
+	examinee.testing.setupLimitRangeFromConfigStub = func(_ context.Context, ctx *runContext) error {
 		methodCalled = true
 		assert.Equal(t, h.namespace1, ctx.runNamespace)
 		return expectedError
 	}
 
 	// EXERCISE
-	resultError := examinee.setupStaticLimitRange(runCtx)
+	resultError := examinee.setupStaticLimitRange(h.ctx, runCtx)
 
 	// VERIFY
 	assert.ErrorContains(t, resultError, "failed to set up the configured limit range in namespace \""+h.namespace1+"\": ")
@@ -815,6 +840,7 @@ func Test__runManager_setupStaticLimitRange__Succeeds(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	runCtx := &runContext{}
 	examinee := runManager{
 		testing: newRunManagerTestingWithAllNoopStubs(),
@@ -822,7 +848,7 @@ func Test__runManager_setupStaticLimitRange__Succeeds(t *testing.T) {
 	examinee.testing.setupStaticLimitRangeStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupStaticLimitRange(runCtx)
+	resultError := examinee.setupStaticLimitRange(ctx, runCtx)
 
 	// VERIFY
 	assert.NilError(t, resultError)
@@ -853,7 +879,7 @@ func Test__runManager_setupLimitRangeFromConfig__NoLimitRangeConfigured(t *testi
 	examinee.testing.setupLimitRangeFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupLimitRangeFromConfig(runCtx)
+	resultError := examinee.setupLimitRangeFromConfig(h.ctx, runCtx)
 	assert.NilError(t, resultError)
 }
 
@@ -882,7 +908,7 @@ func Test__runManager_setupLimitRangeFromConfig__MalformedLimitRange(t *testing.
 	examinee.testing.setupLimitRangeFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupLimitRangeFromConfig(runCtx)
+	resultError := examinee.setupLimitRangeFromConfig(h.ctx, runCtx)
 
 	// VERIFY
 	assert.ErrorContains(t, resultError, "failed to decode configured limit range: ")
@@ -916,7 +942,7 @@ func Test__runManager_setupLimitRangeFromConfig__UnexpectedGroup(t *testing.T) {
 	examinee.testing.setupLimitRangeFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupLimitRangeFromConfig(runCtx)
+	resultError := examinee.setupLimitRangeFromConfig(h.ctx, runCtx)
 
 	// VERIFY
 	assert.Error(t, resultError,
@@ -953,7 +979,7 @@ func Test__runManager_setupLimitRangeFromConfig__UnexpectedKind(t *testing.T) {
 	examinee.testing.setupLimitRangeFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupLimitRangeFromConfig(runCtx)
+	resultError := examinee.setupLimitRangeFromConfig(h.ctx, runCtx)
 
 	// VERIFY
 	assert.Error(t, resultError,
@@ -975,14 +1001,14 @@ func Test__runManager_setupStaticResourceQuota__Calls__setupResourceQuotaFromCon
 
 	var methodCalled bool
 	expectedError := errors.New("some error")
-	examinee.testing.setupResourceQuotaFromConfigStub = func(ctx *runContext) error {
+	examinee.testing.setupResourceQuotaFromConfigStub = func(_ context.Context, ctx *runContext) error {
 		methodCalled = true
 		assert.Equal(t, h.namespace1, ctx.runNamespace)
 		return expectedError
 	}
 
 	// EXERCISE
-	resultError := examinee.setupStaticResourceQuota(runCtx)
+	resultError := examinee.setupStaticResourceQuota(h.ctx, runCtx)
 
 	// VERIFY
 	assert.ErrorContains(t, resultError, "failed to set up the configured resource quota in namespace \""+h.namespace1+"\": ")
@@ -994,6 +1020,7 @@ func Test__runManager_setupStaticResourceQuota__Succeeds(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	runCtx := &runContext{}
 	examinee := runManager{
 		testing: newRunManagerTestingWithAllNoopStubs(),
@@ -1001,7 +1028,7 @@ func Test__runManager_setupStaticResourceQuota__Succeeds(t *testing.T) {
 	examinee.testing.setupStaticResourceQuotaStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupStaticResourceQuota(runCtx)
+	resultError := examinee.setupStaticResourceQuota(ctx, runCtx)
 
 	// VERIFY
 	assert.NilError(t, resultError)
@@ -1032,7 +1059,7 @@ func Test__runManager_setupResourceQuotaFromConfig__NoQuotaConfigured(t *testing
 	examinee.testing.setupResourceQuotaFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupResourceQuotaFromConfig(runCtx)
+	resultError := examinee.setupResourceQuotaFromConfig(h.ctx, runCtx)
 	assert.NilError(t, resultError)
 }
 
@@ -1061,7 +1088,7 @@ func Test__runManager_setupResourceQuotaFromConfig__MalformedResourceQuota(t *te
 	examinee.testing.setupResourceQuotaFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupResourceQuotaFromConfig(runCtx)
+	resultError := examinee.setupResourceQuotaFromConfig(h.ctx, runCtx)
 
 	// VERIFY
 	assert.ErrorContains(t, resultError, "failed to decode configured resource quota: ")
@@ -1095,7 +1122,7 @@ func Test__runManager_setupResourceQuotaFromConfig__UnexpectedGroup(t *testing.T
 	examinee.testing.setupResourceQuotaFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupResourceQuotaFromConfig(runCtx)
+	resultError := examinee.setupResourceQuotaFromConfig(h.ctx, runCtx)
 
 	// VERIFY
 	assert.Error(t, resultError,
@@ -1132,7 +1159,7 @@ func Test__runManager_setupResourceQuotaFromConfig__UnexpectedKind(t *testing.T)
 	examinee.testing.setupResourceQuotaFromConfigStub = nil
 
 	// EXERCISE
-	resultError := examinee.setupResourceQuotaFromConfig(runCtx)
+	resultError := examinee.setupResourceQuotaFromConfig(h.ctx, runCtx)
 
 	// VERIFY
 	assert.Error(t, resultError,
@@ -1149,7 +1176,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	_, mockPipelineRun, _ := h.prepareMocks(mockCtrl)
-	runConfig, _ := newEmptyRunsConfig()
+	runConfig, _ := newEmptyRunsConfig(h.ctx)
 	runCtx := &runContext{
 		pipelineRun:        mockPipelineRun,
 		pipelineRunsConfig: runConfig,
@@ -1163,12 +1190,12 @@ func Test__runManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet
 	}
 
 	// EXERCISE
-	resultError := examinee.createTektonTaskRun(runCtx)
+	resultError := examinee.createTektonTaskRun(h.ctx, runCtx)
 
 	// VERIFY
 	assert.NilError(t, resultError)
 
-	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(tektonClusterTaskName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	if equality.Semantic.DeepEqual(taskRun.Spec.PodTemplate, tekton.PodTemplate{}) {
 		t.Fatal("podTemplate of TaskRun is empty")
@@ -1207,17 +1234,17 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 		factory: cf,
 		testing: newRunManagerTestingWithAllNoopStubs(),
 	}
-	examinee.testing.getServiceAccountSecretNameStub = func(ctx *runContext) string {
-		return serviceAccountSecretName
+	examinee.testing.getServiceAccountSecretNameStub = func(_ context.Context, ctx *runContext) (string, error) {
+		return serviceAccountSecretName, nil
 	}
 
 	// EXERCISE
-	resultError := examinee.createTektonTaskRun(runCtx)
+	resultError := examinee.createTektonTaskRun(h.ctx, runCtx)
 
 	// VERIFY
 	assert.NilError(t, resultError)
 
-	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(tektonClusterTaskName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	expectedPodTemplate := &tekton.PodTemplate{
 		SecurityContext: &corev1api.PodSecurityContext{
@@ -1264,12 +1291,12 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	runNamespace, _, resultError := examinee.Start(mockPipelineRun, config)
+	runNamespace, _, resultError := examinee.Start(h.ctx, mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY
 	result, err := mockFactory.TektonV1beta1().TaskRuns(runNamespace).Get(
-		tektonTaskRunName, metav1.GetOptions{})
+		h.ctx, tektonTaskRunName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	assert.Assert(t, result != nil)
 }
@@ -1334,7 +1361,7 @@ func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
 			examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 			var cleanupCalled int
-			examinee.testing.cleanupStub = func(ctx *runContext) error {
+			examinee.testing.cleanupStub = func(_ context.Context, ctx *runContext) error {
 				assert.Assert(t, ctx.pipelineRun == mockPipelineRun)
 				cleanupCalled++
 				if test.cleanupError != nil && cleanupCalled == test.failOnCleanupCount {
@@ -1342,15 +1369,15 @@ func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
 				}
 				return nil
 			}
-			examinee.testing.createTektonTaskRunStub = func(ctx *runContext) error {
+			examinee.testing.createTektonTaskRunStub = func(_ context.Context, ctx *runContext) error {
 				return test.createTektonTaskRunError
 			}
-			examinee.testing.prepareRunNamespaceStub = func(ctx *runContext) error {
+			examinee.testing.prepareRunNamespaceStub = func(_ context.Context, ctx *runContext) error {
 				return test.prepareRunNamespaceError
 			}
 
 			// EXERCISE
-			_, _, resultError := examinee.Start(mockPipelineRun, config)
+			_, _, resultError := examinee.Start(h.ctx, mockPipelineRun, config)
 
 			// VERIFY
 			if test.expectedError != nil {
@@ -1479,7 +1506,7 @@ func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	_, _, resultError := examinee.Start(mockPipelineRun, config)
+	_, _, resultError := examinee.Start(h.ctx, mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY
@@ -1491,6 +1518,7 @@ func Test__runManager_copySecretsToRunNamespace__DoesCopySecret(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -1510,12 +1538,12 @@ func Test__runManager_copySecretsToRunNamespace__DoesCopySecret(t *testing.T) {
 	}
 
 	// EXPECT
-	mockSecretManager.EXPECT().CopyAll(run).
+	mockSecretManager.EXPECT().CopyAll(gomock.Not(gomock.Nil()), run).
 		Return("cloneSecret1", []string{"foo", "bar"}, nil).
 		Times(1)
 
 	// EXERCISE
-	cloneSecret, imagePullSecrets, resultError := examinee.copySecretsToRunNamespace(runCtx)
+	cloneSecret, imagePullSecrets, resultError := examinee.copySecretsToRunNamespace(ctx, runCtx)
 
 	// VERFIY
 	assert.NilError(t, resultError)
@@ -1543,18 +1571,18 @@ func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
 			examinee.testing = newRunManagerTestingWithAllNoopStubs()
 			examinee.testing.cleanupStub = nil
 
-			pipelineRunHelper, err := k8s.NewPipelineRun(h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
+			pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 			assert.NilError(t, err)
 
 			runCtx := &runContext{
 				pipelineRun:        pipelineRunHelper,
 				pipelineRunsConfig: config,
 			}
-			err = examinee.prepareRunNamespace(runCtx)
+			err = examinee.prepareRunNamespace(h.ctx, runCtx)
 			assert.NilError(t, err)
 			runCtx.pipelineRun.UpdateRunNamespace(runCtx.runNamespace)
 			runCtx.pipelineRun.UpdateAuxNamespace(runCtx.auxNamespace)
-			_, err = runCtx.pipelineRun.CommitStatus()
+			_, err = runCtx.pipelineRun.CommitStatus(h.ctx)
 			assert.NilError(t, err)
 			{
 				pipelineRun1 := h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1)
@@ -1569,7 +1597,7 @@ func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
 			}
 
 			// EXERCISE
-			resultErr := examinee.Cleanup(pipelineRunHelper)
+			resultErr := examinee.Cleanup(h.ctx, pipelineRunHelper)
 
 			// VERIFY
 			assert.NilError(t, resultErr)
@@ -1620,7 +1648,8 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 			k8sfake.Namespace("namespace1"),
 			pipelineRun,
 		)
-		k8sPipelineRun, err := k8s.NewPipelineRun(pipelineRun, cf)
+		ctx := context.Background()
+		k8sPipelineRun, err := k8s.NewPipelineRun(ctx, pipelineRun, cf)
 		assert.NilError(t, err)
 		config := &cfg.PipelineRunsConfigStruct{}
 		examinee = newRunManager(
@@ -1636,7 +1665,8 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 	}
 
 	expectSingleTaskRun := func(t *testing.T, cf *k8sfake.ClientFactory, k8sPipelineRun k8s.PipelineRun) *tekton.TaskRun {
-		taskRunList, err := cf.TektonV1beta1().TaskRuns(k8sPipelineRun.GetRunNamespace()).List(metav1.ListOptions{})
+		ctx := context.Background()
+		taskRunList, err := cf.TektonV1beta1().TaskRuns(k8sPipelineRun.GetRunNamespace()).List(ctx, metav1.ListOptions{})
 		assert.NilError(t, err)
 		assert.Equal(t, 1, len(taskRunList.Items), "%s", spew.Sdump(taskRunList))
 		return &taskRunList.Items[0]
@@ -1677,6 +1707,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 	} {
 		t.Run(test+"_"+tc.name, func(t *testing.T) {
 			// setup
+			ctx := context.Background()
 			pipelineRunJSON := fmt.Sprintf(fixIndent(`
 				{
 					"apiVersion": "steward.sap.com/v1alpha1",
@@ -1704,7 +1735,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 			examinee, runCtx, cf := setupExaminee(t, pipelineRunJSON)
 
 			// exercise
-			resultError := examinee.createTektonTaskRun(runCtx)
+			resultError := examinee.createTektonTaskRun(ctx, runCtx)
 			assert.NilError(t, resultError)
 			// verify
 			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
@@ -1733,6 +1764,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 	} {
 		t.Run(test+"_"+tc.name, func(t *testing.T) {
 			// setup
+			ctx := context.Background()
 			pipelineRunJSON := fmt.Sprintf(fixIndent(`
 				{
 					"apiVersion": "steward.sap.com/v1alpha1",
@@ -1756,7 +1788,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 			examinee, runCtx, cf := setupExaminee(t, pipelineRunJSON)
 
 			// exercise
-			resultError := examinee.createTektonTaskRun(runCtx)
+			resultError := examinee.createTektonTaskRun(ctx, runCtx)
 			assert.NilError(t, resultError)
 
 			// verify
@@ -1792,6 +1824,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 	} {
 		t.Run(test+"_"+tc.name, func(t *testing.T) {
 			// setup
+			ctx := context.Background()
 			pipelineRunJSON := fmt.Sprintf(fixIndent(`
 				{
 					"apiVersion": "steward.sap.com/v1alpha1",
@@ -1818,7 +1851,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 			t.Log("input:", pipelineRunJSON)
 			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
 			// exercise
-			resultError := examinee.createTektonTaskRun(runCtx)
+			resultError := examinee.createTektonTaskRun(ctx, runCtx)
 			assert.ErrorContains(t, resultError, tc.expectedError)
 		})
 	}
@@ -1838,6 +1871,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 	} {
 		t.Run(test+"_"+tc.name, func(t *testing.T) {
 			// setup
+			ctx := context.Background()
 			pipelineRunJSON := fmt.Sprintf(fixIndent(`
 				{
 					"apiVersion": "steward.sap.com/v1alpha1",
@@ -1865,7 +1899,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
 
 			// exercise
-			resultError := examinee.createTektonTaskRun(runCtx)
+			resultError := examinee.createTektonTaskRun(ctx, runCtx)
 
 			// verify
 			assert.NilError(t, resultError)
@@ -1875,6 +1909,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 
 type testHelper1 struct {
 	t            *testing.T
+	ctx          context.Context
 	namespace1   string
 	pipelineRun1 string
 }
@@ -1882,6 +1917,7 @@ type testHelper1 struct {
 func newTestHelper1(t *testing.T) *testHelper1 {
 	h := &testHelper1{
 		t:            t,
+		ctx:          context.Background(),
 		namespace1:   "namespace1",
 		pipelineRun1: "pipelinerun1",
 	}
@@ -1892,7 +1928,7 @@ func (h *testHelper1) getPipelineRunFromStorage(cf *fake.ClientFactory, namespac
 	t := h.t
 	t.Helper()
 
-	pipelineRun, err := cf.StewardV1alpha1().PipelineRuns(namespace).Get(name, metav1.GetOptions{})
+	pipelineRun, err := cf.StewardV1alpha1().PipelineRuns(namespace).Get(h.ctx, name, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("could not get pipeline run %q from namespace %q: %s", name, namespace, err.Error())
 	}
@@ -1912,7 +1948,7 @@ func (h *testHelper1) verifyNamespace(cf *fake.ClientFactory, nsName, expectedPu
 			`-)[[:alnum:]]*$`)
 	assert.Assert(t, cmp.Regexp(namePattern, nsName))
 
-	namespace, err := cf.CoreV1().Namespaces().Get(nsName, metav1.GetOptions{})
+	namespace, err := cf.CoreV1().Namespaces().Get(h.ctx, nsName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	assert.Equal(t, namespace.ObjectMeta.GenerateName, namePattern.FindStringSubmatch(nsName)[1])
 
@@ -1927,7 +1963,7 @@ func (h *testHelper1) assertThatExactlyTheseNamespacesExist(cf *fake.ClientFacto
 	t := h.t
 	t.Helper()
 
-	list, err := cf.CoreV1().Namespaces().List(metav1.ListOptions{})
+	list, err := cf.CoreV1().Namespaces().List(h.ctx, metav1.ListOptions{})
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -1960,7 +1996,7 @@ func (h *testHelper1) preparePredefinedClusterRole(cf *mocks.MockClientFactory, 
 	t := h.t
 	t.Helper()
 
-	_, err := cf.RbacV1beta1().ClusterRoles().Create(k8sfake.ClusterRole(string(runClusterRoleName)))
+	_, err := cf.RbacV1beta1().ClusterRoles().Create(h.ctx, k8sfake.ClusterRole(string(runClusterRoleName)), metav1.CreateOptions{})
 	if err != nil {
 		t.Fatalf("could not create cluster role: %s", err.Error())
 	}
@@ -2010,13 +2046,13 @@ func (*testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv
 	mockPipelineRun.EXPECT().UpdateAuxNamespace(gomock.Any()).Do(func(arg string) {
 		auxNamespace = arg
 	}).MaxTimes(1)
-	mockPipelineRun.EXPECT().CommitStatus().MaxTimes(1)
+	mockPipelineRun.EXPECT().CommitStatus(gomock.Any()).MaxTimes(1)
 
 	mockSecretProvider := secretmocks.NewMockSecretProvider(ctrl)
 
 	return mockFactory, mockPipelineRun, mockSecretProvider
 }
 
-func newEmptyRunsConfig() (*cfg.PipelineRunsConfigStruct, error) {
+func newEmptyRunsConfig(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error) {
 	return &cfg.PipelineRunsConfigStruct{}, nil
 }

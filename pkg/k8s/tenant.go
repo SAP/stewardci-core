@@ -1,6 +1,8 @@
 package k8s
 
 import (
+	"context"
+
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardLister "github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -13,7 +15,7 @@ type TenantFetcher interface {
 	// ByKey fetches Tenant resource from Kubernetes.
 	//     key    has to be "<namespace>/<name>"
 	// Return nil,nil if tenant with key does not exist
-	ByKey(key string) (*api.Tenant, error)
+	ByKey(ctx context.Context, key string) (*api.Tenant, error)
 }
 
 type clientBasedTenantFetcher struct {
@@ -26,13 +28,13 @@ func NewClientBasedTenantFetcher(factory ClientFactory) TenantFetcher {
 }
 
 // ByKey implements interface TenantFetcher
-func (tf *clientBasedTenantFetcher) ByKey(key string) (*api.Tenant, error) {
+func (tf *clientBasedTenantFetcher) ByKey(ctx context.Context, key string) (*api.Tenant, error) {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return nil, err
 	}
 	client := tf.factory.StewardV1alpha1().Tenants(namespace)
-	t, err := client.Get(name, metav1.GetOptions{})
+	t, err := client.Get(ctx, name, metav1.GetOptions{})
 	if k8serrors.IsNotFound(err) {
 		return nil, nil
 	}
@@ -49,7 +51,7 @@ func NewListerBasedTenantFetcher(lister stewardLister.TenantLister) TenantFetche
 }
 
 // ByKey implements interface TenantFetcher
-func (l *listerBasedTenantFetcher) ByKey(key string) (*api.Tenant, error) {
+func (l *listerBasedTenantFetcher) ByKey(ctx context.Context, key string) (*api.Tenant, error) {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return nil, err

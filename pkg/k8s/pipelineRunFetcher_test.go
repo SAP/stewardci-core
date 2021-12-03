@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -14,12 +15,13 @@ import (
 
 func Test_ClientBasedPipelineRunFetcher_ByName_NotExisting(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	factory := fake.NewClientFactory()
 	client := factory.StewardV1alpha1()
 	examinee := NewClientBasedPipelineRunFetcher(client)
 
 	// EXERCISE
-	pipelineRun, resultErr := examinee.ByName(ns1, "NotExisting1")
+	pipelineRun, resultErr := examinee.ByName(ctx, ns1, "NotExisting1")
 
 	// VERIFY
 	assert.Assert(t, pipelineRun == nil)
@@ -28,6 +30,7 @@ func Test_ClientBasedPipelineRunFetcher_ByName_NotExisting(t *testing.T) {
 
 func Test_ClientBasedPipelineRunFetcher_ByName_OtherError(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	factory := fake.NewClientFactory()
 	expectedError := fmt.Errorf("expected")
 	expectedReturnedError := errors.Wrap(expectedError,
@@ -37,7 +40,7 @@ func Test_ClientBasedPipelineRunFetcher_ByName_OtherError(t *testing.T) {
 	examinee := NewClientBasedPipelineRunFetcher(client)
 
 	// EXERCISE
-	pipelineRun, resultErr := examinee.ByName(ns1, "Any")
+	pipelineRun, resultErr := examinee.ByName(ctx, ns1, "Any")
 
 	// VERIFY
 	assert.Assert(t, pipelineRun == nil)
@@ -46,12 +49,14 @@ func Test_ClientBasedPipelineRunFetcher_ByName_OtherError(t *testing.T) {
 
 func Test_ClientBasedPipelineRunFetcher_ByKey_BadKey(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	factory := fake.NewClientFactory()
 	client := factory.StewardV1alpha1()
 	examinee := NewClientBasedPipelineRunFetcher(client)
 	badKey := "this/is/a/bad/key"
+
 	// EXERCISE
-	pipelineRun, resultErr := examinee.ByKey(badKey)
+	pipelineRun, resultErr := examinee.ByKey(ctx, badKey)
 
 	// VERIFY
 	assert.Assert(t, pipelineRun == nil)
@@ -63,13 +68,14 @@ func Test_ClientBasedPipelineRunFetcher_ByName_GoodCase(t *testing.T) {
 	const (
 		secretName = "secret1"
 	)
+	ctx := context.Background()
 	run := newPipelineRunWithSecret(ns1, run1, secretName)
 	factory := fake.NewClientFactory(run)
 	client := factory.StewardV1alpha1()
 	examinee := NewClientBasedPipelineRunFetcher(client)
 
 	// EXERCISE
-	resultObj, resultErr := examinee.ByName(ns1, run1)
+	resultObj, resultErr := examinee.ByName(ctx, ns1, run1)
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -81,6 +87,7 @@ func Test_ClientBasedPipelineRunFetcher_ByKey_GoodCase(t *testing.T) {
 	const (
 		secretName = "secret1"
 	)
+	ctx := context.Background()
 	run := newPipelineRunWithSecret(ns1, run1, secretName)
 	factory := fake.NewClientFactory(run)
 	client := factory.StewardV1alpha1()
@@ -88,7 +95,7 @@ func Test_ClientBasedPipelineRunFetcher_ByKey_GoodCase(t *testing.T) {
 	examinee := NewClientBasedPipelineRunFetcher(client)
 
 	// EXERCISE
-	resultObj, resultErr := examinee.ByKey(key)
+	resultObj, resultErr := examinee.ByKey(ctx, key)
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -97,11 +104,12 @@ func Test_ClientBasedPipelineRunFetcher_ByKey_GoodCase(t *testing.T) {
 
 func Test_ListerBasedPipelineRunFetcher_ByName_NotExisting(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	lister := createLister()
 	examinee := NewListerBasedPipelineRunFetcher(lister)
 
 	// EXERCISE
-	pipelineRun, resultErr := examinee.ByName(ns1, "NotExisting1")
+	pipelineRun, resultErr := examinee.ByName(ctx, ns1, "NotExisting1")
 
 	// VERIFY
 	assert.Assert(t, pipelineRun == nil)
@@ -113,11 +121,12 @@ func Test_ListerBasedPipelineRunFetcher_ByName_GoodCase(t *testing.T) {
 	const (
 		secretName = "secret1"
 	)
+	ctx := context.Background()
 	run := newPipelineRunWithSecret(ns1, run1, secretName)
 	lister := createLister(run)
 	examinee := NewListerBasedPipelineRunFetcher(lister)
 	// EXERCISE
-	resultObj, resultErr := examinee.ByName(ns1, run1)
+	resultObj, resultErr := examinee.ByName(ctx, ns1, run1)
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -129,13 +138,14 @@ func Test_ListerBasedPipelineRunFetcher_ByKey_GoodCase(t *testing.T) {
 	const (
 		secretName = "secret1"
 	)
+	ctx := context.Background()
 	run := newPipelineRunWithSecret(ns1, run1, secretName)
 	lister := createLister(run)
 	examinee := NewListerBasedPipelineRunFetcher(lister)
 	key := fake.ObjectKey(run1, ns1)
 
 	// EXERCISE
-	resultObj, resultErr := examinee.ByKey(key)
+	resultObj, resultErr := examinee.ByKey(ctx, key)
 
 	// VERIFY
 	assert.NilError(t, resultErr)

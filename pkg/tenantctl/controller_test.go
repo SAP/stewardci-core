@@ -1,6 +1,7 @@
 package tenantctl
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -24,7 +25,7 @@ import (
 func Test_Controller_syncHandler_DoesNotingIfTenantNotFound(t *testing.T) {
 	// SETUP
 	cf := fake.NewClientFactory( /* no objects exist */ )
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	// EXERCISE
@@ -56,9 +57,9 @@ func Test_Controller_syncHandler_FailsIfTenantFetchFails(t *testing.T) {
 
 	fetcher := mocks.NewMockTenantFetcher(mockCtl)
 	fetcherErr := errors.New("fetcher error")
-	fetcher.EXPECT().ByKey(gomock.Any()).Return(nil, fetcherErr).Times(1)
+	fetcher.EXPECT().ByKey(gomock.Not(gomock.Nil()), gomock.Any()).Return(nil, fetcherErr).Times(1)
 
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = fetcher
 
 	// EXERCISE
@@ -83,7 +84,7 @@ func Test_Controller_syncHandler_FailsIfClientConfigIsInvalid(t *testing.T) {
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	injectedError := errors.New("ERR1")
@@ -115,6 +116,7 @@ func Test_Controller_syncHandler_AddsFinalizer(t *testing.T) {
 		tenantRoleName = "tenantClusterRole1"
 	)
 
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
@@ -124,11 +126,11 @@ func Test_Controller_syncHandler_AddsFinalizer(t *testing.T) {
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 	// ensure that there are no finalizers
 	{
-		tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
+		tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(ctx, tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
 		assertThatExactlyTheseFinalizersExist(t, &tenant.ObjectMeta /*none*/)
 	}
@@ -139,7 +141,7 @@ func Test_Controller_syncHandler_AddsFinalizer(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, resultErr)
 	{
-		tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
+		tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(ctx, tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
 		assertThatExactlyTheseFinalizersExist(t, &tenant.ObjectMeta,
 			k8s.FinalizerName,
@@ -156,6 +158,7 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 		tenantRoleName = "tenantClusterRole1"
 	)
 
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
@@ -165,7 +168,7 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	// EXERCISE
@@ -173,7 +176,7 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 
 	// VERIFY
 	assert.NilError(t, resultErr)
-	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
+	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(ctx, tenantID, metav1.GetOptions{})
 	assert.NilError(t, err)
 
 	// tenant
@@ -191,7 +194,7 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 
 	// tenant namespace
 	{
-		namespace, err := cf.CoreV1().Namespaces().Get(tenant.Status.TenantNamespaceName, metav1.GetOptions{})
+		namespace, err := cf.CoreV1().Namespaces().Get(ctx, tenant.Status.TenantNamespaceName, metav1.GetOptions{})
 		assert.NilError(t, err)
 
 		_, labelExists := namespace.GetLabels()[stewardv1alpha1.LabelSystemManaged]
@@ -201,7 +204,7 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 	// RoleBinding in tenant namespace
 	{
 		roleBindingList, err := cf.RbacV1beta1().RoleBindings(tenant.Status.TenantNamespaceName).
-			List(metav1.ListOptions{LabelSelector: api.LabelSystemManaged})
+			List(ctx, metav1.ListOptions{LabelSelector: api.LabelSystemManaged})
 		assert.NilError(t, err)
 		assert.Assert(t, len(roleBindingList.Items) == 1)
 		roleBinding := roleBindingList.Items[0]
@@ -241,6 +244,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnNamespaceClash(t *te
 		tenantRoleName = "tenantClusterRole1"
 	)
 
+	ctx := context.Background()
 	clashingNamespaceName := fmt.Sprintf("%s-%s", tenantNSPrefix, tenantID)
 	cf := fake.NewClientFactory(
 		// the client namespace
@@ -254,7 +258,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnNamespaceClash(t *te
 		// a namespace with same name as will be used for tenant namespace
 		fake.Namespace(clashingNamespaceName),
 	)
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	// EXERCISE
@@ -267,7 +271,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnNamespaceClash(t *te
 		resultErr.Error(),
 	))
 
-	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
+	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(ctx, tenantID, metav1.GetOptions{})
 	assert.NilError(t, err)
 
 	// tenant
@@ -290,7 +294,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnNamespaceClash(t *te
 	// RoleBinding in tenant namespace NOT created
 	{
 		_, err := cf.RbacV1beta1().RoleBindings(tenant.Status.TenantNamespaceName).
-			Get(tenantNamespaceRoleBindingNamePrefix, metav1.GetOptions{})
+			Get(ctx, tenantNamespaceRoleBindingNamePrefix, metav1.GetOptions{})
 		assert.Assert(t, k8serrors.IsNotFound(err))
 	}
 }
@@ -313,7 +317,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnErrorWhenSyncingRole
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	injectedError := errors.New("ERR1")
@@ -330,7 +334,8 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnErrorWhenSyncingRole
 	assert.Assert(t, resultErr != nil)
 	assert.Assert(t, injectedError == resultErr)
 
-	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
+	ctx := context.Background()
+	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(ctx, tenantID, metav1.GetOptions{})
 	assert.NilError(t, err)
 
 	// tenant
@@ -376,7 +381,7 @@ func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *tes
 		// the tenant namespace
 		fake.Namespace(tenantNSName),
 	)
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	// EXERCISE
@@ -384,7 +389,8 @@ func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *tes
 
 	// VERIFY
 	assert.NilError(t, resultErr)
-	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
+	ctx := context.Background()
+	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(ctx, tenantID, metav1.GetOptions{})
 	assert.NilError(t, err)
 
 	// tenant
@@ -406,7 +412,7 @@ func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *tes
 	// RoleBinding in tenant namespace
 	{
 		roleBindingList, err := cf.RbacV1beta1().RoleBindings(tenant.Status.TenantNamespaceName).
-			List(metav1.ListOptions{LabelSelector: api.LabelSystemManaged})
+			List(ctx, metav1.ListOptions{LabelSelector: api.LabelSystemManaged})
 		assert.NilError(t, err)
 		assert.Assert(t, len(roleBindingList.Items) == 1)
 		roleBinding := roleBindingList.Items[0]
@@ -461,7 +467,7 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnMissingNamespace(t *te
 		origTenant,
 		// no tenant namespace here,
 	)
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	// EXERCISE
@@ -471,7 +477,8 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnMissingNamespace(t *te
 	assert.Assert(t, resultErr != nil)
 	assert.Error(t, resultErr, fmt.Sprintf("tenant namespace \"%s\" does not exist anymore", tenantNSName))
 
-	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
+	ctx := context.Background()
+	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(ctx, tenantID, metav1.GetOptions{})
 	assert.NilError(t, err)
 
 	// tenant
@@ -524,7 +531,7 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnErrorWhenSyncingRoleBi
 		// the tenant namespace
 		fake.Namespace(tenantNSName),
 	)
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	injectedError := errors.New("ERR1")
@@ -541,7 +548,8 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnErrorWhenSyncingRoleBi
 	assert.Assert(t, resultErr != nil)
 	assert.Assert(t, injectedError == resultErr)
 
-	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
+	ctx := context.Background()
+	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(ctx, tenantID, metav1.GetOptions{})
 	assert.NilError(t, err)
 
 	// status
@@ -578,6 +586,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfFinalizerIsSet(t *testing.T) 
 		tenantRoleName = "tenantClusterRole1"
 	)
 
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
@@ -587,7 +596,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfFinalizerIsSet(t *testing.T) 
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 	tenantKey := makeTenantKey(clientNSName, tenantID)
 	tenantsIfc := cf.StewardV1alpha1().Tenants(clientNSName)
@@ -598,7 +607,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfFinalizerIsSet(t *testing.T) 
 		err := ctl.syncHandler(tenantKey)
 		assert.NilError(t, err)
 
-		initializedTenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
+		initializedTenant, err := tenantsIfc.Get(ctx, tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
 		tenantNSName = initializedTenant.Status.TenantNamespaceName
 	}
@@ -612,10 +621,10 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfFinalizerIsSet(t *testing.T) 
 	// mark tenant as deleted
 	{
 		// Fake client deletes immediately -> set deletion timestamp
-		tenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
+		tenant, err := tenantsIfc.Get(ctx, tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
 		tenant.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
-		_, err = tenantsIfc.Update(tenant)
+		_, err = tenantsIfc.Update(ctx, tenant, metav1.UpdateOptions{})
 		assert.NilError(t, err)
 	}
 
@@ -645,6 +654,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_SkippedIfFinalizerIsNotSet(t *t
 		tenantRoleName = "tenantClusterRole1"
 	)
 
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
@@ -654,7 +664,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_SkippedIfFinalizerIsNotSet(t *t
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 	tenantKey := makeTenantKey(clientNSName, tenantID)
 	tenantsIfc := cf.StewardV1alpha1().Tenants(clientNSName)
@@ -665,7 +675,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_SkippedIfFinalizerIsNotSet(t *t
 		err := ctl.syncHandler(tenantKey)
 		assert.NilError(t, err)
 
-		initializedTenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
+		initializedTenant, err := tenantsIfc.Get(ctx, tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
 		tenantNSName = initializedTenant.Status.TenantNamespaceName
 	}
@@ -679,11 +689,11 @@ func Test_Controller_syncHandler_CleanupOnDelete_SkippedIfFinalizerIsNotSet(t *t
 	// mark tenant as deleted
 	{
 		// Fake client deletes immediately -> set deletion timestamp
-		tenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
+		tenant, err := tenantsIfc.Get(ctx, tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
 		tenant.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
 		tenant.SetFinalizers([]string{"not-our-finalizer"})
-		_, err = tenantsIfc.Update(tenant)
+		_, err = tenantsIfc.Update(ctx, tenant, metav1.UpdateOptions{})
 		assert.NilError(t, err)
 	}
 
@@ -699,7 +709,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_SkippedIfFinalizerIsNotSet(t *t
 	assertThatExactlyTheseTenantsExistInNamespace(t, cf, clientNSName,
 		tenantID, // due to other finalizer
 	)
-	tenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
+	tenant, err := tenantsIfc.Get(ctx, tenantID, metav1.GetOptions{})
 	assert.NilError(t, err)
 	assert.Assert(t, !tenant.GetDeletionTimestamp().IsZero())
 	assertThatExactlyTheseFinalizersExist(t, &tenant.ObjectMeta, "not-our-finalizer")
@@ -714,6 +724,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfNamespaceDoesNotExistAnymore(
 		tenantRoleName = "tenantClusterRole1"
 	)
 
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
@@ -723,7 +734,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfNamespaceDoesNotExistAnymore(
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 	tenantKey := makeTenantKey(clientNSName, tenantID)
 	tenantsIfc := cf.StewardV1alpha1().Tenants(clientNSName)
@@ -734,7 +745,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfNamespaceDoesNotExistAnymore(
 		err := ctl.syncHandler(tenantKey)
 		assert.NilError(t, err)
 
-		initializedTenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
+		initializedTenant, err := tenantsIfc.Get(ctx, tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
 		tenantNSName = initializedTenant.Status.TenantNamespaceName
 	}
@@ -747,7 +758,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfNamespaceDoesNotExistAnymore(
 
 	// delete tenant namespace
 	{
-		err := cf.CoreV1().Namespaces().Delete(tenantNSName, &metav1.DeleteOptions{})
+		err := cf.CoreV1().Namespaces().Delete(ctx, tenantNSName, metav1.DeleteOptions{})
 		assert.NilError(t, err)
 	}
 
@@ -759,10 +770,10 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfNamespaceDoesNotExistAnymore(
 	// mark tenant as deleted
 	{
 		// Fake client deletes immediately -> set deletion timestamp
-		tenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
+		tenant, err := tenantsIfc.Get(ctx, tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
 		tenant.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
-		_, err = tenantsIfc.Update(tenant)
+		_, err = tenantsIfc.Update(ctx, tenant, metav1.UpdateOptions{})
 		assert.NilError(t, err)
 	}
 
@@ -797,7 +808,7 @@ func Test_Controller_syncHandler_CleanupOnStatusUpdateFailure(t *testing.T) {
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf, NewMetrics())
+	ctl := NewController(cf)
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	injectedError := errors.New("ERR1")
@@ -829,6 +840,7 @@ func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_listManagedRoleBi
 		tenantRoleName = "tenantClusterRole1"
 	)
 
+	ctx := context.Background()
 	tenant := fake.Tenant(tenantID, clientNSName)
 	config := &clientConfigImpl{
 		tenantRoleName: tenantRoleName,
@@ -845,7 +857,7 @@ func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_listManagedRoleBi
 	}
 
 	// EXERCISE
-	resultUpdateNeeded, resultErr := examinee.reconcileTenantRoleBinding(tenant, tenantNSName, config)
+	resultUpdateNeeded, resultErr := examinee.reconcileTenantRoleBinding(ctx, tenant, tenantNSName, config)
 
 	// VERIFY
 	assert.Error(t, resultErr, fmt.Sprintf(
@@ -865,6 +877,7 @@ func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_createRoleBinding
 		tenantRoleName = "tenantClusterRole1"
 	)
 
+	ctx := context.Background()
 	tenant := fake.Tenant(tenantID, clientNSName)
 	config := &clientConfigImpl{
 		tenantRoleName: tenantRoleName,
@@ -884,7 +897,7 @@ func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_createRoleBinding
 	}
 
 	// EXERCISE
-	resultUpdateNeeded, resultErr := examinee.reconcileTenantRoleBinding(tenant, tenantNSName, config)
+	resultUpdateNeeded, resultErr := examinee.reconcileTenantRoleBinding(ctx, tenant, tenantNSName, config)
 
 	// VERIFY
 	assert.Error(t, resultErr, fmt.Sprintf(
@@ -901,6 +914,7 @@ func Test_Controller_listManagedRoleBindings_GoodCase_WithLabelFilter(t *testing
 		nsName = "namespace1"
 	)
 
+	ctx := context.Background()
 	newManagedRoleBinding := func(name string, labelValue string) *rbacv1beta1.RoleBinding {
 		return &rbacv1beta1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
@@ -932,7 +946,7 @@ func Test_Controller_listManagedRoleBindings_GoodCase_WithLabelFilter(t *testing
 	examinee := &Controller{factory: cf}
 
 	// EXERCISE
-	resultList, resultErr := examinee.listManagedRoleBindings(nsName)
+	resultList, resultErr := examinee.listManagedRoleBindings(ctx, nsName)
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -960,6 +974,7 @@ func Test_Controller_listManagedRoleBindings_FailureCase(t *testing.T) {
 		nsName = "namespace1"
 	)
 
+	ctx := context.Background()
 	cf := fake.NewClientFactory()
 	injectedError := errors.Errorf("injected error 1")
 	cf.KubernetesClientset().PrependReactor("list", "rolebindings", fake.NewErrorReactor(injectedError))
@@ -967,7 +982,7 @@ func Test_Controller_listManagedRoleBindings_FailureCase(t *testing.T) {
 	examinee := &Controller{factory: cf}
 
 	// EXERCISE
-	resultList, resultErr := examinee.listManagedRoleBindings(nsName)
+	resultList, resultErr := examinee.listManagedRoleBindings(ctx, nsName)
 
 	// VERIFY
 	assert.Assert(t, resultErr != nil)
@@ -992,6 +1007,7 @@ func Test_Controller_updateStatus_ConcurrentModification(t *testing.T) {
 		tenantRoleName = "tenantClusterRole1"
 	)
 
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		// the client namespace
 		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
@@ -1006,7 +1022,7 @@ func Test_Controller_updateStatus_ConcurrentModification(t *testing.T) {
 	stopCh, controller := startController(t, cf)
 	defer stopController(t, stopCh)
 
-	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(tenantID, metav1.GetOptions{})
+	tenant, err := cf.StewardV1alpha1().Tenants(clientNSName).Get(ctx, tenantID, metav1.GetOptions{})
 	assert.NilError(t, err)
 
 	// first update
@@ -1014,7 +1030,7 @@ func Test_Controller_updateStatus_ConcurrentModification(t *testing.T) {
 		cond := tenant.Status.GetCondition(knativeapis.ConditionReady)
 		cond.Message = "update 1"
 		tenant.Status.SetCondition(cond)
-		_, err = controller.updateStatus(tenant)
+		_, err = controller.updateStatus(ctx, tenant)
 		assert.NilError(t, err)
 	}
 
@@ -1024,7 +1040,7 @@ func Test_Controller_updateStatus_ConcurrentModification(t *testing.T) {
 		cond := tenant.Status.GetCondition(knativeapis.ConditionReady)
 		cond.Message = "update 2"
 		tenant.Status.SetCondition(cond)
-		if _, err := controller.updateStatus(tenant); err == nil {
+		if _, err := controller.updateStatus(ctx, tenant); err == nil {
 			t.Fatalf("second update succeeded but should have failed")
 		}
 	}
@@ -1055,6 +1071,7 @@ func Test_Controller_FullWorkflow(t *testing.T) {
 
 	// VERIFY
 	tenantsIfc := cf.StewardV1alpha1().Tenants(clientNSName)
+	ctx := context.Background()
 
 	assertThatExactlyTheseNamespacesExist(t, cf,
 		clientNSName,
@@ -1065,7 +1082,7 @@ func Test_Controller_FullWorkflow(t *testing.T) {
 	{
 		syncCount := controller.getSyncCount()
 
-		_, err := tenantsIfc.Create(fake.Tenant(tenantID, clientNSName))
+		_, err := tenantsIfc.Create(ctx, fake.Tenant(tenantID, clientNSName), metav1.CreateOptions{})
 		assert.NilError(t, err)
 
 		waitForNextSync(t, controller, syncCount)
@@ -1078,7 +1095,7 @@ func Test_Controller_FullWorkflow(t *testing.T) {
 			tenantID,
 		)
 
-		tenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
+		tenant, err := tenantsIfc.Get(ctx, tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
 		dump := fmt.Sprintf("\n\n%v", spew.Sdump(tenant))
 		{
@@ -1096,17 +1113,17 @@ func Test_Controller_FullWorkflow(t *testing.T) {
 	{
 		syncCount := controller.getSyncCount()
 
-		tenant, err := tenantsIfc.Get(tenantID, metav1.GetOptions{})
+		tenant, err := tenantsIfc.Get(ctx, tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
 
 		// Fake client deletes immediately -> set deletion timestamp
 		tenant.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
-		_, err = tenantsIfc.Update(tenant)
+		_, err = tenantsIfc.Update(ctx, tenant, metav1.UpdateOptions{})
 		assert.NilError(t, err)
 
 		waitForNextSync(t, controller, syncCount)
 
-		tenant, err = tenantsIfc.Get(tenantID, metav1.GetOptions{})
+		tenant, err = tenantsIfc.Get(ctx, tenantID, metav1.GetOptions{})
 		assert.NilError(t, err)
 
 		assertThatExactlyTheseNamespacesExist(t, cf,
@@ -1119,7 +1136,8 @@ func Test_Controller_FullWorkflow(t *testing.T) {
 func assertThatExactlyTheseNamespacesExist(t *testing.T, cf *fake.ClientFactory, expectedNamespaces ...string) {
 	t.Helper()
 
-	nsList, err := cf.CoreV1().Namespaces().List(metav1.ListOptions{})
+	ctx := context.Background()
+	nsList, err := cf.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	assert.NilError(t, err)
 	dump := fmt.Sprintf("\n\n%v", spew.Sdump(nsList.Items))
 
@@ -1145,7 +1163,8 @@ func assertThatExactlyTheseNamespacesExist(t *testing.T, cf *fake.ClientFactory,
 func assertThatExactlyTheseTenantsExistInNamespace(t *testing.T, cf *fake.ClientFactory, namespace string, expectedTenants ...string) {
 	t.Helper()
 
-	tenantList, err := cf.StewardV1alpha1().Tenants(namespace).List(metav1.ListOptions{})
+	ctx := context.Background()
+	tenantList, err := cf.StewardV1alpha1().Tenants(namespace).List(ctx, metav1.ListOptions{})
 	assert.NilError(t, err)
 	dump := fmt.Sprintf("\n\n%v", spew.Sdump(tenantList.Items))
 
@@ -1197,8 +1216,7 @@ func assertThatExactlyTheseFinalizersExist(t *testing.T, obj *metav1.ObjectMeta,
 
 func startController(t *testing.T, cf *fake.ClientFactory) (chan struct{}, *Controller) {
 	stopCh := make(chan struct{}, 0)
-	metrics := NewMetrics()
-	controller := NewController(cf, metrics)
+	controller := NewController(cf)
 	controller.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 	cf.StewardInformerFactory().Start(stopCh)
 	go start(t, controller, stopCh)

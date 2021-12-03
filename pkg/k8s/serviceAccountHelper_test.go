@@ -1,18 +1,24 @@
 package k8s
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func Test_GetServiceAccountSecretName_works(t *testing.T) {
-	//SETUP
-	secretName := "ns1-token-foo"
+func Test_serviceAccountHelper_GetServiceAccountSecretName_works(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	ctx := context.Background()
+
+	const secretName = "ns1-token-foo"
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
@@ -20,21 +26,44 @@ func Test_GetServiceAccountSecretName_works(t *testing.T) {
 		},
 		Type: v1.SecretTypeServiceAccountToken,
 	}
-	setupAccountManager(secret)
-	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+
+	cf := fake.NewClientFactory(
+		secret,
+	)
+	accountManager := NewServiceAccountManager(cf, ns1)
+	account, err := accountManager.CreateServiceAccount(
+		ctx,
+		accountName,
+		"pipelineCloneSecretName1",
+		[]string{
+			"imagePullSecret1",
+			"imagePullSecret2",
+		},
+	)
 	assert.NilError(t, err)
 
-	acc.AttachSecrets("a-secret", secretName, "z-secret")
-	examinee := acc.GetHelper()
+	account.AttachSecrets(
+		"a-secret",
+		secretName,
+		"z-secret",
+	)
+	examinee := account.GetHelper()
+
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName()
+	result, resultErr := examinee.GetServiceAccountSecretName(ctx)
+
 	// VERIFY
-	assert.Equal(t, secretName, resultName)
+	assert.NilError(t, resultErr)
+	assert.Equal(t, secretName, result)
 }
 
-func Test_GetServiceAccountSecretNameRepeat_delayedRef_works(t *testing.T) {
-	//SETUP
-	secretName := "ns1-token-foo"
+func Test_serviceAccountHelper_GetServiceAccountSecretNameRepeat_delayedRef_works(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	ctx := context.Background()
+
+	const secretName = "ns1-token-foo"
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
@@ -42,35 +71,66 @@ func Test_GetServiceAccountSecretNameRepeat_delayedRef_works(t *testing.T) {
 		},
 		Type: v1.SecretTypeServiceAccountToken,
 	}
-	setupAccountManager(secret)
-	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+
+	cf := fake.NewClientFactory(
+		secret,
+	)
+	accountManager := NewServiceAccountManager(cf, ns1)
+
+	account, err := accountManager.CreateServiceAccount(
+		ctx,
+		accountName,
+		"pipelineCloneSecretName1",
+		[]string{
+			"imagePullSecret1",
+			"imagePullSecret2",
+		},
+	)
 	assert.NilError(t, err)
-	err = acc.Update()
+	err = account.Update(ctx)
 	assert.NilError(t, err)
+
+	examinee := account.GetHelper()
+
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
-	go func(t *testing.T, acc *ServiceAccountWrap) {
+
+	// attach secret concurrently with delay
+	go func() {
 		defer waitGroup.Done()
-		examinee := acc.GetHelper()
-		// EXERCISE
-		resultName := examinee.GetServiceAccountSecretNameRepeat()
-		// VERIFY
-		assert.Equal(t, "ns1-token-foo", resultName)
-	}(t, acc)
-	duration, _ := time.ParseDuration("500ms")
-	time.Sleep(duration)
-	localAccountManager := NewServiceAccountManager(factory, ns1)
-	localAccount, err := localAccountManager.GetServiceAccount(accountName)
-	assert.NilError(t, err)
-	localAccount.AttachSecrets("a-secret", secretName, "z-secret")
-	err = localAccount.Update()
-	assert.NilError(t, err)
+
+		time.Sleep(100 * time.Millisecond)
+
+		localAccountManager := NewServiceAccountManager(cf, ns1)
+		localAccount, err := localAccountManager.GetServiceAccount(ctx, accountName)
+		assert.NilError(t, err)
+
+		localAccount.AttachSecrets(
+			"a-secret",
+			secretName,
+			"z-secret",
+		)
+		err = localAccount.Update(ctx)
+		assert.NilError(t, err)
+	}()
+
+	// EXERCISE
+	result, resultErr := examinee.GetServiceAccountSecretNameRepeat(ctx)
+
+	// VERIFY
+	assert.NilError(t, resultErr)
+	assert.Equal(t, secretName, result)
+
 	waitGroup.Wait()
 }
 
-func Test_GetServiceAccountSecretNameRepeat_delayedSecret_works(t *testing.T) {
-	//SETUP
-	secretName := "ns1-token-foo"
+func Test_serviceAccountHelper_GetServiceAccountSecretNameRepeat_delayedSecret_works(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	ctx := context.Background()
+
+	const secretName = "ns1-token-foo"
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
@@ -78,33 +138,61 @@ func Test_GetServiceAccountSecretNameRepeat_delayedSecret_works(t *testing.T) {
 		},
 		Type: v1.SecretTypeServiceAccountToken,
 	}
-	setupAccountManager()
-	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
-	acc.AttachSecrets("a-secret", secretName, "z-secret")
+
+	cf := fake.NewClientFactory()
+	accountManager := NewServiceAccountManager(cf, ns1)
+
+	account, err := accountManager.CreateServiceAccount(
+		ctx,
+		accountName,
+		"pipelineCloneSecretName1",
+		[]string{
+			"imagePullSecret1",
+			"imagePullSecret2",
+		},
+	)
+	account.AttachSecrets(
+		"a-secret",
+		secretName,
+		"z-secret",
+	)
 	assert.NilError(t, err)
-	err = acc.Update()
+	err = account.Update(ctx)
 	assert.NilError(t, err)
+
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
-	go func(t *testing.T, acc *ServiceAccountWrap) {
+
+	examinee := account.GetHelper()
+
+	// create secret concurrently with delay
+	go func() {
 		defer waitGroup.Done()
-		examinee := acc.GetHelper()
-		// EXERCISE
-		resultName := examinee.GetServiceAccountSecretNameRepeat()
-		// VERIFY
-		assert.Equal(t, "ns1-token-foo", resultName)
-	}(t, acc)
-	duration, _ := time.ParseDuration("500ms")
-	time.Sleep(duration)
-	secretsInterface := factory.CoreV1().Secrets(ns1)
-	_, err = secretsInterface.Create(secret)
-	assert.NilError(t, err)
+
+		time.Sleep(100 * time.Millisecond)
+
+		secretsInterface := cf.CoreV1().Secrets(ns1)
+		_, err = secretsInterface.Create(ctx, secret, metav1.CreateOptions{})
+		assert.NilError(t, err)
+	}()
+
+	// EXERCISE
+	result, resultErr := examinee.GetServiceAccountSecretNameRepeat(ctx)
+
+	// VERIFY
+	assert.NilError(t, resultErr)
+	assert.Equal(t, secretName, result)
+
 	waitGroup.Wait()
 }
 
-func Test_GetServiceAccountSecretName_wrongType(t *testing.T) {
-	//SETUP
-	secretName := "ns1-token-foo"
+func Test_serviceAccountHelper_GetServiceAccountSecretName_wrongType(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	ctx := context.Background()
+
+	const secretName = "ns1-token-foo"
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
@@ -112,21 +200,45 @@ func Test_GetServiceAccountSecretName_wrongType(t *testing.T) {
 		},
 		Type: v1.SecretTypeOpaque,
 	}
-	setupAccountManager(secret)
-	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+
+	cf := fake.NewClientFactory(
+		secret,
+	)
+	accountManager := NewServiceAccountManager(cf, ns1)
+
+	account, err := accountManager.CreateServiceAccount(
+		ctx,
+		accountName,
+		"pipelineCloneSecretName1",
+		[]string{
+			"imagePullSecret1",
+			"imagePullSecret2",
+		},
+	)
 	assert.NilError(t, err)
 
-	acc.AttachSecrets("a-secret", secretName, "z-secret")
-	examinee := acc.GetHelper()
+	account.AttachSecrets(
+		"a-secret",
+		secretName,
+		"z-secret",
+	)
+	examinee := account.GetHelper()
+
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName()
+	result, resultErr := examinee.GetServiceAccountSecretName(ctx)
+
 	// VERIFY
-	assert.Equal(t, "", resultName)
+	assert.NilError(t, resultErr)
+	assert.Equal(t, "", result)
 }
 
-func Test_GetServiceAccountSecretName_ref_missing(t *testing.T) {
-	//SETUP
-	secretName := "ns1-token-foo"
+func Test_serviceAccountHelper_GetServiceAccountSecretName_refMissing(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	ctx := context.Background()
+
+	const secretName = "ns1-token-foo"
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
@@ -134,31 +246,72 @@ func Test_GetServiceAccountSecretName_ref_missing(t *testing.T) {
 		},
 		Type: v1.SecretTypeServiceAccountToken,
 	}
-	setupAccountManager(secret)
-	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+
+	cf := fake.NewClientFactory(
+		secret,
+	)
+	accountManager := NewServiceAccountManager(cf, ns1)
+
+	account, err := accountManager.CreateServiceAccount(
+		ctx,
+		accountName,
+		"pipelineCloneSecretName1",
+		[]string{
+			"imagePullSecret1",
+			"imagePullSecret2",
+		},
+	)
 	assert.NilError(t, err)
 
-	acc.AttachSecrets("a-secret", "z-secret")
-	examinee := acc.GetHelper()
+	account.AttachSecrets(
+		"a-secret",
+		"z-secret",
+	)
+	examinee := account.GetHelper()
 
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName()
+	result, resultErr := examinee.GetServiceAccountSecretName(ctx)
+
 	// VERIFY
-	assert.Equal(t, "", resultName)
+	assert.NilError(t, resultErr)
+	assert.Equal(t, "", result)
 }
 
-func Test_GetServiceAccountSecretName_secret_missing(t *testing.T) {
-	//SETUP
-	secretName := "ns1-token-foo"
-	setupAccountManager()
-	acc, err := accountManager.CreateServiceAccount(accountName, "pipelineCloneSecretName1", []string{"imagePullSecret1", "imagePullSecret2"})
+func Test_serviceAccountHelper_GetServiceAccountSecretName_secretMissing(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	ctx := context.Background()
+
+	const secretName = "ns1-token-foo"
+
+	cf := fake.NewClientFactory(
+	// no secret here
+	)
+	accountManager := NewServiceAccountManager(cf, ns1)
+
+	account, err := accountManager.CreateServiceAccount(
+		ctx,
+		accountName,
+		"pipelineCloneSecretName1",
+		[]string{
+			"imagePullSecret1",
+			"imagePullSecret2",
+		},
+	)
 	assert.NilError(t, err)
 
-	acc.AttachSecrets("a-secret", secretName, "z-secret")
-	examinee := acc.GetHelper()
+	account.AttachSecrets(
+		"a-secret",
+		secretName,
+		"z-secret",
+	)
+	examinee := account.GetHelper()
 
 	// EXERCISE
-	resultName := examinee.GetServiceAccountSecretName()
+	result, resultErr := examinee.GetServiceAccountSecretName(ctx)
+
 	// VERIFY
-	assert.Equal(t, "", resultName)
+	assert.NilError(t, resultErr)
+	assert.Equal(t, "", result)
 }

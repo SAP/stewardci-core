@@ -1,6 +1,7 @@
 package secrets
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -47,6 +48,7 @@ func Test_CopySecrets_NoFilter(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -55,10 +57,10 @@ func Test_CopySecrets_NoFilter(t *testing.T) {
 
 	// EXPECT
 	expectedSecret := fake.SecretOpaque("foo", "")
-	mockSecretHelper.EXPECT().CreateSecret(expectedSecret).Return(expectedSecret, nil)
+	mockSecretHelper.EXPECT().CreateSecret(ctx, expectedSecret).Return(expectedSecret, nil)
 
 	// EXERCISE
-	resultList, resultErr := examinee.CopySecrets([]string{"foo"}, nil)
+	resultList, resultErr := examinee.CopySecrets(ctx, []string{"foo"}, nil)
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -69,6 +71,7 @@ func Test_CopySecrets_WithFilter(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -86,12 +89,13 @@ func Test_CopySecrets_WithFilter(t *testing.T) {
 
 	// EXPECT
 	expectedSecret2 := fake.SecretOpaque("bar", "")
-	mockSecretHelper.EXPECT().CreateSecret(expectedSecret2).Return(expectedSecret2, nil)
+	mockSecretHelper.EXPECT().CreateSecret(ctx, expectedSecret2).Return(expectedSecret2, nil)
 	expectedSecret3 := fake.SecretOpaque("baz", "")
-	mockSecretHelper.EXPECT().CreateSecret(expectedSecret3).Return(expectedSecret3, nil)
+	mockSecretHelper.EXPECT().CreateSecret(ctx, expectedSecret3).Return(expectedSecret3, nil)
 
 	// EXERCISE
 	resultList, resultErr := examinee.CopySecrets(
+		ctx,
 		[]string{"foo", "bar", "foo2", "baz", "foo3"},
 		filter,
 	)
@@ -105,6 +109,7 @@ func Test_CopySecrets_NotExisting(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -115,10 +120,11 @@ func Test_CopySecrets_NotExisting(t *testing.T) {
 
 	// EXPECT
 	expectedSecret := fake.SecretOpaque("foo", "")
-	mockSecretHelper.EXPECT().CreateSecret(expectedSecret).Return(expectedSecret, nil)
+	mockSecretHelper.EXPECT().CreateSecret(ctx, expectedSecret).Return(expectedSecret, nil)
 
 	// EXERCISE
 	resultList, resultErr := examinee.CopySecrets(
+		ctx,
 		[]string{"foo", "notExistingSecret1", "bar"},
 		nil,
 	)
@@ -139,11 +145,12 @@ func Test_CreateSecret_GoodCase(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	examinee, targetClient := initSecretHelperWithClient()
 	origSecret := fake.SecretOpaque("foo", namespace)
 
 	// EXERCISE
-	resultSecret, resultErr := examinee.CreateSecret(origSecret.DeepCopy())
+	resultSecret, resultErr := examinee.CreateSecret(ctx, origSecret.DeepCopy())
 
 	// VERIFY
 	expectedSecret := origSecret.DeepCopy()
@@ -152,7 +159,7 @@ func Test_CreateSecret_GoodCase(t *testing.T) {
 	assert.NilError(t, resultErr)
 	assert.DeepEqual(t, expectedSecret, resultSecret)
 
-	storedSecret, err := targetClient.Get("foo", metav1.GetOptions{})
+	storedSecret, err := targetClient.Get(ctx, "foo", metav1.GetOptions{})
 	assert.NilError(t, err)
 	assert.DeepEqual(t, expectedSecret, storedSecret)
 }
@@ -161,6 +168,7 @@ func Test_CreateSecret_StripsMetadata(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	examinee, targetClient := initSecretHelperWithClient()
 
 	now := metav1.Now()
@@ -190,7 +198,7 @@ func Test_CreateSecret_StripsMetadata(t *testing.T) {
 	}
 
 	// EXERCISE
-	resultSecret, resultErr := examinee.CreateSecret(origSecret.DeepCopy())
+	resultSecret, resultErr := examinee.CreateSecret(ctx, origSecret.DeepCopy())
 
 	// VERIFY
 	expectedSecret := &v1.Secret{
@@ -207,7 +215,7 @@ func Test_CreateSecret_StripsMetadata(t *testing.T) {
 	assert.NilError(t, resultErr)
 	assert.DeepEqual(t, expectedSecret, resultSecret)
 
-	storedSecret, err := targetClient.Get("foo", metav1.GetOptions{})
+	storedSecret, err := targetClient.Get(ctx, "foo", metav1.GetOptions{})
 	assert.NilError(t, err)
 	assert.DeepEqual(t, expectedSecret, storedSecret)
 }
@@ -216,6 +224,7 @@ func Test_CreateSecret_Error(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	ctx := context.Background()
 	fakeSecretProvider := fakesecretprovider.NewProvider(namespace)
 	cs := kubernetes.NewSimpleClientset()
 	expectedError := fmt.Errorf("expected")
@@ -225,7 +234,7 @@ func Test_CreateSecret_Error(t *testing.T) {
 	examinee := NewSecretHelper(fakeSecretProvider, targetNamespace, cs.CoreV1().Secrets(targetNamespace))
 
 	// EXERCISE
-	resultSecret, resultErr := examinee.CreateSecret(origSecret.DeepCopy())
+	resultSecret, resultErr := examinee.CreateSecret(ctx, origSecret.DeepCopy())
 
 	// VERIFY
 	assert.Assert(t, expectedError == resultErr)

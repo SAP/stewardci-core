@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"context"
 	"strconv"
 	"testing"
 
@@ -74,6 +75,7 @@ func Test_namespaceManager_generateName(t *testing.T) {
 
 func Test_namespaceManager_Create_uses_generateName(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory()
 	examinee := &namespaceManager{
 		nsInterface:  cf.CoreV1().Namespaces(),
@@ -82,7 +84,7 @@ func Test_namespaceManager_Create_uses_generateName(t *testing.T) {
 	}
 
 	// EXERCISE
-	result, err := examinee.Create("customPart1", map[string]string{})
+	result, err := examinee.Create(ctx, "customPart1", map[string]string{})
 
 	// VERIFY
 	assert.NilError(t, err)
@@ -93,6 +95,7 @@ func Test_namespaceManager_Create_Success(t *testing.T) {
 	// SETUP
 	const namespaceName = "namespace1"
 
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 	// no objects preexist
 	)
@@ -105,12 +108,12 @@ func Test_namespaceManager_Create_Success(t *testing.T) {
 	}
 
 	// EXERCISE
-	result, err := examinee.Create(namespaceName, annotations)
+	result, err := examinee.Create(ctx, namespaceName, annotations)
 
 	// VERIFY
 	assert.NilError(t, err)
 	assert.Equal(t, namespaceName, result)
-	namespaceList, err := listNamespaces(cf)
+	namespaceList, err := listNamespaces(ctx, cf)
 	assert.NilError(t, err)
 	assert.Equal(t, 1, len(namespaceList.Items))
 	namespace := namespaceList.Items[0]
@@ -122,13 +125,14 @@ func Test_namespaceManager_Create_ExistsAlready(t *testing.T) {
 	// SETUP
 	const namespaceName = "namespace1"
 
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		fake.Namespace(namespaceName), // existing namespace
 	)
 	examinee := NewNamespaceManager(cf, "", 0)
 
 	// EXERCISE
-	result, err := examinee.Create(namespaceName, map[string]string{})
+	result, err := examinee.Create(ctx, namespaceName, map[string]string{})
 
 	// VERIFY
 	assert.Assert(t, err != nil)
@@ -138,27 +142,30 @@ func Test_namespaceManager_Create_ExistsAlready(t *testing.T) {
 func Test_namespaceManager_Delete_Success(t *testing.T) {
 	// SETUP
 	const namespaceName = "namespace1"
+
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		fake.Namespace(namespaceName),
 	)
 	examinee := NewNamespaceManager(cf, "", 0)
-	assert.Equal(t, 1, countNamespaces(cf))
+	assert.Equal(t, 1, countNamespaces(ctx, cf))
 
 	// EXERCISE
-	err := examinee.Delete(namespaceName)
+	err := examinee.Delete(ctx, namespaceName)
 
 	// VERIFY
 	assert.NilError(t, err)
-	assert.Equal(t, 0, countNamespaces(cf))
+	assert.Equal(t, 0, countNamespaces(ctx, cf))
 }
 
 func Test_namespaceManager_Delete_FailsIfNameDoesNotStartWithPrefix(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory()
 	examinee := NewNamespaceManager(cf, "prefix1", 0)
 
 	// EXERCISE
-	err := examinee.Delete("foo")
+	err := examinee.Delete(ctx, "foo")
 
 	// VERIFY
 	assert.Assert(t, err != nil)
@@ -167,20 +174,21 @@ func Test_namespaceManager_Delete_FailsIfNameDoesNotStartWithPrefix(t *testing.T
 
 func Test_namespaceManager_Delete_FailsIfPrefixLabelDoesNotMatch(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory()
 	examinee := NewNamespaceManager(cf, "prefix1", 0)
-	namespaceName, err := examinee.Create("foo", map[string]string{})
+	namespaceName, err := examinee.Create(ctx, "foo", map[string]string{})
 	assert.NilError(t, err)
 
-	namespace, err := cf.CoreV1().Namespaces().Get(namespaceName, metav1.GetOptions{})
+	namespace, err := cf.CoreV1().Namespaces().Get(ctx, namespaceName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	labels := namespace.GetLabels()
 	labels[labelPrefix] = "unexpectedValue"
 	namespace.SetLabels(labels)
-	cf.CoreV1().Namespaces().Update(namespace)
+	cf.CoreV1().Namespaces().Update(ctx, namespace, metav1.UpdateOptions{})
 
 	// EXERCISE
-	err = examinee.Delete(namespaceName)
+	err = examinee.Delete(ctx, namespaceName)
 
 	// VERIFY
 	assert.Assert(t, err != nil)
@@ -189,26 +197,27 @@ func Test_namespaceManager_Delete_FailsIfPrefixLabelDoesNotMatch(t *testing.T) {
 
 func Test_namespaceManager_Delete_NotExisting(t *testing.T) {
 	// SETUP
+	ctx := context.Background()
 	cf := fake.NewClientFactory(
 	// no namespace preexists
 	)
 	examinee := NewNamespaceManager(cf, "", 0)
-	assert.Equal(t, 0, countNamespaces(cf))
+	assert.Equal(t, 0, countNamespaces(ctx, cf))
 
 	// EXERCISE
-	err := examinee.Delete("foo")
+	err := examinee.Delete(ctx, "foo")
 
 	// VERIFY
 	assert.NilError(t, err)
-	assert.Equal(t, 0, countNamespaces(cf))
+	assert.Equal(t, 0, countNamespaces(ctx, cf))
 }
 
-func listNamespaces(cf ClientFactory) (*corev1.NamespaceList, error) {
-	return cf.CoreV1().Namespaces().List(metav1.ListOptions{})
+func listNamespaces(ctx context.Context, cf ClientFactory) (*corev1.NamespaceList, error) {
+	return cf.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 }
 
-func countNamespaces(factory ClientFactory) int {
-	namespace, err := listNamespaces(factory)
+func countNamespaces(ctx context.Context, factory ClientFactory) int {
+	namespace, err := listNamespaces(ctx, factory)
 	if err != nil {
 		panic(err)
 	}

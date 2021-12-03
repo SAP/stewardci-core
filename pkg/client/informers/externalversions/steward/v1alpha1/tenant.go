@@ -25,6 +25,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	time "time"
 
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
@@ -67,13 +68,13 @@ func NewFilteredTenantInformer(client versioned.Interface, namespace string, res
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.StewardV1alpha1().Tenants(namespace).List(options)
+				return client.StewardV1alpha1().Tenants(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.StewardV1alpha1().Tenants(namespace).Watch(options)
+				return client.StewardV1alpha1().Tenants(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&stewardv1alpha1.Tenant{},

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
+	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/SAP/stewardci-core/pkg/signals"
 	tenantctl "github.com/SAP/stewardci-core/pkg/tenantctl"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -17,9 +18,15 @@ import (
 var kubeconfig string
 var burst, qps, threadiness int
 
-// Time to wait until the next resync takes place.
-// Resync is only required if events got lost or if the controller restarted (and missed events).
-const resyncPeriod = 1 * time.Minute
+const (
+	// resyncPeriod is the period between full resyncs performed
+	// by the controller.
+	resyncPeriod = 1 * time.Minute
+
+	// metricsPort is the TCP port number to be used by the metrics
+	// HTTP server
+	metricsPort = 9090
+)
 
 func init() {
 	klog.InitFlags(nil)
@@ -41,14 +48,13 @@ func main() {
 		klog.Infof("In cluster")
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			klog.Infof("Hint: You can use parameter '-kubeconfig' for local testing. See --help")
-			panic(err.Error())
+			klog.Exitf("failed to load kubeconfig: %s; Hint: You can use parameter '-kubeconfig' for local testing", err.Error())
 		}
 	} else {
 		klog.Infof("Outside cluster")
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
-			panic(err.Error())
+			klog.Exitln(err.Error())
 		}
 	}
 
@@ -59,12 +65,11 @@ func main() {
 	config.Burst = burst
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
-	klog.V(2).Infof("Provide metrics")
-	metrics := tenantctl.NewMetrics()
-	metrics.StartServer()
+	klog.V(2).Infof("Provide metrics on http://0.0.0.0:%d/metrics", metricsPort)
+	metrics.StartServer(metricsPort)
 
 	klog.V(3).Infof("Create Controller")
-	controller := tenantctl.NewController(factory, metrics)
+	controller := tenantctl.NewController(factory)
 
 	klog.V(3).Infof("Create Signal Handlers")
 	stopCh := signals.SetupShutdownSignalHandler()
