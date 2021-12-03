@@ -2,7 +2,6 @@ package tenantctl
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"strconv"
 
