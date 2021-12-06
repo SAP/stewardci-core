@@ -31,14 +31,18 @@ import (
 	klog "k8s.io/klog/v2"
 )
 
-// Used for logging (control loop) "still alive" messages
-var heartbeatInterval = time.Minute * 1
+const (
+	// heartbeatStimulusKey is a special key inserted into the controller
+	// work queue as heartbeat stimulus.
+	// It is an invalid Kubernetes name to avoid conflicts with real
+	// pipeline runs.
+	heartbeatStimulusKey = "Heartbeat Stimulus"
+)
 
-// use key which is no valid k8s name to avoid conflict with real pipeline runs
-const heartbeatKey = "heart_beat"
-
-// Interval for histogram creation set to prometheus default scrape interval
-var meteringInterval = time.Minute * 1
+var (
+	// Interval for histogram creation set to prometheus default scrape interval
+	meteringInterval = 1 * time.Minute
+)
 
 // Controller processes PipelineRun resources
 type Controller struct {
@@ -51,6 +55,9 @@ type Controller struct {
 	recorder             record.EventRecorder
 	pipelineRunLister    v1alpha1.PipelineRunLister
 	pipelineRunStore     cache.Store
+
+	heartbeatInterval time.Duration
+	heartbeatLogLevel *klog.Level
 }
 
 type controllerTesting struct {
@@ -60,8 +67,22 @@ type controllerTesting struct {
 	isMaintenanceModeStub      func(ctx context.Context) (bool, error)
 }
 
+// ControllerOpts stores options for the construction of a Controller
+// instance.
+type ControllerOpts struct {
+	// HeartbeatInterval is the interval for heartbeats.
+	// If zero or negative, heartbeats are disabled.
+	HeartbeatInterval time.Duration
+
+	// HeartbeatLogLevel is a pointer to a klog log level to be used for
+	// logging heartbeats.
+	// If nil, heartbeat logging is disabled and heartbeats are only
+	// exposed via metric.
+	HeartbeatLogLevel *klog.Level
+}
+
 // NewController creates new Controller
-func NewController(factory k8s.ClientFactory) *Controller {
+func NewController(factory k8s.ClientFactory, opts ControllerOpts) *Controller {
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
 	pipelineRunLister := pipelineRunInformer.Lister()
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
@@ -82,6 +103,13 @@ func NewController(factory k8s.ClientFactory) *Controller {
 		recorder:             recorder,
 		pipelineRunStore:     pipelineRunInformer.Informer().GetStore(),
 	}
+
+	controller.heartbeatInterval = opts.HeartbeatInterval
+	if opts.HeartbeatLogLevel != nil {
+		copyOfValue := *opts.HeartbeatLogLevel
+		controller.heartbeatLogLevel = &copyOfValue
+	}
+
 	pipelineRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.addPipelineRun,
 		UpdateFunc: func(old, new interface{}) {
@@ -112,14 +140,11 @@ func (c *Controller) meterAllPipelineRunsPeriodic() {
 	}
 }
 
-func (c *Controller) heartbeat() {
-	c.workqueue.Add(heartbeatKey)
-}
-
 // Run runs the controller
 func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
+
 	klog.V(2).Infof("Sync cache")
 	if ok := cache.WaitForCacheSync(stopCh, c.pipelineRunSynced, c.tektonTaskRunsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
@@ -128,14 +153,19 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	klog.V(2).Infof("Starting metering of pipeline runs with interval %v", meteringInterval)
 	go wait.Until(c.meterAllPipelineRunsPeriodic, meteringInterval, stopCh)
 
-	klog.V(2).Infof("Starting heartbeat with interval %v", heartbeatInterval)
-	go wait.Until(c.heartbeat, heartbeatInterval, stopCh)
+	if c.heartbeatInterval > 0 {
+		klog.V(2).Infof("Starting controller heartbeat stimulator with interval %s", c.heartbeatInterval)
+		go wait.Until(c.heartbeatStimulus, c.heartbeatInterval, stopCh)
+	} else {
+		klog.V(2).Info("Controller heartbeat is disabled")
+	}
 
 	klog.V(2).Infof("Start workers")
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 	klog.V(2).Infof("Workers running")
+
 	<-stopCh
 	klog.V(2).Infof("Workers stopped")
 	return nil
@@ -179,12 +209,6 @@ func (c *Controller) processNextWorkItem() bool {
 			return nil
 		}
 
-		if key == heartbeatKey {
-			klog.V(3).Infof("Run Controller still alive")
-			c.workqueue.Forget(key)
-			return nil
-		}
-
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
 		if err := c.syncHandler(key); err != nil {
@@ -205,6 +229,17 @@ func (c *Controller) processNextWorkItem() bool {
 	}
 
 	return true
+}
+
+func (c *Controller) heartbeatStimulus() {
+	c.workqueue.Add(heartbeatStimulusKey)
+}
+
+func (c *Controller) heartbeat() {
+	if c.heartbeatLogLevel != nil {
+		klog.V(*c.heartbeatLogLevel).InfoS("heartbeat")
+	}
+	metrics.ControllerHeartbeats.Inc()
 }
 
 func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
@@ -252,6 +287,12 @@ func (c *Controller) isMaintenanceMode(ctx context.Context) (bool, error) {
 // converge the two. It then updates the Status block of the Foo resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
+
+	if key == heartbeatStimulusKey {
+		c.heartbeat()
+		return nil
+	}
+
 	ctx := context.Background()
 
 	// Initial checks on cached pipelineRun

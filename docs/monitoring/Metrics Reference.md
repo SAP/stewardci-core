@@ -12,6 +12,7 @@
       - [`steward_k8sclient_rest_request_results`](#steward_k8sclient_rest_request_results)
   - [Steward Pipeline Run Controller](#steward-pipeline-run-controller)
     - [Processing Indicators](#processing-indicators)
+      - [`steward_pipelineruns_controller_heartbeats_total`](#steward_pipelineruns_controller_heartbeats_total)
       - [`steward_pipelineruns_started_total`](#steward_pipelineruns_started_total)
       - [`steward_pipelineruns_completed_total`](#steward_pipelineruns_completed_total)
       - [`steward_pipelineruns_state_duration_seconds`](#steward_pipelineruns_state_duration_seconds)
@@ -127,6 +128,13 @@ Labels:
 ## Steward Pipeline Run Controller
 
 ### Processing Indicators
+
+#### `steward_pipelineruns_controller_heartbeats_total`
+
+The number of heartbeats of the run controller instance.
+
+Type: Counter
+
 
 #### `steward_pipelineruns_started_total`
 
