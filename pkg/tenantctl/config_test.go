@@ -8,7 +8,6 @@ import (
 
 	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	assert "gotest.tools/assert"
-	cmp "gotest.tools/assert/cmp"
 	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -102,9 +101,11 @@ func Test_getClientConfig_NamespaceParameterIsZeroLengthString(t *testing.T) {
 	)
 
 	// EXERCISE
-	assert.Assert(t, cmp.Panics(func() {
-		getClientConfig(ctx, cf, emptyNameString)
-	}))
+	result, resultErr := getClientConfig(ctx, cf, emptyNameString)
+
+	// VERIFY
+	assert.ErrorContains(t, resultErr, "client namespace must not be empty")
+	assert.Assert(t, result == nil)
 }
 
 func Test_getClientConfig_ClientNamespaceNotExisting(t *testing.T) {
