@@ -82,26 +82,33 @@ func Test_PipelineRunAbort(t *testing.T) {
 func Test_PipelineRunLoggingWithRunID(t *testing.T) {
 	buildID := uuid.New().String()
 	realmID := uuid.New().String()
-	pipelineRun := PipelineRun("prefix1", "namespace1",
+	pipelineRun := PipelineRun(
+		"prefix1",
+		"namespace1",
 		PipelineRunSpec(
 			LoggingWithRunID(&api.CustomJSON{
-				map[string]string{
+				Value: map[string]string{
 					"jobId":   "1",
 					"buildId": buildID,
 					"realmId": realmID,
-				}}),
+				},
+			}),
 		),
 	)
-	assert.DeepEqual(t, &api.Logging{
-		Elasticsearch: &api.Elasticsearch{
-			RunID: &api.CustomJSON{
-				map[string]string{
-					"jobId":   "1",
-					"buildId": buildID,
-					"realmId": realmID,
-				}},
+	assert.DeepEqual(t,
+		&api.Logging{
+			Elasticsearch: &api.Elasticsearch{
+				RunID: &api.CustomJSON{
+					Value: map[string]string{
+						"jobId":   "1",
+						"buildId": buildID,
+						"realmId": realmID,
+					},
+				},
+			},
 		},
-	}, pipelineRun.Spec.Logging)
+		pipelineRun.Spec.Logging,
+	)
 }
 
 func Test_PipelineRunLoggingIndexURL(t *testing.T) {
@@ -120,28 +127,35 @@ func Test_PipelineRunLoggingIndexURL(t *testing.T) {
 func Test_PipelineRunLoggingWithAllParams(t *testing.T) {
 	buildID := uuid.New().String()
 	realmID := uuid.New().String()
-	pipelineRun := PipelineRun("prefix1", "namespace1",
+	pipelineRun := PipelineRun(
+		"prefix1",
+		"namespace1",
 		PipelineRunSpec(
 			LoggingWithIndexURL("testURL"),
 			LoggingWithRunID(&api.CustomJSON{
-				map[string]string{
+				Value: map[string]string{
 					"jobId":   "1",
 					"buildId": buildID,
 					"realmId": realmID,
-				}}),
+				},
+			}),
 		),
 	)
-	assert.DeepEqual(t, &api.Logging{
-		Elasticsearch: &api.Elasticsearch{
-			IndexURL: "testURL",
-			RunID: &api.CustomJSON{
-				map[string]string{
-					"jobId":   "1",
-					"buildId": buildID,
-					"realmId": realmID,
-				}},
+	assert.DeepEqual(t,
+		&api.Logging{
+			Elasticsearch: &api.Elasticsearch{
+				IndexURL: "testURL",
+				RunID: &api.CustomJSON{
+					Value: map[string]string{
+						"jobId":   "1",
+						"buildId": buildID,
+						"realmId": realmID,
+					},
+				},
+			},
 		},
-	}, pipelineRun.Spec.Logging)
+		pipelineRun.Spec.Logging,
+	)
 }
 
 func Test_CheckConflictsBetweenIndexURLsOfTests(t *testing.T) {
@@ -154,32 +168,38 @@ func Test_CheckConflictsBetweenIndexURLsOfTests(t *testing.T) {
 	}{
 		{
 			name: "pipelineRun with runID, indexURL and credential",
-			pipelineRun: PipelineRun("prefix1", "namespace1",
+			pipelineRun: PipelineRun(
+				"prefix1",
+				"namespace1",
 				PipelineRunSpec(
 					LoggingWithIndexURL("foo"),
 					LoggingWithRunID(&api.CustomJSON{
-						map[string]string{
+						Value: map[string]string{
 							"jobId":   "1",
 							"buildId": buildID,
 							"realmId": realmID,
-						}}),
+						},
+					}),
 				),
 			),
 			expectedResult: &api.Logging{
 				Elasticsearch: &api.Elasticsearch{
 					IndexURL: "foo",
 					RunID: &api.CustomJSON{
-						map[string]string{
+						Value: map[string]string{
 							"jobId":   "1",
 							"buildId": buildID,
 							"realmId": realmID,
-						}},
+						},
+					},
 				},
 			},
 		},
 		{
 			name: "pipelineRun with different indexURL than previous test",
-			pipelineRun: PipelineRun("prefix1", "namespace1",
+			pipelineRun: PipelineRun(
+				"prefix1",
+				"namespace1",
 				PipelineRunSpec(
 					LoggingWithIndexURL("bar"),
 				),

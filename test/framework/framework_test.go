@@ -10,6 +10,7 @@ import (
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/test/builder"
+	"github.com/SAP/stewardci-core/test/shared"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -20,8 +21,6 @@ var frameworkTestBuilders = []PipelineRunTestBuilder{
 	PipelineRunWrongName,
 	PipelineRunWithSecretNameConflict,
 }
-
-const pipelineRepoURL = "https://github.com/SAP-samples/stewardci-example-pipelines"
 
 func Test_FirstFinishBeforeSecondStarts(t *testing.T) {
 	test := TestPlan{TestBuilder: PipelineRunWrongName,
@@ -51,8 +50,8 @@ func PipelineRunSleepTooLong(Namespace string, runID *api.CustomJSON) PipelineRu
 		PipelineRun: builder.PipelineRun("sleeptoolong-", Namespace,
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
-				builder.JenkinsFileSpec(pipelineRepoURL,
-					"sleep/Jenkinsfile"),
+				builder.JenkinsFileSpec(shared.ExamplePipelineRepoURL,
+					"sleep/Jenkinsfile", shared.ExamplePipelineRepoRevision),
 				builder.ArgSpec("SLEEP_FOR_SECONDS", "10"),
 			)),
 		Check:    PipelineRunHasStateResult(api.ResultSuccess),
@@ -67,8 +66,8 @@ func PipelineRunWrongExpect(Namespace string, runID *api.CustomJSON) PipelineRun
 		PipelineRun: builder.PipelineRun("wrongexpect-", Namespace,
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
-				builder.JenkinsFileSpec(pipelineRepoURL,
-					"success/Jenkinsfile"),
+				builder.JenkinsFileSpec(shared.ExamplePipelineRepoURL,
+					"success/Jenkinsfile", shared.ExamplePipelineRepoRevision),
 			)),
 		Check:    PipelineRunHasStateResult(api.ResultAborted),
 		Timeout:  120 * time.Second,
@@ -82,8 +81,8 @@ func PipelineRunWrongName(Namespace string, runID *api.CustomJSON) PipelineRunTe
 		PipelineRun: builder.PipelineRun("wrong_Name", Namespace,
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
-				builder.JenkinsFileSpec(pipelineRepoURL,
-					"success/Jenkinsfile"),
+				builder.JenkinsFileSpec(shared.ExamplePipelineRepoURL,
+					"success/Jenkinsfile", shared.ExamplePipelineRepoRevision),
 			)),
 		Check:    PipelineRunHasStateResult(api.ResultSuccess),
 		Timeout:  120 * time.Second,
@@ -97,8 +96,8 @@ func PipelineRunWithSecretNameConflict(Namespace string, runID *api.CustomJSON) 
 		PipelineRun: builder.PipelineRun("with-secret-name-conflict", Namespace,
 			builder.PipelineRunSpec(
 				builder.LoggingWithRunID(runID),
-				builder.JenkinsFileSpec(pipelineRepoURL,
-					"secret/Jenkinsfile"),
+				builder.JenkinsFileSpec(shared.ExamplePipelineRepoURL,
+					"secret/Jenkinsfile", shared.ExamplePipelineRepoRevision),
 			)),
 		Check:   PipelineRunHasStateResult(api.ResultSuccess),
 		Timeout: 120 * time.Second,
