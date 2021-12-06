@@ -25,7 +25,7 @@ import (
 func Test_Controller_syncHandler_DoesNotingIfTenantNotFound(t *testing.T) {
 	// SETUP
 	cf := fake.NewClientFactory( /* no objects exist */ )
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	// EXERCISE
@@ -59,7 +59,7 @@ func Test_Controller_syncHandler_FailsIfTenantFetchFails(t *testing.T) {
 	fetcherErr := errors.New("fetcher error")
 	fetcher.EXPECT().ByKey(gomock.Not(gomock.Nil()), gomock.Any()).Return(nil, fetcherErr).Times(1)
 
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = fetcher
 
 	// EXERCISE
@@ -84,7 +84,7 @@ func Test_Controller_syncHandler_FailsIfClientConfigIsInvalid(t *testing.T) {
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	injectedError := errors.New("ERR1")
@@ -126,7 +126,7 @@ func Test_Controller_syncHandler_AddsFinalizer(t *testing.T) {
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 	// ensure that there are no finalizers
 	{
@@ -168,7 +168,7 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	// EXERCISE
@@ -258,7 +258,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnNamespaceClash(t *te
 		// a namespace with same name as will be used for tenant namespace
 		fake.Namespace(clashingNamespaceName),
 	)
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	// EXERCISE
@@ -317,7 +317,7 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnErrorWhenSyncingRole
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	injectedError := errors.New("ERR1")
@@ -381,7 +381,7 @@ func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *tes
 		// the tenant namespace
 		fake.Namespace(tenantNSName),
 	)
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	// EXERCISE
@@ -467,7 +467,7 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnMissingNamespace(t *te
 		origTenant,
 		// no tenant namespace here,
 	)
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	// EXERCISE
@@ -531,7 +531,7 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnErrorWhenSyncingRoleBi
 		// the tenant namespace
 		fake.Namespace(tenantNSName),
 	)
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	injectedError := errors.New("ERR1")
@@ -596,7 +596,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfFinalizerIsSet(t *testing.T) 
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 	tenantKey := makeTenantKey(clientNSName, tenantID)
 	tenantsIfc := cf.StewardV1alpha1().Tenants(clientNSName)
@@ -664,7 +664,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_SkippedIfFinalizerIsNotSet(t *t
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 	tenantKey := makeTenantKey(clientNSName, tenantID)
 	tenantsIfc := cf.StewardV1alpha1().Tenants(clientNSName)
@@ -734,7 +734,7 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfNamespaceDoesNotExistAnymore(
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 	tenantKey := makeTenantKey(clientNSName, tenantID)
 	tenantsIfc := cf.StewardV1alpha1().Tenants(clientNSName)
@@ -808,7 +808,7 @@ func Test_Controller_syncHandler_CleanupOnStatusUpdateFailure(t *testing.T) {
 		// the tenant
 		fake.Tenant(tenantID, clientNSName),
 	)
-	ctl := NewController(cf)
+	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	injectedError := errors.New("ERR1")
@@ -1216,7 +1216,7 @@ func assertThatExactlyTheseFinalizersExist(t *testing.T, obj *metav1.ObjectMeta,
 
 func startController(t *testing.T, cf *fake.ClientFactory) (chan struct{}, *Controller) {
 	stopCh := make(chan struct{}, 0)
-	controller := NewController(cf)
+	controller := NewController(cf, ControllerOpts{})
 	controller.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 	cf.StewardInformerFactory().Start(stopCh)
 	go start(t, controller, stopCh)

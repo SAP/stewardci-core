@@ -30,6 +30,7 @@
       - [`steward_pipelineruns_workqueue_retry_count_total`](#steward_pipelineruns_workqueue_retry_count_total)
   - [Steward Tenant Controller](#steward-tenant-controller)
     - [Processing Indicators](#processing-indicators-1)
+      - [`steward_tenants_controller_heartbeats_total`](#steward_tenants_controller_heartbeats_total)
       - [`steward_tenants_count_total`](#steward_tenants_count_total)
       - [DEPRECATED `steward_tenants_total`](#deprecated-steward_tenants_total)
     - [Tenant Controller Workqueue](#tenant-controller-workqueue)
@@ -277,6 +278,13 @@ Type: Counter
 ## Steward Tenant Controller
 
 ### Processing Indicators
+
+#### `steward_tenants_controller_heartbeats_total`
+
+The number of heartbeats of the tenant controller instance.
+
+Type: Counter
+
 
 #### `steward_tenants_count_total`
 

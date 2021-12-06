@@ -33,6 +33,12 @@ import (
 
 const (
 	tenantNamespaceRoleBindingNamePrefix = steward.GroupName + "--tenant-role-binding-"
+
+	// heartbeatStimulusKey is a special key inserted into the controller
+	// work queue as heartbeat stimulus.
+	// It is an invalid Kubernetes name to avoid conflicts with real
+	// pipeline runs.
+	heartbeatStimulusKey = "Heartbeat Stimulus"
 )
 
 // Controller for Steward Tenants
@@ -44,6 +50,9 @@ type Controller struct {
 	workqueue    workqueue.RateLimitingInterface
 	syncCount    int64
 	testing      *controllerTesting
+
+	heartbeatInterval time.Duration
+	heartbeatLogLevel *klog.Level
 }
 
 type controllerTesting struct {
@@ -54,10 +63,25 @@ type controllerTesting struct {
 	updateStatusStub               func(tenant *api.Tenant) (*api.Tenant, error)
 }
 
+// ControllerOpts stores options for the construction of a Controller
+// instance.
+type ControllerOpts struct {
+	// HeartbeatInterval is the interval for heartbeats.
+	// If zero or negative, heartbeats are disabled.
+	HeartbeatInterval time.Duration
+
+	// HeartbeatLogLevel is a pointer to a klog log level to be used for
+	// logging heartbeats.
+	// If nil, heartbeat logging is disabled and heartbeats are only
+	// exposed via metric.
+	HeartbeatLogLevel *klog.Level
+}
+
 // NewController creates new Controller
-func NewController(factory k8s.ClientFactory) *Controller {
+func NewController(factory k8s.ClientFactory, opts ControllerOpts) *Controller {
 	informer := factory.StewardInformerFactory().Steward().V1alpha1().Tenants()
 	fetcher := k8s.NewListerBasedTenantFetcher(informer.Lister())
+
 	controller := &Controller{
 		factory:      factory,
 		fetcher:      fetcher,
@@ -65,6 +89,13 @@ func NewController(factory k8s.ClientFactory) *Controller {
 		tenantLister: informer.Lister(),
 		workqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), metrics.WorkqueueName),
 	}
+
+	controller.heartbeatInterval = opts.HeartbeatInterval
+	if opts.HeartbeatLogLevel != nil {
+		copyOfValue := *opts.HeartbeatLogLevel
+		controller.heartbeatLogLevel = &copyOfValue
+	}
+
 	informer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.onTenantAdd,
 		UpdateFunc: controller.onTenantUpdate,
@@ -89,15 +120,25 @@ func (c *Controller) getNamespaceManager(config clientConfig) k8s.NamespaceManag
 func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
+
 	klog.V(2).Infof("Sync cache")
 	if ok := cache.WaitForCacheSync(stopCh, c.tenantSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
+
+	if c.heartbeatInterval > 0 {
+		klog.V(2).Infof("Starting controller heartbeat stimulator with interval %s", c.heartbeatInterval)
+		go wait.Until(c.heartbeatStimulus, c.heartbeatInterval, stopCh)
+	} else {
+		klog.V(2).Info("Controller heartbeat is disabled")
+	}
+
 	klog.V(2).Infof("Start workers")
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 	klog.V(2).Infof("Workers running [%v]", threadiness)
+
 	<-stopCh
 	klog.V(2).Infof("Workers stopped")
 	return nil
@@ -168,10 +209,27 @@ func (c *Controller) processNextWorkItem() bool {
 	return true
 }
 
+func (c *Controller) heartbeatStimulus() {
+	c.workqueue.Add(heartbeatStimulusKey)
+}
+
+func (c *Controller) heartbeat() {
+	if c.heartbeatLogLevel != nil {
+		klog.V(*c.heartbeatLogLevel).InfoS("heartbeat")
+	}
+	metrics.ControllerHeartbeats.Inc()
+}
+
 // syncHandler compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the tenant resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
+
+	if key == heartbeatStimulusKey {
+		c.heartbeat()
+		return nil
+	}
+
 	ctx := context.Background()
 
 	origTenant, err := c.fetcher.ByKey(ctx, key)
