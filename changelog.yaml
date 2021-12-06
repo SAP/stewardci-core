@@ -188,6 +188,13 @@
         status failed.
       pullRequestNumber: 288
 
+    - type: enhancement
+      impact: patch
+      title: Update Go SDK to v1.16.11
+      description: |-
+        Build with Go SDK [v1.16.11](https://golang.org/doc/go1.16).
+      pullRequestNumber: 292
+
 - version: "0.14.4"
   date: 2021-11-17
   changes:
