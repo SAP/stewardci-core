@@ -37,8 +37,17 @@ spec:
         - {{ printf "-qps=%d" ( .Values.runController.args.qps | int ) | quote }}
         - {{ printf "-burst=%d" ( .Values.runController.args.burst | int ) | quote }}
         - {{ printf "-threadiness=%d" ( .Values.runController.args.threadiness | int ) | quote }}
-        {{- if .Values.runController.args.logVerbosity }}
-        - {{ printf "-v=%d" ( .Values.runController.args.logVerbosity | int ) | quote }}
+        {{- with .Values.runController.args.logVerbosity }}
+        - {{ printf "-v=%d" ( . | int ) | quote }}
+        {{- end }}
+        {{- with .Values.runController.args.heartbeatInterval }}
+        - {{ printf "-heartbeat-interval=%s" . | quote }}
+        {{- end }}
+        {{- with .Values.runController.args.heartbeatLogging }}
+        - {{ printf "-heartbeat-logging=%s" ( . | ternary "true" "false" ) | quote }}
+        {{- end }}
+        {{- with .Values.runController.args.heartbeatLogLevel }}
+        - {{ printf "-heartbeat-log-level=%d" ( . | int ) | quote }}
         {{- end }}
         command:
         - /app/steward-runctl

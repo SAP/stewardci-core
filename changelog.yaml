@@ -52,6 +52,18 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: minor
+      title: Improve controller heartbeat
+      description: |-
+        - Add heartbeat for tenant controller
+        - Introduce heartbeat counter metrics
+        - Make heartbeat configurable via command line options
+        - Handle heartbeat in function `syncHandler`, not
+          `processNextWorkItem`, to make the heartbeat call
+          more similar to normal work item processing.
+      pullRequestNumber: 294
+
 - version: "0.15.0"
   date: 2021-12-06
   changes:

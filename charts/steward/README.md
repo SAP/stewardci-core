@@ -12,11 +12,14 @@ Install and configure [Steward][] on Kubernetes.
   - [Uninstall](#uninstall)
   - [Chart Configuration](#chart-configuration)
     - [Target Namespace](#target-namespace)
-    - [Controllers](#controllers)
+    - [Pipeline Run Controller](#pipeline-run-controller)
+    - [Tenant Controller](#tenant-controller)
     - [Monitoring](#monitoring)
     - [Pipeline Runs](#pipeline-runs)
-    - [Feature Flags ](#feature-flags)
+    - [Feature Flags](#feature-flags)
       - [List of Defined Feature Flags](#list-of-defined-feature-flags)
+    - [Misc](#misc)
+      - [Duration Value Syntax](#duration-value-syntax)
   - [Custom Resource Definitions](#custom-resource-definitions)
 
 ## Prerequisites
@@ -91,93 +94,97 @@ The tables in the following sections list the configurable parameters of the Ste
 
 | Parameter | Description | Default |
 |---|---|---|
-| <code>targetNamespace.<wbr/>create</code> | (bool)<br/> Whether to create the target namespace. Can be set to `false` if the namespace exists already, e.g. because the target namespace is also the target namespace of the Helm release and therefore must be created before installing the Chart. | `true` |
-| <code>targetNamespace.<wbr/>name</code> | (string)<br/> The name of the namespace where Steward should be installed to. Note that we do not use the Helm release target namespace, so that this chart can be used as subchart of another chart and still installs into its dedicated namespace. | `steward-system` |
+| <code><b>targetNamespace.<wbr/>create</b></code><br/><i>bool</i> |  Whether to create the target namespace. Can be set to `false` if the namespace exists already, e.g. because the target namespace is also the target namespace of the Helm release and therefore must be created before installing the Chart. | `true` |
+| <code><b>targetNamespace.<wbr/>name</b></code><br/><i>string</i> |  The name of the namespace where Steward should be installed to. Note that we do not use the Helm release target namespace, so that this chart can be used as subchart of another chart and still installs into its dedicated namespace. | `steward-system` |
 
-### Controllers
-
-Pipeline Run Controller:
+### Pipeline Run Controller
 
 | Parameter | Description | Default |
 |---|---|---|
-| <code>runController.<wbr/>image.<wbr/>repository</code> | (string)<br/> The container registry and repository of the Run Controller image. | `stewardci/stewardci-run-controller` |
-| <code>runController.<wbr/>image.<wbr/>tag</code> | (string)<br/> The tag of the Run Controller image in the container registry. | A fixed image tag. |
-| <code>runController.<wbr/>image.<wbr/>pullPolicy</code> | (string)<br/> The image pull policy for the Run Controller image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation.  | `IfNotPresent` |
-| <code>runController.<wbr/>resources</code> | (object of [`RecourceRequirements`][k8s-resourcerequirements])<br/> The resource requirements of the Run Controller container. When overriding, override the complete value, not just subvalues, because the default value might change in future versions and a partial override might not make sense anymore. | Limits and requests set (see `values.yaml`) |
-| <code>runController.<wbr/>podSecurityContext</code> | (object of [`PodSecurityContext`][k8s-podsecuritycontext])<br/> The pod security context of the Run Controller pod. | `{}` |
-| <code>runController.<wbr/>securityContext</code> | (object of [`SecurityContext`][k8s-securitycontext])<br/> The security context of the Run Controller container. | `{}` |
-| <code>runController.<wbr/>nodeSelector</code> | (object)<br/> The `nodeSelector` field of the Run Controller [pod spec][k8s-podspec]. | `{}` |
-| <code>runController.<wbr/>affinity</code> | (object of [`Affinity`][k8s-affinity])<br/> The `affinity` field of the Run Controller [pod spec][k8s-podspec]. | `{}` |
-| <code>runController.<wbr/>tolerations</code> | (array of [`Toleration`][k8s-tolerations])<br/> The `tolerations` field of the Run Controller [pod spec][k8s-podspec]. | `[]` |
-| <code>runController.<wbr/>args.<wbr/>qps</code> | (integer)<br/> The maximum queries per second (QPS) from the controller to the cluster. | 5 |
-| <code>runController.<wbr/>args.<wbr/>burst</code> | (integer)<br/> The burst limit for throttle connections (maximum number of concurrent requests). | 10 |
-| <code>runController.<wbr/>args.<wbr/>threadiness</code> | (integer)<br/> The maximum number of reconciliations performed in parallel. | 2 |
-| <code>runController.<wbr/>args.<wbr/>logVerbosity</code> | (integer)<br/> The log verbosity. Levels are adopted from [Kubernetes logging conventions][k8s-logging-conventions]. | 2 |
-| <code>runController.<wbr/>podSecurityPolicyName</code> | (string)<br/> The name of an _existing_ pod security policy that should be used by the run controller. If empty, a default pod security policy will be created. | empty |
+| <code>runController.<wbr/><b>image.<wbr/>repository</b></code><br/><i>string</i> |  The container registry and repository of the Run Controller image. | `stewardci/stewardci-run-controller` |
+| <code>runController.<wbr/><b>image.<wbr/>tag</b></code><br/><i>string</i> |  The tag of the Run Controller image in the container registry. | A fixed image tag. |
+| <code>runController.<wbr/><b>image.<wbr/>pullPolicy</b></code><br/><i>string</i> |  The image pull policy for the Run Controller image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation.  | `IfNotPresent` |
+| <code>runController.<wbr/><b>resources</b></code><br/><i>object of [`RecourceRequirements`][k8s-resourcerequirements]</i> |  The resource requirements of the Run Controller container. When overriding, override the complete value, not just subvalues, because the default value might change in future versions and a partial override might not make sense anymore. | Limits and requests set (see `values.yaml`) |
+| <code>runController.<wbr/><b>podSecurityContext</b></code><br/><i>object of [`PodSecurityContext`][k8s-podsecuritycontext]</i> |  The pod security context of the Run Controller pod. | `{}` |
+| <code>runController.<wbr/><b>securityContext</b></code><br/><i>object of [`SecurityContext`][k8s-securitycontext]</i> |  The security context of the Run Controller container. | `{}` |
+| <code>runController.<wbr/><b>nodeSelector</b></code><br/><i>object</i> |  The `nodeSelector` field of the Run Controller [pod spec][k8s-podspec]. | `{}` |
+| <code>runController.<wbr/><b>affinity</b></code><br/><i>object of [`Affinity`][k8s-affinity]</i> |  The `affinity` field of the Run Controller [pod spec][k8s-podspec]. | `{}` |
+| <code>runController.<wbr/><b>tolerations</b></code><br/><i>array of [`Toleration`][k8s-tolerations]</i> |  The `tolerations` field of the Run Controller [pod spec][k8s-podspec]. | `[]` |
+| <code>runController.<wbr/><b>args.<wbr/>qps</b></code><br/><i>integer</i> |  The maximum queries per second (QPS) from the controller to the cluster. | 5 |
+| <code>runController.<wbr/><b>args.<wbr/>burst</b></code><br/><i>integer</i> |  The burst limit for throttle connections (maximum number of concurrent requests). | 10 |
+| <code>runController.<wbr/><b>args.<wbr/>threadiness</b></code><br/><i>integer</i> |  The maximum number of reconciliations performed in parallel. | 2 |
+| <code>runController.<wbr/><b>args.<wbr/>logVerbosity</b></code><br/><i>integer</i> |  The log verbosity. Levels are adopted from [Kubernetes logging conventions][k8s-logging-conventions]. | 3 |
+| <code>runController.<wbr/><b>args.<wbr/>heartbeatInterval</b></code><br/><i>[duration][type-duration]</i> |  The interval of controller heartbeats. | `1m` |
+| <code>runController.<wbr/><b>args.<wbr/>heartbeatLogging</b></code><br/><i>bool</i> |  Whether controller heartbeats should be logged. | `true` |
+| <code>runController.<wbr/><b>args.<wbr/>heartbeatLogLevel</b></code><br/><i>bool</i> |  The log level to be used for controller heartbeats. | `3` |
+| <code>runController.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by the run controller. If empty, a default pod security policy will be created. | empty |
 
-Tenant Controller:
+### Tenant Controller
 
 | Parameter | Description | Default |
 |---|---|---|
-| <code>tenantController.<wbr/>image.<wbr/>repository</code> | (string)<br/> The container registry and repository of the Tenant Controller image. | `stewardci/stewardci-tenant-controller` |
-| <code>tenantController.<wbr/>image.<wbr/>tag</code> | (string)<br/> The tag of the Tenant Controller image in the container registry. | A fixed image tag. |
-| <code>tenantController.<wbr/>image.<wbr/>pullPolicy</code> | (string)<br/> The image pull policy for the Tenant Controller image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation.  | `IfNotPresent` |
-| <code>tenantController.<wbr/>resources</code> | (object of [`RecourceRequirements`][k8s-resourcerequirements])<br/> The resource requirements of the Tenant Controller container. When overriding, override the complete value, not just subvalues, because the default value might change in future versions and a partial override might not make sense anymore. | Limits and requests set (see `values.yaml`) |
-| <code>tenantController.<wbr/>podSecurityContext</code> | (object of [`PodSecurityContext`][k8s-podsecuritycontext])<br/> The pod security context of the Tenant Controller pod. | `{}` |
-| <code>tenantController.<wbr/>securityContext</code> | (object of [`SecurityContext`][k8s-securitycontext])<br/> The security context of the Tenant Controller container. | `{}` |
-| <code>tenantController.<wbr/>nodeSelector</code> | (object)<br/> The `nodeSelector` field of the Tenant Controller [pod spec][k8s-podspec]. | `{}` |
-| <code>tenantController.<wbr/>affinity</code> | (object of [`Affinity`][k8s-affinity])<br/> The `affinity` field of the Tenant Controller [pod spec][k8s-podspec]. | `{}` |
-| <code>tenantController.<wbr/>tolerations</code> | (array of [`Toleration`][k8s-tolerations])<br/> The `tolerations` field of the Tenant Controller [pod spec][k8s-podspec]. | `[]` |
-| <code>tenantController.<wbr/>args.<wbr/>qps</code> | (integer)<br/> The maximum queries per second (QPS) from the controller to the cluster. | 5 |
-| <code>tenantController.<wbr/>args.<wbr/>burst</code> | (integer)<br/> The burst limit for throttle connections (maximum number of concurrent requests). | 10 |
-| <code>tenantController.<wbr/>args.<wbr/>threadiness</code> | (integer)<br/> The maximum number of reconciliations performed in parallel. | 2 |
-| <code>tenantController.<wbr/>possibleTenantRoles</code> | (array of string)<br/> The names of all possible tenant roles. A tenant role is a Kubernetes ClusterRole that the controller binds within a tenant namespace to (a) the default service account of the client namespace the tenant belongs to and (b) to the default service account of the tenant namespace. The tenant role to be used can be configured per Steward client namespace via annotation `steward.sap.com/tenant-role`. | `['steward-tenant']` |
-| <code>tenantController.<wbr/>args.<wbr/>logVerbosity</code> | The log verbosity. Levels are adopted from [Kubernetes logging conventions][k8s-logging-conventions]. | 2 |
-| <code>tenantController.<wbr/>podSecurityPolicyName</code> | (string)<br/> The name of an _existing_ pod security policy that should be used by the tenant controller. If empty, a default pod security policy will be created. | empty |
+| <code>tenantController.<wbr/><b>image.<wbr/>repository</b></code><br/><i>string</i> |  The container registry and repository of the Tenant Controller image. | `stewardci/stewardci-tenant-controller` |
+| <code>tenantController.<wbr/><b>image.<wbr/>tag</b></code><br/><i>string</i> |  The tag of the Tenant Controller image in the container registry. | A fixed image tag. |
+| <code>tenantController.<wbr/><b>image.<wbr/>pullPolicy</b></code><br/><i>string</i> |  The image pull policy for the Tenant Controller image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation.  | `IfNotPresent` |
+| <code>tenantController.<wbr/><b>resources</b></code><br/><i>object of [`RecourceRequirements`][k8s-resourcerequirements]</i> |  The resource requirements of the Tenant Controller container. When overriding, override the complete value, not just subvalues, because the default value might change in future versions and a partial override might not make sense anymore. | Limits and requests set (see `values.yaml`) |
+| <code>tenantController.<wbr/><b>podSecurityContext</b></code><br/><i>object of [`PodSecurityContext`][k8s-podsecuritycontext]</i> |  The pod security context of the Tenant Controller pod. | `{}` |
+| <code>tenantController.<wbr/><b>securityContext</b></code><br/><i>object of [`SecurityContext`][k8s-securitycontext]</i> |  The security context of the Tenant Controller container. | `{}` |
+| <code>tenantController.<wbr/><b>nodeSelector</b></code><br/><i>object</i> |  The `nodeSelector` field of the Tenant Controller [pod spec][k8s-podspec]. | `{}` |
+| <code>tenantController.<wbr/><b>affinity</b></code><br/><i>object of [`Affinity`][k8s-affinity]</i> |  The `affinity` field of the Tenant Controller [pod spec][k8s-podspec]. | `{}` |
+| <code>tenantController.<wbr/><b>tolerations</b></code><br/><i>array of [`Toleration`][k8s-tolerations]</i> |  The `tolerations` field of the Tenant Controller [pod spec][k8s-podspec]. | `[]` |
+| <code>tenantController.<wbr/><b>args.<wbr/>qps</b></code><br/><i>integer</i> |  The maximum queries per second (QPS) from the controller to the cluster. | 5 |
+| <code>tenantController.<wbr/><b>args.<wbr/>burst</b></code><br/><i>integer</i> |  The burst limit for throttle connections (maximum number of concurrent requests). | 10 |
+| <code>tenantController.<wbr/><b>args.<wbr/>threadiness</b></code><br/><i>integer</i> |  The maximum number of reconciliations performed in parallel. | 2 |
+| <code>tenantController.<wbr/><b>args.<wbr/>logVerbosity</b></code> | The log verbosity. Levels are adopted from [Kubernetes logging conventions][k8s-logging-conventions]. | 3 |
+| <code>tenantController.<wbr/><b>args.<wbr/>heartbeatInterval</b></code><br/><i>[duration][type-duration]</i> |  The interval of controller heartbeats. | `1m` |
+| <code>tenantController.<wbr/><b>args.<wbr/>heartbeatLogging</b></code><br/><i>bool</i> |  Whether controller heartbeats should be logged. | `true` |
+| <code>tenantController.<wbr/><b>args.<wbr/>heartbeatLogLevel</b></code><br/><i>bool</i> |  The log level to be used for controller heartbeats. | `3` |
+| <code>tenantController.<wbr/><b>possibleTenantRoles</b></code><br/><i>array of string</i> |  The names of all possible tenant roles. A tenant role is a Kubernetes ClusterRole that the controller binds within a tenant namespace to (a) the default service account of the client namespace the tenant belongs to and (b) to the default service account of the tenant namespace. The tenant role to be used can be configured per Steward client namespace via annotation `steward.sap.com/tenant-role`. | `['steward-tenant']` |
+| <code>tenantController.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by the tenant controller. If empty, a default pod security policy will be created. | empty |
 
 Common parameters:
 
 | Parameter | Description | Default |
 |---|---|---|
-| <code>imagePullSecrets</code> | (array of [LocalObjectReference][k8s-localobjectreference])<br/> The image pull secrets to be used for pulling controller images. | `[]` |
+| <code><b>imagePullSecrets</b></code><br/><i>array of [LocalObjectReference][k8s-localobjectreference]</i> |  The image pull secrets to be used for pulling controller images. | `[]` |
 
 ### Monitoring
 
 | Parameter | Description | Default |
 |---|---|---|
-| <code>metrics.<wbr/>serviceMonitors.<wbr/>enabled</code> | (bool)<br/> Whether to generate ServiceMonitor resource for [Prometheus Operator][prometheus-operator]. | `false` |
-| <code>metrics.<wbr/>serviceMonitors.<wbr/>extraLabels</code> | (object of string)<br/> Labels to be attached to the ServiceMonitor resources for [Prometheus Operator][prometheus-operator]. | `{}` |
+| <code>metrics.<wbr/><b>serviceMonitors.<wbr/>enabled</b></code><br/><i>bool</i> |  Whether to generate ServiceMonitor resource for [Prometheus Operator][prometheus-operator]. | `false` |
+| <code>metrics.<wbr/><b>serviceMonitors.<wbr/>extraLabels</b></code><br/><i>object of string</i> |  Labels to be attached to the ServiceMonitor resources for [Prometheus Operator][prometheus-operator]. | `{}` |
 
 ### Pipeline Runs
 
 | Parameter | Description | Default |
 |---|---|---|
-| <code>pipelineRuns.<wbr/>logging.<wbr/>elasticsearch.<wbr/>indexURL</code> | (string)<br/> The URL of the Elasticsearch index to send logs to. If null or empty, logging to Elasticsearch is disabled. Example: `http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc` | empty |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>repository</code> | OUTDATED (string)<br/> Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</code> instead. | |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>tag</code> | OUTDATED (string)<br/> Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</code> instead.  | |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image.<wbr/>pullPolicy</code> | OUTDATED (string)<br/> Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>imagePullPolicy</code> instead. | |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</code> | (string)<br/> The Jenkinsfile Runner image. | `stewardci/stewardci-jenkinsfile-runner:<versionTag>` |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>imagePullPolicy</code> | (string)<br/> The image pull policy for the Jenkinsfile Runner image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation. <br/><br/> **Currently broken, `IfNotPresent` is used in any case. See [tektoncd/pipeline #3423](https://github.com/tektoncd/pipeline/issues/3423)** | `IfNotPresent` |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>javaOpts</code> | (string)<br/> The JAVA_OPTS for the Jenkinsfile Runner process.  | (see `values.yaml`) |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>resources</code> | (object of [`RecourceRequirements`][k8s-resourcerequirements])<br/> The resource requirements of Jenkinsfile Runner containers. When overriding, override the complete value, not just subvalues, because the default value might change in future versions and a partial override might not make sense anymore. | Limits and requests set (see `values.yaml`) |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>podSecurityContext.<wbr/>runAsUser</code> | (integer)<br/> The user ID (UID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of [1,65535]. Corresponds to field `runAsUser` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>podSecurityContext.<wbr/>runAsGroup</code> | (integer)<br/> The group ID (GID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of [1,65535]. Corresponds to field `runAsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>podSecurityContext.<wbr/>fsGroup</code> | (integer)<br/> A special supplemental group ID of the container processes of the Jenkinsfile Runner pod, that defines the ownership of some volume types. The value must be an integer in the range of [1,65535]. Corresponds to field `fsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>pipelineCloneRetryIntervalSec</code> | (string)<br/> The retry interval for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>pipelineCloneRetryTimeoutSec</code> | (string)<br/> The retry timeout for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
-| <code>pipelineRuns.<wbr/>podSecurityPolicyName</code> | (string)<br/> The name of an _existing_ pod security policy that should be used by pipeline run pods. If empty, a default pod security policy will be created. | empty |
-| <code>pipelineRuns.<wbr/>timeout</code> | (string)<br/> The maximum execution time of pipelines. Must be specified as a string understood by [Go's `time.parseDuration()`](https://godoc.org/time#ParseDuration): <blockquote>A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix, such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".</blockquote> | `60m` |
-| <code>pipelineRuns.<wbr/>networkPolicy</code> | (string)<br/> DEPRECATED: Use <code>pipelineRuns.<wbr/>networkPolicies</code> instead. | |
-| <code>pipelineRuns.<wbr/>defaultNetworkPolicyName</code> | The name of the network policy which is used when no network profile is selected by a pipeline run spec. | `default` if <code>pipelineRuns.<wbr/>networkPolicies</code> is not set or empty. |
-| <code>pipelineRuns.<wbr/>networkPolicies</code> | (map[string]string)<br/> The network policies selectable as network profiles in pipeline run specs. The key can be any valid YAML key not starting with underscore (`_`). The value must be a string containing a complete `networkpolicy.networking.k8s.io` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of network policies][k8s-networkpolicies] for details about Kubernetes network policies.<br/><br/> Note that Steward ensures that all pods in pipeline run namespaces are _isolated_ in terms of network policies. The policy defined here _adds_ egress and/or ingress rules. | A single entry named `default` whose value is a network policy defining rules that allow ingress traffic from all pods in the same namespace and egress traffic to the internet, the cluster DNS resolver and the Kubernetes API server. |
-| <code>pipelineRuns.<wbr/>limitRange</code> | (string)<br/> The limit range to be created in every pipeline run namespace. The value must be a string containing a complete `limitrange` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of limit ranges][k8s-limitranges] for details about Kubernetes limit ranges. | A limit range defining a default CPU request of 0.5 CPUs, a default CPU limit of 3 CPUs, a default memory request of 0.5 GiB and a default memory limit of 3 GiB.<br/><br/>This default limit range might change with newer releases of Steward. It is recommended to set an own limit range to avoid unexpected changes with Steward upgrades. |
-| <code>pipelineRuns.<wbr/>resourceQuota</code> | (string)<br/> The resource quota to be created in every pipeline run namespace. The value must be a string containing a complete `resourcequotas` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of resource quotas][k8s-resourcequotas] for details about Kubernetes resource quotas.| none |
+| <code>pipelineRuns.<wbr/><b>logging.<wbr/>elasticsearch.<wbr/>indexURL</b></code><br/><i>string</i> |  The URL of the Elasticsearch index to send logs to. If null or empty, logging to Elasticsearch is disabled. Example: `http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc` | empty |
+| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>image.<wbr/>repository</b></code><br/><i>string</i> |  <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</b></code> instead. | |
+| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>image.<wbr/>tag</b></code><br/><i>string</i> |  <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</b></code> instead.  | |
+| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>image.<wbr/>pullPolicy</b></code><br/><i>string</i> |  <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>imagePullPolicy</b></code> instead. | |
+| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>image</b></code><br/><i>string</i> |  The Jenkinsfile Runner image. | `stewardci/stewardci-jenkinsfile-runner:<versionTag>` |
+| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>imagePullPolicy</b></code><br/><i>string</i> |  The image pull policy for the Jenkinsfile Runner image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation. | `IfNotPresent` |
+| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>javaOpts</b></code><br/><i>string</i> |  The JAVA_OPTS environment variable for the Jenkinsfile Runner process.  | (see `values.yaml`) |
+| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>resources</b></code><br/><i>object of [`RecourceRequirements`][k8s-resourcerequirements]</i> |  The resource requirements of Jenkinsfile Runner containers. When overriding, override the complete value, not just subvalues, because the default value might change in future versions and a partial override might not make sense anymore. | Limits and requests set (see `values.yaml`) |
+| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>podSecurityContext.<wbr/>runAsUser</b></code><br/><i>integer</i> |  The user ID (UID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of [1,65535]. Corresponds to field `runAsUser` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
+| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>podSecurityContext.<wbr/>runAsGroup</b></code><br/><i>integer</i> |  The group ID (GID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of [1,65535]. Corresponds to field `runAsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
+| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>podSecurityContext.<wbr/>fsGroup</b></code><br/><i>integer</i> |  A special supplemental group ID of the container processes of the Jenkinsfile Runner pod, that defines the ownership of some volume types. The value must be an integer in the range of [1,65535]. Corresponds to field `fsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
+| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>pipelineCloneRetryIntervalSec</b></code><br/><i>string</i> |  The retry interval for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
+| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>pipelineCloneRetryTimeoutSec</b></code><br/><i>string</i> |  The retry timeout for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
+| <code>pipelineRuns.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by pipeline run pods. If empty, a default pod security policy will be created. | empty |
+| <code>pipelineRuns.<wbr/>timeout</b></code><br/><i>[duration][type-duration]</i> |  The maximum execution time of pipelines. | `60m` |
+| <code>pipelineRuns.<wbr/><b>networkPolicy</b></code><br/><i>string</i> | <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>networkPolicies</code> instead. | |
+| <code>pipelineRuns.<wbr/><b>defaultNetworkPolicyName</b></code> | The name of the network policy which is used when no network profile is selected by a pipeline run spec. | `default` if <code>pipelineRuns.<wbr/>networkPolicies</code> is not set or empty. |
+| <code>pipelineRuns.<wbr/><b>networkPolicies</b></code><br/><i>map[string]string</i> |  The network policies selectable as network profiles in pipeline run specs. The key can be any valid YAML key not starting with underscore (`_`). The value must be a string containing a complete `networkpolicy.networking.k8s.io` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of network policies][k8s-networkpolicies] for details about Kubernetes network policies.<br/><br/> Note that Steward ensures that all pods in pipeline run namespaces are _isolated_ in terms of network policies. The policy defined here _adds_ egress and/or ingress rules. | A single entry named `default` whose value is a network policy defining rules that allow ingress traffic from all pods in the same namespace and egress traffic to the internet, the cluster DNS resolver and the Kubernetes API server. |
+| <code>pipelineRuns.<wbr/><b>limitRange</b></code><br/><i>string</i> |  The limit range to be created in every pipeline run namespace. The value must be a string containing a complete `limitrange` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of limit ranges][k8s-limitranges] for details about Kubernetes limit ranges. | A limit range defining a default CPU request of 0.5 CPUs, a default CPU limit of 3 CPUs, a default memory request of 0.5 GiB and a default memory limit of 3 GiB.<br/><br/>This default limit range might change with newer releases of Steward. It is recommended to set an own limit range to avoid unexpected changes with Steward upgrades. |
+| <code>pipelineRuns.<wbr/><b>resourceQuota</b></code><br/><i>string</i> |  The resource quota to be created in every pipeline run namespace. The value must be a string containing a complete `resourcequotas` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of resource quotas][k8s-resourcequotas] for details about Kubernetes resource quotas.| none |
 
 ### Feature Flags
 
 | Parameter | Description | Default |
 |---|---|---|
-| <code>featureFlags</code> | (string)<br/> Feature flag definition.  | empty |
+| <code><b>featureFlags</b></code><br/><i>string</i> |  Feature flag definition.  | empty |
 
 The feature flags definition is a string containing any number of feature flag names separated by any non-empty sequence of comma (`,`) and/or whitespace (space, horizontal tab, vertical tab, carriage return, newline, form feed). Separators at the beginning and the end of the string are allowed.
 
@@ -215,6 +222,14 @@ The definition string has leading and trailing separators and uses different sep
 | --- | --- | --- |
 | `RetryOnInvalidPipelineRunsConfig` | If enabled, the pipeline run controller retries reconciling PipelineRun objects in case the controller configuration (in ConfigMaps) is invalid or cannot be loaded. It is assumed that the condition can be detected by a monitoring tool, triggers an alert and operators fix the issue in a timely manner. By that operator errors do not immediately break user pipeline runs. However, processing of PipelineRun objects may be delayed significantly in case of invalid configuration.<br/><br/> If disabled, the current behavior is used: immediately set all unfinished PipelineRun objects to finished with result code `error_infra`.<br/><br/>  The new behavior is supposed to become the default in a future release of Steward. | disabled |
 
+### Misc
+
+#### Duration Value Syntax
+
+Chart parameters of type duration must be specified as a string understood by [Go's `time.parseDuration()`](https://godoc.org/time#ParseDuration):
+
+> A duration string is a possibly signed sequence of decimal numbers, each with optional fraction and a unit suffix, such as "300ms", "-1.5h" or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+
 ## Custom Resource Definitions
 
 Steward extends Kubernetes by a set of _custom resources types_ like Tenant and PipelineRun.
@@ -246,3 +261,5 @@ By doing so, all resource objects of those types will be removed by Kubernetes, 
 [k8s-resourcequotas]: https://kubernetes.io/docs/concepts/policy/resource-quotas/
 [k8s-logging-conventions]: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md#logging-conventions
 [prometheus-operator]: https://github.com/coreos/prometheus-operator
+
+[type-duration]: #duration-value-syntax

@@ -15,37 +15,82 @@ import (
 	"knative.dev/pkg/system"
 )
 
-var kubeconfig string
-var burst, qps, threadiness int
-
 const (
 	// resyncPeriod is the period between full resyncs performed
 	// by the controller.
 	resyncPeriod = 30 * time.Second
 
 	// metricsPort is the TCP port number to be used by the metrics
-	// HTTP server
+	// HTTP server.
 	metricsPort = 9090
+)
+
+var (
+	kubeconfig              string
+	burst, qps, threadiness int
+
+	heartbeatInterval time.Duration
+	heartbeatLogging  bool
+	heartbeatLogLevel int
 )
 
 func init() {
 	klog.InitFlags(nil)
 
-	flag.IntVar(&burst, "burst", 10, "burst for RESTClient")
-	flag.IntVar(&qps, "qps", 5, "QPS for RESTClient")
-	flag.IntVar(&threadiness, "threadiness", 2, "maximum number of reconciliations performed in parallel")
-	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to Kubernetes config file")
+	flag.StringVar(
+		&kubeconfig,
+		"kubeconfig",
+		"",
+		"The path to a kubeconfig file configuring access to the Kubernetes cluster."+
+			" If not specified or empty, assume running in-cluster.",
+	)
+	flag.IntVar(
+		&qps,
+		"qps",
+		5,
+		"The queries per seconds (QPS) for Kubernetes API client-side rate limiting.",
+	)
+	flag.IntVar(
+		&burst,
+		"burst",
+		10,
+		"The size of the burst bucket for Kubernetes API client-side rate limiting.",
+	)
+	flag.IntVar(
+		&threadiness,
+		"threadiness",
+		2,
+		"The maximum number of reconciliations performed by the controller in parallel.",
+	)
+	flag.DurationVar(
+		&heartbeatInterval,
+		"heartbeat-interval",
+		1*time.Minute,
+		"The interval of controller heartbeats.",
+	)
+	flag.BoolVar(
+		&heartbeatLogging,
+		"heartbeat-logging",
+		true,
+		"Whether controller heartbeats should be logged.",
+	)
+	flag.IntVar(
+		&heartbeatLogLevel,
+		"heartbeat-log-level",
+		3,
+		"The log level to be used for controller heartbeats.",
+	)
+
 	flag.Parse()
 }
 
-//TODO: Rename "/cmd" folder to "/main"
-//TODO: Rename "/cmd/controller" folder to "pipeline_run"
-
 func main() {
-	// creates the in-cluster config
+	defer klog.Flush()
+
+	system.Namespace() // ensure that namespace is set in environment
+
 	var config *rest.Config
 	var err error
-	defer klog.Flush()
 
 	if kubeconfig == "" {
 		klog.Infof("In cluster")
@@ -61,8 +106,6 @@ func main() {
 		}
 	}
 
-	system.Namespace() // ensure that namespace is set in environment
-
 	klog.V(3).Infof("Create Factory (resync period: %s, QPS: %d, burst: %d)", resyncPeriod.String(), qps, burst)
 	config.QPS = float32(qps)
 	config.Burst = burst
@@ -72,7 +115,14 @@ func main() {
 	metrics.StartServer(metricsPort)
 
 	klog.V(3).Infof("Create Controller")
-	controller := runctl.NewController(factory)
+	controllerOpts := runctl.ControllerOpts{
+		HeartbeatInterval: heartbeatInterval,
+	}
+	if heartbeatLogging {
+		tmp := klog.Level(heartbeatLogLevel)
+		controllerOpts.HeartbeatLogLevel = &tmp
+	}
+	controller := runctl.NewController(factory, controllerOpts)
 
 	klog.V(3).Infof("Create Signal Handlers")
 	stopCh := signals.SetupShutdownSignalHandler()

@@ -12,6 +12,7 @@
       - [`steward_k8sclient_rest_request_results`](#steward_k8sclient_rest_request_results)
   - [Steward Pipeline Run Controller](#steward-pipeline-run-controller)
     - [Processing Indicators](#processing-indicators)
+      - [`steward_pipelineruns_controller_heartbeats_total`](#steward_pipelineruns_controller_heartbeats_total)
       - [`steward_pipelineruns_started_total`](#steward_pipelineruns_started_total)
       - [`steward_pipelineruns_completed_total`](#steward_pipelineruns_completed_total)
       - [`steward_pipelineruns_state_duration_seconds`](#steward_pipelineruns_state_duration_seconds)
@@ -29,6 +30,7 @@
       - [`steward_pipelineruns_workqueue_retry_count_total`](#steward_pipelineruns_workqueue_retry_count_total)
   - [Steward Tenant Controller](#steward-tenant-controller)
     - [Processing Indicators](#processing-indicators-1)
+      - [`steward_tenants_controller_heartbeats_total`](#steward_tenants_controller_heartbeats_total)
       - [`steward_tenants_count_total`](#steward_tenants_count_total)
       - [DEPRECATED `steward_tenants_total`](#deprecated-steward_tenants_total)
     - [Tenant Controller Workqueue](#tenant-controller-workqueue)
@@ -127,6 +129,13 @@ Labels:
 ## Steward Pipeline Run Controller
 
 ### Processing Indicators
+
+#### `steward_pipelineruns_controller_heartbeats_total`
+
+The number of heartbeats of the run controller instance.
+
+Type: Counter
+
 
 #### `steward_pipelineruns_started_total`
 
@@ -269,6 +278,13 @@ Type: Counter
 ## Steward Tenant Controller
 
 ### Processing Indicators
+
+#### `steward_tenants_controller_heartbeats_total`
+
+The number of heartbeats of the tenant controller instance.
+
+Type: Counter
+
 
 #### `steward_tenants_count_total`
 
