@@ -1,10 +1,9 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: pipelineruns.steward.sap.com
 spec:
   group: steward.sap.com
-  version: v1alpha1
   names:
     kind: PipelineRun
     singular: pipelinerun
@@ -13,96 +12,106 @@ spec:
     - spr
     - sprs
   scope: Namespaced
-  subresources:
-    status: {}
-  additionalPrinterColumns:
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        required:
+        - spec
+        properties:
+          spec: ###
+            type: object
+            required:
+            - jenkinsFile
+            properties:
+              jenkinsFile: ###
+                type: object
+                required:
+                - repoUrl
+                - revision
+                - relativePath
+                properties:
+                  repoUrl: ###
+                    type: string
+                    pattern: '^[^\s]{1,}.*$'
+                  revision: ###
+                    type: string
+                    pattern: '^[^\s]{1,}.*$'
+                  relativePath: ###
+                    type: string
+                    pattern: '^[^\s]{1,}.*$'
+                  repoAuthSecret: ###
+                    type: string
+              args: ### map[string]string
+                type: object
+                additionalProperties: ###
+                  type: string
+              secrets: ###
+                type: array
+                items:
+                  type: string
+                  pattern: '^[^\s]{1,}.*$'
+              imagePullSecrets: ###
+                type: array
+                items:
+                  type: string
+                  pattern: '^[^\s]{1,}.*$'
+              intent: ###
+                type: string
+                pattern: '^(|run|abort)$'
+              logging: ###
+                type: object
+                properties:
+                  elasticsearch: ###
+                    type: object
+                    required:
+                    - runID
+                    properties:
+                      runID: ###
+                        type: object # should be any JSON value as soon as Elasticsearch Log Plug-in can handle it
+                        x-kubernetes-preserve-unknown-fields: true
+              runDetails: ###
+                type: object
+                properties:
+                  jobName: ###
+                    type: string
+                    #pattern: #TODO: valid Jenkins job names + blank
+                  sequenceNumber: ###
+                    type: integer
+                    minimum: 0
+                    maximum: 2147483647 # int32
+                  cause: ###
+                    type: string
+    subresources:
+      status: {}
+    additionalPrinterColumns:
     - name: Started
       type: date
-      JSONPath: .metadata.creationTimestamp
+      jsonPath: |-
+        .metadata.creationTimestamp
     - name: Finished
       type: date
-      JSONPath: .status.container.terminated.finishedAt
+      jsonPath: |-
+        .status.container.terminated.finishedAt
       priority: 1
     - name: Status
       type: string
       description: The current state of the pipeline run
-      JSONPath: .status.state
+      jsonPath: |-
+        .status.state
       priority: 0
     - name: Result
       type: string
       description: The result of the pipeline run
-      JSONPath: .status.result
+      jsonPath: |-
+        .status.result
       priority: 1
     - name: Message
       type: string
       description: The message of the pipeline run
-      JSONPath: .status.messageShort
+      jsonPath: |-
+        .status.messageShort
       priority: 2
-  validation:
-    openAPIV3Schema:
-      type: object
-      required:
-        - spec
-      properties:
-        spec: ###
-          type: object
-          required:
-            - jenkinsFile
-          properties:
-            jenkinsFile: ###
-              type: object
-              required:
-                - repoUrl
-                - revision
-                - relativePath
-              properties:
-                repoUrl: ###
-                  type: string
-                  pattern: '^[^\s]{1,}.*$'
-                revision: ###
-                  type: string
-                  pattern: '^[^\s]{1,}.*$'
-                relativePath: ###
-                  type: string
-                  pattern: '^[^\s]{1,}.*$'
-                repoAuthSecret: ###
-                  type: string
-            args: ### map[string]string
-              type: object
-              additionalProperties: ###
-                type: string
-            secrets: ###
-              type: array
-              items:
-                type: string
-                pattern: '^[^\s]{1,}.*$'
-            imagePullSecrets: ###
-              type: array
-              items:
-                type: string
-                pattern: '^[^\s]{1,}.*$'
-            intent: ###
-              type: string
-              pattern: '^(|run|abort)$'
-            logging: ###
-              type: object
-              properties:
-                elasticsearch: ###
-                  type: object
-                  required:
-                    - runID
-                  properties:
-                    runID: ###
-                      type: object # should be any JSON value as soon as Elasticsearch Log Plug-in can handle it
-            runDetails: ###
-              type: object
-              properties:
-                jobName: ###
-                  type: string
-                  #pattern: #TODO: valid Jenkins job names + blank
-                sequenceNumber: ###
-                  type: integer
-                  minimum: 0
-                  maximum: 2147483647 # int32
-                cause: ###
-                  type: string
