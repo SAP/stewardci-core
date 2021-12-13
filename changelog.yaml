@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.16.1"
+  date: 2021-12-13
+  changes:
+
     - type: bug
       impact: patch
       title: "Helm chart: Fix CRD updates"
