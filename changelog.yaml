@@ -62,7 +62,18 @@
         - `apiextensions.k8s.io/v1beta1` → `apiextensions.k8s.io/v1`
         - `rbac.authorization.k8s.io/v1beta1` → `rbac.authorization.k8s.io/v1`
       warning: |-
-        Steward does no longer run on Kubernetes v1.15 or below.
+        -   Steward does no longer run on Kubernetes v1.15 or below.
+
+        -   Rolling back to an earlier version of Steward might fail.
+
+            All Steward releases up to v0.16.0 have a bug in the CRD update
+            hook of the Helm chart.
+            Using `helm rollback` or `helm upgrade` with such target version
+            will fail.
+
+            The problem has been fixed in Steward v0.16.1 and higher.
+            Rolling back to an earlier version can be achieved by first rolling
+            back to v0.16.1 and then to the desired target version.
       upgradeNotes: |-
         See the warnings section.
       pullRequestNumber: 296
