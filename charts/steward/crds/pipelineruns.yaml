@@ -12,6 +12,7 @@ spec:
     - spr
     - sprs
   scope: Namespaced
+  preserveUnknownFields: false
   versions:
   - name: v1alpha1
     served: true
@@ -22,69 +23,92 @@ spec:
         required:
         - spec
         properties:
-          spec: ###
+          "spec": ###
             type: object
             required:
             - jenkinsFile
             properties:
-              jenkinsFile: ###
+              "jenkinsfileRunner": ###
+                type: object
+                properties:
+                  "image": ###
+                    type: string
+                  "imagePullPolicy": ###
+                    type: string
+                    enum:
+                    - ""
+                    - Never
+                    - IfNotPresent
+                    - Always
+              "jenkinsFile": ###
                 type: object
                 required:
                 - repoUrl
                 - revision
                 - relativePath
                 properties:
-                  repoUrl: ###
+                  "repoUrl": ###
                     type: string
                     pattern: '^[^\s]{1,}.*$'
-                  revision: ###
+                  "revision": ###
                     type: string
                     pattern: '^[^\s]{1,}.*$'
-                  relativePath: ###
+                  "relativePath": ###
                     type: string
                     pattern: '^[^\s]{1,}.*$'
-                  repoAuthSecret: ###
+                  "repoAuthSecret": ###
                     type: string
-              args: ### map[string]string
+              "args": ### map[string]string
                 type: object
                 additionalProperties: ###
                   type: string
-              secrets: ###
+              "secrets": ###
                 type: array
                 items:
                   type: string
                   pattern: '^[^\s]{1,}.*$'
-              imagePullSecrets: ###
+              "imagePullSecrets": ###
                 type: array
                 items:
                   type: string
                   pattern: '^[^\s]{1,}.*$'
-              intent: ###
+              "intent": ###
                 type: string
-                pattern: '^(|run|abort)$'
-              logging: ###
+                enum:
+                - ""
+                - run
+                - abort
+                default: run
+              "logging": ###
                 type: object
                 properties:
-                  elasticsearch: ###
+                  "elasticsearch": ###
                     type: object
                     required:
                     - runID
                     properties:
-                      runID: ###
+                      "runID": ###
                         type: object # should be any JSON value as soon as Elasticsearch Log Plug-in can handle it
                         x-kubernetes-preserve-unknown-fields: true
-              runDetails: ###
+                      "indexURL": ###
+                        type: string
+                      "authSecret": ###
+                        type: string
+              "runDetails": ###
                 type: object
                 properties:
-                  jobName: ###
+                  "jobName": ###
                     type: string
                     #pattern: #TODO: valid Jenkins job names + blank
-                  sequenceNumber: ###
+                  "sequenceNumber": ###
                     type: integer
                     minimum: 0
                     maximum: 2147483647 # int32
-                  cause: ###
+                  "cause": ###
                     type: string
+          "status": ###
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
     subresources:
       status: {}
     additionalPrinterColumns:
