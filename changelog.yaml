@@ -52,6 +52,23 @@
   date: TBD
   changes:
 
+    - type: bug
+      impact: patch
+      title: "Helm chart: Fix CRD updates"
+      description: |-
+        So far `kubectl apply` has been used to create or update
+        CRDs.
+        But in case of updating an existing CRD the result may be
+        a mixture of existing and new CRD that is possibly broken.
+
+        Now `kubectl create` and `kubectl replace` are used instead.
+      warning: |-
+        <optional warning message (markdown syntax)>
+      upgradeNotes: |-
+        The helper image `docker.io/bitnami/kubectl` has been upgraded
+        to `1.23@sha256:df3de0bb32b3d9f829da5a7608bd5bec85431d26ed89109b6158d8329b5305c9`.
+      pullRequestNumber: 297
+
 - version: "0.16.0"
   date: 2021-12-08
   changes:
