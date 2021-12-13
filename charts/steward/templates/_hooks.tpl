@@ -80,8 +80,11 @@ spec:
         - "bin/sh"
         - "-c"
         - >
-          echo "$CRD_SPEC" | kubectl apply -f -
-
+          if echo "$CRD_SPEC" | kubectl get -f - ; then
+            echo "$CRD_SPEC" | kubectl replace -f -
+          else
+            echo "$CRD_SPEC" | kubectl create -f -
+          fi
 {{- end -}}
 {{- end -}}
 
