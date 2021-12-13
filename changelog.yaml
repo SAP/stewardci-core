@@ -62,8 +62,6 @@
         a mixture of existing and new CRD that is possibly broken.
 
         Now `kubectl create` and `kubectl replace` are used instead.
-      warning: |-
-        <optional warning message (markdown syntax)>
       upgradeNotes: |-
         The helper image `docker.io/bitnami/kubectl` has been upgraded
         to `1.23@sha256:df3de0bb32b3d9f829da5a7608bd5bec85431d26ed89109b6158d8329b5305c9`.
