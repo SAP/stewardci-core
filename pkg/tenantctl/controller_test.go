@@ -6,25 +6,24 @@ import (
 	"testing"
 	"time"
 
-	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
-	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
-	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/golang/mock/gomock"
-	"github.com/pkg/errors"
+	k8sfake "github.com/SAP/stewardci-core/pkg/k8s/fake"
+	k8smocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
+	spew "github.com/davecgh/go-spew/spew"
+	gomock "github.com/golang/mock/gomock"
+	errors "github.com/pkg/errors"
 	assert "gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
-	rbacv1beta1 "k8s.io/api/rbac/v1beta1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	rbacv1 "k8s.io/api/rbac/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	knativeapis "knative.dev/pkg/apis"
 )
 
 func Test_Controller_syncHandler_DoesNotingIfTenantNotFound(t *testing.T) {
 	// SETUP
-	cf := fake.NewClientFactory( /* no objects exist */ )
+	cf := k8sfake.NewClientFactory( /* no objects exist */ )
 	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
@@ -53,9 +52,9 @@ func Test_Controller_syncHandler_FailsIfTenantFetchFails(t *testing.T) {
 	mockCtl := gomock.NewController(t)
 	defer mockCtl.Finish()
 
-	cf := fake.NewClientFactory( /* no objects exist */ )
+	cf := k8sfake.NewClientFactory( /* no objects exist */ )
 
-	fetcher := mocks.NewMockTenantFetcher(mockCtl)
+	fetcher := k8smocks.NewMockTenantFetcher(mockCtl)
 	fetcherErr := errors.New("fetcher error")
 	fetcher.EXPECT().ByKey(gomock.Not(gomock.Nil()), gomock.Any()).Return(nil, fetcherErr).Times(1)
 
@@ -78,11 +77,11 @@ func Test_Controller_syncHandler_FailsIfClientConfigIsInvalid(t *testing.T) {
 		tenantRoleName = "tenantClusterRole1"
 	)
 
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.Namespace(clientNSName), // annotations left out because not needed
+		k8sfake.Namespace(clientNSName), // annotations left out because not needed
 		// the tenant
-		fake.Tenant(tenantID, clientNSName),
+		k8sfake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -117,14 +116,14 @@ func Test_Controller_syncHandler_AddsFinalizer(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+		k8sfake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, clientNSName),
+		k8sfake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -159,14 +158,14 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+		k8sfake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, clientNSName),
+		k8sfake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -203,8 +202,8 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 
 	// RoleBinding in tenant namespace
 	{
-		roleBindingList, err := cf.RbacV1beta1().RoleBindings(tenant.Status.TenantNamespaceName).
-			List(ctx, metav1.ListOptions{LabelSelector: api.LabelSystemManaged})
+		roleBindingList, err := cf.RbacV1().RoleBindings(tenant.Status.TenantNamespaceName).
+			List(ctx, metav1.ListOptions{LabelSelector: stewardv1alpha1.LabelSystemManaged})
 		assert.NilError(t, err)
 		assert.Assert(t, len(roleBindingList.Items) == 1)
 		roleBinding := roleBindingList.Items[0]
@@ -212,14 +211,14 @@ func Test_Controller_syncHandler_UninitializedTenant_GoodCase(t *testing.T) {
 		_, labelExists := roleBinding.GetLabels()[stewardv1alpha1.LabelSystemManaged]
 		assert.Assert(t, labelExists)
 
-		expectedRoleRef := rbacv1beta1.RoleRef{
+		expectedRoleRef := rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
 			Name:     tenantRoleName,
 		}
 		assert.DeepEqual(t, expectedRoleRef, roleBinding.RoleRef)
 
-		expectedSubjects := []rbacv1beta1.Subject{
+		expectedSubjects := []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
 				Namespace: tenant.Status.TenantNamespaceName,
@@ -246,17 +245,17 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnNamespaceClash(t *te
 
 	ctx := context.Background()
 	clashingNamespaceName := fmt.Sprintf("%s-%s", tenantNSPrefix, tenantID)
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+		k8sfake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix:       tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantNamespaceSuffixLength: "0",
 			stewardv1alpha1.AnnotationTenantRole:                  tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, clientNSName),
+		k8sfake.Tenant(tenantID, clientNSName),
 		// a namespace with same name as will be used for tenant namespace
-		fake.Namespace(clashingNamespaceName),
+		k8sfake.Namespace(clashingNamespaceName),
 	)
 	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -293,9 +292,9 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnNamespaceClash(t *te
 
 	// RoleBinding in tenant namespace NOT created
 	{
-		_, err := cf.RbacV1beta1().RoleBindings(tenant.Status.TenantNamespaceName).
+		_, err := cf.RbacV1().RoleBindings(tenant.Status.TenantNamespaceName).
 			Get(ctx, tenantNamespaceRoleBindingNamePrefix, metav1.GetOptions{})
-		assert.Assert(t, k8serrors.IsNotFound(err))
+		assert.Assert(t, kerrors.IsNotFound(err))
 	}
 }
 
@@ -308,21 +307,21 @@ func Test_Controller_syncHandler_UninitializedTenant_FailsOnErrorWhenSyncingRole
 		tenantRoleName = "tenantClusterRole1"
 	)
 
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+		k8sfake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, clientNSName),
+		k8sfake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	injectedError := errors.New("ERR1")
 	ctl.testing = &controllerTesting{
-		reconcileTenantRoleBindingStub: func(*api.Tenant, string, clientConfig) (bool, error) {
+		reconcileTenantRoleBindingStub: func(*stewardv1alpha1.Tenant, string, clientConfig) (bool, error) {
 			return false, injectedError
 		},
 	}
@@ -366,20 +365,20 @@ func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *tes
 		tenantNSName = "somename1"
 	)
 
-	origTenant := fake.Tenant(tenantID, clientNSName)
+	origTenant := k8sfake.Tenant(tenantID, clientNSName)
 	origTenant.Status.TenantNamespaceName = tenantNSName
 	// no ready condition set because not needed by the reconciler
 
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+		k8sfake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
 		origTenant,
 		// the tenant namespace
-		fake.Namespace(tenantNSName),
+		k8sfake.Namespace(tenantNSName),
 	)
 	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -411,8 +410,8 @@ func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *tes
 
 	// RoleBinding in tenant namespace
 	{
-		roleBindingList, err := cf.RbacV1beta1().RoleBindings(tenant.Status.TenantNamespaceName).
-			List(ctx, metav1.ListOptions{LabelSelector: api.LabelSystemManaged})
+		roleBindingList, err := cf.RbacV1().RoleBindings(tenant.Status.TenantNamespaceName).
+			List(ctx, metav1.ListOptions{LabelSelector: stewardv1alpha1.LabelSystemManaged})
 		assert.NilError(t, err)
 		assert.Assert(t, len(roleBindingList.Items) == 1)
 		roleBinding := roleBindingList.Items[0]
@@ -420,14 +419,14 @@ func Test_Controller_syncHandler_InitializedTenant_AddsMissingRoleBinding(t *tes
 		_, labelExists := roleBinding.GetLabels()[stewardv1alpha1.LabelSystemManaged]
 		assert.Assert(t, labelExists)
 
-		expectedRoleRef := rbacv1beta1.RoleRef{
+		expectedRoleRef := rbacv1.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
 			Name:     tenantRoleName,
 		}
 		assert.DeepEqual(t, expectedRoleRef, roleBinding.RoleRef)
 
-		expectedSubjects := []rbacv1beta1.Subject{
+		expectedSubjects := []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
 				Namespace: tenant.Status.TenantNamespaceName,
@@ -453,13 +452,13 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnMissingNamespace(t *te
 		tenantNSName   = "somename1"
 	)
 
-	origTenant := fake.Tenant(tenantID, clientNSName)
+	origTenant := k8sfake.Tenant(tenantID, clientNSName)
 	origTenant.Status.TenantNamespaceName = tenantNSName
 	// no ready condition set because not needed by the reconciler
 
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+		k8sfake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
@@ -516,27 +515,27 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnErrorWhenSyncingRoleBi
 		tenantNSName   = "somename1"
 	)
 
-	origTenant := fake.Tenant(tenantID, clientNSName)
+	origTenant := k8sfake.Tenant(tenantID, clientNSName)
 	origTenant.Status.TenantNamespaceName = tenantNSName
 	// no ready condition set because not needed by the reconciler
 
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+		k8sfake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
 		origTenant,
 		// the tenant namespace
-		fake.Namespace(tenantNSName),
+		k8sfake.Namespace(tenantNSName),
 	)
 	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	injectedError := errors.New("ERR1")
 	ctl.testing = &controllerTesting{
-		reconcileTenantRoleBindingStub: func(*api.Tenant, string, clientConfig) (bool, error) {
+		reconcileTenantRoleBindingStub: func(*stewardv1alpha1.Tenant, string, clientConfig) (bool, error) {
 			return true, injectedError
 		},
 	}
@@ -558,7 +557,7 @@ func Test_Controller_syncHandler_InitializedTenant_FailsOnErrorWhenSyncingRoleBi
 
 		readyCond := tenant.Status.GetCondition(knativeapis.ConditionReady)
 		assert.Assert(t, readyCond.IsFalse(), dump)
-		assert.Equal(t, api.StatusReasonDependentResourceState, readyCond.Reason, dump)
+		assert.Equal(t, stewardv1alpha1.StatusReasonDependentResourceState, readyCond.Reason, dump)
 		assert.Equal(t,
 			fmt.Sprintf(
 				"The RoleBinding in tenant namespace \"%s\" is outdated but could not be updated.",
@@ -587,14 +586,14 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfFinalizerIsSet(t *testing.T) 
 	)
 
 	ctx := context.Background()
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+		k8sfake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, clientNSName),
+		k8sfake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -655,14 +654,14 @@ func Test_Controller_syncHandler_CleanupOnDelete_SkippedIfFinalizerIsNotSet(t *t
 	)
 
 	ctx := context.Background()
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+		k8sfake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, clientNSName),
+		k8sfake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -725,14 +724,14 @@ func Test_Controller_syncHandler_CleanupOnDelete_IfNamespaceDoesNotExistAnymore(
 	)
 
 	ctx := context.Background()
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+		k8sfake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, clientNSName),
+		k8sfake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -799,21 +798,21 @@ func Test_Controller_syncHandler_CleanupOnStatusUpdateFailure(t *testing.T) {
 		tenantRoleName = "tenantClusterRole1"
 	)
 
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+		k8sfake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, clientNSName),
+		k8sfake.Tenant(tenantID, clientNSName),
 	)
 	ctl := NewController(cf, ControllerOpts{})
 	ctl.fetcher = k8s.NewClientBasedTenantFetcher(cf)
 
 	injectedError := errors.New("ERR1")
 	ctl.testing = &controllerTesting{
-		updateStatusStub: func(tenant *api.Tenant) (*api.Tenant, error) {
+		updateStatusStub: func(tenant *stewardv1alpha1.Tenant) (*stewardv1alpha1.Tenant, error) {
 			assert.Assert(t, tenant.Status.TenantNamespaceName != "", spew.Sdump(tenant.Status))
 			return tenant, injectedError
 		},
@@ -841,7 +840,7 @@ func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_listManagedRoleBi
 	)
 
 	ctx := context.Background()
-	tenant := fake.Tenant(tenantID, clientNSName)
+	tenant := k8sfake.Tenant(tenantID, clientNSName)
 	config := &clientConfigImpl{
 		tenantRoleName: tenantRoleName,
 	}
@@ -850,7 +849,7 @@ func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_listManagedRoleBi
 
 	examinee := &Controller{
 		testing: &controllerTesting{
-			listManagedRoleBindingsStub: func(string) (*rbacv1beta1.RoleBindingList, error) {
+			listManagedRoleBindingsStub: func(string) (*rbacv1.RoleBindingList, error) {
 				return nil, injectedError
 			},
 		},
@@ -878,7 +877,7 @@ func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_createRoleBinding
 	)
 
 	ctx := context.Background()
-	tenant := fake.Tenant(tenantID, clientNSName)
+	tenant := k8sfake.Tenant(tenantID, clientNSName)
 	config := &clientConfigImpl{
 		tenantRoleName: tenantRoleName,
 	}
@@ -887,10 +886,10 @@ func Test_Controller_reconcileTenantRoleBinding_FailsOnErrorIn_createRoleBinding
 
 	examinee := &Controller{
 		testing: &controllerTesting{
-			listManagedRoleBindingsStub: func(string) (*rbacv1beta1.RoleBindingList, error) {
-				return &rbacv1beta1.RoleBindingList{}, nil
+			listManagedRoleBindingsStub: func(string) (*rbacv1.RoleBindingList, error) {
+				return &rbacv1.RoleBindingList{}, nil
 			},
-			createRoleBindingStub: func(*rbacv1beta1.RoleBinding) (*rbacv1beta1.RoleBinding, error) {
+			createRoleBindingStub: func(*rbacv1.RoleBinding) (*rbacv1.RoleBinding, error) {
 				return nil, injectedError
 			},
 		},
@@ -915,19 +914,19 @@ func Test_Controller_listManagedRoleBindings_GoodCase_WithLabelFilter(t *testing
 	)
 
 	ctx := context.Background()
-	newManagedRoleBinding := func(name string, labelValue string) *rbacv1beta1.RoleBinding {
-		return &rbacv1beta1.RoleBinding{
+	newManagedRoleBinding := func(name string, labelValue string) *rbacv1.RoleBinding {
+		return &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: nsName,
 				Labels: map[string]string{
-					api.LabelSystemManaged: labelValue, // SUT's selector should not depend on that value
+					stewardv1alpha1.LabelSystemManaged: labelValue, // SUT's selector should not depend on that value
 				},
 			},
 		}
 	}
-	newUnmanagedRoleBinding := func(name string) *rbacv1beta1.RoleBinding {
-		return &rbacv1beta1.RoleBinding{
+	newUnmanagedRoleBinding := func(name string) *rbacv1.RoleBinding {
+		return &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: nsName,
@@ -935,7 +934,7 @@ func Test_Controller_listManagedRoleBindings_GoodCase_WithLabelFilter(t *testing
 		}
 	}
 
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		newManagedRoleBinding("roleBinding1", ""),
 		newUnmanagedRoleBinding("roleBinding2"),
 		newManagedRoleBinding("roleBinding3", "dfkghsdfasdfk"),
@@ -975,9 +974,9 @@ func Test_Controller_listManagedRoleBindings_FailureCase(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	cf := fake.NewClientFactory()
+	cf := k8sfake.NewClientFactory()
 	injectedError := errors.Errorf("injected error 1")
-	cf.KubernetesClientset().PrependReactor("list", "rolebindings", fake.NewErrorReactor(injectedError))
+	cf.KubernetesClientset().PrependReactor("list", "rolebindings", k8sfake.NewErrorReactor(injectedError))
 
 	examinee := &Controller{factory: cf}
 
@@ -1008,14 +1007,14 @@ func Test_Controller_updateStatus_ConcurrentModification(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+		k8sfake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix: "prefix1",
 			stewardv1alpha1.AnnotationTenantRole:            tenantRoleName,
 		}),
 		// the tenant
-		fake.Tenant(tenantID, clientNSName),
+		k8sfake.Tenant(tenantID, clientNSName),
 	)
 
 	// EXERCISE + VERIFY
@@ -1056,9 +1055,9 @@ func Test_Controller_FullWorkflow(t *testing.T) {
 		tenantNSName   = tenantNSPrefix + "-" + tenantID
 	)
 
-	cf := fake.NewClientFactory(
+	cf := k8sfake.NewClientFactory(
 		// the client namespace
-		fake.NamespaceWithAnnotations(clientNSName, map[string]string{
+		k8sfake.NamespaceWithAnnotations(clientNSName, map[string]string{
 			stewardv1alpha1.AnnotationTenantNamespacePrefix:       tenantNSPrefix,
 			stewardv1alpha1.AnnotationTenantRole:                  tenantRoleName,
 			stewardv1alpha1.AnnotationTenantNamespaceSuffixLength: "0",
@@ -1082,7 +1081,7 @@ func Test_Controller_FullWorkflow(t *testing.T) {
 	{
 		syncCount := controller.getSyncCount()
 
-		_, err := tenantsIfc.Create(ctx, fake.Tenant(tenantID, clientNSName), metav1.CreateOptions{})
+		_, err := tenantsIfc.Create(ctx, k8sfake.Tenant(tenantID, clientNSName), metav1.CreateOptions{})
 		assert.NilError(t, err)
 
 		waitForNextSync(t, controller, syncCount)
@@ -1133,7 +1132,7 @@ func Test_Controller_FullWorkflow(t *testing.T) {
 	}
 }
 
-func assertThatExactlyTheseNamespacesExist(t *testing.T, cf *fake.ClientFactory, expectedNamespaces ...string) {
+func assertThatExactlyTheseNamespacesExist(t *testing.T, cf *k8sfake.ClientFactory, expectedNamespaces ...string) {
 	t.Helper()
 
 	ctx := context.Background()
@@ -1160,7 +1159,7 @@ func assertThatExactlyTheseNamespacesExist(t *testing.T, cf *fake.ClientFactory,
 	}
 }
 
-func assertThatExactlyTheseTenantsExistInNamespace(t *testing.T, cf *fake.ClientFactory, namespace string, expectedTenants ...string) {
+func assertThatExactlyTheseTenantsExistInNamespace(t *testing.T, cf *k8sfake.ClientFactory, namespace string, expectedTenants ...string) {
 	t.Helper()
 
 	ctx := context.Background()
@@ -1214,7 +1213,7 @@ func assertThatExactlyTheseFinalizersExist(t *testing.T, obj *metav1.ObjectMeta,
 	}
 }
 
-func startController(t *testing.T, cf *fake.ClientFactory) (chan struct{}, *Controller) {
+func startController(t *testing.T, cf *k8sfake.ClientFactory) (chan struct{}, *Controller) {
 	stopCh := make(chan struct{}, 0)
 	controller := NewController(cf, ControllerOpts{})
 	controller.fetcher = k8s.NewClientBasedTenantFetcher(cf)
@@ -1229,7 +1228,7 @@ func stopController(t *testing.T, stopCh chan struct{}) {
 	stopCh <- struct{}{}
 }
 
-func runControllerForAWhile(t *testing.T, cf *fake.ClientFactory) *Controller {
+func runControllerForAWhile(t *testing.T, cf *k8sfake.ClientFactory) *Controller {
 	stopCh, controller := startController(t, cf)
 	defer stopController(t, stopCh)
 	return controller

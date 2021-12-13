@@ -40,7 +40,7 @@ import (
 	dynamic "k8s.io/client-go/dynamic"
 	v11 "k8s.io/client-go/kubernetes/typed/core/v1"
 	v12 "k8s.io/client-go/kubernetes/typed/networking/v1"
-	v1beta10 "k8s.io/client-go/kubernetes/typed/rbac/v1beta1"
+	v13 "k8s.io/client-go/kubernetes/typed/rbac/v1"
 	reflect "reflect"
 )
 
@@ -109,18 +109,18 @@ func (mr *MockClientFactoryMockRecorder) NetworkingV1() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NetworkingV1", reflect.TypeOf((*MockClientFactory)(nil).NetworkingV1))
 }
 
-// RbacV1beta1 mocks base method
-func (m *MockClientFactory) RbacV1beta1() v1beta10.RbacV1beta1Interface {
+// RbacV1 mocks base method
+func (m *MockClientFactory) RbacV1() v13.RbacV1Interface {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RbacV1beta1")
-	ret0, _ := ret[0].(v1beta10.RbacV1beta1Interface)
+	ret := m.ctrl.Call(m, "RbacV1")
+	ret0, _ := ret[0].(v13.RbacV1Interface)
 	return ret0
 }
 
-// RbacV1beta1 indicates an expected call of RbacV1beta1
-func (mr *MockClientFactoryMockRecorder) RbacV1beta1() *gomock.Call {
+// RbacV1 indicates an expected call of RbacV1
+func (mr *MockClientFactoryMockRecorder) RbacV1() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RbacV1beta1", reflect.TypeOf((*MockClientFactory)(nil).RbacV1beta1))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RbacV1", reflect.TypeOf((*MockClientFactory)(nil).RbacV1))
 }
 
 // StewardInformerFactory mocks base method

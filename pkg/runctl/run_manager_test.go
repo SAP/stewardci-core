@@ -9,33 +9,31 @@ import (
 	"testing"
 	"time"
 
-	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	stewardfake "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/fake"
+	stewardfakeclient "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/fake"
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	featureflag "github.com/SAP/stewardci-core/pkg/featureflag"
 	featureflagtesting "github.com/SAP/stewardci-core/pkg/featureflag/testing"
-	"github.com/SAP/stewardci-core/pkg/k8s"
-	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
+	k8s "github.com/SAP/stewardci-core/pkg/k8s"
 	k8sfake "github.com/SAP/stewardci-core/pkg/k8s/fake"
-	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
+	k8smocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	secretmocks "github.com/SAP/stewardci-core/pkg/k8s/secrets/mocks"
-	secretfake "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/fake"
-	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
+	secretproviderfakes "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/fake"
+	cfg "github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	runmocks "github.com/SAP/stewardci-core/pkg/runctl/run/mocks"
-	tektonclientfake "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/fake"
-	"github.com/davecgh/go-spew/spew"
+	tektonfakeclient "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/fake"
+	spew "github.com/davecgh/go-spew/spew"
 	gomock "github.com/golang/mock/gomock"
-	"github.com/pkg/errors"
-	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"gotest.tools/assert"
-	"gotest.tools/assert/cmp"
+	errors "github.com/pkg/errors"
+	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
+	assert "gotest.tools/assert"
+	assertcmp "gotest.tools/assert/cmp"
 	is "gotest.tools/assert/cmp"
-	corev1api "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
+	corev1 "k8s.io/api/core/v1"
+	equality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kubefake "k8s.io/client-go/kubernetes/fake"
@@ -63,9 +61,9 @@ func newRunManagerTestingWithRequiredStubs() *runManagerTesting {
 	}
 }
 
-func contextWithSpec(t *testing.T, runNamespaceName string, spec api.PipelineSpec) *runContext {
+func contextWithSpec(t *testing.T, runNamespaceName string, spec stewardv1alpha1.PipelineSpec) *runContext {
 	ctx := context.Background()
-	pipelineRun := fake.PipelineRun("run1", "ns1", spec)
+	pipelineRun := k8sfake.PipelineRun("run1", "ns1", spec)
 	k8sPipelineRun, err := k8s.NewPipelineRun(ctx, pipelineRun, nil)
 	assert.NilError(t, err)
 	return &runContext{runNamespace: runNamespaceName,
@@ -82,13 +80,13 @@ func Test__runManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
 			h := newTestHelper1(t)
 
 			cf := newFakeClientFactory(
-				fake.Namespace(h.namespace1),
-				fake.PipelineRun(h.pipelineRun1, h.namespace1, stewardv1alpha1.PipelineSpec{}),
+				k8sfake.Namespace(h.namespace1),
+				k8sfake.PipelineRun(h.pipelineRun1, h.namespace1, stewardv1alpha1.PipelineSpec{}),
 			)
-			cf.KubernetesClientset().PrependReactor("create", "namespaces", fake.GenerateNameReactor(7))
+			cf.KubernetesClientset().PrependReactor("create", "namespaces", k8sfake.GenerateNameReactor(7))
 
 			config := &cfg.PipelineRunsConfigStruct{}
-			secretProvider := secretfake.NewProvider(h.namespace1)
+			secretProvider := secretproviderfakes.NewProvider(h.namespace1)
 
 			examinee := newRunManager(cf, secretProvider)
 			examinee.testing = newRunManagerTestingWithAllNoopStubs()
@@ -134,12 +132,12 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 	h := newTestHelper1(t)
 
 	cf := newFakeClientFactory(
-		fake.Namespace(h.namespace1),
-		fake.PipelineRun(h.pipelineRun1, h.namespace1, stewardv1alpha1.PipelineSpec{}),
+		k8sfake.Namespace(h.namespace1),
+		k8sfake.PipelineRun(h.pipelineRun1, h.namespace1, stewardv1alpha1.PipelineSpec{}),
 	)
 
 	config := &cfg.PipelineRunsConfigStruct{}
-	secretProvider := secretfake.NewProvider(h.namespace1)
+	secretProvider := secretproviderfakes.NewProvider(h.namespace1)
 	pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
@@ -175,12 +173,12 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 	h := newTestHelper1(t)
 
 	cf := newFakeClientFactory(
-		fake.Namespace(h.namespace1),
-		fake.PipelineRun(h.pipelineRun1, h.namespace1, stewardv1alpha1.PipelineSpec{}),
+		k8sfake.Namespace(h.namespace1),
+		k8sfake.PipelineRun(h.pipelineRun1, h.namespace1, stewardv1alpha1.PipelineSpec{}),
 	)
 
 	config := &cfg.PipelineRunsConfigStruct{}
-	secretProvider := secretfake.NewProvider(h.namespace1)
+	secretProvider := secretproviderfakes.NewProvider(h.namespace1)
 	pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
@@ -222,12 +220,12 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 	h := newTestHelper1(t)
 
 	cf := newFakeClientFactory(
-		fake.Namespace(h.namespace1),
-		fake.PipelineRun(h.pipelineRun1, h.namespace1, stewardv1alpha1.PipelineSpec{}),
+		k8sfake.Namespace(h.namespace1),
+		k8sfake.PipelineRun(h.pipelineRun1, h.namespace1, stewardv1alpha1.PipelineSpec{}),
 	)
 
 	config := &cfg.PipelineRunsConfigStruct{}
-	secretProvider := secretfake.NewProvider(h.namespace1)
+	secretProvider := secretproviderfakes.NewProvider(h.namespace1)
 	pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
@@ -338,8 +336,8 @@ func Test__runManager_setupNetworkPolicyThatIsolatesAllPods(t *testing.T) {
 	)
 	h := newTestHelper1(t)
 	runCtx := &runContext{runNamespace: h.namespace1}
-	cf := fake.NewClientFactory()
-	cf.KubernetesClientset().PrependReactor("create", "*", fake.GenerateNameReactor(0))
+	cf := k8sfake.NewClientFactory()
+	cf.KubernetesClientset().PrependReactor("create", "*", k8sfake.GenerateNameReactor(0))
 
 	examinee := runManager{
 		factory: cf,
@@ -371,7 +369,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__NoPolicyConfigured(t *testin
 
 	// SETUP
 	h := newTestHelper1(t)
-	runCtx := contextWithSpec(t, h.namespace1, api.PipelineSpec{})
+	runCtx := contextWithSpec(t, h.namespace1, stewardv1alpha1.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
 		// no network policy
 	}
@@ -380,7 +378,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__NoPolicyConfigured(t *testin
 
 	// We use a mocked client factory without expected calls, because
 	// the SUT should not use it if no policy is configured.
-	cf := mocks.NewMockClientFactory(mockCtrl)
+	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
 	examinee := runManager{
 		factory: cf,
@@ -410,7 +408,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__SetsMetadataAndLeavesOtherTh
 		Resource: "networkpolicies",
 	}
 
-	runCtx := contextWithSpec(t, h.namespace1, api.PipelineSpec{})
+	runCtx := contextWithSpec(t, h.namespace1, stewardv1alpha1.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
 		DefaultNetworkProfile: "key1",
 		NetworkPolicies: map[string]string{
@@ -436,14 +434,14 @@ func Test__runManager_setupNetworkPolicyFromConfig__SetsMetadataAndLeavesOtherTh
 		},
 	}
 
-	cf := fake.NewClientFactory()
+	cf := k8sfake.NewClientFactory()
 	cf.DynamicClient = dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
 		runtime.NewScheme(),
 		map[schema.GroupVersionResource]string{
 			gvr: "NetworkPolicyList",
 		},
 	)
-	cf.DynamicClient.PrependReactor("create", "*", fake.GenerateNameReactor(0))
+	cf.DynamicClient.PrependReactor("create", "*", k8sfake.GenerateNameReactor(0))
 
 	examinee := runManager{
 		factory: cf,
@@ -498,7 +496,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__ReplacesAllMetadata(t *testi
 		expectedNamePrefix = "steward.sap.com--configured-"
 	)
 	h := newTestHelper1(t)
-	runCtx := contextWithSpec(t, h.namespace1, api.PipelineSpec{})
+	runCtx := contextWithSpec(t, h.namespace1, stewardv1alpha1.PipelineSpec{})
 
 	gvr := schema.GroupVersionResource{
 		Group:    "networking.k8s.io",
@@ -533,14 +531,14 @@ func Test__runManager_setupNetworkPolicyFromConfig__ReplacesAllMetadata(t *testi
 		},
 	}
 
-	cf := fake.NewClientFactory()
+	cf := k8sfake.NewClientFactory()
 	cf.DynamicClient = dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
 		runtime.NewScheme(),
 		map[schema.GroupVersionResource]string{
 			gvr: "NetworkPolicyList",
 		},
 	)
-	cf.DynamicClient.PrependReactor("create", "*", fake.GenerateNameReactor(0))
+	cf.DynamicClient.PrependReactor("create", "*", k8sfake.GenerateNameReactor(0))
 
 	examinee := runManager{
 		factory: cf,
@@ -575,50 +573,50 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 
 	for _, tc := range []struct {
 		name           string
-		profilesSpec   *api.Profiles
+		profilesSpec   *stewardv1alpha1.Profiles
 		expectedPolicy string
 		expectError    bool
-		result         api.Result
+		result         stewardv1alpha1.Result
 	}{
 		{
 			name:           "no_profile_spec",
 			profilesSpec:   nil,
 			expectedPolicy: "networkPolicySpecDefault1",
 			expectError:    false,
-			result:         api.ResultUndefined,
+			result:         stewardv1alpha1.ResultUndefined,
 		},
 		{
 			name:           "no_network_profile",
-			profilesSpec:   &api.Profiles{},
+			profilesSpec:   &stewardv1alpha1.Profiles{},
 			expectedPolicy: "networkPolicySpecDefault1",
 			expectError:    false,
-			result:         api.ResultUndefined,
+			result:         stewardv1alpha1.ResultUndefined,
 		},
 		{
 			name: "undefined_network_profile",
-			profilesSpec: &api.Profiles{
+			profilesSpec: &stewardv1alpha1.Profiles{
 				Network: "undefined1",
 			},
 			expectError: true,
-			result:      api.ResultErrorConfig,
+			result:      stewardv1alpha1.ResultErrorConfig,
 		},
 		{
 			name: "network_profile_1",
-			profilesSpec: &api.Profiles{
+			profilesSpec: &stewardv1alpha1.Profiles{
 				Network: "networkPolicyKey1",
 			},
 			expectedPolicy: "networkPolicySpec1",
 			expectError:    false,
-			result:         api.ResultUndefined,
+			result:         stewardv1alpha1.ResultUndefined,
 		},
 		{
 			name: "network_profile_2",
-			profilesSpec: &api.Profiles{
+			profilesSpec: &stewardv1alpha1.Profiles{
 				Network: "networkPolicyKey2",
 			},
 			expectedPolicy: "networkPolicySpec2",
 			expectError:    false,
-			result:         api.ResultUndefined,
+			result:         stewardv1alpha1.ResultUndefined,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -632,22 +630,22 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 				Version:  "v123",
 				Resource: "networkpolicies",
 			}
-			cf := fake.NewClientFactory()
+			cf := k8sfake.NewClientFactory()
 			cf.DynamicClient = dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
 				runtime.NewScheme(),
 				map[schema.GroupVersionResource]string{
 					gvr: "NetworkPolicyList",
 				},
 			)
-			cf.DynamicClient.PrependReactor("create", "*", fake.GenerateNameReactor(0))
+			cf.DynamicClient.PrependReactor("create", "*", k8sfake.GenerateNameReactor(0))
 
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
 
-			mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
+			mockPipelineRun := k8smocks.NewMockPipelineRun(mockCtrl)
 			mockPipelineRun.EXPECT().
 				GetSpec().
-				Return(&api.PipelineSpec{Profiles: tc.profilesSpec}).
+				Return(&stewardv1alpha1.PipelineSpec{Profiles: tc.profilesSpec}).
 				AnyTimes()
 
 			runCtx := &runContext{pipelineRun: mockPipelineRun}
@@ -682,7 +680,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 			// VERIFY
 			if tc.expectError {
 				assert.Assert(t, resultError != nil)
-				if tc.result != api.ResultUndefined {
+				if tc.result != stewardv1alpha1.ResultUndefined {
 					assert.Equal(t, tc.result, serrors.GetClass(resultError))
 				}
 			} else {
@@ -705,7 +703,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_MalformedPolicy(t *testing.T) 
 
 	// SETUP
 	h := newTestHelper1(t)
-	runCtx := contextWithSpec(t, h.namespace1, api.PipelineSpec{})
+	runCtx := contextWithSpec(t, h.namespace1, stewardv1alpha1.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
 		DefaultNetworkProfile: "key1",
 		NetworkPolicies: map[string]string{
@@ -717,7 +715,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_MalformedPolicy(t *testing.T) 
 
 	// We use a mocked client factory without expected calls, because
 	// the SUT should not use it if policy decoding fails.
-	cf := mocks.NewMockClientFactory(mockCtrl)
+	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
 	examinee := runManager{
 		factory: cf,
@@ -737,7 +735,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__UnexpectedGroup(t *testing.T
 
 	// SETUP
 	h := newTestHelper1(t)
-	runCtx := contextWithSpec(t, h.namespace1, api.PipelineSpec{})
+	runCtx := contextWithSpec(t, h.namespace1, stewardv1alpha1.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
 		DefaultNetworkProfile: "key1",
 		NetworkPolicies: map[string]string{
@@ -752,7 +750,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__UnexpectedGroup(t *testing.T
 
 	// We use a mocked client factory without expected calls, because
 	// the SUT should not use it if policy decoding fails.
-	cf := mocks.NewMockClientFactory(mockCtrl)
+	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
 	examinee := runManager{
 		factory: cf,
@@ -775,7 +773,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__UnexpectedKind(t *testing.T)
 
 	// SETUP
 	h := newTestHelper1(t)
-	runCtx := contextWithSpec(t, h.namespace1, api.PipelineSpec{})
+	runCtx := contextWithSpec(t, h.namespace1, stewardv1alpha1.PipelineSpec{})
 	runCtx.pipelineRunsConfig = &cfg.PipelineRunsConfigStruct{
 		DefaultNetworkProfile: "key1",
 		NetworkPolicies: map[string]string{
@@ -790,7 +788,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__UnexpectedKind(t *testing.T)
 
 	// We use a mocked client factory without expected calls, because
 	// the SUT should not use it if policy decoding fails.
-	cf := mocks.NewMockClientFactory(mockCtrl)
+	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
 	examinee := runManager{
 		factory: cf,
@@ -870,7 +868,7 @@ func Test__runManager_setupLimitRangeFromConfig__NoLimitRangeConfigured(t *testi
 
 	// We use a mocked client factory without expected calls, because
 	// the SUT should not use it if no policy is configured.
-	cf := mocks.NewMockClientFactory(mockCtrl)
+	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
 	examinee := runManager{
 		factory: cf,
@@ -899,7 +897,7 @@ func Test__runManager_setupLimitRangeFromConfig__MalformedLimitRange(t *testing.
 
 	// We use a mocked client factory without expected calls, because
 	// the SUT should not use it if policy decoding fails.
-	cf := mocks.NewMockClientFactory(mockCtrl)
+	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
 	examinee := runManager{
 		factory: cf,
@@ -933,7 +931,7 @@ func Test__runManager_setupLimitRangeFromConfig__UnexpectedGroup(t *testing.T) {
 
 	// We use a mocked client factory without expected calls, because
 	// the SUT should not use it if policy decoding fails.
-	cf := mocks.NewMockClientFactory(mockCtrl)
+	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
 	examinee := runManager{
 		factory: cf,
@@ -970,7 +968,7 @@ func Test__runManager_setupLimitRangeFromConfig__UnexpectedKind(t *testing.T) {
 
 	// We use a mocked client factory without expected calls, because
 	// the SUT should not use it if policy decoding fails.
-	cf := mocks.NewMockClientFactory(mockCtrl)
+	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
 	examinee := runManager{
 		factory: cf,
@@ -1050,7 +1048,7 @@ func Test__runManager_setupResourceQuotaFromConfig__NoQuotaConfigured(t *testing
 
 	// We use a mocked client factory without expected calls, because
 	// the SUT should not use it if no policy is configured.
-	cf := mocks.NewMockClientFactory(mockCtrl)
+	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
 	examinee := runManager{
 		factory: cf,
@@ -1079,7 +1077,7 @@ func Test__runManager_setupResourceQuotaFromConfig__MalformedResourceQuota(t *te
 
 	// We use a mocked client factory without expected calls, because
 	// the SUT should not use it if policy decoding fails.
-	cf := mocks.NewMockClientFactory(mockCtrl)
+	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
 	examinee := runManager{
 		factory: cf,
@@ -1113,7 +1111,7 @@ func Test__runManager_setupResourceQuotaFromConfig__UnexpectedGroup(t *testing.T
 
 	// We use a mocked client factory without expected calls, because
 	// the SUT should not use it if policy decoding fails.
-	cf := mocks.NewMockClientFactory(mockCtrl)
+	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
 	examinee := runManager{
 		factory: cf,
@@ -1150,7 +1148,7 @@ func Test__runManager_setupResourceQuotaFromConfig__UnexpectedKind(t *testing.T)
 
 	// We use a mocked client factory without expected calls, because
 	// the SUT should not use it if policy decoding fails.
-	cf := mocks.NewMockClientFactory(mockCtrl)
+	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
 	examinee := runManager{
 		factory: cf,
@@ -1183,7 +1181,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet
 		runNamespace:       h.namespace1,
 	}
 	mockPipelineRun.UpdateRunNamespace(h.namespace1)
-	cf := fake.NewClientFactory()
+	cf := k8sfake.NewClientFactory()
 	examinee := runManager{
 		factory: cf,
 		testing: newRunManagerTestingWithAllNoopStubs(),
@@ -1197,7 +1195,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet
 
 	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
-	if equality.Semantic.DeepEqual(taskRun.Spec.PodTemplate, tekton.PodTemplate{}) {
+	if equality.Semantic.DeepEqual(taskRun.Spec.PodTemplate, tektonv1beta1.PodTemplate{}) {
 		t.Fatal("podTemplate of TaskRun is empty")
 	}
 }
@@ -1228,7 +1226,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 			JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(3333),
 		},
 	}
-	cf := fake.NewClientFactory()
+	cf := k8sfake.NewClientFactory()
 
 	examinee := runManager{
 		factory: cf,
@@ -1246,17 +1244,17 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 
 	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
-	expectedPodTemplate := &tekton.PodTemplate{
-		SecurityContext: &corev1api.PodSecurityContext{
+	expectedPodTemplate := &tektonv1beta1.PodTemplate{
+		SecurityContext: &corev1.PodSecurityContext{
 			FSGroup:    int64Ptr(1111),
 			RunAsGroup: int64Ptr(2222),
 			RunAsUser:  int64Ptr(3333),
 		},
-		Volumes: []corev1api.Volume{
+		Volumes: []corev1.Volume{
 			{
 				Name: "service-account-token",
-				VolumeSource: corev1api.VolumeSource{
-					Secret: &corev1api.SecretVolumeSource{
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
 						SecretName:  serviceAccountSecretName,
 						DefaultMode: int32Ptr(0644),
 					},
@@ -1399,12 +1397,12 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 	for _, tc := range []struct {
 		name                string
 		spec                *stewardv1alpha1.PipelineSpec
-		expectedAddedParams []tekton.Param
+		expectedAddedParams []tektonv1beta1.Param
 	}{
 		{
 			name: "empty",
 			spec: &stewardv1alpha1.PipelineSpec{},
-			expectedAddedParams: []tekton.Param{
+			expectedAddedParams: []tektonv1beta1.Param{
 				tektonStringParam("JFR_IMAGE", pipelineRunsConfigDefaultImage),
 				tektonStringParam("JFR_IMAGE_PULL_POLICY", pipelineRunsConfigDefaultPolicy),
 			},
@@ -1414,7 +1412,7 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 			spec: &stewardv1alpha1.PipelineSpec{
 				JenkinsfileRunner: &stewardv1alpha1.JenkinsfileRunnerSpec{},
 			},
-			expectedAddedParams: []tekton.Param{
+			expectedAddedParams: []tektonv1beta1.Param{
 				tektonStringParam("JFR_IMAGE", pipelineRunsConfigDefaultImage),
 				tektonStringParam("JFR_IMAGE_PULL_POLICY", pipelineRunsConfigDefaultPolicy),
 			},
@@ -1426,7 +1424,7 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 					Image: "foo",
 				},
 			},
-			expectedAddedParams: []tekton.Param{
+			expectedAddedParams: []tektonv1beta1.Param{
 				tektonStringParam("JFR_IMAGE", "foo"),
 				tektonStringParam("JFR_IMAGE_PULL_POLICY", "IfNotPresent"),
 			},
@@ -1438,7 +1436,7 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 					ImagePullPolicy: "bar",
 				},
 			},
-			expectedAddedParams: []tekton.Param{
+			expectedAddedParams: []tektonv1beta1.Param{
 				tektonStringParam("JFR_IMAGE", pipelineRunsConfigDefaultImage),
 				tektonStringParam("JFR_IMAGE_PULL_POLICY", pipelineRunsConfigDefaultPolicy),
 			},
@@ -1451,7 +1449,7 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 					ImagePullPolicy: "bar",
 				},
 			},
-			expectedAddedParams: []tekton.Param{
+			expectedAddedParams: []tektonv1beta1.Param{
 				tektonStringParam("JFR_IMAGE", "foo"),
 				tektonStringParam("JFR_IMAGE_PULL_POLICY", "bar"),
 			},
@@ -1464,12 +1462,12 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 			// SETUP
 			mockCtrl := gomock.NewController(t)
 			defer mockCtrl.Finish()
-			mockPipelineRun := mocks.NewMockPipelineRun(mockCtrl)
+			mockPipelineRun := k8smocks.NewMockPipelineRun(mockCtrl)
 			mockPipelineRun.EXPECT().GetSpec().Return(tc.spec).AnyTimes()
 			existingParam := tektonStringParam("AlreadyExistingParam1", "foo")
-			tektonTaskRun := tekton.TaskRun{
-				Spec: tekton.TaskRunSpec{
-					Params: []tekton.Param{*existingParam.DeepCopy()},
+			tektonTaskRun := tektonv1beta1.TaskRun{
+				Spec: tektonv1beta1.TaskRunSpec{
+					Params: []tektonv1beta1.Param{*existingParam.DeepCopy()},
 				},
 			}
 			runCtx := &runContext{
@@ -1484,7 +1482,7 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 			examinee.addTektonTaskRunParamsForJenkinsfileRunnerImage(runCtx, &tektonTaskRun)
 
 			// VERIFY
-			expectedParams := []tekton.Param{existingParam}
+			expectedParams := []tektonv1beta1.Param{existingParam}
 			expectedParams = append(expectedParams, tc.expectedAddedParams...)
 			assert.DeepEqual(t, expectedParams, tektonTaskRun.Spec.Params)
 		})
@@ -1532,7 +1530,7 @@ func Test__runManager_copySecretsToRunNamespace__DoesCopySecret(t *testing.T) {
 		return mockSecretManager
 	}
 
-	run := mocks.NewMockPipelineRun(mockCtrl)
+	run := k8smocks.NewMockPipelineRun(mockCtrl)
 	runCtx := &runContext{
 		pipelineRun: run,
 	}
@@ -1560,12 +1558,12 @@ func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
 			h := newTestHelper1(t)
 
 			cf := newFakeClientFactory(
-				fake.Namespace(h.namespace1),
-				fake.PipelineRun(h.pipelineRun1, h.namespace1, stewardv1alpha1.PipelineSpec{}),
+				k8sfake.Namespace(h.namespace1),
+				k8sfake.PipelineRun(h.pipelineRun1, h.namespace1, stewardv1alpha1.PipelineSpec{}),
 			)
 
 			config := &cfg.PipelineRunsConfigStruct{}
-			secretProvider := secretfake.NewProvider(h.namespace1)
+			secretProvider := secretproviderfakes.NewProvider(h.namespace1)
 
 			examinee := newRunManager(cf, secretProvider)
 			examinee.testing = newRunManagerTestingWithAllNoopStubs()
@@ -1623,7 +1621,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 		TaskRunParamNameRunIDJSON = "PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON"
 	)
 
-	findTaskRunParam := func(taskRun *tekton.TaskRun, paramName string) (param *tekton.Param) {
+	findTaskRunParam := func(taskRun *tektonv1beta1.TaskRun, paramName string) (param *tektonv1beta1.Param) {
 		assert.Assert(t, taskRun.Spec.Params != nil)
 		for _, p := range taskRun.Spec.Params {
 			if p.Name == paramName {
@@ -1664,7 +1662,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 		return
 	}
 
-	expectSingleTaskRun := func(t *testing.T, cf *k8sfake.ClientFactory, k8sPipelineRun k8s.PipelineRun) *tekton.TaskRun {
+	expectSingleTaskRun := func(t *testing.T, cf *k8sfake.ClientFactory, k8sPipelineRun k8s.PipelineRun) *tektonv1beta1.TaskRun {
 		ctx := context.Background()
 		taskRunList, err := cf.TektonV1beta1().TaskRuns(k8sPipelineRun.GetRunNamespace()).List(ctx, metav1.ListOptions{})
 		assert.NilError(t, err)
@@ -1741,7 +1739,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
 			param := findTaskRunParam(taskRun, TaskRunParamNameRunIDJSON)
 			assert.Assert(t, param != nil)
-			assert.Equal(t, tekton.ParamTypeString, param.Value.Type)
+			assert.Equal(t, tektonv1beta1.ParamTypeString, param.Value.Type)
 			assert.Equal(t, tc.expectedParamValue, param.Value.StringVal)
 
 			param = findTaskRunParam(taskRun, TaskRunParamNameIndexURL)
@@ -1796,7 +1794,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 
 			param := findTaskRunParam(taskRun, TaskRunParamNameIndexURL)
 			assert.Assert(t, param != nil)
-			assert.Equal(t, tekton.ParamTypeString, param.Value.Type)
+			assert.Equal(t, tektonv1beta1.ParamTypeString, param.Value.Type)
 			assert.Equal(t, "", param.Value.StringVal)
 
 			param = findTaskRunParam(taskRun, TaskRunParamNameRunIDJSON)
@@ -1924,7 +1922,7 @@ func newTestHelper1(t *testing.T) *testHelper1 {
 	return h
 }
 
-func (h *testHelper1) getPipelineRunFromStorage(cf *fake.ClientFactory, namespace, name string) *stewardv1alpha1.PipelineRun {
+func (h *testHelper1) getPipelineRunFromStorage(cf *k8sfake.ClientFactory, namespace, name string) *stewardv1alpha1.PipelineRun {
 	t := h.t
 	t.Helper()
 
@@ -1938,7 +1936,7 @@ func (h *testHelper1) getPipelineRunFromStorage(cf *fake.ClientFactory, namespac
 	return pipelineRun
 }
 
-func (h *testHelper1) verifyNamespace(cf *fake.ClientFactory, nsName, expectedPurpose string) {
+func (h *testHelper1) verifyNamespace(cf *k8sfake.ClientFactory, nsName, expectedPurpose string) {
 	t := h.t
 	t.Helper()
 
@@ -1946,7 +1944,7 @@ func (h *testHelper1) verifyNamespace(cf *fake.ClientFactory, nsName, expectedPu
 		`^(steward-run-([[:alnum:]]{` + strconv.Itoa(runNamespaceRandomLength) + `})-` +
 			regexp.QuoteMeta(expectedPurpose) +
 			`-)[[:alnum:]]*$`)
-	assert.Assert(t, cmp.Regexp(namePattern, nsName))
+	assert.Assert(t, assertcmp.Regexp(namePattern, nsName))
 
 	namespace, err := cf.CoreV1().Namespaces().Get(h.ctx, nsName, metav1.GetOptions{})
 	assert.NilError(t, err)
@@ -1959,7 +1957,7 @@ func (h *testHelper1) verifyNamespace(cf *fake.ClientFactory, nsName, expectedPu
 	}
 }
 
-func (h *testHelper1) assertThatExactlyTheseNamespacesExist(cf *fake.ClientFactory, expected ...string) {
+func (h *testHelper1) assertThatExactlyTheseNamespacesExist(cf *k8sfake.ClientFactory, expected ...string) {
 	t := h.t
 	t.Helper()
 
@@ -1992,42 +1990,42 @@ func (h *testHelper1) assertThatExactlyTheseNamespacesExist(cf *fake.ClientFacto
 	assert.DeepEqual(t, expected, actual)
 }
 
-func (h *testHelper1) preparePredefinedClusterRole(cf *mocks.MockClientFactory, pipelineRun *mocks.MockPipelineRun) {
+func (h *testHelper1) preparePredefinedClusterRole(cf *k8smocks.MockClientFactory, pipelineRun *k8smocks.MockPipelineRun) {
 	t := h.t
 	t.Helper()
 
-	_, err := cf.RbacV1beta1().ClusterRoles().Create(h.ctx, k8sfake.ClusterRole(string(runClusterRoleName)), metav1.CreateOptions{})
+	_, err := cf.RbacV1().ClusterRoles().Create(h.ctx, k8sfake.ClusterRole(string(runClusterRoleName)), metav1.CreateOptions{})
 	if err != nil {
 		t.Fatalf("could not create cluster role: %s", err.Error())
 	}
 }
 
-func (h *testHelper1) prepareMocks(ctrl *gomock.Controller) (*mocks.MockClientFactory, *mocks.MockPipelineRun, *secretmocks.MockSecretProvider) {
+func (h *testHelper1) prepareMocks(ctrl *gomock.Controller) (*k8smocks.MockClientFactory, *k8smocks.MockPipelineRun, *secretmocks.MockSecretProvider) {
 	return h.prepareMocksWithSpec(ctrl, &stewardv1alpha1.PipelineSpec{})
 }
 
-func (*testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv1alpha1.PipelineSpec) (*mocks.MockClientFactory, *mocks.MockPipelineRun, *secretmocks.MockSecretProvider) {
-	mockFactory := mocks.NewMockClientFactory(ctrl)
+func (*testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv1alpha1.PipelineSpec) (*k8smocks.MockClientFactory, *k8smocks.MockPipelineRun, *secretmocks.MockSecretProvider) {
+	mockFactory := k8smocks.NewMockClientFactory(ctrl)
 
 	kubeClientSet := kubefake.NewSimpleClientset()
-	kubeClientSet.PrependReactor("create", "*", fake.GenerateNameReactor(0))
+	kubeClientSet.PrependReactor("create", "*", k8sfake.GenerateNameReactor(0))
 
 	mockFactory.EXPECT().CoreV1().Return(kubeClientSet.CoreV1()).AnyTimes()
-	mockFactory.EXPECT().RbacV1beta1().Return(kubeClientSet.RbacV1beta1()).AnyTimes()
+	mockFactory.EXPECT().RbacV1().Return(kubeClientSet.RbacV1()).AnyTimes()
 	mockFactory.EXPECT().NetworkingV1().Return(kubeClientSet.NetworkingV1()).AnyTimes()
 
 	dynamicClient := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
 	mockFactory.EXPECT().Dynamic().Return(dynamicClient).AnyTimes()
 
-	stewardClientset := stewardfake.NewSimpleClientset()
+	stewardClientset := stewardfakeclient.NewSimpleClientset()
 	mockFactory.EXPECT().StewardV1alpha1().Return(stewardClientset.StewardV1alpha1()).AnyTimes()
 
-	tektonClientset := tektonclientfake.NewSimpleClientset()
+	tektonClientset := tektonfakeclient.NewSimpleClientset()
 	mockFactory.EXPECT().TektonV1beta1().Return(tektonClientset.TektonV1beta1()).AnyTimes()
 
 	runNamespace := ""
 	auxNamespace := ""
-	mockPipelineRun := mocks.NewMockPipelineRun(ctrl)
+	mockPipelineRun := k8smocks.NewMockPipelineRun(ctrl)
 	mockPipelineRun.EXPECT().GetAPIObject().Return(&stewardv1alpha1.PipelineRun{Spec: *spec}).AnyTimes()
 	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
 	mockPipelineRun.EXPECT().GetStatus().Return(&stewardv1alpha1.PipelineStatus{}).AnyTimes()
