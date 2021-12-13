@@ -12,7 +12,6 @@ spec:
     - stn
     - stns
   scope: Namespaced
-  preserveUnknownFields: false
   versions:
   - name: v1alpha1
     served: true
