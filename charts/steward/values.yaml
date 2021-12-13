@@ -16,7 +16,7 @@ runController:
     heartbeatLogLevel: 3
   image:
     repository: stewardci/stewardci-run-controller
-    tag: "0.16.0" #Do not modify this line! RunController tag updated automatically
+    tag: "0.16.1" #Do not modify this line! RunController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -50,7 +50,7 @@ tenantController:
     heartbeatLogLevel: 3
   image:
     repository: stewardci/stewardci-tenant-controller
-    tag: "0.16.0" #Do not modify this line! TenantController tag updated automatically
+    tag: "0.16.1" #Do not modify this line! TenantController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -127,7 +127,7 @@ hooks:
   images:
     kubectl:
       repository: docker.io/bitnami/kubectl
-      tag: "1.17"
+      tag: "1.23@sha256:df3de0bb32b3d9f829da5a7608bd5bec85431d26ed89109b6158d8329b5305c9"
       pullPolicy: IfNotPresent
 
 featureFlags: ""
