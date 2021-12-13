@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.17.0"
+  date: 2021-12-13
+  changes:
+
     - type: enhancement
       impact: incompatible
       title: Remove use of deprecated K8s APIs
