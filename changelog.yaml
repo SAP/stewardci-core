@@ -52,6 +52,18 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: patch
+      title: Add ignore label
+      description: |-
+        For tests it is required to create/update Steward CROs, but avoid that
+        Steward controllers act on them.
+
+        A new label `steward.sap.com/ignore` (without value) instructs Steward
+        controllers to ignore this API object.
+        The label should never be added to an existing API object.
+      pullRequestNumber: 300
+
 - version: "0.17.0"
   date: 2021-12-13
   changes:

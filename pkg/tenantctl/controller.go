@@ -13,6 +13,7 @@ import (
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardv1alpha1listers "github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
+	"github.com/SAP/stewardci-core/pkg/stewardlabels"
 	slabels "github.com/SAP/stewardci-core/pkg/stewardlabels"
 	metrics "github.com/SAP/stewardci-core/pkg/tenantctl/metrics"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
@@ -238,6 +239,11 @@ func (c *Controller) syncHandler(key string) error {
 	}
 
 	if origTenant == nil {
+		return nil
+	}
+
+	// don't process if labelled as to be ignored
+	if stewardlabels.IsLabelledAsIgnore(origTenant) {
 		return nil
 	}
 
