@@ -11,7 +11,7 @@ import (
 )
 
 func Test_CRDs_Tenant_Schema(t *testing.T) {
-	tenantTests := []struct {
+	testcases := []struct {
 		name     string
 		manifest string
 		check    func(t *testing.T, resultErr error)
@@ -56,7 +56,7 @@ func Test_CRDs_Tenant_Schema(t *testing.T) {
 		},
 	}
 
-	for _, testcase := range tenantTests {
+	for _, testcase := range testcases {
 		t.Run(testcase.name, func(t *testing.T) {
 			testcase := testcase
 			t.Parallel()
