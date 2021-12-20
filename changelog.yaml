@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.17.1"
+  date: 2021-12-20
+  changes:
+
     - type: security
       impact: patch
       title: Updated Jenkinsfile Runner image to 211220_cf0ea4a
