@@ -52,6 +52,16 @@
   date: TBD
   changes:
 
+    - type: security
+      impact: patch
+      title: Updated Jenkinsfile Runner image to 211220_cf0ea4a
+      description: |-
+        Updated Jenkinsfile Runner image to [211220_cf0ea4a](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/211220_cf0ea4a)
+        with latest Jenkins Core and plugins.
+      upgradeNotes: |-
+        If you mirror the image don't forget to add this new version.
+      pullRequestNumber: 303
+
 - version: "0.17.0"
   date: 2021-12-13
   changes:
