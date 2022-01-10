@@ -115,7 +115,7 @@ func main() {
 	klog.V(3).Infof("Create Factory (resync period: %s, QPS: %d, burst: %d, connection-timeout: %s m)", resyncPeriod.String(), qps, burst, connectionTimeout.String())
 	config.QPS = float32(qps)
 	config.Burst = burst
-	config.timeout = connectionTimeout
+	config.Timeout = connectionTimeout
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
 	klog.V(2).Infof("Provide metrics on http://0.0.0.0:%d/metrics", metricsPort)
