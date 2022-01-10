@@ -52,6 +52,16 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: minor
+      title: Make K8s API connection timeout configurable
+      description: |-
+        When stewardci-core hits a network issue when connecting to API server, it will only recover after 15 min when the default timeout occurs.
+        To improve the situation the timeout should be configurable. Following parameters are added now for run- and tenant-controllers:
+          - `runController.connection-timeout`
+          - `tenantController.connection-timeout`
+      pullRequestNumber: 303
+
 - version: "0.17.1"
   date: 2021-12-20
   changes:
