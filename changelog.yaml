@@ -52,6 +52,17 @@
   date: TBD
   changes:
 
+    - type: bug
+      impact: patch
+      title: Remove default 1m value from the Helmchart
+      description: |-
+        Default value should not be overwritten in the Helmchart but in the consumer of this Helmchart.
+        Hence 1m value is removed so that 15m default timeout is set if consumer does not set it explicitely.
+      upgradeNotes: |-
+        In the previous version `0.18.0` default value of 1m is set in the Helmchart for `server-request-timeout` for both run- and tenant-controllers
+        which are wrong. This release removes the default value of 1m in the Helmchart to be set by the consumer of the Helmchart.
+      pullRequestNumber: 307
+
 - version: "0.18.0"
   date: 2022-01-12
   changes:

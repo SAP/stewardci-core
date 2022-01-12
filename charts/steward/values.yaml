@@ -14,7 +14,6 @@ runController:
     heartbeatInterval: 1m
     heartbeatLogging: true
     heartbeatLogLevel: 3
-    serverRequestTimeout: 1m
   image:
     repository: stewardci/stewardci-run-controller
     tag: "0.18.0" #Do not modify this line! RunController tag updated automatically
@@ -49,7 +48,6 @@ tenantController:
     heartbeatInterval: 1m
     heartbeatLogging: true
     heartbeatLogLevel: 3
-    serverRequestTimeout: 1m
   image:
     repository: stewardci/stewardci-tenant-controller
     tag: "0.18.0" #Do not modify this line! TenantController tag updated automatically
