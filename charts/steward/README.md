@@ -117,7 +117,7 @@ The tables in the following sections list the configurable parameters of the Ste
 | <code>runController.<wbr/><b>args.<wbr/>heartbeatInterval</b></code><br/><i>[duration][type-duration]</i> |  The interval of controller heartbeats. | `1m` |
 | <code>runController.<wbr/><b>args.<wbr/>heartbeatLogging</b></code><br/><i>bool</i> |  Whether controller heartbeats should be logged. | `true` |
 | <code>runController.<wbr/><b>args.<wbr/>heartbeatLogLevel</b></code><br/><i>bool</i> |  The log level to be used for controller heartbeats. | `3` |
-| <code>runController.<wbr/><b>args.<wbr/>serverRequestTimeout</b></code><br/><i>[duration][type-duration]</i> | The timeout for Kubernetes API requests. A value of zero means no timeout. If empty, a default timeout will be applied. | empty |
+| <code>runController.<wbr/><b>args.<wbr/>k8sAPIRequestTimeout</b></code><br/><i>[duration][type-duration]</i> | The timeout for Kubernetes API requests. A value of zero means no timeout. If empty, a default timeout will be applied. | empty |
 | <code>runController.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by the run controller. If empty, a default pod security policy will be created. | empty |
 
 ### Tenant Controller
@@ -140,7 +140,7 @@ The tables in the following sections list the configurable parameters of the Ste
 | <code>tenantController.<wbr/><b>args.<wbr/>heartbeatInterval</b></code><br/><i>[duration][type-duration]</i> |  The interval of controller heartbeats. | `1m` |
 | <code>tenantController.<wbr/><b>args.<wbr/>heartbeatLogging</b></code><br/><i>bool</i> |  Whether controller heartbeats should be logged. | `true` |
 | <code>tenantController.<wbr/><b>args.<wbr/>heartbeatLogLevel</b></code><br/><i>bool</i> |  The log level to be used for controller heartbeats. | `3` |
-| <code>tenantController.<wbr/><b>args.<wbr/>serverRequestTimeout</b></code><br/><i>[duration][type-duration]</i> | The timeout for Kubernetes API requests. A value of zero means no timeout. If empty, a default timeout will be applied. | empty |
+| <code>tenantController.<wbr/><b>args.<wbr/>k8sAPIRequestTimeout</b></code><br/><i>[duration][type-duration]</i> | The timeout for Kubernetes API requests. A value of zero means no timeout. If empty, a default timeout will be applied. | empty |
 | <code>tenantController.<wbr/><b>possibleTenantRoles</b></code><br/><i>array of string</i> |  The names of all possible tenant roles. A tenant role is a Kubernetes ClusterRole that the controller binds within a tenant namespace to (a) the default service account of the client namespace the tenant belongs to and (b) to the default service account of the tenant namespace. The tenant role to be used can be configured per Steward client namespace via annotation `steward.sap.com/tenant-role`. | `['steward-tenant']` |
 | <code>tenantController.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by the tenant controller. If empty, a default pod security policy will be created. | empty |
 

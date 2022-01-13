@@ -54,14 +54,20 @@
 
     - type: bug
       impact: patch
-      title: Remove default 1m value from the Helmchart
+      title: Remove default 1m value from the Helmchart and rename the parameter
       description: |-
-        Default value should not be overwritten in the Helmchart but in the consumer of this Helmchart.
-        Hence 1m value is removed so that 15m default timeout is set if consumer does not set it explicitely.
+        - Default value should not be overwritten in the Helmchart but in the consumer of this Helmchart.
+          Hence 1m value is removed so that 15m default timeout is set if consumer does not set it explicitely.
+        - Rename command-line parameter `server-request-timeout` for the run controller to `k8s-api-request-timeout`
+        - Rename command-line parameter `server-request-timeout` for the tenant controller to `k8s-api-request-timeout`
+        - Rename Helm Chart values in the `values.yaml` file from `runController.serverRequestTimeout` to `runController.k8sAPIRequestTimeout`
+        - Rename Helm Chart values in the `values.yaml` file from `tenantController.serverRequestTimeout` to `tenantController.k8sAPIRequestTimeout`
       upgradeNotes: |-
-        In the previous version `0.18.0` default value of 1m is set in the Helmchart for `server-request-timeout` for both run- and tenant-controllers
+        - In the previous version `0.18.0` default value of 1m is set in the Helmchart for `server-request-timeout` for both run- and tenant-controllers
         which are wrong. This release removes the default value of 1m in the Helmchart to be set by the consumer of the Helmchart.
-      pullRequestNumber: 307
+        - Please rename `runController.serverRequestTimeout` to `runController.k8sAPIRequestTimeout` inside consumer's `values.yaml` file.
+        - Please rename `tenantController.serverRequestTimeout` to `tenantController.k8sAPIRequestTimeout` inside consumer's `values.yaml` file.
+      pullRequestNumber:
 
 - version: "0.18.0"
   date: 2022-01-12

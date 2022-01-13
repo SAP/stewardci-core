@@ -15,7 +15,7 @@ runController:
     heartbeatLogging: true
     heartbeatLogLevel: 3
     # allowed values are durations. e.g. 1m 
-    serverRequestTimeout: ""
+    k8sAPIRequestTimeout: ""
   image:
     repository: stewardci/stewardci-run-controller
     tag: "0.18.0" #Do not modify this line! RunController tag updated automatically
@@ -51,7 +51,7 @@ tenantController:
     heartbeatLogging: true
     heartbeatLogLevel: 3
     # allowed values are durations. e.g. 1m 
-    serverRequestTimeout: ""
+    k8sAPIRequestTimeout: ""
   image:
     repository: stewardci/stewardci-tenant-controller
     tag: "0.18.0" #Do not modify this line! TenantController tag updated automatically
