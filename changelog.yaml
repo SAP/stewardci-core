@@ -67,7 +67,7 @@
         which are wrong. This release removes the default value of 1m in the Helmchart to be set by the consumer of the Helmchart.
         - Please rename `runController.serverRequestTimeout` to `runController.k8sAPIRequestTimeout` inside consumer's `values.yaml` file.
         - Please rename `tenantController.serverRequestTimeout` to `tenantController.k8sAPIRequestTimeout` inside consumer's `values.yaml` file.
-      pullRequestNumber:
+      pullRequestNumber: 307
 
 - version: "0.18.0"
   date: 2022-01-12
