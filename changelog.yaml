@@ -54,19 +54,17 @@
 
     - type: bug
       impact: patch
-      title: Remove default 1m value from the Helmchart and rename the parameter
+      title: Adapt configuration for K8s API request timeouts
       description: |-
-        - Default value should not be overwritten in the Helmchart but in the consumer of this Helmchart.
-          Hence 1m value is removed so that 15m default timeout is set if consumer does not set it explicitely.
-        - Rename command-line parameter `server-request-timeout` for the run controller to `k8s-api-request-timeout`
-        - Rename command-line parameter `server-request-timeout` for the tenant controller to `k8s-api-request-timeout`
-        - Rename Helm Chart values in the `values.yaml` file from `runController.serverRequestTimeout` to `runController.k8sAPIRequestTimeout`
-        - Rename Helm Chart values in the `values.yaml` file from `tenantController.serverRequestTimeout` to `tenantController.k8sAPIRequestTimeout`
+        - Do not set default timeout values in the Helm chart.
+          If no value is set, use the default value built into
+          the controller (15 minutes).
+        - Renamed the Helm chart parameters. See the upgrade
+          notes for details.
       upgradeNotes: |-
-        - In the previous version `0.18.0` default value of 1m is set in the Helmchart for `server-request-timeout` for both run- and tenant-controllers
-        which are wrong. This release removes the default value of 1m in the Helmchart to be set by the consumer of the Helmchart.
-        - Please rename `runController.serverRequestTimeout` to `runController.k8sAPIRequestTimeout` inside consumer's `values.yaml` file.
-        - Please rename `tenantController.serverRequestTimeout` to `tenantController.k8sAPIRequestTimeout` inside consumer's `values.yaml` file.
+        - Rename Helm chart parameters:
+            - `runController.args.serverRequestTimeout` to `runController.args.k8sAPIRequestTimeout`
+            - `tenantController.args.serverRequestTimeout` to `tenantController.args.k8sAPIRequestTimeout`
       pullRequestNumber: 307
 
 - version: "0.18.0"
@@ -75,14 +73,10 @@
 
     - type: enhancement
       impact: minor
-      title: Make K8s API connection timeout configurable
+      title: Make K8s API request timeout configurable
       description: |-
-        When stewardci-core hits a network issue when connecting to API server, it will only recover after 15 min when the default timeout occurs.
-        To improve the situation the timeout should be configurable. Following parameters are added now for run- and tenant-controllers:
-          - Add command-line parameter `server-request-timeout` for the run controller
-          - Add command-line parameter `server-request-timeout` for the tenant controller
-          - Make `server-request-timeout` command-line parameter of run controller configurable in the Helmchart via `runController.serverRequestTimeout`
-          - Make `server-request-timeout` command-line parameter of tenant controller configurable in the Helmchart via `tenantController.serverRequestTimeout`
+        The request timeout of K8s API calls can be configured now
+        via additional Helm chart parameters.
       pullRequestNumber: 303
 
 - version: "0.17.1"
