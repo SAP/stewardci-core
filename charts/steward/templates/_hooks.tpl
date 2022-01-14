@@ -66,6 +66,10 @@ spec:
         {{- include "steward.labels" . | nindent 8 }}
     spec:
       serviceAccountName: helm-{{ include "steward.hooks-helpers.adler32sumOfReleaseId" ( list . $crdName ) }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       restartPolicy: Never
       containers:
       - name: kubectl

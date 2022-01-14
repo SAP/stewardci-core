@@ -52,6 +52,15 @@
   date: TBD
   changes:
 
+    - type: bug
+      impact: patch
+      title: "Fix: Helm hooks do not use configured image pull secrets"
+      description: |-
+        The Helm chart uses hooks to install/update the CRDs.
+        These hooks are K8s jobs, which also need a container image.
+        The configured image pull secrets should be used for Helm hooks, too.
+      pullRequestNumber: 302
+
     - type: enhancement
       impact: patch
       title: Add ignore label
