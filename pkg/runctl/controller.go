@@ -19,6 +19,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	"github.com/SAP/stewardci-core/pkg/runctl/metrics"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
+	"github.com/SAP/stewardci-core/pkg/stewardlabels"
 	"github.com/SAP/stewardci-core/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -302,6 +303,10 @@ func (c *Controller) syncHandler(key string) error {
 	}
 	// If pipelineRun is not found there is nothing to sync
 	if pipelineRunAPIObj == nil {
+		return nil
+	}
+	// don't process if labelled as to be ignored
+	if stewardlabels.IsLabelledAsIgnore(pipelineRunAPIObj) {
 		return nil
 	}
 	// fast exit - no finalizer cleanup needed
