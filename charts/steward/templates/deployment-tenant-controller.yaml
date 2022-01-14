@@ -49,6 +49,9 @@ spec:
         {{- with .Values.tenantController.args.heartbeatLogLevel }}
         - {{ printf "-heartbeat-log-level=%d" ( . | int ) | quote }}
         {{- end }}
+        {{- with .Values.tenantController.args.serverRequestTimeout }}
+        - {{ printf "-server-request-timeout=%s" . | quote }}
+        {{- end }}
         command:
         - /app/steward-tenantctl
         env:
