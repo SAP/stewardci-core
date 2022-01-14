@@ -59,6 +59,36 @@
         CRD schema tests where broken, incomplete and fragile.
       pullRequestNumber: 301
 
+- version: "0.18.0"
+  date: 2022-01-12
+  changes:
+
+    - type: enhancement
+      impact: minor
+      title: Make K8s API connection timeout configurable
+      description: |-
+        When stewardci-core hits a network issue when connecting to API server, it will only recover after 15 min when the default timeout occurs.
+        To improve the situation the timeout should be configurable. Following parameters are added now for run- and tenant-controllers:
+          - Add command-line parameter `server-request-timeout` for the run controller
+          - Add command-line parameter `server-request-timeout` for the tenant controller
+          - Make `server-request-timeout` command-line parameter of run controller configurable in the Helmchart via `runController.serverRequestTimeout`
+          - Make `server-request-timeout` command-line parameter of tenant controller configurable in the Helmchart via `tenantController.serverRequestTimeout`
+      pullRequestNumber: 303
+
+- version: "0.17.1"
+  date: 2021-12-20
+  changes:
+
+    - type: security
+      impact: patch
+      title: Updated Jenkinsfile Runner image to 211220_cf0ea4a
+      description: |-
+        Updated Jenkinsfile Runner image to [211220_cf0ea4a](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/211220_cf0ea4a)
+        with latest Jenkins Core and plugins.
+      upgradeNotes: |-
+        If you mirror the image don't forget to add this new version.
+      pullRequestNumber: 303
+
 - version: "0.17.0"
   date: 2021-12-13
   changes:
