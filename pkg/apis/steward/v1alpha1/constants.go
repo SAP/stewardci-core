@@ -35,6 +35,11 @@ const (
 	// The value of the label is ignored and should be empty.
 	LabelSystemManaged = steward.GroupName + "/system-managed"
 
+	// LabelIgnore is the key of the label whose presence indicates
+	// that this resource object should be ignored by the Steward system.
+	// The value of the label is ignored and should be empty.
+	LabelIgnore = steward.GroupName + "/ignore"
+
 	// LabelOwnerClientName is the key of the label that identifies the Steward
 	// _client_ that the labelled object is owned by.
 	// As Steward clients are currently represented by K8s namespaces only,

@@ -20,6 +20,27 @@ func LabelAsSystemManaged(obj metav1.Object) {
 	obj.SetLabels(labels)
 }
 
+// LabelAsIgnore sets label `steward.sap.com/ignore` at
+// the given object.
+func LabelAsIgnore(obj metav1.Object) {
+	if obj == nil {
+		return
+	}
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	labels[stewardv1alpha1.LabelIgnore] = ""
+	obj.SetLabels(labels)
+}
+
+// IsLabelledAsIgnore return whether the given resource object is labelled
+// as to be ignored by Steward.
+func IsLabelledAsIgnore(obj metav1.Object) bool {
+	_, exists := obj.GetLabels()[stewardv1alpha1.LabelIgnore]
+	return exists
+}
+
 // LabelAsOwnedByClientNamespace sets some labels on `obj` that identify it
 // as owned by the Steward client represented by the given namespace.
 // Fails if there's a conflict with existing labels, e.g. `obj` is labelled
