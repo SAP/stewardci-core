@@ -80,6 +80,13 @@
         CRD schema tests where broken, incomplete and fragile.
       pullRequestNumber: 301
 
+    - type: internal
+      impact: patch
+      title: Update Go SDK to v1.16.12
+      description: |-
+        Build with Go SDK [v1.16.12](https://golang.org/doc/go1.16).
+      pullRequestNumber: 308
+
 - version: "0.18.0"
   date: 2022-01-12
   changes:
