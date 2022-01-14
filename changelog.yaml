@@ -64,6 +64,13 @@
         The label should never be added to an existing API object.
       pullRequestNumber: 300
 
+    - type: internal
+      impact: patch
+      title: Fix and overhaul CRD schema tests
+      description: |-
+        CRD schema tests where broken, incomplete and fragile.
+      pullRequestNumber: 301
+
 - version: "0.18.0"
   date: 2022-01-12
   changes:
