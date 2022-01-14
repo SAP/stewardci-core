@@ -1,6 +1,3 @@
-# Default values for steward.
-# This is a YAML-formatted file.
-
 targetNamespace:
   create: true
   name: "steward-system"
@@ -14,7 +11,7 @@ runController:
     heartbeatInterval: 1m
     heartbeatLogging: true
     heartbeatLogLevel: 3
-    serverRequestTimeout: 1m
+    k8sAPIRequestTimeout: ""
   image:
     repository: stewardci/stewardci-run-controller
     tag: "0.18.0" #Do not modify this line! RunController tag updated automatically
@@ -26,7 +23,6 @@ runController:
     requests:
       cpu: 100m
   podSecurityContext: {}
-    # fsGroup: 2000
   securityContext:
     capabilities:
       drop:
@@ -49,7 +45,7 @@ tenantController:
     heartbeatInterval: 1m
     heartbeatLogging: true
     heartbeatLogLevel: 3
-    serverRequestTimeout: 1m
+    k8sAPIRequestTimeout: ""
   image:
     repository: stewardci/stewardci-tenant-controller
     tag: "0.18.0" #Do not modify this line! TenantController tag updated automatically
@@ -61,7 +57,6 @@ tenantController:
     requests:
       cpu: 10m
   podSecurityContext: {}
-    # fsGroup: 2000
   securityContext:
     capabilities:
       drop:
@@ -76,22 +71,16 @@ tenantController:
   possibleTenantRoles: ["steward-tenant"]
   podSecurityPolicyName: ""
 
-# imagePullSecrets are used to pull controller images, but no other images.
 imagePullSecrets: []
 
-# metrics contains settings for Prometheus monitoring
 metrics:
   serviceMonitors:
     enabled: false
     extraLabels: {}
 
-# pipelineRuns contains common configuration for all pipeline runs
 pipelineRuns:
   logging:
     elasticsearch:
-      # indexURL is the URL of the Elasticsearch index to send logs to.
-      # If null or empty, logging to Elasticsearch is disabled.
-      # Example: http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc
       indexURL: ""
   jenkinsfileRunner:
     image: "stewardci/stewardci-jenkinsfile-runner:211220_cf0ea4a"
@@ -109,16 +98,12 @@ pipelineRuns:
       requests:
         cpu: 500m
     podSecurityContext:
-      # The values below must be supported by the Jenkinsfile Runner image,
-      # e.g. by having file ownerships set accordingly.
       runAsUser: 1000
       runAsGroup: 1000
       fsGroup: 1000
     pipelineCloneRetryIntervalSec: ""
     pipelineCloneRetryTimeoutSec: ""
   timeout: "60m"
-  # networkPolicy is DEPRECATED: use 'networkPolicies' instead.
-  # networkPolicy: ""
   defaultNetworkPolicyName: ""
   networkPolicies: {}
   limitRange: ""

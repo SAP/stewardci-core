@@ -117,8 +117,8 @@ The tables in the following sections list the configurable parameters of the Ste
 | <code>runController.<wbr/><b>args.<wbr/>heartbeatInterval</b></code><br/><i>[duration][type-duration]</i> |  The interval of controller heartbeats. | `1m` |
 | <code>runController.<wbr/><b>args.<wbr/>heartbeatLogging</b></code><br/><i>bool</i> |  Whether controller heartbeats should be logged. | `true` |
 | <code>runController.<wbr/><b>args.<wbr/>heartbeatLogLevel</b></code><br/><i>bool</i> |  The log level to be used for controller heartbeats. | `3` |
+| <code>runController.<wbr/><b>args.<wbr/>k8sAPIRequestTimeout</b></code><br/><i>[duration][type-duration]</i> | The timeout for Kubernetes API requests. A value of zero means no timeout. If empty, a default timeout will be applied. | empty |
 | <code>runController.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by the run controller. If empty, a default pod security policy will be created. | empty |
-| <code>runController.<wbr/><b>serverRequestTimeout</b></code><br/><i>[duration][type-duration]</i> |  The maximum length of time to wait before giving up on a server request. A value of zero means no timeout. If empty, a default timeout will be applied. | 1m |
 
 ### Tenant Controller
 
@@ -140,9 +140,9 @@ The tables in the following sections list the configurable parameters of the Ste
 | <code>tenantController.<wbr/><b>args.<wbr/>heartbeatInterval</b></code><br/><i>[duration][type-duration]</i> |  The interval of controller heartbeats. | `1m` |
 | <code>tenantController.<wbr/><b>args.<wbr/>heartbeatLogging</b></code><br/><i>bool</i> |  Whether controller heartbeats should be logged. | `true` |
 | <code>tenantController.<wbr/><b>args.<wbr/>heartbeatLogLevel</b></code><br/><i>bool</i> |  The log level to be used for controller heartbeats. | `3` |
+| <code>tenantController.<wbr/><b>args.<wbr/>k8sAPIRequestTimeout</b></code><br/><i>[duration][type-duration]</i> | The timeout for Kubernetes API requests. A value of zero means no timeout. If empty, a default timeout will be applied. | empty |
 | <code>tenantController.<wbr/><b>possibleTenantRoles</b></code><br/><i>array of string</i> |  The names of all possible tenant roles. A tenant role is a Kubernetes ClusterRole that the controller binds within a tenant namespace to (a) the default service account of the client namespace the tenant belongs to and (b) to the default service account of the tenant namespace. The tenant role to be used can be configured per Steward client namespace via annotation `steward.sap.com/tenant-role`. | `['steward-tenant']` |
 | <code>tenantController.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by the tenant controller. If empty, a default pod security policy will be created. | empty |
-| <code>tenantController.<wbr/><b>serverRequestTimeout</b></code><br/><i>[duration][type-duration]</i> |  The maximum length of time to wait before giving up on a server request. A value of zero means no timeout. If empty, a default timeout will be applied. | 1m |
 
 Common parameters:
 
@@ -175,7 +175,7 @@ Common parameters:
 | <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>pipelineCloneRetryIntervalSec</b></code><br/><i>string</i> |  The retry interval for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
 | <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>pipelineCloneRetryTimeoutSec</b></code><br/><i>string</i> |  The retry timeout for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
 | <code>pipelineRuns.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by pipeline run pods. If empty, a default pod security policy will be created. | empty |
-| <code>pipelineRuns.<wbr/>timeout</b></code><br/><i>[duration][type-duration]</i> |  The maximum execution time of pipelines. | `60m` |
+| <code>pipelineRuns.<wbr/><b>timeout</b></code><br/><i>[duration][type-duration]</i> |  The maximum execution time of pipelines. | `60m` |
 | <code>pipelineRuns.<wbr/><b>networkPolicy</b></code><br/><i>string</i> | <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>networkPolicies</code> instead. | |
 | <code>pipelineRuns.<wbr/><b>defaultNetworkPolicyName</b></code> | The name of the network policy which is used when no network profile is selected by a pipeline run spec. | `default` if <code>pipelineRuns.<wbr/>networkPolicies</code> is not set or empty. |
 | <code>pipelineRuns.<wbr/><b>networkPolicies</b></code><br/><i>map[string]string</i> |  The network policies selectable as network profiles in pipeline run specs. The key can be any valid YAML key not starting with underscore (`_`). The value must be a string containing a complete `networkpolicy.networking.k8s.io` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of network policies][k8s-networkpolicies] for details about Kubernetes network policies.<br/><br/> Note that Steward ensures that all pods in pipeline run namespaces are _isolated_ in terms of network policies. The policy defined here _adds_ egress and/or ingress rules. | A single entry named `default` whose value is a network policy defining rules that allow ingress traffic from all pods in the same namespace and egress traffic to the internet, the cluster DNS resolver and the Kubernetes API server. |

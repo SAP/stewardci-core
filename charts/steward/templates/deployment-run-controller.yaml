@@ -49,8 +49,8 @@ spec:
         {{- with .Values.runController.args.heartbeatLogLevel }}
         - {{ printf "-heartbeat-log-level=%d" ( . | int ) | quote }}
         {{- end }}
-        {{- with .Values.runController.args.serverRequestTimeout }}
-        - {{ printf "-server-request-timeout=%s" . | quote }}
+        {{- with .Values.runController.args.k8sAPIRequestTimeout }}
+        - {{ printf "-k8s-api-request-timeout=%s" . | quote }}
         {{- end }}
         command:
         - /app/steward-runctl

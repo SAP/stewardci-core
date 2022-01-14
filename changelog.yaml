@@ -54,6 +54,21 @@
 
     - type: bug
       impact: patch
+      title: Adapt configuration for K8s API request timeouts
+      description: |-
+        - Do not set default timeout values in the Helm chart.
+          If no value is set, use the default value built into
+          the controller (15 minutes).
+        - Renamed the Helm chart parameters. See the upgrade
+          notes for details.
+      upgradeNotes: |-
+        - Rename Helm chart parameters:
+            - `runController.args.serverRequestTimeout` to `runController.args.k8sAPIRequestTimeout`
+            - `tenantController.args.serverRequestTimeout` to `tenantController.args.k8sAPIRequestTimeout`
+      pullRequestNumber: 307
+
+    - type: bug
+      impact: patch
       title: "Fix: Helm hooks do not use configured image pull secrets"
       description: |-
         The Helm chart uses hooks to install/update the CRDs.
@@ -93,14 +108,10 @@
 
     - type: enhancement
       impact: minor
-      title: Make K8s API connection timeout configurable
+      title: Make K8s API request timeout configurable
       description: |-
-        When stewardci-core hits a network issue when connecting to API server, it will only recover after 15 min when the default timeout occurs.
-        To improve the situation the timeout should be configurable. Following parameters are added now for run- and tenant-controllers:
-          - Add command-line parameter `server-request-timeout` for the run controller
-          - Add command-line parameter `server-request-timeout` for the tenant controller
-          - Make `server-request-timeout` command-line parameter of run controller configurable in the Helmchart via `runController.serverRequestTimeout`
-          - Make `server-request-timeout` command-line parameter of tenant controller configurable in the Helmchart via `tenantController.serverRequestTimeout`
+        The request timeout of K8s API calls can be configured now
+        via additional Helm chart parameters.
       pullRequestNumber: 303
 
 - version: "0.17.1"
