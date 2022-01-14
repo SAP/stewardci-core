@@ -29,9 +29,11 @@ var (
 	kubeconfig              string
 	burst, qps, threadiness int
 
-	heartbeatInterval, k8sAPIRequestTimeout time.Duration
-	heartbeatLogging                        bool
-	heartbeatLogLevel                       int
+	heartbeatInterval time.Duration
+	heartbeatLogging  bool
+	heartbeatLogLevel int
+
+	k8sAPIRequestTimeout time.Duration
 )
 
 func init() {
