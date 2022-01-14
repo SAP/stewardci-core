@@ -29,9 +29,9 @@ var (
 	kubeconfig              string
 	burst, qps, threadiness int
 
-	heartbeatInterval time.Duration
-	heartbeatLogging  bool
-	heartbeatLogLevel int
+	heartbeatInterval, serverRequestTimeout time.Duration
+	heartbeatLogging                        bool
+	heartbeatLogLevel                       int
 )
 
 func init() {
@@ -80,6 +80,12 @@ func init() {
 		3,
 		"The log level to be used for controller heartbeats.",
 	)
+	flag.DurationVar(
+		&serverRequestTimeout,
+		"server-request-timeout",
+		15*time.Minute,
+		"The maximum length of time to wait before giving up on a server request. A value of zero means no timeout.",
+	)
 
 	flag.Parse()
 }
@@ -106,9 +112,10 @@ func main() {
 		}
 	}
 
-	klog.V(3).Infof("Create Factory (resync period: %s, QPS: %d, burst: %d)", resyncPeriod.String(), qps, burst)
+	klog.V(3).Infof("Create Factory (resync period: %s, QPS: %d, burst: %d, server-request-timeout: %s)", resyncPeriod.String(), qps, burst, serverRequestTimeout.String())
 	config.QPS = float32(qps)
 	config.Burst = burst
+	config.Timeout = serverRequestTimeout
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
 	klog.V(2).Infof("Provide metrics on http://0.0.0.0:%d/metrics", metricsPort)
