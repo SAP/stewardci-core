@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.18.1"
+  date: 2022-01-17
+  changes:
+
     - type: bug
       impact: patch
       title: Adapt configuration for K8s API request timeouts
