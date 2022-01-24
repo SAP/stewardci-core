@@ -52,6 +52,15 @@
   date: TBD
   changes:
 
+    - type: security
+      impact: patch
+      title: new JFR image with everything updated and fixed vulnerabilities
+      description: |-
+        Jenkins core, plugins and adoptopenjdk base image on latest versions.
+        See [changes](https://github.com/SAP/stewardci-jenkinsfilerunner-image/compare/211220_cf0ea4a...220124_2022975).
+      pullRequestNumber: 310
+      jiraIssueNumber: ["CLOUDCI-1337", "CLOUDCI-1338", "CLOUDCI-1339", "CLOUDCI-1340"]
+
 - version: "0.18.1"
   date: 2022-01-17
   changes:
