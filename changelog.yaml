@@ -58,6 +58,8 @@
       description: |-
         Jenkins core, plugins and adoptopenjdk base image on latest versions.
         See [changes](https://github.com/SAP/stewardci-jenkinsfilerunner-image/compare/211220_cf0ea4a...220124_2022975).
+      upgradeNotes: |-
+        If you use an image cache make sure to add the new image `stewardci/stewardci-jenkinsfile-runner:220124_2022975`.
       pullRequestNumber: 310
       jiraIssueNumber: ["CLOUDCI-1337", "CLOUDCI-1338", "CLOUDCI-1339", "CLOUDCI-1340"]
 
