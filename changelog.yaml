@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.18.2"
+  date: 2022-01-24
+  changes:
+
     - type: security
       impact: patch
       title: new JFR image with everything updated and fixed vulnerabilities
