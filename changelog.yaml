@@ -61,7 +61,7 @@
       upgradeNotes: |-
         If you use an image cache make sure to add the new image `stewardci/stewardci-jenkinsfile-runner:220124_2022975`.
       pullRequestNumber: 310
-      jiraIssueNumber: ["CLOUDCI-1337", "CLOUDCI-1338", "CLOUDCI-1339", "CLOUDCI-1340"]
+      jiraIssueNumber: [1337, 1338, 1339, 1340]
 
 - version: "0.18.1"
   date: 2022-01-17
