@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.18.3"
+  date: 2022-02-16
+  changes:
+
     - type: security
       impact: patch
       title: Updated JFR image to 220215_5d89c43
