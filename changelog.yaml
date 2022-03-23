@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.18.4"
+  date: 2022-03-23
+  changes:
+
     - type: security
       impact: patch
       title: Updated `tektoncd/pipeline` and `prometheus/client_golang` package versions
