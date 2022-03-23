@@ -52,6 +52,15 @@
   date: TBD
   changes:
 
+    - type: security
+      impact: patch
+      title: Updated `tektoncd/pipeline` and `prometheus/client_golang` package versions
+      description: |-
+        - Updated "github.com/tektoncd/pipeline" version to `v0.34.0` due to [CVE-2021-44716](https://github.com/advisories/GHSA-vc3p-29h2-gpcp).
+        - Updated "github.com/prometheus/client_golang" version to `v1.12.1` due to [CVE-2022-21698](https://www.whitesourcesoftware.com/vulnerability-database/CVE-2022-21698)
+      pullRequestNumber: 314
+      jiraIssueNumber: CLOUDCI-1198
+
 - version: "0.18.3"
   date: 2022-02-16
   changes:
