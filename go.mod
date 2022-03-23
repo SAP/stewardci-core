@@ -4,20 +4,15 @@ go 1.16
 
 require (
 	github.com/benbjohnson/clock v1.3.0
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
-	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-kit/log v0.2.0 // indirect
-	github.com/go-logr/logr v1.2.1 // indirect
-	github.com/go-openapi/spec v0.20.4 // indirect
+	github.com/go-openapi/jsonreference v0.19.6 // indirect
 	github.com/golang/mock v1.6.0
-	github.com/google/go-containerregistry v0.7.0 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/lithammer/dedent v1.1.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/gomega v1.17.0 // indirect
@@ -27,24 +22,15 @@ require (
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/prometheus/statsd_exporter v0.22.4 // indirect
-	github.com/tektoncd/pipeline v0.30.0
+	github.com/tektoncd/pipeline v0.34.0
 	go.uber.org/zap v1.19.1
-	golang.org/x/mod v0.5.1 // indirect
-	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9 // indirect
-	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
-	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
-	google.golang.org/api v0.60.0 // indirect
-	google.golang.org/genproto v0.0.0-20211129164237-f09f9a12af12 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.21.7
-	k8s.io/apimachinery v0.21.7
-	k8s.io/client-go v0.21.7
-	k8s.io/klog/v2 v2.30.0
-	k8s.io/utils v0.0.0-20211116205334-6203023598ed // indirect
-	knative.dev/pkg v0.0.0-20211101212339-96c0204a70dc
-	sigs.k8s.io/structured-merge-diff/v4 v4.2.0 // indirect
+	k8s.io/api v0.23.4
+	k8s.io/apimachinery v0.23.4
+	k8s.io/client-go v1.5.2
+	k8s.io/klog/v2 v2.40.1
+	knative.dev/pkg v0.0.0-20220131144930-f4b57aef0006
 )
 
 replace (

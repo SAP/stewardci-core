@@ -52,6 +52,14 @@
   date: TBD
   changes:
 
+    - type: security
+      impact: patch
+      title: Updated `tektoncd/pipeline` to `v0.34.0`
+      description: |-
+        Updated "github.com/tektoncd/pipeline" version to `v0.34.0` due to [CVE-2021-44716](https://github.com/advisories/GHSA-vc3p-29h2-gpcp).
+      pullRequestNumber: 314
+      jiraIssueNumber: CLOUDCI-1198
+
 - version: "0.18.3"
   date: 2022-02-16
   changes:
