@@ -18,9 +18,7 @@ require (
 	github.com/onsi/gomega v1.17.0 // indirect
 	github.com/openzipkin/zipkin-go v0.3.0 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.11.0
-	github.com/prometheus/common v0.32.1 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/statsd_exporter v0.22.4 // indirect
 	github.com/tektoncd/pipeline v0.34.0
 	go.uber.org/zap v1.19.1
