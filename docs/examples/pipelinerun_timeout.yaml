@@ -1,0 +1,15 @@
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+metadata:
+  generateName: sleep
+spec:
+  timeout: "1d"
+  args:
+    SLEEP_FOR_SECONDS: "120"
+  jenkinsFile:
+    repoUrl: https://github.com/SAP-samples/stewardci-example-pipelines
+    revision: main
+    relativePath: sleep/Jenkinsfile
+  logging:
+    elasticsearch:
+      runID: {"build": 1}
