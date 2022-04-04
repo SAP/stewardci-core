@@ -77,7 +77,7 @@ type PipelineSpec struct {
 
 	Profiles *Profiles `json:"profiles,omitempty"`
 
-	Timeout *time.Duration `json:"timeout,omitempty"`
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
 // JenkinsfileRunnerSpec carries configuration options for the Jenkinsfile Runner container.

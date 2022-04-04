@@ -78,6 +78,9 @@ spec:
                 - run
                 - abort
                 default: run
+              "timeout": ###
+                type: string
+                pattern: '^[0-9]*m?$'
               "logging": ###
                 type: object
                 properties:
