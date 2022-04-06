@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/url"
 	"strings"
 
@@ -479,12 +478,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Pipeline Run: %+v", runCtx.pipelineRun.GetSpec())
-	timeout := runCtx.pipelineRunsConfig.Timeout
-	pipelineRunTimeout := runCtx.pipelineRun.GetSpec().Timeout
-	if pipelineRunTimeout != nil {
-		timeout = pipelineRunTimeout
-	}
+
 	tektonTaskRun := tekton.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tektonTaskRunName,
@@ -502,7 +496,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 			Params: []tekton.Param{
 				tektonStringParam("RUN_NAMESPACE", namespace),
 			},
-			Timeout: timeout,
+			Timeout: getTimeout(runCtx),
 
 			// Always set a non-empty pod template even if we don't have
 			// values to set. Otherwise the Tekton default pod template
@@ -531,6 +525,15 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 	c.addTektonTaskRunParamsForRunDetails(runCtx, &tektonTaskRun)
 
 	return &tektonTaskRun, nil
+}
+
+func getTimeout(runCtx *runContext) *metav1.Duration {
+  timeout := runCtx.pipelineRunsConfig.Timeout
+  pipelineRunTimeout := runCtx.pipelineRun.GetSpec().Timeout
+  if pipelineRunTimeout != nil {
+  	timeout = pipelineRunTimeout
+  }
+  return timeout
 }
 
 func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext) error {

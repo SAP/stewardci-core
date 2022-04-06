@@ -3,7 +3,7 @@ kind: PipelineRun
 metadata:
   generateName: sleep
 spec:
-  timeout: "1d"
+  timeout: "1m"
   args:
     SLEEP_FOR_SECONDS: "120"
   jenkinsFile:

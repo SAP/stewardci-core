@@ -2054,3 +2054,54 @@ func (*testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv
 func newEmptyRunsConfig(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error) {
 	return &cfg.PipelineRunsConfigStruct{}, nil
 }
+
+func Test__runManager__getTimeout__retrievesPipelineTimeoutIfSetInThePipelineSpec(t *testing.T) {
+	t.Parallel()
+
+  defaultTimeout:= metav1Duration(200)
+  customTimeout:= metav1Duration(300)
+  ctx:= context.Background()
+
+	k8sPipelineRun, err:= k8s.NewPipelineRun(ctx, &stewardv1alpha1.PipelineRun{
+                                                		TypeMeta: metav1.TypeMeta{
+                                                			APIVersion: stewardv1alpha1.SchemeGroupVersion.String(),
+                                                			Kind:       "PipelineRun",
+                                                		},
+                                                		Spec: stewardv1alpha1.PipelineSpec{Timeout: customTimeout},
+                                                	}, nil)
+	assert.NilError(t, err)
+
+	config:= &cfg.PipelineRunsConfigStruct{
+	  Timeout: defaultTimeout,
+	}
+	runCtx:= &runContext{
+  			pipelineRun:        k8sPipelineRun,
+  			pipelineRunsConfig: config,
+  }
+
+  //exercise
+  result:= getTimeout(runCtx)
+  assert.DeepEqual(t, customTimeout, result)
+
+}
+
+func Test__runManager__getTimeout__retrievesTheDefaultPipelineTimeoutIfTimeoutIsNilInThePipelineSpec(t *testing.T) {
+	t.Parallel()
+
+	ctx:= context.Background()
+  k8sPipelineRun, err:= k8s.NewPipelineRun(ctx, &stewardv1alpha1.PipelineRun{}, nil)
+  assert.NilError(t, err)
+  defaultTimeout:= metav1Duration(200)
+  config:= &cfg.PipelineRunsConfigStruct{
+    Timeout: defaultTimeout,
+  }
+  runCtx:= &runContext{
+        pipelineRun:        k8sPipelineRun,
+        pipelineRunsConfig: config,
+  }
+
+  //exercise
+  result:= getTimeout(runCtx)
+  assert.DeepEqual(t, defaultTimeout, result)
+}
+
