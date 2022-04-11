@@ -528,12 +528,12 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 }
 
 func getTimeout(runCtx *runContext) *metav1.Duration {
-  timeout := runCtx.pipelineRunsConfig.Timeout
-  pipelineRunTimeout := runCtx.pipelineRun.GetSpec().Timeout
-  if pipelineRunTimeout != nil {
-  	timeout = pipelineRunTimeout
-  }
-  return timeout
+	timeout := runCtx.pipelineRunsConfig.Timeout
+	pipelineRunTimeout := runCtx.pipelineRun.GetSpec().Timeout
+	if pipelineRunTimeout != nil {
+		timeout = pipelineRunTimeout
+	}
+	return timeout
 }
 
 func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext) error {
