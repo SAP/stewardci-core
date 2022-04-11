@@ -51,6 +51,13 @@
 - version: NEXT
   date: TBD
   changes:
+    - type: enhancement
+      impact: minor
+      title: Provide a timeout setting for each pipeline run
+      description: |-
+        With this change it is now possible to define timeout for each pipeline run.
+      pullRequestNumber: 316
+      jiraIssueNumber: CLOUDCI-1286
 
 - version: "0.18.4"
   date: 2022-03-23
