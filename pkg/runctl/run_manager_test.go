@@ -2058,6 +2058,7 @@ func newEmptyRunsConfig(ctx context.Context) (*cfg.PipelineRunsConfigStruct, err
 func Test__runManager__getTimeout__retrievesPipelineTimeoutIfSetInThePipelineSpec(t *testing.T) {
 	t.Parallel()
 
+  //SETUP
   defaultTimeout:= metav1Duration(200)
   customTimeout:= metav1Duration(300)
   ctx:= context.Background()
@@ -2079,8 +2080,10 @@ func Test__runManager__getTimeout__retrievesPipelineTimeoutIfSetInThePipelineSpe
   			pipelineRunsConfig: config,
   }
 
-  //exercise
+  //EXERCISE
   result:= getTimeout(runCtx)
+
+  //VERIFY
   assert.DeepEqual(t, customTimeout, result)
 
 }
@@ -2088,6 +2091,7 @@ func Test__runManager__getTimeout__retrievesPipelineTimeoutIfSetInThePipelineSpe
 func Test__runManager__getTimeout__retrievesTheDefaultPipelineTimeoutIfTimeoutIsNilInThePipelineSpec(t *testing.T) {
 	t.Parallel()
 
+  //SETUP
 	ctx:= context.Background()
   k8sPipelineRun, err:= k8s.NewPipelineRun(ctx, &stewardv1alpha1.PipelineRun{}, nil)
   assert.NilError(t, err)
@@ -2100,8 +2104,10 @@ func Test__runManager__getTimeout__retrievesTheDefaultPipelineTimeoutIfTimeoutIs
         pipelineRunsConfig: config,
   }
 
-  //exercise
+  //EXERCISE
   result:= getTimeout(runCtx)
+
+  //VERIFY
   assert.DeepEqual(t, defaultTimeout, result)
 }
 
