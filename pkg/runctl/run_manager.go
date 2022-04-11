@@ -461,11 +461,7 @@ func (c *runManager) getServiceAccountSecretName(ctx context.Context, runCtx *ru
 	return runCtx.serviceAccount.GetHelper().GetServiceAccountSecretNameRepeat(ctx)
 }
 
-func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext) error {
-
-	if c.testing != nil && c.testing.createTektonTaskRunStub != nil {
-		return c.testing.createTektonTaskRunStub(ctx, runCtx)
-	}
+func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runContext) (*tekton.TaskRun, error) {
 
 	var err error
 
@@ -480,7 +476,7 @@ func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext
 	namespace := runCtx.runNamespace
 	serviceAccountSecretName, err := c.getServiceAccountSecretName(ctx, runCtx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	tektonTaskRun := tekton.TaskRun{
@@ -500,7 +496,7 @@ func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext
 			Params: []tekton.Param{
 				tektonStringParam("RUN_NAMESPACE", namespace),
 			},
-			Timeout: runCtx.pipelineRunsConfig.Timeout,
+			Timeout: getTimeout(runCtx),
 
 			// Always set a non-empty pod template even if we don't have
 			// values to set. Otherwise the Tekton default pod template
@@ -519,16 +515,38 @@ func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext
 	c.addTektonTaskRunParamsForJenkinsfileRunnerImage(runCtx, &tektonTaskRun)
 	err = c.addTektonTaskRunParamsForPipeline(runCtx, &tektonTaskRun)
 	if err != nil {
-		return serrors.Classify(err, stewardv1alpha1.ResultErrorConfig)
+		return nil, serrors.Classify(err, stewardv1alpha1.ResultErrorConfig)
 	}
 	err = c.addTektonTaskRunParamsForLoggingElasticsearch(runCtx, &tektonTaskRun)
 	if err != nil {
-		return serrors.Classify(err, stewardv1alpha1.ResultErrorConfig)
+		return nil, serrors.Classify(err, stewardv1alpha1.ResultErrorConfig)
 	}
 
 	c.addTektonTaskRunParamsForRunDetails(runCtx, &tektonTaskRun)
+
+	return &tektonTaskRun, nil
+}
+
+func getTimeout(runCtx *runContext) *metav1.Duration {
+	timeout := runCtx.pipelineRunsConfig.Timeout
+	pipelineRunTimeout := runCtx.pipelineRun.GetSpec().Timeout
+	if pipelineRunTimeout != nil {
+		timeout = pipelineRunTimeout
+	}
+	return timeout
+}
+
+func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext) error {
+	if c.testing != nil && c.testing.createTektonTaskRunStub != nil {
+		return c.testing.createTektonTaskRunStub(ctx, runCtx)
+	}
+
+	tektonTaskRun, err := c.createTektonTaskRunObject(ctx, runCtx)
+	if err != nil {
+		return err
+	}
 	tektonClient := c.factory.TektonV1beta1()
-	_, err = tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(ctx, &tektonTaskRun, metav1.CreateOptions{})
+	_, err = tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(ctx, tektonTaskRun, metav1.CreateOptions{})
 	return err
 }
 
