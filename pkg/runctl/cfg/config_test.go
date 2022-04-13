@@ -243,8 +243,6 @@ func Test_withRecoverablility(t *testing.T) {
 		{"retry_on_infra_error", true, true, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tc := tc // capture current value before going parallel
-			t.Parallel()
 
 			// SETUP
 			defer featureflagtesting.WithFeatureFlag(featureflag.RetryOnInvalidPipelineRunsConfig, tc.flag)()

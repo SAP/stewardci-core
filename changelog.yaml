@@ -59,6 +59,13 @@
       pullRequestNumber: 316
       jiraIssueNumber: CLOUDCI-1286
 
+    - type: security
+      impact: patch
+      title: Update go version
+      description: |-
+        Update go version to 1.16.15
+      pullRequestNumber: 317
+
 - version: "0.18.4"
   date: 2022-03-23
   changes:
