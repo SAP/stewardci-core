@@ -72,8 +72,8 @@
       description: |-
         - Update go version to 1.17.9
         - Update build tags. See https://go.dev/design/draft-gobuild
-      pullRequestNumber: 0
-
+      pullRequestNumber: 318
+      
 - version: "0.18.4"
   date: 2022-03-23
   changes:
