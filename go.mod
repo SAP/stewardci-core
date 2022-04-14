@@ -20,42 +20,44 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/statsd_exporter v0.22.4 // indirect
-	github.com/tektoncd/pipeline v0.34.0
-	go.uber.org/zap v1.19.1
+	github.com/tektoncd/pipeline v0.34.1
+	go.uber.org/zap v1.21.0
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.23.4
-	k8s.io/apimachinery v0.23.4
+	k8s.io/api v0.23.5
+	k8s.io/apimachinery v0.23.5
 	k8s.io/client-go v1.5.2
-	k8s.io/klog/v2 v2.40.1
+	k8s.io/klog/v2 v2.60.1
 	knative.dev/pkg v0.0.0-20220131144930-f4b57aef0006
 )
 
 replace (
-	k8s.io/api => k8s.io/api v0.21.7 // kubernetes-1.21.7
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.7
-	k8s.io/apimachinery => k8s.io/apimachinery v0.21.7 // kubernetes-1.21.7
-	k8s.io/apiserver => k8s.io/apiserver v0.21.7
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.21.7
-	k8s.io/client-go => k8s.io/client-go v0.21.7 // kubernetes-1.21.7
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.21.7
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.21.7
-	k8s.io/code-generator => k8s.io/code-generator v0.21.7
-	k8s.io/component-base => k8s.io/component-base v0.21.7
-	k8s.io/component-helpers => k8s.io/component-helpers v0.21.7
-	k8s.io/controller-manager => k8s.io/controller-manager v0.21.7
-	k8s.io/cri-api => k8s.io/cri-api v0.21.7
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.21.7
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.21.7
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.21.7
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.21.7
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.21.7
-	k8s.io/kubectl => k8s.io/kubectl v0.21.7
-	k8s.io/kubelet => k8s.io/kubelet v0.21.7
-	k8s.io/kubernetes => k8s.io/kubernetes v1.21.7
-	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.21.7
-	k8s.io/metrics => k8s.io/metrics v0.21.7
-	k8s.io/mount-utils => k8s.io/mount-utils v0.21.7
-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.21.7
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.12.1
+	k8s.io/api => k8s.io/api v0.23.5 // kubernetes-1.23.5
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.23.5
+	k8s.io/apimachinery => k8s.io/apimachinery v0.23.5 // kubernetes-1.23.5
+	k8s.io/apiserver => k8s.io/apiserver v0.23.5
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.23.5
+	k8s.io/client-go => k8s.io/client-go v0.23.5 // kubernetes-1.23.5
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.23.5
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.23.5
+	k8s.io/code-generator => k8s.io/code-generator v0.23.5
+	k8s.io/component-base => k8s.io/component-base v0.23.5
+	k8s.io/component-helpers => k8s.io/component-helpers v0.23.5
+	k8s.io/controller-manager => k8s.io/controller-manager v0.23.5
+	k8s.io/cri-api => k8s.io/cri-api v0.23.5
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.23.5
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.23.5
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.23.5
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.23.5
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.23.5
+	k8s.io/kubectl => k8s.io/kubectl v0.23.5
+	k8s.io/kubelet => k8s.io/kubelet v0.23.5
+	k8s.io/kubernetes => k8s.io/kubernetes v1.23.5
+	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.23.5
+	k8s.io/metrics => k8s.io/metrics v0.23.5
+	k8s.io/mount-utils => k8s.io/mount-utils v0.23.5
+	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.23.5 // kubernetes-1.23.5
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.23.5
 	knative.dev/pkg => knative.dev/pkg v0.0.0-20211101212339-96c0204a70dc // release-1.0
 )
