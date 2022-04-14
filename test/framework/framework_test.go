@@ -1,3 +1,4 @@
+//go:build frameworktest
 // +build frameworktest
 
 package framework

@@ -66,6 +66,14 @@
         Update go version to 1.16.15
       pullRequestNumber: 317
 
+    - type: security
+      impact: patch
+      title: Update go version
+      description: |-
+        - Update go version to 1.17.9
+        - Update build tags. See https://go.googlesource.com/proposal/+/master/design/draft-gobuild.md
+      pullRequestNumber: 0
+
 - version: "0.18.4"
   date: 2022-03-23
   changes:
