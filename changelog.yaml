@@ -71,8 +71,15 @@
       title: Update go version
       description: |-
         - Update go version to 1.17.9
-        - Update build tags. See https://go.googlesource.com/proposal/+/master/design/draft-gobuild.md
-      pullRequestNumber: 0
+        - Update build tags. See https://go.dev/design/draft-gobuild
+      pullRequestNumber: 318
+    - type: security
+      impact: patch
+      title: Update k8s version
+      description: |-
+        - Update k8s version to 1.23.5
+        - Update other dependencies to latest versions. See go.mod
+      pullRequestNumber: 319
 
 - version: "0.18.4"
   date: 2022-03-23
