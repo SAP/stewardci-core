@@ -32,6 +32,7 @@ require (
 )
 
 replace (
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.12.1
 	k8s.io/api => k8s.io/api v0.23.5 // kubernetes-1.23.5
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.23.5
 	k8s.io/apimachinery => k8s.io/apimachinery v0.23.5 // kubernetes-1.23.5

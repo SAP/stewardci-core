@@ -79,7 +79,8 @@
       description: |-
         - Update k8s version to 1.23.5
         - Update other dependencies to latest versions. See go.mod
-      pullRequestNumber: 319
+      pullRequestNumber: [319, 320]
+
 - version: "0.18.4"
   date: 2022-03-23
   changes:
