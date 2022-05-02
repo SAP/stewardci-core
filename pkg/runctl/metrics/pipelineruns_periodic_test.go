@@ -84,6 +84,7 @@ func Test_pipelineRunsPeriodic_NewRun(t *testing.T) {
 
 				run := &stewardapi.PipelineRun{}
 				run.Status.State = tc.state
+				run.Status.StateDetails.State = state
 				if !tc.omitCreationTime {
 					run.CreationTimestamp = metav1.NewTime(mockClock.Now().Add(-tc.duration))
 				}
