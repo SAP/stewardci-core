@@ -52,6 +52,15 @@
   date: TBD
   changes:
 
+    - type: bug
+      impact: patch
+      title: Fix metric steward_pipelineruns_ongoing_state_duration_periodic_observations_seconds
+      description: |-
+        No observations were made for phases `preparing` and `waiting`.
+        For observations of phases `cleaning` and `finished` the duration
+        was including the duration of phase `running`.
+      pullRequestNumber: 322
+
 - version: "0.19.0"
   date: 2022-04-19
   changes:

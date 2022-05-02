@@ -72,8 +72,8 @@ func (m *pipelineRunsPeriodic) init() {
 func (m *pipelineRunsPeriodic) Observe(run *stewardapi.PipelineRun) {
 	if m.isNewRun(run) {
 		m.observe(stewardapi.StateNew, run.CreationTimestamp)
-	} else if run.Status.StartedAt != nil {
-		m.observe(run.Status.State, *run.Status.StartedAt)
+	} else {
+		m.observe(run.Status.State, run.Status.StateDetails.StartedAt)
 	}
 }
 

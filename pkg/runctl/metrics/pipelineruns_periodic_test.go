@@ -87,11 +87,8 @@ func Test_pipelineRunsPeriodic_NewRun(t *testing.T) {
 				if !tc.omitCreationTime {
 					run.CreationTimestamp = metav1.NewTime(mockClock.Now().Add(-tc.duration))
 				}
-				{
-					// Start time should be ignored. Set it to see whether it's used anyway.
-					t := metav1.NewTime(mockClock.Now().Add(24 * time.Hour))
-					run.Status.StartedAt = &t
-				}
+				// Start time should be ignored. Set it to see whether it's used anyway.
+				run.Status.StateDetails.StartedAt = metav1.NewTime(mockClock.Now().Add(-24 * time.Hour))
 
 				// EXERCISE and VERIFY
 				doTestPipelineRunsPeriodic(
@@ -163,11 +160,11 @@ func Test_pipelineRunsPeriodic_NonNewRun(t *testing.T) {
 
 				run := &stewardapi.PipelineRun{}
 				run.Status.State = state
+				run.Status.StateDetails.State = state
 				// Creation time should be ignored. Set it to see whether it's used anyway.
 				run.CreationTimestamp = metav1.NewTime(mockClock.Now().Add(-24 * time.Hour))
 				if !tc.omitStartTime {
-					t := metav1.NewTime(mockClock.Now().Add(-tc.duration))
-					run.Status.StartedAt = &t
+					run.Status.StateDetails.StartedAt = metav1.NewTime(mockClock.Now().Add(-tc.duration))
 				}
 
 				// EXERCISE and VERIFY
