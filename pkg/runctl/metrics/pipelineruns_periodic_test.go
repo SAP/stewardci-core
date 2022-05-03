@@ -84,14 +84,12 @@ func Test_pipelineRunsPeriodic_NewRun(t *testing.T) {
 
 				run := &stewardapi.PipelineRun{}
 				run.Status.State = tc.state
+				run.Status.StateDetails.State = tc.state
 				if !tc.omitCreationTime {
 					run.CreationTimestamp = metav1.NewTime(mockClock.Now().Add(-tc.duration))
 				}
-				{
-					// Start time should be ignored. Set it to see whether it's used anyway.
-					t := metav1.NewTime(mockClock.Now().Add(24 * time.Hour))
-					run.Status.StartedAt = &t
-				}
+				// Start time should be ignored. Set it to see whether it's used anyway.
+				run.Status.StateDetails.StartedAt = metav1.NewTime(mockClock.Now().Add(-24 * time.Hour))
 
 				// EXERCISE and VERIFY
 				doTestPipelineRunsPeriodic(
@@ -114,6 +112,7 @@ func Test_pipelineRunsPeriodic_NonNewRun(t *testing.T) {
 
 	for _, tc := range []struct {
 		omitStartTime     bool
+		state             stewardapi.State
 		duration          time.Duration // must be a small duration
 		expectObservation bool
 	}{
@@ -146,14 +145,16 @@ func Test_pipelineRunsPeriodic_NonNewRun(t *testing.T) {
 			stewardapi.StateFinished,
 			stewardapi.State("testdummy5489674598"),
 		} {
+			tc := tc
+			tc.state = state
 			idx++
+
 			t.Run(strconv.Itoa(idx), func(t *testing.T) {
 				// no parallel: patching global state
 
 				defer func() {
 					if t.Failed() {
 						t.Logf("tc was: %+v", tc)
-						t.Logf("state was: %#v", state)
 					}
 				}()
 
@@ -162,12 +163,12 @@ func Test_pipelineRunsPeriodic_NonNewRun(t *testing.T) {
 				mockClock.Set(fakeNow)
 
 				run := &stewardapi.PipelineRun{}
-				run.Status.State = state
+				run.Status.State = tc.state
+				run.Status.StateDetails.State = tc.state
 				// Creation time should be ignored. Set it to see whether it's used anyway.
 				run.CreationTimestamp = metav1.NewTime(mockClock.Now().Add(-24 * time.Hour))
 				if !tc.omitStartTime {
-					t := metav1.NewTime(mockClock.Now().Add(-tc.duration))
-					run.Status.StartedAt = &t
+					run.Status.StateDetails.StartedAt = metav1.NewTime(mockClock.Now().Add(-tc.duration))
 				}
 
 				// EXERCISE and VERIFY
@@ -177,7 +178,7 @@ func Test_pipelineRunsPeriodic_NonNewRun(t *testing.T) {
 					run,
 					tc.duration,
 					tc.expectObservation,
-					state,
+					tc.state,
 				)
 			})
 		}
