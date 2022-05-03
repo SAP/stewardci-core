@@ -155,7 +155,6 @@ func Test_pipelineRunsPeriodic_NonNewRun(t *testing.T) {
 				defer func() {
 					if t.Failed() {
 						t.Logf("tc was: %+v", tc)
-						t.Logf("state was: %#v", state)
 					}
 				}()
 
@@ -179,7 +178,7 @@ func Test_pipelineRunsPeriodic_NonNewRun(t *testing.T) {
 					run,
 					tc.duration,
 					tc.expectObservation,
-					state,
+					tc.state,
 				)
 			})
 		}
