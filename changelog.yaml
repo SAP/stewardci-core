@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.19.1"
+  date: 2022-05-04
+  changes:
+
     - type: bug
       impact: patch
       title: Fix metric steward_pipelineruns_ongoing_state_duration_periodic_observations_seconds
