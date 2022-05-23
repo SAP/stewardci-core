@@ -60,7 +60,7 @@
         The default user has now full CRUD permissions on:
         - configmaps
         - secrets
-      pullRequestNumber: 0
+      pullRequestNumber: 324
       jiraIssueNumber: CLOUDCI-1609
 
 - version: "0.19.1"
