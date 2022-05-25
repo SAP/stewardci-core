@@ -52,6 +52,13 @@
   date: TBD
   changes:
 
+    - type: security
+      impact: patch
+      title: Update JFR to 220525_0a71212
+      description: |-
+        Update to latest JFR [220525_0a71212](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/220525_0a71212)
+      pullRequestNumber: 326
+
 - version: "0.20.0"
   date: 2022-05-25
   changes:
