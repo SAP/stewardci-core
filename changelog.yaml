@@ -56,12 +56,12 @@
       impact: minor
       title: Extend permissions of default service account in run namespaces
       description: |-
-        The permissions of the default service account in run namespaces are extended.
-        The default user has now full CRUD permissions on:
+        The permissions of the default service account in run namespaces are extended
+        by full CRUD permissions on:
         - configmaps
         - secrets
       pullRequestNumber: 324
-      jiraIssueNumber: CLOUDCI-1609
+      jiraIssueNumber: 1609
 
 - version: "0.19.1"
   date: 2022-05-04
