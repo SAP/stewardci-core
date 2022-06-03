@@ -42,12 +42,6 @@ spec:
       port: 53
     - protocol: TCP
       port: 53
-  - # rule: allow access to K8s apiserver (cluster-internal address)
-    to:
-    - ipBlock:
-        cidr: 172.16.0.0/28 # GKE control plane address range
-    ports:
-    - port: 443
   ingress:
   - # rule: allow access from all pods in the same namespace
     from:
