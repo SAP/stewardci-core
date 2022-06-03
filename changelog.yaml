@@ -53,7 +53,7 @@
   changes:
 
     - type: enhancement
-      impact: minor
+      impact: incompatible
       title: "Network policy: Remove rule for cluster-internal API Server access"
       description: |-
         We cannot provide a rule allowing access to service `kubernetes.default`
