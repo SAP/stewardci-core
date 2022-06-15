@@ -54,9 +54,9 @@
 
     - type: security
       impact: patch
-      title: Update JFR to 220525_0a71212
+      title: Update JFR to 220615_7db71b2
       description: |-
-        Update to latest JFR [220525_0a71212](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/220525_0a71212)
+        Update to latest JFR [220615_7db71b2](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/220615_7db71b2)
       pullRequestNumber: 326
 
 - version: "0.20.0"
