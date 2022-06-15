@@ -61,6 +61,21 @@
         If you use an image cache you might want to update the image there as well.
       pullRequestNumber: 326
 
+    - type: enhancement
+      impact: incompatible
+      title: "Network policy: Remove rule for cluster-internal API Server access"
+      description: |-
+        We cannot provide a rule allowing access to service `kubernetes.default`
+        that works in general.
+        It always depends on the particular K8s setup.
+        Therefore, remove the rule.
+      upgradeNotes: |-
+        If you use the network policy for pipeline runs provided with the Helm
+        chart, check whether a rule for API Server access is required.
+        If so, define your own network policy (see the chart README).
+      pullRequestNumber: 328
+      jiraIssueNumber: 1604
+
 - version: "0.20.0"
   date: 2022-05-25
   changes:
