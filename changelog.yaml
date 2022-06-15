@@ -57,6 +57,8 @@
       title: Update JFR to 220615_7db71b2
       description: |-
         Update to latest JFR [220615_7db71b2](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/220615_7db71b2)
+      upgradeNotes: |-
+        If you use an image cache you might want to update the image there as well.
       pullRequestNumber: 326
 
 - version: "0.20.0"
