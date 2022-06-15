@@ -60,6 +60,7 @@
       upgradeNotes: |-
         If you use an image cache you might want to update the image there as well.
       pullRequestNumber: 326
+      jiraIssueNumber: 1640
 
     - type: enhancement
       impact: incompatible
