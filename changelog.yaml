@@ -52,6 +52,15 @@
   date: TBD
   changes:
 
+    - type: security
+      impact: patch
+      title: Update JFR to 220701_94864a5
+      description: |-
+        Update to latest JFR [220701_94864a5](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/220701_94864a5)
+      upgradeNotes: |-
+        If you use an image cache you might want to update the image there as well.
+      pullRequestNumber: 330
+
 - version: "0.21.0"
   date: 2022-06-15
   changes:
