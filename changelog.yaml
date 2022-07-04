@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.21.1"
+  date: 2022-07-04
+  changes:
+
     - type: security
       impact: patch
       title: Update JFR to 220701_94864a5
