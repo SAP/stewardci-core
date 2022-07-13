@@ -53,7 +53,7 @@ tenantController:
   resources:
     limits:
       cpu: 1
-      memory: 32Mi
+      memory: 64Mi
     requests:
       cpu: 10m
   podSecurityContext: {}
