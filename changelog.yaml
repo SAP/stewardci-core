@@ -54,7 +54,7 @@
 
  - type: enhancement
       impact: patch
-      title: Increase Tekton memory limit
+      title: Increase memory limit for steward-tenant-controller pod
       description: |-
         Increase tekton pod memory limit due to issues with out of memory at certain clusters.
       pullRequestNumber: 332
