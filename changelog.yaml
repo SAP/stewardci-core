@@ -56,7 +56,7 @@
       impact: patch
       title: Increase memory limit for steward-tenant-controller pod
       description: |-
-        Increase tekton pod memory limit due to issues with out of memory at certain clusters.
+        Increase memory limit for steward-tenant-controller pod to avoid OOMKilled.
       pullRequestNumber: 332
 
 - version: "0.21.1"
