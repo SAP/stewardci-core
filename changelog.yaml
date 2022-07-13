@@ -52,6 +52,13 @@
   date: TBD
   changes:
 
+ - type: enhancement
+      impact: patch
+      title: Increase Tekton memory limit
+      description: |-
+        Increase tekton pod memory limit due to issues with out of memory at certain clusters.
+      pullRequestNumber: 332
+
 - version: "0.21.1"
   date: 2022-07-04
   changes:
