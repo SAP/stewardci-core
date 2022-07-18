@@ -54,9 +54,9 @@
 
  - type: enhancement
       impact: patch
-      title: Increase memory limit for steward-tenant-controller pod
+      title: Increase memory limit of Steward tenant controller
       description: |-
-        Increase memory limit for steward-tenant-controller pod to avoid OOMKilled.
+        Increase the memory limit of Steward tenant controller to avoid OOMKilled.
       pullRequestNumber: 332
 
 - version: "0.21.1"
