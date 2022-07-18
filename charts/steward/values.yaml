@@ -22,6 +22,7 @@ runController:
       memory: 256Mi
     requests:
       cpu: 100m
+      memory: 256Mi
   podSecurityContext: {}
   securityContext:
     capabilities:
@@ -56,6 +57,7 @@ tenantController:
       memory: 64Mi
     requests:
       cpu: 10m
+      memory: 64Mi
   podSecurityContext: {}
   securityContext:
     capabilities:
@@ -97,6 +99,7 @@ pipelineRuns:
         memory: 2Gi
       requests:
         cpu: 500m
+        memory: 2Gi
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000
