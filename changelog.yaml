@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.21.2"
+  date: 2022-07-19
+  changes:
+
     - type: enhancement
       impact: patch
       title: Increase memory limit of Steward tenant controller
