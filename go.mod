@@ -6,29 +6,25 @@ require (
 	github.com/benbjohnson/clock v1.3.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
-	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-kit/log v0.2.0 // indirect
 	github.com/go-openapi/jsonreference v0.19.6 // indirect
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
-	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/lithammer/dedent v1.1.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
-	github.com/onsi/gomega v1.17.0 // indirect
-	github.com/openzipkin/zipkin-go v0.3.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/statsd_exporter v0.22.4 // indirect
-	github.com/tektoncd/pipeline v0.34.1
-	go.uber.org/zap v1.21.0
+	github.com/tektoncd/pipeline v0.40.2
+	go.uber.org/zap v1.23.0
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.23.5
-	k8s.io/apimachinery v0.23.5
+	k8s.io/api v0.23.9
+	k8s.io/apimachinery v0.23.9
 	k8s.io/client-go v1.5.2
-	k8s.io/klog/v2 v2.60.1
-	knative.dev/pkg v0.0.0-20220131144930-f4b57aef0006
+	k8s.io/klog/v2 v2.70.2-0.20220707122935-0990e81f1a8f
+	knative.dev/pkg v0.0.0-20220818004048-4a03844c0b15
 )
 
 replace (
