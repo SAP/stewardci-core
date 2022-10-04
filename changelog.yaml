@@ -52,7 +52,7 @@
   date: TBD
   changes:
 
-   - type: internal
+    - type: internal
       impact: incompatible
       title: Upgrade dependency to Tekton v0.40.2
       description: |-
@@ -60,7 +60,7 @@
       warning: Requires Tekton v0.40.2 and Kubernetes v1.22+
       upgradeNotes: |-
         Steward will not run properly with versions older than v0.40.2 of Tekton due to a renaming within Tekton.
-      pullRequestNumber: 216
+      pullRequestNumber: 336
       jiraIssueNumber: 1832
 
 - version: "0.21.2"
