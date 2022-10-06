@@ -30,7 +30,6 @@ func Test_provider_GetSecret_Existing(t *testing.T) {
 			DeletionGracePeriodSeconds: &grace,
 			OwnerReferences:            []metav1.OwnerReference{{}},
 			Finalizers:                 []string{"dummy"},
-			ClusterName:                "dummy",
 			Labels: map[string]string{
 				"lbar": "lbaz",
 			},

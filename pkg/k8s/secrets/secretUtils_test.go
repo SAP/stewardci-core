@@ -184,9 +184,8 @@ func Test_CreateSecret_StripsMetadata(t *testing.T) {
 			Generation:                 1,
 			CreationTimestamp:          now,
 			DeletionGracePeriodSeconds: &grace,
-			OwnerReferences:            []metav1.OwnerReference{metav1.OwnerReference{}},
+			OwnerReferences:            []metav1.OwnerReference{{}},
 			Finalizers:                 []string{"dummy"},
-			ClusterName:                "dummy",
 			Labels: map[string]string{
 				"lbar": "lbaz",
 			},
