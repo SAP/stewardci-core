@@ -20,8 +20,8 @@ require (
 	go.uber.org/zap v1.23.0
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.23.9
-	k8s.io/apimachinery v0.23.9
+	k8s.io/api v0.24.4
+	k8s.io/apimachinery v0.24.4
 	k8s.io/client-go v1.5.2
 	k8s.io/klog/v2 v2.70.2-0.20220707122935-0990e81f1a8f
 	knative.dev/pkg v0.0.0-20220818004048-4a03844c0b15
@@ -55,5 +55,5 @@ replace (
 	k8s.io/mount-utils => k8s.io/mount-utils v0.23.5
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.23.5 // kubernetes-1.23.5
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.23.5
-	knative.dev/pkg => knative.dev/pkg v0.0.0-20211101212339-96c0204a70dc // release-1.0
+	knative.dev/pkg => knative.dev/pkg v0.0.0-20221006013630-1fb3e679f6d4 // release-1.7
 )
