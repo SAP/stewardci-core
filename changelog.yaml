@@ -56,7 +56,12 @@
       impact: incompatible
       title: Upgrade dependency to Tekton v0.40.2
       description: |-
-        Build and run against Tekton v0.40.2
+        Build and run against Tekton v0.40.2.
+
+        For compliance reasons, the following changes have also been introduced:
+        - Go version upgraded to 1.18.7
+        - Kubernetes dependencies upgraded to v1.23.9
+        - knative.dev/pkg dependency upgraded to release-1.7
       warning: Requires Tekton v0.40.2 and Kubernetes v1.22+
       upgradeNotes: |-
         Steward will not run properly with versions older than v0.40.2 of Tekton due to a renaming within Tekton.
