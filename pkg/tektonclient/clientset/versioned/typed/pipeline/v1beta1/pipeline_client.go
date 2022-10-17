@@ -25,6 +25,8 @@ limitations under the License.
 package v1beta1
 
 import (
+	"net/http"
+
 	"github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/scheme"
 	v1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	rest "k8s.io/client-go/rest"
@@ -33,6 +35,7 @@ import (
 type TektonV1beta1Interface interface {
 	RESTClient() rest.Interface
 	ClusterTasksGetter
+	CustomRunsGetter
 	PipelinesGetter
 	PipelineRunsGetter
 	TasksGetter
@@ -46,6 +49,10 @@ type TektonV1beta1Client struct {
 
 func (c *TektonV1beta1Client) ClusterTasks() ClusterTaskInterface {
 	return newClusterTasks(c)
+}
+
+func (c *TektonV1beta1Client) CustomRuns(namespace string) CustomRunInterface {
+	return newCustomRuns(c, namespace)
 }
 
 func (c *TektonV1beta1Client) Pipelines(namespace string) PipelineInterface {
@@ -65,12 +72,28 @@ func (c *TektonV1beta1Client) TaskRuns(namespace string) TaskRunInterface {
 }
 
 // NewForConfig creates a new TektonV1beta1Client for the given config.
+// NewForConfig is equivalent to NewForConfigAndClient(c, httpClient),
+// where httpClient was generated with rest.HTTPClientFor(c).
 func NewForConfig(c *rest.Config) (*TektonV1beta1Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
 	}
-	client, err := rest.RESTClientFor(&config)
+	httpClient, err := rest.HTTPClientFor(&config)
+	if err != nil {
+		return nil, err
+	}
+	return NewForConfigAndClient(&config, httpClient)
+}
+
+// NewForConfigAndClient creates a new TektonV1beta1Client for the given config and http client.
+// Note the http client provided takes precedence over the configured transport values.
+func NewForConfigAndClient(c *rest.Config, h *http.Client) (*TektonV1beta1Client, error) {
+	config := *c
+	if err := setConfigDefaults(&config); err != nil {
+		return nil, err
+	}
+	client, err := rest.RESTClientForConfigAndClient(&config, h)
 	if err != nil {
 		return nil, err
 	}

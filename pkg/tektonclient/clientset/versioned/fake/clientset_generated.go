@@ -80,7 +80,10 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 	return c.tracker
 }
 
-var _ clientset.Interface = &Clientset{}
+var (
+	_ clientset.Interface = &Clientset{}
+	_ testing.FakeClient  = &Clientset{}
+)
 
 // TektonV1beta1 retrieves the TektonV1beta1Client
 func (c *Clientset) TektonV1beta1() tektonv1beta1.TektonV1beta1Interface {

@@ -19,6 +19,7 @@ import (
 	slabels "github.com/SAP/stewardci-core/pkg/stewardlabels"
 	"github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
+	tektonPod "github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	corev1api "k8s.io/api/core/v1"
 	networkingv1api "k8s.io/api/networking/v1"
@@ -502,7 +503,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 			// values to set. Otherwise the Tekton default pod template
 			// would be used only in such cases but not if we have values
 			// to set.
-			PodTemplate: &tekton.PodTemplate{
+			PodTemplate: &tektonPod.PodTemplate{
 				SecurityContext: &corev1api.PodSecurityContext{
 					RunAsUser:  copyInt64Ptr(runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsUser),
 					RunAsGroup: copyInt64Ptr(runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
@@ -811,7 +812,7 @@ func toJSONString(value interface{}) (string, error) {
 func tektonStringParam(name string, value string) tekton.Param {
 	return tekton.Param{
 		Name: name,
-		Value: tekton.ArrayOrString{
+		Value: tekton.ParamValue{
 			Type:      tekton.ParamTypeString,
 			StringVal: value,
 		},

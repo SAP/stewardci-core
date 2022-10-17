@@ -26,6 +26,7 @@ import (
 	spew "github.com/davecgh/go-spew/spew"
 	gomock "github.com/golang/mock/gomock"
 	errors "github.com/pkg/errors"
+	tektonPod "github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	assert "gotest.tools/assert"
 	assertcmp "gotest.tools/assert/cmp"
@@ -1195,7 +1196,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet
 
 	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
-	if equality.Semantic.DeepEqual(taskRun.Spec.PodTemplate, tektonv1beta1.PodTemplate{}) {
+	if equality.Semantic.DeepEqual(taskRun.Spec.PodTemplate, tektonPod.PodTemplate{}) {
 		t.Fatal("podTemplate of TaskRun is empty")
 	}
 }
@@ -1244,7 +1245,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 
 	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
-	expectedPodTemplate := &tektonv1beta1.PodTemplate{
+	expectedPodTemplate := &tektonPod.PodTemplate{
 		SecurityContext: &corev1.PodSecurityContext{
 			FSGroup:    int64Ptr(1111),
 			RunAsGroup: int64Ptr(2222),

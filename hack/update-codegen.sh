@@ -162,7 +162,7 @@ if is_generate_mocks; then
     MOCKGEN_EXE="$GOPATH_1/bin/mockgen"
     if [[ ! -x $MOCKGEN_EXE ]]; then
         echo "Installing mockgen"
-        ( cd "$GOPATH_1" && GO111MODULE=on go get github.com/golang/mock/mockgen@v1.4.3 ) || die "Installation of mockgen failed"
+        ( cd "$GOPATH_1" && go install github.com/golang/mock/mockgen@v1.4.3 ) || die "Installation of mockgen failed"
     fi
     [[ -f $MOCKGEN_EXE ]] || die "'$MOCKGEN_EXE' does not exist"
     [[ -x $MOCKGEN_EXE ]] || die "'$MOCKGEN_EXE' is not executable"

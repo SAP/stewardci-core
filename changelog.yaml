@@ -52,6 +52,28 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: incompatible
+      title: Upgrade Go dependencies
+      description: |-
+        - Tekton: v0.40.2
+        - Kubernetes: v1.23.9
+        - knative.dev/pkg: release-1.7 (v0.0.0-20220818004048-4a03844c0b15)
+        - others
+      warning: |-
+        Requires Tekton v0.40.0+ and Kubernetes v1.22+ at runtime.
+      upgradeNotes: |-
+        Ensure that runtime dependency requirements are met (see warning above).
+      pullRequestNumber: 336
+      jiraIssueNumber: 1832
+
+    - type: enhancement
+      impact: patch
+      title: Upgrade Go SDK to v1.18.7
+      description: |-
+        Use Go SDK to v1.18.7.
+      pullRequestNumber: 336
+
 - version: "0.21.2"
   date: 2022-07-19
   changes:
