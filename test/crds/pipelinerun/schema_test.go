@@ -9,7 +9,7 @@ import (
 
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	framework "github.com/SAP/stewardci-core/test/framework"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"gotest.tools/assert"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
