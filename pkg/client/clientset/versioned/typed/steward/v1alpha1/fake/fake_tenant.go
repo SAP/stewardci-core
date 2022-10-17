@@ -123,7 +123,7 @@ func (c *FakeTenants) UpdateStatus(ctx context.Context, tenant *v1alpha1.Tenant,
 // Delete takes name of the tenant and deletes it. Returns an error if one occurs.
 func (c *FakeTenants) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(tenantsResource, c.ns, name), &v1alpha1.Tenant{})
+		Invokes(testing.NewDeleteActionWithOptions(tenantsResource, c.ns, name, opts), &v1alpha1.Tenant{})
 
 	return err
 }
