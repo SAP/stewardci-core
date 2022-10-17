@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/lithammer/dedent"
-	"gotest.tools/assert/cmp"
+	"gotest.tools/v3/assert/cmp"
 )
 
 // FixIndent removes common leading whitespace from all lines

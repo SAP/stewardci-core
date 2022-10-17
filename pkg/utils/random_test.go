@@ -1,11 +1,12 @@
 package utils
 
 import (
-	"gotest.tools/assert"
-	is "gotest.tools/assert/cmp"
 	"math"
 	"strconv"
 	"testing"
+
+	"gotest.tools/v3/assert"
+	is "gotest.tools/v3/assert/cmp"
 )
 
 func Test_Random_Negative(t *testing.T) {

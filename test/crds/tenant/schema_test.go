@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	framework "github.com/SAP/stewardci-core/test/framework"
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 

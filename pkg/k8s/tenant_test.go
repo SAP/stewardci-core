@@ -7,7 +7,7 @@ import (
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardLister "github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 	"k8s.io/client-go/tools/cache"
 )
 

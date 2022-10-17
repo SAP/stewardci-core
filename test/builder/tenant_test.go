@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

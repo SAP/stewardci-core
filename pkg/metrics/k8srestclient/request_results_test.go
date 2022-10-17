@@ -3,7 +3,7 @@ package k8srestclient
 import (
 	"testing"
 
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 func Test_requestResultsInstance_isInitialized(t *testing.T) {

@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/gruntwork-io/terratest v0.38.5
-	gotest.tools v2.2.0+incompatible
+	gotest.tools/v3 v3.0.3
 	k8s.io/api v0.23.5 // kubernetes-1.23.5
 )
 

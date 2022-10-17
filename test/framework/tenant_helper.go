@@ -9,7 +9,7 @@ import (
 	"github.com/SAP/stewardci-core/test/builder"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 // TenantTest is a test for a Tenant

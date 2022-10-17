@@ -8,7 +8,7 @@ import (
 	stewardapi "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/prometheus/client_golang/prometheus"
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 	k8sapiv1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

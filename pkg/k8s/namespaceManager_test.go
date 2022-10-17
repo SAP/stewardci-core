@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
-	"gotest.tools/assert"
-	is "gotest.tools/assert/cmp"
+	"gotest.tools/v3/assert"
+	is "gotest.tools/v3/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

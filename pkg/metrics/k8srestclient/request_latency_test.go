@@ -3,7 +3,7 @@ package k8srestclient
 import (
 	"testing"
 
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 func Test_requestLatencyInstance_isInitialized(t *testing.T) {

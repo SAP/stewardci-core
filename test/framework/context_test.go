@@ -6,7 +6,7 @@ import (
 
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"github.com/SAP/stewardci-core/test/builder"
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 func Test_Set_GetClientFactory(t *testing.T) {

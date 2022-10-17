@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 func setupClientContext() context.Context {
