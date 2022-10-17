@@ -52,21 +52,27 @@
   date: TBD
   changes:
 
-    - type: internal
+    - type: enhancement
       impact: incompatible
-      title: Upgrade dependency to Tekton v0.40.2
+      title: Upgrade Go dependencies
       description: |-
-        Build and run against Tekton v0.40.2.
-
-        For compliance reasons, the following changes have also been introduced:
-        - Go version upgraded to 1.18.7
-        - Kubernetes dependencies upgraded to v1.23.9
-        - knative.dev/pkg dependency upgraded to release-1.7
-      warning: Requires Tekton v0.40.2 and Kubernetes v1.22+
+        - Tekton: v0.40.2
+        - Kubernetes: v1.23.9
+        - knative.dev/pkg: release-1.7 (v0.0.0-20220818004048-4a03844c0b15)
+        - others
+      warning: |-
+        Requires Tekton v0.40.0+ and Kubernetes v1.22+ at runtime.
       upgradeNotes: |-
-        Steward will not run properly with versions older than v0.40.2 of Tekton due to a renaming within Tekton.
+        Ensure that runtime dependency requirements are met (see warning above).
       pullRequestNumber: 336
       jiraIssueNumber: 1832
+
+    - type: enhancement
+      impact: patch
+      title: Upgrade Go SDK to v1.18.7
+      description: |-
+        Use Go SDK to v1.18.7.
+      pullRequestNumber: 336
 
 - version: "0.21.2"
   date: 2022-07-19
