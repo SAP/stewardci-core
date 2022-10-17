@@ -19,7 +19,7 @@ require (
 	k8s.io/api v0.23.9
 	k8s.io/apimachinery v0.23.9
 	k8s.io/client-go v1.5.2
-	k8s.io/klog/v2 v2.70.2-0.20220707122935-0990e81f1a8f
+	k8s.io/klog/v2 v2.80.1
 	knative.dev/pkg v0.0.0-20220818004048-4a03844c0b15
 )
 
