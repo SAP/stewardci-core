@@ -1,6 +1,6 @@
 module github.com/SAP/stewardci-core
 
-go 1.16
+go 1.18
 
 require (
 	github.com/benbjohnson/clock v1.3.0
