@@ -8,7 +8,6 @@ import (
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/SAP/stewardci-core/pkg/runctl"
 	"github.com/SAP/stewardci-core/pkg/signals"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	klog "k8s.io/klog/v2"
