@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.22.1"
+  date: 2022-10-19
+  changes:
+
     - type: enhancement
       impact: patch
       title: Upgrade Go dependencies
