@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 func Test_Annotate(t *testing.T) {

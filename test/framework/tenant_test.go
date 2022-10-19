@@ -4,12 +4,10 @@
 package framework
 
 import (
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
 	"fmt"
 	"testing"
 
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 func Test_TenantCreation(t *testing.T) {

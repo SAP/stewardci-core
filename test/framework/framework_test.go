@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/test/builder"
 	"github.com/SAP/stewardci-core/test/shared"

@@ -10,7 +10,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/SAP/stewardci-core/test/builder"
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

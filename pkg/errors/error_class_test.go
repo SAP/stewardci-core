@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 )

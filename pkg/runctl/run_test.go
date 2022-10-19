@@ -9,7 +9,7 @@ import (
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/ghodss/yaml"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -85,7 +85,7 @@ const (
       message: %q
       startedAt: "2019-05-14T08:24:11Z"
 `
-	completionTimeSet = `status: 
+	completionTimeSet = `status:
   completionTime: 2019-05-14T08:24:49Z
   `
 	completionTimeNotSet = `status: {}`

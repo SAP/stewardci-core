@@ -9,7 +9,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/benbjohnson/clock"
 	"github.com/prometheus/client_golang/prometheus"
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

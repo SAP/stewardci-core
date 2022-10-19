@@ -7,8 +7,7 @@ import (
 	"testing"
 
 	framework "github.com/SAP/stewardci-core/test/framework"
-	"gotest.tools/assert"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"gotest.tools/v3/assert"
 )
 
 func Test_CRDs_Tenant_Schema(t *testing.T) {

@@ -9,11 +9,10 @@ import (
 
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	framework "github.com/SAP/stewardci-core/test/framework"
-	"gopkg.in/yaml.v2"
-	"gotest.tools/assert"
+	"gopkg.in/yaml.v3"
+	"gotest.tools/v3/assert"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 const pipelineRunHeader string = `

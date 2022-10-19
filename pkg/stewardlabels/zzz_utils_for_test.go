@@ -5,7 +5,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/google/uuid"
-	"gotest.tools/assert/cmp"
+	"gotest.tools/v3/assert/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

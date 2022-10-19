@@ -3,7 +3,7 @@ package testing
 import (
 	"testing"
 
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 func Test_FixIndent(t *testing.T) {

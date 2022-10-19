@@ -52,6 +52,13 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: patch
+      title: Upgrade Go dependencies
+      description: |-
+        Upgrade to highest possible versions.
+      pullRequestNumber: 338
+
 - version: "0.22.0"
   date: 2022-10-17
   changes:

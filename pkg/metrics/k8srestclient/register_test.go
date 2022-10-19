@@ -3,7 +3,7 @@ package k8srestclient
 import (
 	"testing"
 
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 	k8sclientmetrics "k8s.io/client-go/tools/metrics"
 )
 

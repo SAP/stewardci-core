@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 func Test_AddStringIfMissing_ToEmptyList(t *testing.T) {

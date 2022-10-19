@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 	v1 "k8s.io/api/core/v1"
 )
 

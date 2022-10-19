@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 func Test_retriesMetric(t *testing.T) {

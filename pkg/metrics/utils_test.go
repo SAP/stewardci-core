@@ -3,7 +3,7 @@ package metrics
 import (
 	"testing"
 
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 func Test_CodeLocation_WithoutSkip(t *testing.T) {

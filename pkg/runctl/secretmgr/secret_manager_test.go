@@ -10,7 +10,7 @@ import (
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	secretMocks "github.com/SAP/stewardci-core/pkg/k8s/secrets/mocks"
 	gomock "github.com/golang/mock/gomock"
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 type testHelper struct {
