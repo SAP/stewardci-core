@@ -52,6 +52,14 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: minor
+      title: Add aggregated cluster roles for crds
+      description: |-
+        Add aggregated cluster roles for the generic view, edit and admin roles 
+        for the custom resources tenants and pipelineruns.
+      pullRequestNumber: 340
+
 - version: "0.22.1"
   date: 2022-10-19
   changes:
