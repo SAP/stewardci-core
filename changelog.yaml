@@ -51,6 +51,10 @@
 - version: NEXT
   date: TBD
   changes:
+
+- version: "0.23.0"
+  date: 2022-11-17
+  changes:
     - type: security
       impact: patch
       title: Upgrade go version to 1.18.8
