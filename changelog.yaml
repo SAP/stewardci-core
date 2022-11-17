@@ -61,14 +61,6 @@
       impact: minor
       title: Add aggregated cluster roles for crds
       description: |-
-        Add aggregated cluster roles for the generic view edit and admin roles 
-        for the custom resources tenants and pipelines.
-      pullRequestNumber: 340
-
-    - type: enhancement
-      impact: minor
-      title: Add aggregated cluster roles for crds
-      description: |-
         Add aggregated cluster roles for the generic view, edit and admin roles 
         for the custom resources tenants and pipelineruns.
       pullRequestNumber: 340
