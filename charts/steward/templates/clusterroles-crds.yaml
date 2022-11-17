@@ -4,7 +4,6 @@ metadata:
   name: steward-edit
   labels:
     {{- include "steward.labels" . | nindent 4 }}
-
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
     rbac.authorization.k8s.io/aggregate-to-admin: "true"
 rules:
