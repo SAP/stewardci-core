@@ -12,7 +12,7 @@ rules:
     resources:
       - tenants
       - pipelineruns
-     verbs:
+    verbs:
       - create
       - delete
       - deletecollection
