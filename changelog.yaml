@@ -55,7 +55,7 @@
       impact: patch
       title: Upgrade go version to 1.18.8
       description: Upgrade go version to 1.18.8
-      pullRequestNumber: 0
+      pullRequestNumber: 341
 
     - type: enhancement
       impact: minor
