@@ -393,7 +393,7 @@ func (c *Controller) syncHandler(key string) error {
 		if err != nil {
 			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
 		}
-		namespace, auxNamespace, err := runManager.Start(ctx, pipelineRun, pipelineRunsConfig)
+		namespace, auxNamespace, taskRunName, err := runManager.Start(ctx, pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			resultClass := serrors.GetClass(err)
@@ -408,6 +408,7 @@ func (c *Controller) syncHandler(key string) error {
 
 		pipelineRun.UpdateRunNamespace(namespace)
 		pipelineRun.UpdateAuxNamespace(auxNamespace)
+		pipelineRun.UpdateTaskRunName(taskRunName)
 
 		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
 			return err

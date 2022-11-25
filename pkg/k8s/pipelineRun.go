@@ -29,6 +29,7 @@ type PipelineRun interface {
 	GetKey() string
 	GetRunNamespace() string
 	GetAuxNamespace() string
+	GetTaskRunName() string
 	GetNamespace() string
 	GetPipelineRepoServerURL() (string, error)
 	HasDeletionTimestamp() bool
@@ -43,6 +44,7 @@ type PipelineRun interface {
 	UpdateRunNamespace(string)
 	UpdateAuxNamespace(string)
 	UpdateMessage(string)
+	UpdateTaskRunName(string)
 }
 
 type pipelineRun struct {
@@ -102,6 +104,11 @@ func (r *pipelineRun) GetRunNamespace() string {
 // for the pipeline run.
 func (r *pipelineRun) GetAuxNamespace() string {
 	return r.apiObj.Status.AuxiliaryNamespace
+}
+
+// GetTaskRunName returns the task run name of an pipeline run.
+func (r *pipelineRun) GetTaskRunName() string {
+	return r.apiObj.Status.TaskRunName
 }
 
 // GetKey returns the key of the pipelineRun
@@ -276,6 +283,15 @@ func (r *pipelineRun) UpdateAuxNamespace(ns string) {
 	r.ensureCopy()
 	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.AuxiliaryNamespace = ns
+		return nil, nil
+	})
+}
+
+// UpdateTaskRunName overrides the task run name of an pipeline run.
+func (r *pipelineRun) UpdateTaskRunName(name string) {
+	r.ensureCopy()
+	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
+		s.TaskRunName = name
 		return nil, nil
 	})
 }

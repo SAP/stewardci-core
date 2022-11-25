@@ -166,6 +166,7 @@ type PipelineStatus struct {
 	History            []string              `json:"history"`
 	Namespace          string                `json:"namespace"`
 	AuxiliaryNamespace string                `json:"auxiliaryNamespace"`
+	TaskRunName        string                `json:"taskRunName"`
 }
 
 // StateItem holds start and end time of a state in the history

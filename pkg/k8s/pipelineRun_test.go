@@ -40,6 +40,26 @@ func Test_pipelineRun_GetRunNamespace(t *testing.T) {
 	assert.Equal(t, "foo", ns)
 }
 
+func Test_pipelineRun_GetTaskRunName(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	ctx := context.Background()
+	run := &api.PipelineRun{
+		Status: api.PipelineStatus{
+			TaskRunName: "foo",
+		},
+	}
+	examinee, err := NewPipelineRun(ctx, run, nil)
+	assert.NilError(t, err)
+
+	// EXERCISE
+	ns := examinee.GetTaskRunName()
+
+	// VERIFY
+	assert.Equal(t, "foo", ns)
+}
+
 func Test_pipelineRun_GetKey(t *testing.T) {
 	t.Parallel()
 

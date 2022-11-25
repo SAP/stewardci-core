@@ -50,10 +50,6 @@ const (
 	// tektonClusterTaskJenkinsfileRunnerStep is the name of the step
 	// in the Tekton TaskRun that executes the Jenkinsfile Runner
 	tektonClusterTaskJenkinsfileRunnerStep = "jenkinsfile-runner"
-
-	// tektonTaskRun is the name of the Tekton TaskRun in each
-	// run namespace.
-	tektonTaskRunName = "steward-jenkinsfile-runner"
 )
 
 type runManager struct {
@@ -98,7 +94,7 @@ func newRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvi
 
 // Start prepares the isolated environment for a new run and starts
 // the run in this environment.
-func (c *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (namespace string, auxNamespace string, err error) {
+func (c *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (namespace, auxNamespace, taskRunName string, err error) {
 
 	runCtx := &runContext{
 		pipelineRun:        pipelineRun,
@@ -108,7 +104,7 @@ func (c *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun, pip
 	}
 	err = c.cleanupNamespaces(ctx, runCtx)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	// If something goes wrong while creating objects inside the namespaces, we delete everything.
@@ -120,10 +116,10 @@ func (c *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun, pip
 
 	err = c.prepareRunNamespace(ctx, runCtx)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
-
-	return runCtx.runNamespace, runCtx.auxNamespace, c.createTektonTaskRun(ctx, runCtx)
+	taskRunName, err = c.createTektonTaskRun(ctx, runCtx)
+	return runCtx.runNamespace, runCtx.auxNamespace, taskRunName, err
 }
 
 // prepareRunNamespace creates a new namespace for the pipeline run
@@ -482,8 +478,8 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 
 	tektonTaskRun := tekton.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      tektonTaskRunName,
-			Namespace: namespace,
+			GenerateName: runCtx.pipelineRun.Name,
+			Namespace:    namespace,
 			Annotations: map[string]string{
 				annotationPipelineRunKey: runCtx.pipelineRun.GetKey(),
 			},
@@ -537,7 +533,7 @@ func getTimeout(runCtx *runContext) *metav1.Duration {
 	return timeout
 }
 
-func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext) error {
+func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext) (string, error) {
 	if c.testing != nil && c.testing.createTektonTaskRunStub != nil {
 		return c.testing.createTektonTaskRunStub(ctx, runCtx)
 	}
@@ -547,8 +543,8 @@ func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext
 		return err
 	}
 	tektonClient := c.factory.TektonV1beta1()
-	_, err = tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(ctx, tektonTaskRun, metav1.CreateOptions{})
-	return err
+	createdTektonTaskRun, err := tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(ctx, tektonTaskRun, metav1.CreateOptions{})
+	return createdTektonTaskRun.Name, err
 }
 
 func (c *runManager) addTektonTaskRunParamsForJenkinsfileRunnerImage(
@@ -670,7 +666,8 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 // GetRun based on a pipelineRun
 func (c *runManager) GetRun(ctx context.Context, pipelineRun k8s.PipelineRun) (runifc.Run, error) {
 	namespace := pipelineRun.GetRunNamespace()
-	run, err := c.factory.TektonV1beta1().TaskRuns(namespace).Get(ctx, tektonTaskRunName, metav1.GetOptions{})
+	name := pipelineRun.GetTaskRunName()
+	run, err := c.factory.TektonV1beta1().TaskRuns(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, serrors.RecoverableIf(err,
 			k8serrors.IsServerTimeout(err) ||
