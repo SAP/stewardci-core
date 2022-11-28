@@ -3,7 +3,6 @@ package runctl
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"testing"
 
@@ -939,7 +938,6 @@ func createRun(t *testing.T, run *api.PipelineRun, cf *fake.ClientFactory) {
 	t.Helper()
 	ctx := context.Background()
 	run, err := cf.StewardV1alpha1().PipelineRuns(run.GetNamespace()).Create(ctx, run, metav1.CreateOptions{})
-	log.Printf("RUN::::%+v", run)
 	if err != nil {
 		t.Fatalf("failed to create pipeline run: %s", err.Error())
 	}
@@ -970,9 +968,6 @@ func getTektonTaskRun(t *testing.T, namespace string, cf *fake.ClientFactory) *t
 	t.Helper()
 	const tektonTaskRunName = "run1-"
 	ctx := context.Background()
-
-	list, err := cf.TektonV1beta1().TaskRuns(namespace).List(ctx, metav1.ListOptions{})
-	log.Printf("--->%+v", list)
 	taskRun, err := cf.TektonV1beta1().TaskRuns(namespace).Get(ctx, tektonTaskRunName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("could not get Tekton task run: %s", err.Error())
