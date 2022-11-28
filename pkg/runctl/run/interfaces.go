@@ -12,7 +12,7 @@ import (
 
 // Manager manages runs
 type Manager interface {
-	Start(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (string, string, error)
+	Start(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (string, string, string, error)
 	GetRun(ctx context.Context, pipelineRun k8s.PipelineRun) (Run, error)
 	Cleanup(ctx context.Context, pipelineRun k8s.PipelineRun) error
 }

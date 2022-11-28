@@ -3,6 +3,7 @@ package runctl
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"testing"
 
@@ -361,7 +362,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				name:         "new_ok",
 				pipelineSpec: api.PipelineSpec{},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-					rm.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil)
+					rm.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", "", nil)
 				},
 				pipelineRunsConfigStub: newEmptyRunsConfig,
 				isMaintenanceModeStub:  newIsMaintenanceModeStub(false, nil),
@@ -497,7 +498,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 					State: api.StatePreparing,
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-					rm.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil)
+					rm.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", "", nil)
 				},
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             api.ResultUndefined,
@@ -510,7 +511,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 					State: api.StatePreparing,
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-					rm.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", error1)
+					rm.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", "", error1)
 				},
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             api.ResultUndefined,
@@ -528,7 +529,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 
-					rm.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", serrors.Classify(error1, api.ResultErrorContent))
+					rm.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", "", serrors.Classify(error1, api.ResultErrorContent))
 				},
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             api.ResultErrorContent,
@@ -816,6 +817,7 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 			"spec": {},
 			"status": {
 				"namespace": "steward-run-ns-1",
+				"taskRunName": "steward-jenkinsfile-runner",
 				"state": "running"
 			}
 		}`),
@@ -936,7 +938,8 @@ func getPipelineRun(t *testing.T, name string, namespace string, cf *fake.Client
 func createRun(t *testing.T, run *api.PipelineRun, cf *fake.ClientFactory) {
 	t.Helper()
 	ctx := context.Background()
-	_, err := cf.StewardV1alpha1().PipelineRuns(run.GetNamespace()).Create(ctx, run, metav1.CreateOptions{})
+	run, err := cf.StewardV1alpha1().PipelineRuns(run.GetNamespace()).Create(ctx, run, metav1.CreateOptions{})
+	log.Printf("RUN::::%+v", run)
 	if err != nil {
 		t.Fatalf("failed to create pipeline run: %s", err.Error())
 	}
@@ -965,7 +968,11 @@ func updateRun(t *testing.T, run *api.PipelineRun, namespace string, cf *fake.Cl
 
 func getTektonTaskRun(t *testing.T, namespace string, cf *fake.ClientFactory) *tekton.TaskRun {
 	t.Helper()
+	const tektonTaskRunName = "run1-"
 	ctx := context.Background()
+
+	list, err := cf.TektonV1beta1().TaskRuns(namespace).List(ctx, metav1.ListOptions{})
+	log.Printf("--->%+v", list)
 	taskRun, err := cf.TektonV1beta1().TaskRuns(namespace).Get(ctx, tektonTaskRunName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("could not get Tekton task run: %s", err.Error())
@@ -989,6 +996,8 @@ func newFakeClientFactory(objects ...runtime.Object) *fake.ClientFactory {
 	cf.KubernetesClientset().PrependReactor("create", "*", fake.GenerateNameReactor(0))
 
 	cf.StewardClientset().PrependReactor("create", "*", fake.NewCreationTimestampReactor())
+
+	cf.TektonClientset().PrependReactor("create", "*", fake.GenerateNameReactor(0))
 
 	return cf
 }

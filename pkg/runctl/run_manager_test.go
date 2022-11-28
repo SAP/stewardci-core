@@ -1183,18 +1183,22 @@ func Test__runManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet
 	}
 	mockPipelineRun.UpdateRunNamespace(h.namespace1)
 	cf := k8sfake.NewClientFactory()
+	clientset := cf.TektonClientset()
+	// attach reactor to fake clientset
+	clientset.PrependReactor("create", "*", k8sfake.GenerateNameReactor(0))
+
 	examinee := runManager{
 		factory: cf,
 		testing: newRunManagerTestingWithAllNoopStubs(),
 	}
 
 	// EXERCISE
-	resultError := examinee.createTektonTaskRun(h.ctx, runCtx)
+	name, resultError := examinee.createTektonTaskRun(h.ctx, runCtx)
 
 	// VERIFY
 	assert.NilError(t, resultError)
 
-	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonClusterTaskName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, name, metav1.GetOptions{})
 	assert.NilError(t, err)
 	if equality.Semantic.DeepEqual(taskRun.Spec.PodTemplate, tektonPod.PodTemplate{}) {
 		t.Fatal("podTemplate of TaskRun is empty")
@@ -1238,12 +1242,12 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	}
 
 	// EXERCISE
-	resultError := examinee.createTektonTaskRun(h.ctx, runCtx)
+	name, resultError := examinee.createTektonTaskRun(h.ctx, runCtx)
 
 	// VERIFY
 	assert.NilError(t, resultError)
 
-	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonClusterTaskName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, name, metav1.GetOptions{})
 	assert.NilError(t, err)
 	expectedPodTemplate := &tektonPod.PodTemplate{
 		SecurityContext: &corev1.PodSecurityContext{
@@ -1290,7 +1294,7 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	runNamespace, _, resultError := examinee.Start(h.ctx, mockPipelineRun, config)
+	runNamespace, _, tektonTaskRunName, resultError := examinee.Start(h.ctx, mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY
@@ -1368,15 +1372,15 @@ func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
 				}
 				return nil
 			}
-			examinee.testing.createTektonTaskRunStub = func(_ context.Context, ctx *runContext) error {
-				return test.createTektonTaskRunError
+			examinee.testing.createTektonTaskRunStub = func(_ context.Context, ctx *runContext) (string, error) {
+				return "runName", test.createTektonTaskRunError
 			}
 			examinee.testing.prepareRunNamespaceStub = func(_ context.Context, ctx *runContext) error {
 				return test.prepareRunNamespaceError
 			}
 
 			// EXERCISE
-			_, _, resultError := examinee.Start(h.ctx, mockPipelineRun, config)
+			_, _, _, resultError := examinee.Start(h.ctx, mockPipelineRun, config)
 
 			// VERIFY
 			if test.expectedError != nil {
@@ -1505,7 +1509,7 @@ func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	_, _, resultError := examinee.Start(h.ctx, mockPipelineRun, config)
+	_, _, _, resultError := examinee.Start(h.ctx, mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY
@@ -1734,7 +1738,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 			examinee, runCtx, cf := setupExaminee(t, pipelineRunJSON)
 
 			// exercise
-			resultError := examinee.createTektonTaskRun(ctx, runCtx)
+			_, resultError := examinee.createTektonTaskRun(ctx, runCtx)
 			assert.NilError(t, resultError)
 			// verify
 			taskRun := expectSingleTaskRun(t, cf, runCtx.pipelineRun)
@@ -1787,7 +1791,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 			examinee, runCtx, cf := setupExaminee(t, pipelineRunJSON)
 
 			// exercise
-			resultError := examinee.createTektonTaskRun(ctx, runCtx)
+			_, resultError := examinee.createTektonTaskRun(ctx, runCtx)
 			assert.NilError(t, resultError)
 
 			// verify
@@ -1850,7 +1854,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 			t.Log("input:", pipelineRunJSON)
 			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
 			// exercise
-			resultError := examinee.createTektonTaskRun(ctx, runCtx)
+			_, resultError := examinee.createTektonTaskRun(ctx, runCtx)
 			assert.ErrorContains(t, resultError, tc.expectedError)
 		})
 	}
@@ -1898,7 +1902,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 			examinee, runCtx, _ := setupExaminee(t, pipelineRunJSON)
 
 			// exercise
-			resultError := examinee.createTektonTaskRun(ctx, runCtx)
+			_, resultError := examinee.createTektonTaskRun(ctx, runCtx)
 
 			// verify
 			assert.NilError(t, resultError)
@@ -2005,11 +2009,15 @@ func (h *testHelper1) prepareMocks(ctrl *gomock.Controller) (*k8smocks.MockClien
 	return h.prepareMocksWithSpec(ctrl, &stewardv1alpha1.PipelineSpec{})
 }
 
+const (
+	testRunName = "runName1"
+)
+
 func (*testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv1alpha1.PipelineSpec) (*k8smocks.MockClientFactory, *k8smocks.MockPipelineRun, *secretmocks.MockSecretProvider) {
 	mockFactory := k8smocks.NewMockClientFactory(ctrl)
 
 	kubeClientSet := kubefake.NewSimpleClientset()
-	kubeClientSet.PrependReactor("create", "*", k8sfake.GenerateNameReactor(0))
+	kubeClientSet.PrependReactor("create", "TaskRun", k8sfake.GenerateNameReactor(0))
 
 	mockFactory.EXPECT().CoreV1().Return(kubeClientSet.CoreV1()).AnyTimes()
 	mockFactory.EXPECT().RbacV1().Return(kubeClientSet.RbacV1()).AnyTimes()
@@ -2032,6 +2040,7 @@ func (*testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv
 	mockPipelineRun.EXPECT().GetStatus().Return(&stewardv1alpha1.PipelineStatus{}).AnyTimes()
 	mockPipelineRun.EXPECT().GetKey().Return("key").AnyTimes()
 	mockPipelineRun.EXPECT().GetPipelineRepoServerURL().Return("server", nil).AnyTimes()
+	mockPipelineRun.EXPECT().GetName().Return(testRunName).AnyTimes()
 	mockPipelineRun.EXPECT().GetRunNamespace().DoAndReturn(func() string {
 		return runNamespace
 	}).AnyTimes()

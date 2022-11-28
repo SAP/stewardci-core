@@ -62,7 +62,7 @@ type runManager struct {
 type runManagerTesting struct {
 	cleanupStub                               func(context.Context, *runContext) error
 	copySecretsToRunNamespaceStub             func(context.Context, *runContext) (string, []string, error)
-	createTektonTaskRunStub                   func(context.Context, *runContext) error
+	createTektonTaskRunStub                   func(context.Context, *runContext) (string, error)
 	getSecretManagerStub                      func(*runContext) runifc.SecretManager
 	getServiceAccountSecretNameStub           func(context.Context, *runContext) (string, error)
 	prepareRunNamespaceStub                   func(context.Context, *runContext) error
@@ -478,7 +478,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 
 	tektonTaskRun := tekton.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: runCtx.pipelineRun.Name,
+			GenerateName: fmt.Sprintf("%s-", runCtx.pipelineRun.GetName()),
 			Namespace:    namespace,
 			Annotations: map[string]string{
 				annotationPipelineRunKey: runCtx.pipelineRun.GetKey(),
@@ -540,7 +540,7 @@ func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext
 
 	tektonTaskRun, err := c.createTektonTaskRunObject(ctx, runCtx)
 	if err != nil {
-		return err
+		return "", err
 	}
 	tektonClient := c.factory.TektonV1beta1()
 	createdTektonTaskRun, err := tektonClient.TaskRuns(tektonTaskRun.GetNamespace()).Create(ctx, tektonTaskRun, metav1.CreateOptions{})
