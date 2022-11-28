@@ -35,7 +35,7 @@ func (t *tenantNamespace) TargetClientFactory() ClientFactory {
 	return t.factory
 }
 
-//  GetSecretProvider returns a secret provider
+// GetSecretProvider returns a secret provider
 func (t *tenantNamespace) GetSecretProvider() secrets.SecretProvider {
 	return t.secretProvider
 }

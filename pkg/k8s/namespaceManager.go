@@ -14,7 +14,7 @@ import (
 	utils "github.com/SAP/stewardci-core/pkg/utils"
 )
 
-//NamespaceManager manages namespaces
+// NamespaceManager manages namespaces
 type NamespaceManager interface {
 	Create(ctx context.Context, name string, annotations map[string]string) (string, error)
 	Delete(ctx context.Context, name string) error
@@ -40,9 +40,10 @@ const (
 	labelID     = "id"
 )
 
-//Create creates a new namespace.
-//    nameCustomPart	the namespace name will be <prefix>-<nameCustomPart>-<random>
-//    annotations       annotations to create on the namespace
+// Create creates a new namespace.
+//
+//	nameCustomPart	the namespace name will be <prefix>-<nameCustomPart>-<random>
+//	annotations       annotations to create on the namespace
 func (m *namespaceManager) Create(ctx context.Context, nameCustomPart string, annotations map[string]string) (string, error) {
 	name, err := m.generateName(nameCustomPart)
 	if err != nil {

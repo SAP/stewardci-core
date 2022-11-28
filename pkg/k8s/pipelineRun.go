@@ -296,7 +296,7 @@ func (r *pipelineRun) UpdateTaskRunName(name string) {
 	})
 }
 
-//HasDeletionTimestamp returns true if deletion timestamp is set
+// HasDeletionTimestamp returns true if deletion timestamp is set
 func (r *pipelineRun) HasDeletionTimestamp() bool {
 	return !r.apiObj.ObjectMeta.DeletionTimestamp.IsZero()
 }
@@ -355,7 +355,6 @@ func (r *pipelineRun) mustChangeStatusAndStoreForRetry(change changeFunc) {
 // This function get executed on the current memory representation of the pipeline run
 // and remembered so that it can be re-applied later in case of a re-try. The change function
 // must only apply changes to pipelinerun.Status.
-//
 func (r *pipelineRun) changeStatusAndStoreForRetry(change changeFunc) error {
 	commitRecorder, err := change(r.GetStatus())
 	if err == nil {
@@ -372,10 +371,11 @@ func (r *pipelineRun) changeStatusAndStoreForRetry(change changeFunc) error {
 // object, not more.
 // In case of a conflict (object in storage is different version than
 // ours), the update is retried with backoff:
-//     - wait
-//     - fetch object from storage
-//     - run `change`
-//     - write object status to storage
+//   - wait
+//   - fetch object from storage
+//   - run `change`
+//   - write object status to storage
+//
 // After too many conflicts retrying is aborted, in which case an
 // error is returned.
 // Non-conflict errors are returned without retrying.

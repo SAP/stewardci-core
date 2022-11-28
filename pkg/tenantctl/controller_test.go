@@ -993,9 +993,10 @@ func Test_Controller_listManagedRoleBindings_FailureCase(t *testing.T) {
 	assert.Assert(t, resultList == nil)
 }
 
-//Test for ERROR: Failed to update status of tenant '4e93d9d5-276e-47ca-a570-b3a763aaef3e' in namespace 'stu':
-//         Operation cannot be fulfilled on tenants.steward.sap.com "4e93d9d5-276e-47ca-a570-b3a763aaef3e":
-//         the object has been modified; please apply your changes to the latest version and try again
+// Test for ERROR: Failed to update status of tenant '4e93d9d5-276e-47ca-a570-b3a763aaef3e' in namespace 'stu':
+//
+//	Operation cannot be fulfilled on tenants.steward.sap.com "4e93d9d5-276e-47ca-a570-b3a763aaef3e":
+//	the object has been modified; please apply your changes to the latest version and try again
 func Test_Controller_updateStatus_ConcurrentModification(t *testing.T) {
 	t.Skip("does not work with fake clients as those do not manage UID, resource version, generation etc.")
 
