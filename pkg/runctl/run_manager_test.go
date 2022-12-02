@@ -930,7 +930,7 @@ func Test__runManager_setupLimitRangeFromConfig__UnexpectedGroup(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	// We use a mocked client factory without expected calls, because
+	// We use a mocked client factory without expected calls, becausenewTestHelper1
 	// the SUT should not use it if policy decoding fails.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
@@ -1989,18 +1989,20 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 }
 
 type testHelper1 struct {
-	t            *testing.T
-	ctx          context.Context
-	namespace1   string
-	pipelineRun1 string
+	t             *testing.T
+	ctx           context.Context
+	namespace1    string
+	pipelineRun1  string
+	runNamespace1 string
 }
 
 func newTestHelper1(t *testing.T) *testHelper1 {
 	h := &testHelper1{
-		t:            t,
-		ctx:          context.Background(),
-		namespace1:   "namespace1",
-		pipelineRun1: "pipelinerun1",
+		t:             t,
+		ctx:           context.Background(),
+		namespace1:    "namespace1",
+		pipelineRun1:  "pipelinerun1",
+		runNamespace1: "runNamespace1",
 	}
 	return h
 }
@@ -2083,11 +2085,31 @@ func (h *testHelper1) preparePredefinedClusterRole(cf *k8smocks.MockClientFactor
 	}
 }
 
+func (h *testHelper1) addTektonTaskRun(cf *k8smocks.MockClientFactory) {
+	t := h.t
+	t.Helper()
+	_, err := cf.TektonV1beta1().TaskRuns(h.runNamespace1).Create(h.ctx, h.dummyTektonTaskRun(), metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("could not create tekton task run: %s", err.Error())
+	}
+}
+
+func (h *testHelper1) dummyTektonTaskRun() *tektonv1beta1.TaskRun {
+	t := h.t
+	t.Helper()
+	return &tektonv1beta1.TaskRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      tektonTaskRunName,
+			Namespace: h.runNamespace1,
+		},
+	}
+}
+
 func (h *testHelper1) prepareMocks(ctrl *gomock.Controller) (*k8smocks.MockClientFactory, *k8smocks.MockPipelineRun, *secretmocks.MockSecretProvider) {
 	return h.prepareMocksWithSpec(ctrl, &stewardv1alpha1.PipelineSpec{})
 }
 
-func (*testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv1alpha1.PipelineSpec) (*k8smocks.MockClientFactory, *k8smocks.MockPipelineRun, *secretmocks.MockSecretProvider) {
+func (h *testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv1alpha1.PipelineSpec) (*k8smocks.MockClientFactory, *k8smocks.MockPipelineRun, *secretmocks.MockSecretProvider) {
 	mockFactory := k8smocks.NewMockClientFactory(ctrl)
 
 	kubeClientSet := kubefake.NewSimpleClientset()
@@ -2106,7 +2128,7 @@ func (*testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv
 	tektonClientset := tektonfakeclient.NewSimpleClientset()
 	mockFactory.EXPECT().TektonV1beta1().Return(tektonClientset.TektonV1beta1()).AnyTimes()
 
-	runNamespace := ""
+	runNamespace := h.runNamespace1
 	auxNamespace := ""
 	mockPipelineRun := k8smocks.NewMockPipelineRun(ctrl)
 	mockPipelineRun.EXPECT().GetAPIObject().Return(&stewardv1alpha1.PipelineRun{Spec: *spec}).AnyTimes()
@@ -2192,4 +2214,45 @@ func Test__runManager__getTimeout__retrievesTheDefaultPipelineTimeoutIfTimeoutIs
 
 	//VERIFY
 	assert.DeepEqual(t, defaultTimeout, result)
+}
+
+func Test__runManager_GetRun_Missing(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	h := newTestHelper1(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+	h.addTektonTaskRun(mockFactory)
+	examinee := newRunManager(mockFactory, mockSecretProvider)
+
+	// EXERCISE
+	run, resultError := examinee.GetRun(h.ctx, mockPipelineRun)
+
+	// VERIFY
+	assert.NilError(t, resultError)
+	assert.Assert(t, run != nil)
+
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+}
+
+func Test__runManager_GetRun_Existing(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	h := newTestHelper1(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+	examinee := newRunManager(mockFactory, mockSecretProvider)
+
+	// EXERCISE
+	run, resultError := examinee.GetRun(h.ctx, mockPipelineRun)
+
+	// VERIFY
+	assert.NilError(t, resultError)
+	assert.Assert(t, run == nil)
+
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
 }
