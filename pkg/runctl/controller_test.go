@@ -563,6 +563,49 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedError:              errorRecover1,
 			},
 			{
+				name:         "waiting_start_success",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateWaiting,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().GetRun(gomock.Any(), gomock.Any()).Return(nil, nil)
+					rm.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				},
+				loadPipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:             "",
+				expectedState:              api.StateWaiting,
+			},
+			{
+				name:         "waiting_start_fail",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateWaiting,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().GetRun(gomock.Any(), gomock.Any()).Return(nil, nil)
+					rm.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return(error1)
+				},
+				loadPipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:             api.ResultUndefined,
+				expectedState:              api.StateWaiting,
+				expectedError:              error1,
+			},
+			{
+				name:         "waiting_start_fail_on_config_error_during_start",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateWaiting,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().GetRun(gomock.Any(), gomock.Any()).Return(nil, nil)
+					rm.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return(serrors.Classify(error1, api.ResultErrorConfig))
+				},
+				loadPipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:             api.ResultErrorConfig,
+				expectedState:              api.StateCleaning,
+			},
+			{
 				name:         "waiting_not_started",
 				pipelineSpec: api.PipelineSpec{},
 				currentStatus: api.PipelineStatus{
