@@ -1290,27 +1290,26 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	runNamespace, _, resultError := examinee.Start(h.ctx, mockPipelineRun, config)
+	resultError := examinee.Start(h.ctx, mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY
+	runNamespace := mockPipelineRun.GetRunNamespace()
 	result, err := mockFactory.TektonV1beta1().TaskRuns(runNamespace).Get(
 		h.ctx, tektonTaskRunName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	assert.Assert(t, result != nil)
 }
 
-func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
+func Test__runManager_Prepare__Perform_cleanup_on_error(t *testing.T) {
 	t.Parallel()
 
 	prepareRunnamespaceErr := fmt.Errorf("cannot prepare run namespace: foo")
-	createTektonTaskRunError := fmt.Errorf("cannot create tekton taks run: foo")
 	cleanupError := fmt.Errorf("cannot cleanup: foo")
 
 	for _, test := range []struct {
 		name                     string
 		prepareRunNamespaceError error
-		createTektonTaskRunError error
 		cleanupError             error
 		failOnCleanupCount       int
 		expectedError            error
@@ -1324,12 +1323,6 @@ func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
 			name:                     "failing inside prepareRunNamespace",
 			prepareRunNamespaceError: prepareRunnamespaceErr,
 			expectedError:            prepareRunnamespaceErr,
-			expectedCleanupCount:     2, // before and after (since error occured)
-		},
-		{
-			name:                     "failing inside creating tekton task run",
-			createTektonTaskRunError: createTektonTaskRunError,
-			expectedError:            createTektonTaskRunError,
 			expectedCleanupCount:     2, // before and after (since error occured)
 		},
 		{
@@ -1368,20 +1361,86 @@ func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
 				}
 				return nil
 			}
-			examinee.testing.createTektonTaskRunStub = func(_ context.Context, ctx *runContext) error {
-				return test.createTektonTaskRunError
-			}
 			examinee.testing.prepareRunNamespaceStub = func(_ context.Context, ctx *runContext) error {
 				return test.prepareRunNamespaceError
 			}
 
 			// EXERCISE
-			_, _, resultError := examinee.Start(h.ctx, mockPipelineRun, config)
+			_, _, resultError := examinee.Prepare(h.ctx, mockPipelineRun, config)
 
 			// VERIFY
 			if test.expectedError != nil {
 				assert.Error(t, resultError, test.expectedError.Error())
 			}
+			assert.Assert(t, cleanupCalled == test.expectedCleanupCount)
+		})
+	}
+}
+
+func Test__runManager_Start__Perform_cleanup_on_error(t *testing.T) {
+	t.Parallel()
+
+	createTektonTaskRunError := fmt.Errorf("cannot create tekton taks run: foo")
+	cleanupError := fmt.Errorf("cannot cleanup: foo")
+
+	for _, test := range []struct {
+		name                     string
+		createTektonTaskRunError error
+		cleanupError             error
+		failOnCleanupCount       int
+		expectedError            error
+		expectedCleanupCount     int
+	}{
+		{
+			name:                 "no failure",
+			expectedCleanupCount: 0,
+		},
+		{
+			name:                     "failing inside creating tekton task run",
+			createTektonTaskRunError: createTektonTaskRunError,
+			expectedError:            createTektonTaskRunError,
+			expectedCleanupCount:     1,
+		},
+		{
+			name:                     "failing inside defered cleanup",
+			createTektonTaskRunError: createTektonTaskRunError,
+			failOnCleanupCount:       1,
+			cleanupError:             cleanupError,
+			expectedError:            createTektonTaskRunError, // we still expect "content" error
+			expectedCleanupCount:     1,                        // we are failing inside cleanup
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			// SETUP
+			h := newTestHelper1(t)
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+			config := &cfg.PipelineRunsConfigStruct{}
+
+			examinee := newRunManager(mockFactory, mockSecretProvider)
+			examinee.testing = newRunManagerTestingWithRequiredStubs()
+
+			var cleanupCalled int
+			examinee.testing.cleanupStub = func(_ context.Context, ctx *runContext) error {
+				assert.Assert(t, ctx.pipelineRun == mockPipelineRun)
+				cleanupCalled++
+				if test.cleanupError != nil && cleanupCalled == test.failOnCleanupCount {
+					return test.cleanupError
+				}
+				return nil
+			}
+			examinee.testing.createTektonTaskRunStub = func(_ context.Context, ctx *runContext) error {
+				return test.createTektonTaskRunError
+			}
+			// EXERCISE
+			resultError := examinee.Start(h.ctx, mockPipelineRun, config)
+
+			// VERIFY
+			if test.expectedError != nil {
+				assert.Error(t, resultError, test.expectedError.Error())
+			}
+			//log.Printf("Tst: %s %d", test.name, cleanupCalled)
 			assert.Assert(t, cleanupCalled == test.expectedCleanupCount)
 		})
 	}
@@ -1490,6 +1549,29 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 	}
 }
 
+func Test__runManager_Prepare__DoesNotSetPipelineRunStatus(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	h := newTestHelper1(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+	h.preparePredefinedClusterRole(mockFactory, mockPipelineRun)
+	config := &cfg.PipelineRunsConfigStruct{}
+
+	examinee := newRunManager(mockFactory, mockSecretProvider)
+	examinee.testing = newRunManagerTestingWithRequiredStubs()
+
+	// EXERCISE
+	_, _, resultError := examinee.Prepare(h.ctx, mockPipelineRun, config)
+	assert.NilError(t, resultError)
+
+	// VERIFY
+	// UpdateState should never be called
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+}
+
 func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
 	t.Parallel()
 
@@ -1505,7 +1587,7 @@ func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	_, _, resultError := examinee.Start(h.ctx, mockPipelineRun, config)
+	resultError := examinee.Start(h.ctx, mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY

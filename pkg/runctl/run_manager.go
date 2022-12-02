@@ -96,9 +96,8 @@ func newRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvi
 	}
 }
 
-// Start prepares the isolated environment for a new run and starts
-// the run in this environment.
-func (c *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (namespace string, auxNamespace string, err error) {
+// Prepare prepares the isolated environment for a new run
+func (c *runManager) Prepare(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (namespace string, auxNamespace string, err error) {
 
 	runCtx := &runContext{
 		pipelineRun:        pipelineRun,
@@ -123,7 +122,29 @@ func (c *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun, pip
 		return "", "", err
 	}
 
-	return runCtx.runNamespace, runCtx.auxNamespace, c.createTektonTaskRun(ctx, runCtx)
+	return runCtx.runNamespace, runCtx.auxNamespace, nil
+}
+
+// Start starts the run in the environment prepared by Prepare.
+func (c *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (err error) {
+
+	runCtx := &runContext{
+		pipelineRun:        pipelineRun,
+		pipelineRunsConfig: pipelineRunsConfig,
+		runNamespace:       pipelineRun.GetRunNamespace(),
+		auxNamespace:       pipelineRun.GetAuxNamespace(),
+	}
+
+	// If something goes wrong while creating objects inside the namespaces, we delete everything.
+	defer func() {
+		if err != nil {
+			c.cleanupNamespaces(ctx, runCtx) // clean-up ignoring error
+		}
+	}()
+
+	err = c.createTektonTaskRun(ctx, runCtx)
+
+	return err
 }
 
 // prepareRunNamespace creates a new namespace for the pipeline run
