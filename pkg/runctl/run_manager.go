@@ -135,16 +135,7 @@ func (c *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun, pip
 		auxNamespace:       pipelineRun.GetAuxNamespace(),
 	}
 
-	// If something goes wrong while creating objects inside the namespaces, we delete everything.
-	defer func() {
-		if err != nil {
-			c.cleanupNamespaces(ctx, runCtx) // clean-up ignoring error
-		}
-	}()
-
-	err = c.createTektonTaskRun(ctx, runCtx)
-
-	return err
+	return c.createTektonTaskRun(ctx, runCtx)
 }
 
 // prepareRunNamespace creates a new namespace for the pipeline run

@@ -413,23 +413,31 @@ func (c *Controller) syncHandler(key string) error {
 			return err
 		}
 
-		// TODO: Move Start to StateWaiting and do proper commit
-		if err = runManager.Start(ctx, pipelineRun, pipelineRunsConfig); err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
-			resultClass := serrors.GetClass(err)
-			// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
-			if resultClass != api.ResultUndefined {
-				pipelineRun.UpdateMessage(err.Error())
-				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
-				return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, resultClass, metav1.Now())
-			}
-			return err
-		}
-
 	case api.StateWaiting:
 		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
 			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "waiting failed")
+		}
+
+		if run == nil {
+			// the configuration should be loaded once per sync to avoid inconsistencies
+			// in case of concurrent configuration changes
+			pipelineRunsConfig, err := c.loadPipelineRunsConfig(ctx)
+			if err != nil {
+				return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
+			}
+			if err = runManager.Start(ctx, pipelineRun, pipelineRunsConfig); err != nil {
+				c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
+				resultClass := serrors.GetClass(err)
+				// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
+				if resultClass != api.ResultUndefined {
+					pipelineRun.UpdateMessage(err.Error())
+					pipelineRun.StoreErrorAsMessage(err, "preparing failed")
+					return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, resultClass, metav1.Now())
+				}
+				return err
+			}
+			return nil
 		}
 		started := run.GetStartTime()
 		if started != nil {

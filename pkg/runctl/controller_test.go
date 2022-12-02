@@ -362,7 +362,6 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				pipelineSpec: api.PipelineSpec{},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 					rm.EXPECT().Prepare(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil)
-					rm.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				},
 				pipelineRunsConfigStub: newEmptyRunsConfig,
 				isMaintenanceModeStub:  newIsMaintenanceModeStub(false, nil),
@@ -499,7 +498,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 					rm.EXPECT().Prepare(gomock.Any(), gomock.Any(), gomock.Any()).Return("", "", nil)
-					rm.EXPECT().Start(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				},
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             api.ResultUndefined,
