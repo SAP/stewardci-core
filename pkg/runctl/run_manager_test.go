@@ -1927,6 +1927,17 @@ type testHelper1 struct {
 	runNamespace1 string
 }
 
+func newTestHelperNoRunNamespace(t *testing.T) *testHelper1 {
+	h := &testHelper1{
+		t:             t,
+		ctx:           context.Background(),
+		namespace1:    "namespace1",
+		pipelineRun1:  "pipelinerun1",
+		runNamespace1: "",
+	}
+	return h
+}
+
 func newTestHelper1(t *testing.T) *testHelper1 {
 	h := &testHelper1{
 		t:             t,
@@ -2184,6 +2195,64 @@ func Test__runManager_GetRun_Existing(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, resultError)
 	assert.Assert(t, run == nil)
+
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+}
+
+func Test__runManager_DeleteRun_Success(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	h := newTestHelper1(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+	h.addTektonTaskRun(mockFactory)
+	examinee := newRunManager(mockFactory, mockSecretProvider)
+
+	// EXERCISE
+	resultError := examinee.DeleteRun(h.ctx, mockPipelineRun)
+
+	// VERIFY
+	assert.NilError(t, resultError)
+
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+}
+
+func Test__runManager_DeleteRun_Missing(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	h := newTestHelper1(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+	examinee := newRunManager(mockFactory, mockSecretProvider)
+
+	// EXERCISE
+	resultError := examinee.DeleteRun(h.ctx, mockPipelineRun)
+
+	// VERIFY
+	assert.Error(t, resultError, `cannot delete taskrun in run namespace "runNamespace1": taskruns.tekton.dev "steward-jenkinsfile-runner" not found`)
+
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+}
+
+func Test__runManager_DeleteRun_MissingRunNamespace(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	h := newTestHelperNoRunNamespace(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+	examinee := newRunManager(mockFactory, mockSecretProvider)
+	mockPipelineRun.EXPECT().GetName().Return("foo").Times(1)
+	// EXERCISE
+	resultError := examinee.DeleteRun(h.ctx, mockPipelineRun)
+
+	// VERIFY
+	assert.Error(t, resultError, `cannot delete taskrun, runnamespace not set in "foo"`)
 
 	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
 }

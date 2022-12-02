@@ -134,6 +134,20 @@ func (mr *MockRunMockRecorder) IsFinished() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsFinished", reflect.TypeOf((*MockRun)(nil).IsFinished))
 }
 
+// IsRestartable mocks base method.
+func (m *MockRun) IsRestartable() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsRestartable")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsRestartable indicates an expected call of IsRestartable.
+func (mr *MockRunMockRecorder) IsRestartable() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRestartable", reflect.TypeOf((*MockRun)(nil).IsRestartable))
+}
+
 // MockManager is a mock of Manager interface.
 type MockManager struct {
 	ctrl     *gomock.Controller
@@ -169,6 +183,20 @@ func (m *MockManager) Cleanup(arg0 context.Context, arg1 k8s.PipelineRun) error 
 func (mr *MockManagerMockRecorder) Cleanup(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cleanup", reflect.TypeOf((*MockManager)(nil).Cleanup), arg0, arg1)
+}
+
+// DeleteRun mocks base method.
+func (m *MockManager) DeleteRun(arg0 context.Context, arg1 k8s.PipelineRun) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteRun", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteRun indicates an expected call of DeleteRun.
+func (mr *MockManagerMockRecorder) DeleteRun(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRun", reflect.TypeOf((*MockManager)(nil).DeleteRun), arg0, arg1)
 }
 
 // GetRun mocks base method.

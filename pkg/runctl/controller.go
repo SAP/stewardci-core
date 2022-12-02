@@ -439,6 +439,24 @@ func (c *Controller) syncHandler(key string) error {
 			}
 			return nil
 		}
+
+		if run.IsRestartable() {
+
+			err := runManager.DeleteRun(ctx, pipelineRun)
+
+			// TODO: Check for wait timeout
+			timeout := false
+			if err == nil && timeout {
+				err = fmt.Errorf("wait timeout reached")
+			}
+			if err != nil {
+				pipelineRun.UpdateMessage(err.Error())
+				pipelineRun.StoreErrorAsMessage(err, "restart failed")
+				return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, api.ResultErrorInfra, metav1.Now())
+			}
+			return nil
+		}
+
 		started := run.GetStartTime()
 		if started != nil {
 			if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateRunning, *started); err != nil {

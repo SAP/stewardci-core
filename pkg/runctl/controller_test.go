@@ -613,6 +613,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 					run.EXPECT().GetStartTime().Return(nil)
+					run.EXPECT().IsRestartable().Return(false)
 					rm.EXPECT().GetRun(gomock.Any(), gomock.Any()).Return(run, nil)
 				},
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
@@ -628,11 +629,45 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 					now := metav1.Now()
 					run.EXPECT().GetStartTime().Return(&now)
+					run.EXPECT().IsRestartable().Return(false)
 					rm.EXPECT().GetRun(gomock.Any(), gomock.Any()).Return(run, nil)
 				},
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             "",
 				expectedState:              api.StateRunning,
+			},
+			{
+				name:         "waiting_restartable",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateWaiting,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					run.EXPECT().IsRestartable().Return(true)
+
+					rm.EXPECT().GetRun(gomock.Any(), gomock.Any()).Return(run, nil)
+					rm.EXPECT().DeleteRun(gomock.Any(), gomock.Any()).Return(nil)
+				},
+				loadPipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:             "",
+				expectedState:              api.StateWaiting,
+			},
+			{
+				name:         "waiting_restartable_delete_fails",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateWaiting,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					run.EXPECT().IsRestartable().Return(true)
+
+					rm.EXPECT().GetRun(gomock.Any(), gomock.Any()).Return(run, nil)
+					rm.EXPECT().DeleteRun(gomock.Any(), gomock.Any()).Return(error1)
+				},
+				loadPipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:             api.ResultErrorInfra,
+				expectedState:              api.StateCleaning,
+				expectedMessage:            "restart failed",
 			},
 			{
 				name:         "running_not_finished",

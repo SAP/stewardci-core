@@ -16,6 +16,7 @@ type Manager interface {
 	Start(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) error
 	GetRun(ctx context.Context, pipelineRun k8s.PipelineRun) (Run, error)
 	Cleanup(ctx context.Context, pipelineRun k8s.PipelineRun) error
+	DeleteRun(ctx context.Context, pipelineRun k8s.PipelineRun) error
 }
 
 // Run represents a pipeline run
