@@ -21,6 +21,7 @@ type Manager interface {
 // Run represents a pipeline run
 type Run interface {
 	GetStartTime() *metav1.Time
+	IsRestartable() bool
 	IsFinished() (bool, steward.Result)
 	GetCompletionTime() *metav1.Time
 	GetContainerInfo() *corev1.ContainerState

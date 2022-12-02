@@ -57,6 +57,21 @@ func (r *tektonRun) getSucceededCondition() *knativeapis.Condition {
 	return r.tektonTaskRun.Status.GetCondition(knativeapis.ConditionSucceeded)
 }
 
+// IsRestartable returns true if run is finished but could be restarted
+func (r *tektonRun) IsRestartable() bool {
+	condition := r.getSucceededCondition()
+	if condition.IsFalse() {
+		// TaskRun finished unsuccessfully, check reason...
+		switch condition.Reason {
+		case tekton.TaskRunReasonImagePullFailed.String():
+			return true
+		default:
+			// TODO handle other failure reasons like quota exceedance
+		}
+	}
+	return false
+}
+
 // IsFinished returns true if run is finished
 func (r *tektonRun) IsFinished() (bool, steward.Result) {
 	condition := r.getSucceededCondition()
