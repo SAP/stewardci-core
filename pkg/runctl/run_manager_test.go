@@ -59,6 +59,7 @@ func newRunManagerTestingWithAllNoopStubs() *runManagerTesting {
 func newRunManagerTestingWithRequiredStubs() *runManagerTesting {
 	return &runManagerTesting{
 		getServiceAccountSecretNameStub: func(context.Context, *runContext) (string, error) { return "", nil },
+		ensureServiceAccountTokenStub:   ensureServiceAccountTokenStub,
 	}
 }
 
@@ -1208,10 +1209,6 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	int64Ptr := func(val int64) *int64 { return &val }
 
 	// SETUP
-	const (
-		serviceAccountSecretName = "foo"
-	)
-
 	h := newTestHelper1(t)
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -1233,9 +1230,6 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 		factory: cf,
 		testing: newRunManagerTestingWithAllNoopStubs(),
 	}
-	examinee.testing.getServiceAccountSecretNameStub = func(_ context.Context, ctx *runContext) (string, error) {
-		return serviceAccountSecretName, nil
-	}
 
 	// EXERCISE
 	resultError := examinee.createTektonTaskRun(h.ctx, runCtx)
@@ -1256,7 +1250,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 				Name: "service-account-token",
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName:  serviceAccountSecretName,
+						SecretName:  serviceAccountTokenName,
 						DefaultMode: int32Ptr(0644),
 					},
 				},

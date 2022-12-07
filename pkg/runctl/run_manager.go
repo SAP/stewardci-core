@@ -13,6 +13,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/featureflag"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
+	k8sProvider "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/k8s"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	"github.com/SAP/stewardci-core/pkg/runctl/secretmgr"
@@ -37,6 +38,7 @@ const (
 	runNamespacePrefix       = "steward-run"
 	runNamespaceRandomLength = 5
 	serviceAccountName       = "default"
+	serviceAccountTokenName  = "steward-service-account-token"
 
 	// in general, the token of the above service account should not be automatically mounted into pods
 	automountServiceAccountToken = false
@@ -78,6 +80,7 @@ type runManagerTesting struct {
 	setupStaticLimitRangeStub                 func(context.Context, *runContext) error
 	setupStaticNetworkPoliciesStub            func(context.Context, *runContext) error
 	setupStaticResourceQuotaStub              func(context.Context, *runContext) error
+	ensureServiceAccountTokenStub             func(context.Context, string, string) error
 }
 
 type runContext struct {
@@ -238,8 +241,36 @@ func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext
 			serviceAccountName, runCtx.runNamespace,
 		)
 	}
+
 	runCtx.serviceAccount = serviceAccount
+
+	serviceAccountSecretName, err := c.getServiceAccountSecretName(ctx, runCtx)
+	if err != nil {
+		return errors.Wrapf(err,
+			"failed to get service account secret name %q in namespace %q",
+			serviceAccountName, runCtx.runNamespace,
+		)
+	}
+	err = c.ensureServiceAccountToken(ctx, serviceAccountSecretName, runCtx.runNamespace)
+	if err != nil {
+		return errors.Wrapf(err,
+			"failed to create token %q for service account %q in namespace %q",
+			serviceAccountSecretName, serviceAccountName, runCtx.runNamespace,
+		)
+	}
 	return nil
+}
+
+func (c *runManager) ensureServiceAccountToken(ctx context.Context, serviceAccountSecretName, runNamespace string) error {
+	if c.testing != nil && c.testing.ensureServiceAccountTokenStub != nil {
+		return c.testing.ensureServiceAccountTokenStub(ctx, serviceAccountSecretName, runNamespace)
+	}
+	secretClient := c.factory.CoreV1().Secrets(runNamespace)
+	secretProvider := k8sProvider.NewProvider(secretClient, runNamespace)
+	secretHelper := secrets.NewSecretHelper(secretProvider, runNamespace, secretClient)
+	rename := []secrets.SecretTransformer{secrets.RenameTransformer(serviceAccountTokenName)}
+	_, err := secretHelper.CopySecrets(ctx, []string{serviceAccountSecretName}, nil, rename...)
+	return err
 }
 
 func (c *runManager) copySecretsToRunNamespace(ctx context.Context, runCtx *runContext) (string, []string, error) {
@@ -487,10 +518,6 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 	}
 
 	namespace := runCtx.runNamespace
-	serviceAccountSecretName, err := c.getServiceAccountSecretName(ctx, runCtx)
-	if err != nil {
-		return nil, err
-	}
 
 	tektonTaskRun := tekton.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
@@ -521,7 +548,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 					RunAsGroup: copyInt64Ptr(runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
 					FSGroup:    copyInt64Ptr(runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup),
 				},
-				Volumes: c.volumesWithServiceAccountSecret(serviceAccountSecretName),
+				Volumes: c.volumesWithServiceAccountSecret(serviceAccountTokenName),
 			},
 		},
 	}

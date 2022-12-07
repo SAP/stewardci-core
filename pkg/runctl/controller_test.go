@@ -954,10 +954,15 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 	assert.Equal(t, "message from Succeeded condition", status.Message)
 }
 
+func ensureServiceAccountTokenStub(ctx context.Context, serviceAccountSecretName, runNamespace string) error {
+	return nil
+}
+
 func newTestRunManager(workFactory k8s.ClientFactory, secretProvider secrets.SecretProvider) run.Manager {
 	runManager := newRunManager(workFactory, secretProvider)
 	runManager.testing = &runManagerTesting{
 		getServiceAccountSecretNameStub: func(context.Context, *runContext) (string, error) { return "foo", nil },
+		ensureServiceAccountTokenStub:   ensureServiceAccountTokenStub,
 	}
 	return runManager
 }
