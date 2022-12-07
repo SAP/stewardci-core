@@ -21,7 +21,15 @@ func NewRun(tektonTaskRun *tekton.TaskRun) run.Run {
 }
 
 // GetStartTime returns start time of run if already started
+// start time must not be returned if condition is unknown but not running
 func (r *tektonRun) GetStartTime() *metav1.Time {
+	condition := r.getSucceededCondition()
+	if condition == nil {
+		return nil
+	}
+	if condition.IsUnknown() && condition.Reason != tekton.TaskRunReasonRunning.String() {
+		return nil
+	}
 	return r.tektonTaskRun.Status.StartTime
 }
 

@@ -439,8 +439,8 @@ func (c *Controller) syncHandler(key string) error {
 			}
 			return nil
 		}
-
 		if run.IsRestartable() {
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
 
 			err := runManager.DeleteRun(ctx, pipelineRun)
 
@@ -465,6 +465,9 @@ func (c *Controller) syncHandler(key string) error {
 		}
 	case api.StateRunning:
 		run, err := runManager.GetRun(ctx, pipelineRun)
+		if run == nil {
+			err = fmt.Errorf("task run not found in namespace %q", pipelineRun.GetRunNamespace())
+		}
 		if err != nil {
 			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "running failed")
 		}
