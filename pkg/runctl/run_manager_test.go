@@ -255,6 +255,72 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 	assert.Assert(t, methodCalled == true)
 }
 
+func Test__runManager_ensureServiceAccountToken(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	const (
+		tokenSecretName          = "default1"
+		notExistingTokenName     = "not_existing1"
+		notExistingNamespaceName = "not_existing2"
+	)
+	h := newTestHelper1(t)
+	for _, tc := range []struct {
+		name          string
+		secretName    string
+		namespace     string
+		expectedError string
+	}{
+		{
+			name:       "success",
+			secretName: tokenSecretName,
+			namespace:  h.runNamespace1,
+		},
+		{
+			name:          "missing token",
+			secretName:    notExistingTokenName,
+			namespace:     h.runNamespace1,
+			expectedError: "secret not found: 'not_existing1'",
+		},
+		{
+			name:          "wrong namespace",
+			secretName:    tokenSecretName,
+			namespace:     notExistingNamespaceName,
+			expectedError: "secret not found: 'default1'",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+			t.Parallel()
+
+			cf := newFakeClientFactory(
+				k8sfake.Namespace(h.runNamespace1),
+				k8sfake.SecretOpaque(tokenSecretName, h.runNamespace1),
+			)
+
+			secretProvider := secretproviderfakes.NewProvider(h.namespace1)
+
+			examinee := newRunManager(cf, secretProvider)
+
+			// EXERCISE
+			resultErr := examinee.ensureServiceAccountToken(h.ctx, tc.secretName, tc.namespace)
+
+			// VERIFY
+			if tc.expectedError == "" {
+				assert.NilError(t, resultErr)
+
+				secret, err := cf.CoreV1().Secrets(h.runNamespace1).Get(h.ctx, serviceAccountTokenName, metav1.GetOptions{})
+				assert.NilError(t, err)
+				assert.Assert(t, secret != nil)
+
+			} else {
+				assert.Error(t, resultErr, tc.expectedError)
+			}
+
+		})
+	}
+}
+
 func Test__runManager_setupStaticNetworkPolicies__Succeeds(t *testing.T) {
 	t.Parallel()
 
