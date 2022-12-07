@@ -58,7 +58,8 @@
         Steward is using Tekton to execute PipelineRuns.
         Due to a [change in Tekton](https://github.com/tektoncd/pipeline/pull/4921) the behavior on ImagePullBackOff changed.
         With this change we implement a retry mechanism to overcome problems with the changed Tekton behavior.
-      pullRequestNumber: 0
+      pullRequestNumber: 345
+      jiraIssueNumber: 1974
 
 - version: "0.23.0"
   date: 2022-11-17
