@@ -399,9 +399,7 @@ func (c *Controller) syncHandler(key string) error {
 			resultClass := serrors.GetClass(err)
 			// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 			if resultClass != api.ResultUndefined {
-				pipelineRun.UpdateMessage(err.Error())
-				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
-				return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, resultClass, metav1.Now())
+				return c.handleResultError(ctx, pipelineRun, resultClass, "preparing failed", err)
 			}
 			return err
 		}
@@ -418,41 +416,37 @@ func (c *Controller) syncHandler(key string) error {
 		if err != nil {
 			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "waiting failed")
 		}
+		// the configuration should be loaded once per sync to avoid inconsistencies
+		// in case of concurrent configuration changes
+		pipelineRunsConfig, err := c.loadPipelineRunsConfig(ctx)
+		if err != nil {
+			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
+		}
+
+		// Check for wait timeout
+		startTime := pipelineRun.GetStatus().StateDetails.StartedAt
+		timeout := pipelineRunsConfig.TimeoutWait
+		if startTime.Add(timeout.Duration).Before(time.Now()) {
+			return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "waiting failed", fmt.Errorf("wait timeout reached"))
+		}
 
 		if run == nil {
-			// the configuration should be loaded once per sync to avoid inconsistencies
-			// in case of concurrent configuration changes
-			pipelineRunsConfig, err := c.loadPipelineRunsConfig(ctx)
-			if err != nil {
-				return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
-			}
 			if err = runManager.Start(ctx, pipelineRun, pipelineRunsConfig); err != nil {
 				c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 				resultClass := serrors.GetClass(err)
 				// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 				if resultClass != api.ResultUndefined {
-					pipelineRun.UpdateMessage(err.Error())
-					pipelineRun.StoreErrorAsMessage(err, "preparing failed")
-					return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, resultClass, metav1.Now())
+					return c.handleResultError(ctx, pipelineRun, resultClass, "waiting failed", err)
 				}
 				return err
 			}
 			return nil
 		}
+
 		if run.IsRestartable() {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
-
-			err := runManager.DeleteRun(ctx, pipelineRun)
-
-			// TODO: Check for wait timeout
-			timeout := false
-			if err == nil && timeout {
-				err = fmt.Errorf("wait timeout reached")
-			}
-			if err != nil {
-				pipelineRun.UpdateMessage(err.Error())
-				pipelineRun.StoreErrorAsMessage(err, "restart failed")
-				return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, api.ResultErrorInfra, metav1.Now())
+			if err = runManager.DeleteRun(ctx, pipelineRun); err != nil {
+				return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "restart failed", err)
 			}
 			return nil
 		}
@@ -465,12 +459,14 @@ func (c *Controller) syncHandler(key string) error {
 		}
 	case api.StateRunning:
 		run, err := runManager.GetRun(ctx, pipelineRun)
-		if run == nil {
-			err = fmt.Errorf("task run not found in namespace %q", pipelineRun.GetRunNamespace())
-		}
 		if err != nil {
 			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "running failed")
 		}
+		if run == nil {
+			err = fmt.Errorf("task run not found in namespace %q", pipelineRun.GetRunNamespace())
+			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "running failed")
+		}
+
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
 		if finished, result := run.IsFinished(); finished {
@@ -496,6 +492,12 @@ func (c *Controller) syncHandler(key string) error {
 		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
 	return nil
+}
+
+func (c *Controller) handleResultError(ctx context.Context, pipelineRun k8s.PipelineRun, result api.Result, message string, err error) error {
+	pipelineRun.UpdateMessage(err.Error())
+	pipelineRun.StoreErrorAsMessage(err, message)
+	return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, metav1.Now())
 }
 
 func (c *Controller) onGetRunError(ctx context.Context, pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun, err error, state api.State, result api.Result, message string) error {

@@ -73,8 +73,6 @@ func (r *tektonRun) IsRestartable() bool {
 		switch condition.Reason {
 		case tekton.TaskRunReasonImagePullFailed.String():
 			return true
-		default:
-			// TODO handle other failure reasons like quota exceedance
 		}
 	}
 	return false

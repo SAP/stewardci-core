@@ -2159,7 +2159,10 @@ func (h *testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewar
 }
 
 func newEmptyRunsConfig(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error) {
-	return &cfg.PipelineRunsConfigStruct{}, nil
+	return &cfg.PipelineRunsConfigStruct{
+			TimeoutWait: metav1Duration(time.Minute * 10),
+		},
+		nil
 }
 
 func Test__runManager__getTimeout__retrievesPipelineTimeoutIfSetInThePipelineSpec(t *testing.T) {

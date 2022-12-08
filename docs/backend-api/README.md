@@ -203,6 +203,7 @@ A simple PipelineRun resource example can be found in [docs/examples/pipelinerun
 | `spec.logging.elasticsearch` | (object,optional) The configuration for pipeline logging to Elasticsearch. If not specified, logging to Elasticsearch is disabled and the default Jenkins log implementation is used (stdout of Jenkinsfile Runner container). |
 | `spec.logging.elasticsearch.runID` | (any,optional) The JSON value that should be set as field `runId` in each log entry in Elasticsearch. It can be any JSON value (`null`, boolean, number, string, list, map). |
 | `spec.timeout` | (string,optional) The timeout value specified for a steward pipeline run. The duration string format of composed of whole numbers, each with a unit suffix, such as "300m", "15h" or "2h45m". Valid time units are "s", "m" and "h". |
+| `spec.timeout.wait` | (string,optional) The timeout value specified for the waiting state of a steward pipeline run. The duration string format of composed of whole numbers, each with a unit suffix, such as "300m", "15h" or "2h45m". Valid time units are "s", "m" and "h". The timeout in waiting phase can occur between wait timeout duration and wait timeout duration + resync period duration. The default value is 10 minutes. |
 
 
 #### Mutability

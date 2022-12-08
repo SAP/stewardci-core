@@ -27,6 +27,7 @@ import (
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
 	klog "k8s.io/klog/v2"
+	"knative.dev/pkg/apis"
 )
 
 func Test_meterAllPipelineRunsPeriodic(t *testing.T) {
@@ -109,6 +110,12 @@ func Test_Controller_Running(t *testing.T) {
 	taskRun := getTektonTaskRun(t, runNs, cf)
 	now := metav1.Now()
 	taskRun.Status.StartTime = &now
+	condition := apis.Condition{
+		Type:   apis.ConditionSucceeded,
+		Status: corev1.ConditionUnknown,
+		Reason: tekton.TaskRunReasonRunning.String(),
+	}
+	taskRun.Status.SetCondition(&condition)
 	updateTektonTaskRun(t, taskRun, runNs, cf)
 	cf.Sleep("Waiting for Tekton TaskRun being started")
 	run = getPipelineRun(t, "run1", "ns1", cf)
@@ -476,6 +483,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 func Test_Controller_syncHandler_mock(t *testing.T) {
 	error1 := fmt.Errorf("error1")
 	errorRecover1 := serrors.Recoverable(error1)
+	longAgo := metav1.Unix(10, 10)
 
 	for _, maintenanceMode := range []bool{true, false} {
 
@@ -483,6 +491,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			name                       string
 			pipelineSpec               api.PipelineSpec
 			currentStatus              api.PipelineStatus
+			startedAt                  metav1.Time
 			runManagerExpectation      func(*runmocks.MockManager, *runmocks.MockRun)
 			loadPipelineRunsConfigStub func(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error)
 			expectedResult             api.Result
@@ -592,6 +601,21 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedError:              error1,
 			},
 			{
+				name:         "waiting_fail_on_load_pipeline_run_config",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateWaiting,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().GetRun(gomock.Any(), gomock.Any()).Return(nil, nil)
+				},
+				loadPipelineRunsConfigStub: func(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error) {
+					return nil, error1
+				},
+				expectedResult: api.ResultErrorInfra,
+				expectedState:  api.StateCleaning,
+			},
+			{
 				name:         "waiting_start_fail_on_config_error_during_start",
 				pipelineSpec: api.PipelineSpec{},
 				currentStatus: api.PipelineStatus{
@@ -636,6 +660,21 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedResult:             "",
 				expectedState:              api.StateRunning,
 			},
+			{
+				name:         "waiting_timeout",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateWaiting,
+				},
+				startedAt: longAgo,
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().GetRun(gomock.Any(), gomock.Any()).Return(run, nil)
+				},
+				loadPipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:             api.ResultErrorInfra,
+				expectedState:              api.StateCleaning,
+			},
+
 			{
 				name:         "waiting_restartable",
 				pipelineSpec: api.PipelineSpec{},
@@ -711,6 +750,20 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedResult:             "error_infra",
 				expectedState:              api.StateCleaning,
 				expectedMessage:            "running failed .*error1",
+			},
+			{
+				name:         "running_get_not_found",
+				pipelineSpec: api.PipelineSpec{},
+				currentStatus: api.PipelineStatus{
+					State: api.StateRunning,
+				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().GetRun(gomock.Any(), gomock.Any()).Return(nil, nil)
+				},
+				loadPipelineRunsConfigStub: newEmptyRunsConfig,
+				expectedResult:             "error_infra",
+				expectedState:              api.StateCleaning,
+				expectedMessage:            "running failed .* task run not found in namespace.*",
 			},
 			{
 				name:         "running_finished_timeout",
@@ -806,6 +859,12 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				// SETUP
 				run := fake.PipelineRun("foo", "ns1", test.pipelineSpec)
 				run.Status = test.currentStatus
+				if test.startedAt.IsZero() {
+					test.startedAt = metav1.Now()
+				}
+				run.Status.StateDetails = api.StateItem{
+					StartedAt: test.startedAt,
+				}
 				controller, cf := newController(run)
 				mockCtrl := gomock.NewController(t)
 				defer mockCtrl.Finish()
