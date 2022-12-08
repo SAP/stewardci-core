@@ -19,6 +19,7 @@ import (
 const (
 	mainConfigMapName            = "steward-pipelineruns"
 	mainConfigKeyTimeout         = "timeout"
+	mainConfigKeyTimeoutWait     = "timeout.wait"
 	mainConfigKeyLimitRange      = "limitRange"
 	mainConfigKeyResourceQuota   = "resourceQuota"
 	mainConfigKeyImage           = "jenkinsfileRunner.image"
@@ -36,6 +37,11 @@ type PipelineRunsConfigStruct struct {
 	// Timeout is the maximum execution time of a pipeline run.
 	// If `nil`, a default timeout should be used.
 	Timeout *metav1.Duration
+
+	// TimeoutWait is the maximum time a pipeline run can stay in state waiting
+	// before it is stopped with timeout error.
+	// If `nil`, the timeout is set to 10 minutes.
+	TimeoutWait *metav1.Duration
 
 	// The manifest (in YAML format) of a Kubernetes LimitRange object to be
 	// applied to each pipeline run sandbox namespace.
@@ -206,6 +212,15 @@ func processMainConfig(configData map[string]string, dest *PipelineRunsConfigStr
 		return err
 	}
 
+	if dest.TimeoutWait, err =
+		parseDuration(mainConfigKeyTimeoutWait); err != nil {
+		return err
+	}
+
+	if isZeroDuration(dest.TimeoutWait) {
+		dest.TimeoutWait = metav1Duration(time.Duration(10 * time.Minute))
+	}
+
 	if dest.JenkinsfileRunnerPodSecurityContextRunAsUser, err =
 		parseInt64(mainConfigKeyPSCRunAsUser); err != nil {
 		return err
@@ -221,6 +236,20 @@ func processMainConfig(configData map[string]string, dest *PipelineRunsConfigStr
 	}
 
 	return nil
+}
+
+func isZeroDuration(d *metav1.Duration) bool {
+	if d == nil {
+		return true
+	}
+	if d.Milliseconds() == 0 {
+		return true
+	}
+	return false
+}
+
+func metav1Duration(d time.Duration) *metav1.Duration {
+	return &metav1.Duration{Duration: d}
 }
 
 func processNetworkPoliciesConfig(configData map[string]string, dest *PipelineRunsConfigStruct) error {
