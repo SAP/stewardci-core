@@ -61,6 +61,10 @@
       pullRequestNumber: 345
       jiraIssueNumber: 1974
 
+- version: "0.23.1"
+  date: 2022-12-09
+  changes:
+
     - type: security
       impact: patch
       title: Update JFR to 221118_24e6615
