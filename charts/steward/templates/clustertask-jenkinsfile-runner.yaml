@@ -82,9 +82,7 @@ spec:
   steps:
   - name: jenkinsfile-runner
     image: $(params.JFR_IMAGE)
-    {{/*  Currently broken, see https://github.com/tektoncd/pipeline/issues/3423 */}}
-    {{/*  imagePullPolicy: $(params.JFR_IMAGE_PULL_POLICY) */}}
-    imagePullPolicy: IfNotPresent
+    imagePullPolicy: $(params.JFR_IMAGE_PULL_POLICY)
     # Workaround for Tekton being affected by registry rate limiting.
     # Specifying the command here prevents Tekton from downloading the image
     # manifest from the registry to obtain the entrypoint command from there.
