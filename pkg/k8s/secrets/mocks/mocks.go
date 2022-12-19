@@ -29,36 +29,35 @@ package mocks
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
+	reflect "reflect"
 )
 
-// MockSecretHelper is a mock of SecretHelper interface.
+// MockSecretHelper is a mock of SecretHelper interface
 type MockSecretHelper struct {
 	ctrl     *gomock.Controller
 	recorder *MockSecretHelperMockRecorder
 }
 
-// MockSecretHelperMockRecorder is the mock recorder for MockSecretHelper.
+// MockSecretHelperMockRecorder is the mock recorder for MockSecretHelper
 type MockSecretHelperMockRecorder struct {
 	mock *MockSecretHelper
 }
 
-// NewMockSecretHelper creates a new mock instance.
+// NewMockSecretHelper creates a new mock instance
 func NewMockSecretHelper(ctrl *gomock.Controller) *MockSecretHelper {
 	mock := &MockSecretHelper{ctrl: ctrl}
 	mock.recorder = &MockSecretHelperMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use.
+// EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockSecretHelper) EXPECT() *MockSecretHelperMockRecorder {
 	return m.recorder
 }
 
-// CopySecrets mocks base method.
+// CopySecrets mocks base method
 func (m *MockSecretHelper) CopySecrets(arg0 context.Context, arg1 []string, arg2 func(*v1.Secret) bool, arg3 ...func(*v1.Secret)) ([]string, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1, arg2}
@@ -71,14 +70,14 @@ func (m *MockSecretHelper) CopySecrets(arg0 context.Context, arg1 []string, arg2
 	return ret0, ret1
 }
 
-// CopySecrets indicates an expected call of CopySecrets.
+// CopySecrets indicates an expected call of CopySecrets
 func (mr *MockSecretHelperMockRecorder) CopySecrets(arg0, arg1, arg2 interface{}, arg3 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopySecrets", reflect.TypeOf((*MockSecretHelper)(nil).CopySecrets), varargs...)
 }
 
-// CreateSecret mocks base method.
+// CreateSecret mocks base method
 func (m *MockSecretHelper) CreateSecret(arg0 context.Context, arg1 *v1.Secret) (*v1.Secret, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateSecret", arg0, arg1)
@@ -87,13 +86,13 @@ func (m *MockSecretHelper) CreateSecret(arg0 context.Context, arg1 *v1.Secret) (
 	return ret0, ret1
 }
 
-// CreateSecret indicates an expected call of CreateSecret.
+// CreateSecret indicates an expected call of CreateSecret
 func (mr *MockSecretHelperMockRecorder) CreateSecret(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecret", reflect.TypeOf((*MockSecretHelper)(nil).CreateSecret), arg0, arg1)
 }
 
-// IsNotFound mocks base method.
+// IsNotFound mocks base method
 func (m *MockSecretHelper) IsNotFound(arg0 error) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsNotFound", arg0)
@@ -101,36 +100,36 @@ func (m *MockSecretHelper) IsNotFound(arg0 error) bool {
 	return ret0
 }
 
-// IsNotFound indicates an expected call of IsNotFound.
+// IsNotFound indicates an expected call of IsNotFound
 func (mr *MockSecretHelperMockRecorder) IsNotFound(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNotFound", reflect.TypeOf((*MockSecretHelper)(nil).IsNotFound), arg0)
 }
 
-// MockSecretProvider is a mock of SecretProvider interface.
+// MockSecretProvider is a mock of SecretProvider interface
 type MockSecretProvider struct {
 	ctrl     *gomock.Controller
 	recorder *MockSecretProviderMockRecorder
 }
 
-// MockSecretProviderMockRecorder is the mock recorder for MockSecretProvider.
+// MockSecretProviderMockRecorder is the mock recorder for MockSecretProvider
 type MockSecretProviderMockRecorder struct {
 	mock *MockSecretProvider
 }
 
-// NewMockSecretProvider creates a new mock instance.
+// NewMockSecretProvider creates a new mock instance
 func NewMockSecretProvider(ctrl *gomock.Controller) *MockSecretProvider {
 	mock := &MockSecretProvider{ctrl: ctrl}
 	mock.recorder = &MockSecretProviderMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use.
+// EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockSecretProvider) EXPECT() *MockSecretProviderMockRecorder {
 	return m.recorder
 }
 
-// GetSecret mocks base method.
+// GetSecret mocks base method
 func (m *MockSecretProvider) GetSecret(arg0 context.Context, arg1 string) (*v1.Secret, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSecret", arg0, arg1)
@@ -139,7 +138,7 @@ func (m *MockSecretProvider) GetSecret(arg0 context.Context, arg1 string) (*v1.S
 	return ret0, ret1
 }
 
-// GetSecret indicates an expected call of GetSecret.
+// GetSecret indicates an expected call of GetSecret
 func (mr *MockSecretProviderMockRecorder) GetSecret(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockSecretProvider)(nil).GetSecret), arg0, arg1)
