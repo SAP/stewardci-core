@@ -35,7 +35,7 @@ func RenameByAnnotationTransformer(key string) SecretTransformer {
 }
 
 // RenameTransformer returns a secret transformer function that sets
-// `metadata.name` to the provided value. If the empty string is provided
+// `metadata.name` to the provided value. If an empty string is provided
 // `metadata.name` is kept unchanged.
 func RenameTransformer(newName string) SecretTransformer {
 	return func(secret *v1.Secret) {

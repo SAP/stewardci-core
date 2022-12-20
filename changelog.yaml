@@ -58,6 +58,8 @@
         Steward is using Tekton to execute PipelineRuns.
         Due to a [change in Tekton](https://github.com/tektoncd/pipeline/pull/4921) the behavior on ImagePullBackOff changed.
         With this change we implement a retry mechanism to overcome problems with the changed Tekton behavior.
+        The Tekton TaskRun is now created in the `waiting` phase (instead of the `preparing` phase.
+        If the Tekton TaskRun fails with an image pull back off, the whole `waiting` phase is retried.
       pullRequestNumber: 345
       jiraIssueNumber: 1974
 
