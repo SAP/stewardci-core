@@ -38,7 +38,7 @@ const (
 	runNamespacePrefix       = "steward-run"
 	runNamespaceRandomLength = 5
 	serviceAccountName       = "default"
-	serviceAccountTokenName  = "steward-service-account-token"
+	serviceAccountTokenName  = "steward-serviceaccount-token"
 
 	// in general, the token of the above service account should not be automatically mounted into pods
 	automountServiceAccountToken = false
@@ -265,11 +265,12 @@ func (c *runManager) ensureServiceAccountToken(ctx context.Context, serviceAccou
 	if c.testing != nil && c.testing.ensureServiceAccountTokenStub != nil {
 		return c.testing.ensureServiceAccountTokenStub(ctx, serviceAccountSecretName, runNamespace)
 	}
+
 	secretClient := c.factory.CoreV1().Secrets(runNamespace)
 	secretProvider := k8sSecretsProvider.NewProvider(secretClient, runNamespace)
 	secretHelper := secrets.NewSecretHelper(secretProvider, runNamespace, secretClient)
-	rename := []secrets.SecretTransformer{secrets.RenameTransformer(serviceAccountTokenName)}
-	_, err := secretHelper.CopySecrets(ctx, []string{serviceAccountSecretName}, nil, rename...)
+	renamer := secrets.RenameTransformer(serviceAccountTokenName)
+	_, err := secretHelper.CopySecrets(ctx, []string{serviceAccountSecretName}, nil, renamer)
 	return err
 }
 

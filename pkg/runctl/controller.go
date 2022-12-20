@@ -427,7 +427,11 @@ func (c *Controller) syncHandler(key string) error {
 		startTime := pipelineRun.GetStatus().StateDetails.StartedAt
 		timeout := pipelineRunsConfig.TimeoutWait
 		if startTime.Add(timeout.Duration).Before(time.Now()) {
-			return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "waiting failed", fmt.Errorf("wait timeout reached"))
+			err := fmt.Errorf(
+				"main pod has not started after %s",
+				timeout,
+			)
+			return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "waiting failed", err))
 		}
 
 		if run == nil {
@@ -441,9 +445,7 @@ func (c *Controller) syncHandler(key string) error {
 				return err
 			}
 			return nil
-		}
-
-		if run.IsRestartable() {
+		} else if run.IsRestartable() {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
 			if err = runManager.DeleteRun(ctx, pipelineRun); err != nil {
 				return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "run deletion for restart failed", err)

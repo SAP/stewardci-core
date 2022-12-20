@@ -239,13 +239,7 @@ func processMainConfig(configData map[string]string, dest *PipelineRunsConfigStr
 }
 
 func isZeroDuration(d *metav1.Duration) bool {
-	if d == nil {
-		return true
-	}
-	if d.Milliseconds() == 0 {
-		return true
-	}
-	return false
+	return d == nil || d.Seconds() == 0
 }
 
 func metav1Duration(d time.Duration) *metav1.Duration {
