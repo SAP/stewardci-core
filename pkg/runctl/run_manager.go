@@ -13,7 +13,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/featureflag"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
-	k8sProvider "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/k8s"
+	k8sSecretsProvider "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/k8s"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	"github.com/SAP/stewardci-core/pkg/runctl/secretmgr"
@@ -266,7 +266,7 @@ func (c *runManager) ensureServiceAccountToken(ctx context.Context, serviceAccou
 		return c.testing.ensureServiceAccountTokenStub(ctx, serviceAccountSecretName, runNamespace)
 	}
 	secretClient := c.factory.CoreV1().Secrets(runNamespace)
-	secretProvider := k8sProvider.NewProvider(secretClient, runNamespace)
+	secretProvider := k8sSecretsProvider.NewProvider(secretClient, runNamespace)
 	secretHelper := secrets.NewSecretHelper(secretProvider, runNamespace, secretClient)
 	rename := []secrets.SecretTransformer{secrets.RenameTransformer(serviceAccountTokenName)}
 	_, err := secretHelper.CopySecrets(ctx, []string{serviceAccountSecretName}, nil, rename...)

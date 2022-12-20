@@ -446,7 +446,7 @@ func (c *Controller) syncHandler(key string) error {
 		if run.IsRestartable() {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
 			if err = runManager.DeleteRun(ctx, pipelineRun); err != nil {
-				return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "restart failed", err)
+				return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "run deletion for restart failed", err)
 			}
 			return nil
 		}
