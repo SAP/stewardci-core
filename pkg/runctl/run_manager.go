@@ -707,6 +707,16 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 	return nil
 }
 
+func (c *runManager) wrapError(err error) error {
+	return serrors.RecoverableIf(err,
+		k8serrors.IsServerTimeout(err) ||
+			k8serrors.IsServiceUnavailable(err) ||
+			k8serrors.IsTimeout(err) ||
+			k8serrors.IsTooManyRequests(err) ||
+			k8serrors.IsInternalError(err) ||
+			k8serrors.IsUnexpectedServerError(err))
+}
+
 // GetRun based on a pipelineRun
 func (c *runManager) GetRun(ctx context.Context, pipelineRun k8s.PipelineRun) (runifc.Run, error) {
 	namespace := pipelineRun.GetRunNamespace()
@@ -715,13 +725,7 @@ func (c *runManager) GetRun(ctx context.Context, pipelineRun k8s.PipelineRun) (r
 		return nil, nil
 	}
 	if err != nil {
-		return nil, serrors.RecoverableIf(err,
-			k8serrors.IsServerTimeout(err) ||
-				k8serrors.IsServiceUnavailable(err) ||
-				k8serrors.IsTimeout(err) ||
-				k8serrors.IsTooManyRequests(err) ||
-				k8serrors.IsInternalError(err) ||
-				k8serrors.IsUnexpectedServerError(err))
+		return nil, c.wrapError(err)
 	}
 	return NewRun(run), nil
 }
@@ -733,6 +737,13 @@ func (c *runManager) DeleteRun(ctx context.Context, pipelineRun k8s.PipelineRun)
 		return fmt.Errorf("cannot delete taskrun, runnamespace not set in %q", pipelineRun.GetName())
 	}
 	err := c.factory.TektonV1beta1().TaskRuns(namespace).Delete(ctx, tektonTaskRunName, metav1.DeleteOptions{})
+
+	if k8serrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return c.wrapError(err)
+	}
 	if err != nil {
 		return fmt.Errorf("cannot delete taskrun in run namespace %q: %s", namespace, err.Error())
 	}

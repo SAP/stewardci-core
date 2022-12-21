@@ -2296,8 +2296,7 @@ func Test__runManager_DeleteRun_Missing(t *testing.T) {
 	resultError := examinee.DeleteRun(h.ctx, mockPipelineRun)
 
 	// VERIFY
-	assert.Error(t, resultError, `cannot delete taskrun in run namespace "runNamespace1": taskruns.tekton.dev "steward-jenkinsfile-runner" not found`)
-
+	assert.NilError(t, resultError)
 	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
 }
 
