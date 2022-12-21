@@ -606,9 +606,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				currentStatus: api.PipelineStatus{
 					State: api.StateWaiting,
 				},
-				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
-					rm.EXPECT().GetRun(gomock.Any(), gomock.Any()).Return(nil, nil)
-				},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {},
 				loadPipelineRunsConfigStub: func(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error) {
 					return nil, error1
 				},

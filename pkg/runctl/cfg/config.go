@@ -30,6 +30,8 @@ const (
 
 	networkPoliciesConfigMapName    = "steward-pipelineruns-network-policies"
 	networkPoliciesConfigKeyDefault = "_default"
+
+	defaultWaitTimeoutMinutes = 10
 )
 
 // PipelineRunsConfigStruct is a struct holding the pipeline runs configuration.
@@ -218,7 +220,7 @@ func processMainConfig(configData map[string]string, dest *PipelineRunsConfigStr
 	}
 
 	if isZeroDuration(dest.TimeoutWait) {
-		dest.TimeoutWait = metav1Duration(time.Duration(10 * time.Minute))
+		dest.TimeoutWait = metav1Duration(time.Duration(defaultWaitTimeoutMinutes * time.Minute))
 	}
 
 	if dest.JenkinsfileRunnerPodSecurityContextRunAsUser, err =

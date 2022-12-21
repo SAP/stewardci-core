@@ -384,15 +384,24 @@ func (c *Controller) syncHandler(key string) error {
 
 	runManager := c.createRunManager(pipelineRun)
 
-	// Process pipeline run based on current state
-	switch state := pipelineRun.GetStatus().State; state {
-	case api.StatePreparing:
+	var pipelineRunsConfig *cfg.PipelineRunsConfigStruct
+	state := pipelineRun.GetStatus().State
+	if state == api.StatePreparing || state == api.StateWaiting {
 		// the configuration should be loaded once per sync to avoid inconsistencies
 		// in case of concurrent configuration changes
-		pipelineRunsConfig, err := c.loadPipelineRunsConfig(ctx)
+		pipelineRunsConfig, err = c.loadPipelineRunsConfig(ctx)
 		if err != nil {
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
+			if state == api.StatePreparing {
+				return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
+			}
+			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
 		}
+	}
+
+	// Process pipeline run based on current state
+	switch state {
+	case api.StatePreparing:
+
 		namespace, auxNamespace, err := runManager.Prepare(ctx, pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
@@ -416,12 +425,6 @@ func (c *Controller) syncHandler(key string) error {
 		if err != nil {
 			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "waiting failed")
 		}
-		// the configuration should be loaded once per sync to avoid inconsistencies
-		// in case of concurrent configuration changes
-		pipelineRunsConfig, err := c.loadPipelineRunsConfig(ctx)
-		if err != nil {
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
-		}
 
 		// Check for wait timeout
 		startTime := pipelineRun.GetStatus().StateDetails.StartedAt
@@ -431,12 +434,12 @@ func (c *Controller) syncHandler(key string) error {
 				"main pod has not started after %s",
 				timeout,
 			)
-			return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "waiting failed", err))
+			return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "waiting failed", err)
 		}
 
 		if run == nil {
 			if err = runManager.Start(ctx, pipelineRun, pipelineRunsConfig); err != nil {
-				c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
+				c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
 				resultClass := serrors.GetClass(err)
 				// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 				if resultClass != api.ResultUndefined {
