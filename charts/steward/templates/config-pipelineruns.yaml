@@ -24,7 +24,7 @@ data:
     timeout: 2h15m
 
     # timeout.wait is the maximum time a pipeline is retrying to start a tekton task run
-    # which run into an image pull back offf error before it gives up. 
+    # which run into an image pull back off error before it gives up.
     timeout.wait: 10m
 
     limitRange: |
@@ -65,7 +65,7 @@ data:
     jenkinsfileRunner.podSecurityContext.fsGroup: "1000"
 
   timeout: {{ .Values.pipelineRuns.timeout | quote }}
-  timeout.wait: {{ .Values.pipelineRuns.timeout.wait | quote }}
+  timeout.wait: {{ .Values.pipelineRuns.waitTimeout | quote }}
   limitRange: {{ default ( .Files.Get "data/pipelineruns-default-limitrange.yaml" ) .Values.pipelineRuns.limitRange | quote }}
   resourceQuota: {{ .Values.pipelineRuns.resourceQuota | quote }}
 
