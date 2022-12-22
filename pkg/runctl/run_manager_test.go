@@ -1982,17 +1982,6 @@ type testHelper1 struct {
 	runNamespace1 string
 }
 
-func newTestHelperNoRunNamespace(t *testing.T) *testHelper1 {
-	h := &testHelper1{
-		t:             t,
-		ctx:           context.Background(),
-		namespace1:    "namespace1",
-		pipelineRun1:  "pipelinerun1",
-		runNamespace1: "",
-	}
-	return h
-}
-
 func newTestHelper1(t *testing.T) *testHelper1 {
 	h := &testHelper1{
 		t:             t,
@@ -2297,7 +2286,8 @@ func Test__runManager_DeleteRun_MissingRunNamespace(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
-	h := newTestHelperNoRunNamespace(t)
+	h := newTestHelper1(t)
+	h.runNamespace1 = ""
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
