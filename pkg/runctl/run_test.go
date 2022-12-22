@@ -113,6 +113,14 @@ const (
     status: "False"
     type: Foo
   `
+	imagePullFailedCondition = `status:
+  conditions:
+  - lastTransitionTime: "2022-12-02T12:30:01Z"
+    message: 'failed to pull the image'
+    reason: TaskRunImagePullFailed
+    status: "False"
+    type: Succeeded
+`
 )
 
 func generateTime(timeRFC3339String string) *metav1.Time {
@@ -185,6 +193,27 @@ func Test__IsFinished_Timeout(t *testing.T) {
 	assert.Assert(t, run.GetContainerInfo() == nil)
 	assert.Assert(t, finished == true)
 	assert.Equal(t, result, api.ResultTimeout)
+}
+
+func Test__IsRestartable_False(t *testing.T) {
+	for id, taskrun := range []string{
+		completedSuccess,
+		completedFail,
+		completedValidationFailed,
+		timeout,
+	} {
+		t.Run(fmt.Sprintf("%d", id), func(t *testing.T) {
+			run := NewRun(fakeTektonTaskRun(taskrun))
+			result := run.IsRestartable()
+			assert.Assert(t, result == false)
+		})
+	}
+}
+
+func Test__IsRestartable_ImagePullFailed(t *testing.T) {
+	run := NewRun(fakeTektonTaskRunYaml(imagePullFailedCondition))
+	result := run.IsRestartable()
+	assert.Assert(t, result)
 }
 
 func Test__GetCompletionTime(t *testing.T) {

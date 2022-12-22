@@ -133,6 +133,20 @@ func (mr *MockRunMockRecorder) IsFinished() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsFinished", reflect.TypeOf((*MockRun)(nil).IsFinished))
 }
 
+// IsRestartable mocks base method
+func (m *MockRun) IsRestartable() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsRestartable")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsRestartable indicates an expected call of IsRestartable
+func (mr *MockRunMockRecorder) IsRestartable() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRestartable", reflect.TypeOf((*MockRun)(nil).IsRestartable))
+}
+
 // MockManager is a mock of Manager interface
 type MockManager struct {
 	ctrl     *gomock.Controller
@@ -170,6 +184,20 @@ func (mr *MockManagerMockRecorder) Cleanup(arg0, arg1 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cleanup", reflect.TypeOf((*MockManager)(nil).Cleanup), arg0, arg1)
 }
 
+// DeleteRun mocks base method
+func (m *MockManager) DeleteRun(arg0 context.Context, arg1 k8s.PipelineRun) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteRun", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteRun indicates an expected call of DeleteRun
+func (mr *MockManagerMockRecorder) DeleteRun(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRun", reflect.TypeOf((*MockManager)(nil).DeleteRun), arg0, arg1)
+}
+
 // GetRun mocks base method
 func (m *MockManager) GetRun(arg0 context.Context, arg1 k8s.PipelineRun) (run.Run, error) {
 	m.ctrl.T.Helper()
@@ -185,14 +213,28 @@ func (mr *MockManagerMockRecorder) GetRun(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRun", reflect.TypeOf((*MockManager)(nil).GetRun), arg0, arg1)
 }
 
-// Start mocks base method
-func (m *MockManager) Start(arg0 context.Context, arg1 k8s.PipelineRun, arg2 *cfg.PipelineRunsConfigStruct) (string, string, error) {
+// Prepare mocks base method
+func (m *MockManager) Prepare(arg0 context.Context, arg1 k8s.PipelineRun, arg2 *cfg.PipelineRunsConfigStruct) (string, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Prepare", arg0, arg1, arg2)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
+}
+
+// Prepare indicates an expected call of Prepare
+func (mr *MockManagerMockRecorder) Prepare(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Prepare", reflect.TypeOf((*MockManager)(nil).Prepare), arg0, arg1, arg2)
+}
+
+// Start mocks base method
+func (m *MockManager) Start(arg0 context.Context, arg1 k8s.PipelineRun, arg2 *cfg.PipelineRunsConfigStruct) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Start", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Start indicates an expected call of Start

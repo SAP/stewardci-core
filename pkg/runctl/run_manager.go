@@ -13,6 +13,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/featureflag"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
+	k8sSecretsProvider "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/k8s"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	"github.com/SAP/stewardci-core/pkg/runctl/secretmgr"
@@ -37,6 +38,7 @@ const (
 	runNamespacePrefix       = "steward-run"
 	runNamespaceRandomLength = 5
 	serviceAccountName       = "default"
+	serviceAccountTokenName  = "steward-serviceaccount-token"
 
 	// in general, the token of the above service account should not be automatically mounted into pods
 	automountServiceAccountToken = false
@@ -78,6 +80,7 @@ type runManagerTesting struct {
 	setupStaticLimitRangeStub                 func(context.Context, *runContext) error
 	setupStaticNetworkPoliciesStub            func(context.Context, *runContext) error
 	setupStaticResourceQuotaStub              func(context.Context, *runContext) error
+	ensureServiceAccountTokenStub             func(context.Context, string, string) error
 }
 
 type runContext struct {
@@ -96,9 +99,8 @@ func newRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvi
 	}
 }
 
-// Start prepares the isolated environment for a new run and starts
-// the run in this environment.
-func (c *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (namespace string, auxNamespace string, err error) {
+// Prepare prepares the isolated environment for a new run
+func (c *runManager) Prepare(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (namespace string, auxNamespace string, err error) {
 
 	runCtx := &runContext{
 		pipelineRun:        pipelineRun,
@@ -123,7 +125,20 @@ func (c *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun, pip
 		return "", "", err
 	}
 
-	return runCtx.runNamespace, runCtx.auxNamespace, c.createTektonTaskRun(ctx, runCtx)
+	return runCtx.runNamespace, runCtx.auxNamespace, nil
+}
+
+// Start starts the run in the environment prepared by Prepare.
+func (c *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (err error) {
+
+	runCtx := &runContext{
+		pipelineRun:        pipelineRun,
+		pipelineRunsConfig: pipelineRunsConfig,
+		runNamespace:       pipelineRun.GetRunNamespace(),
+		auxNamespace:       pipelineRun.GetAuxNamespace(),
+	}
+
+	return c.createTektonTaskRun(ctx, runCtx)
 }
 
 // prepareRunNamespace creates a new namespace for the pipeline run
@@ -226,8 +241,37 @@ func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext
 			serviceAccountName, runCtx.runNamespace,
 		)
 	}
+
 	runCtx.serviceAccount = serviceAccount
+
+	serviceAccountSecretName, err := c.getServiceAccountSecretName(ctx, runCtx)
+	if err != nil {
+		return errors.Wrapf(err,
+			"failed to get service account secret name %q in namespace %q",
+			serviceAccountName, runCtx.runNamespace,
+		)
+	}
+	err = c.ensureServiceAccountToken(ctx, serviceAccountSecretName, runCtx.runNamespace)
+	if err != nil {
+		return errors.Wrapf(err,
+			"failed to create token %q for service account %q in namespace %q",
+			serviceAccountSecretName, serviceAccountName, runCtx.runNamespace,
+		)
+	}
 	return nil
+}
+
+func (c *runManager) ensureServiceAccountToken(ctx context.Context, serviceAccountSecretName, runNamespace string) error {
+	if c.testing != nil && c.testing.ensureServiceAccountTokenStub != nil {
+		return c.testing.ensureServiceAccountTokenStub(ctx, serviceAccountSecretName, runNamespace)
+	}
+
+	secretClient := c.factory.CoreV1().Secrets(runNamespace)
+	secretProvider := k8sSecretsProvider.NewProvider(secretClient, runNamespace)
+	secretHelper := secrets.NewSecretHelper(secretProvider, runNamespace, secretClient)
+	renamer := secrets.RenameTransformer(serviceAccountTokenName)
+	_, err := secretHelper.CopySecrets(ctx, []string{serviceAccountSecretName}, nil, renamer)
+	return err
 }
 
 func (c *runManager) copySecretsToRunNamespace(ctx context.Context, runCtx *runContext) (string, []string, error) {
@@ -475,10 +519,6 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 	}
 
 	namespace := runCtx.runNamespace
-	serviceAccountSecretName, err := c.getServiceAccountSecretName(ctx, runCtx)
-	if err != nil {
-		return nil, err
-	}
 
 	tektonTaskRun := tekton.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
@@ -509,7 +549,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 					RunAsGroup: copyInt64Ptr(runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
 					FSGroup:    copyInt64Ptr(runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup),
 				},
-				Volumes: c.volumesWithServiceAccountSecret(serviceAccountSecretName),
+				Volumes: c.volumesWithServiceAccountSecret(serviceAccountTokenName),
 			},
 		},
 	}
@@ -667,20 +707,44 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 	return nil
 }
 
+func (c *runManager) recoverableIfTransient(err error) error {
+	return serrors.RecoverableIf(err,
+		k8serrors.IsServerTimeout(err) ||
+			k8serrors.IsServiceUnavailable(err) ||
+			k8serrors.IsTimeout(err) ||
+			k8serrors.IsTooManyRequests(err) ||
+			k8serrors.IsInternalError(err) ||
+			k8serrors.IsUnexpectedServerError(err))
+}
+
 // GetRun based on a pipelineRun
 func (c *runManager) GetRun(ctx context.Context, pipelineRun k8s.PipelineRun) (runifc.Run, error) {
 	namespace := pipelineRun.GetRunNamespace()
 	run, err := c.factory.TektonV1beta1().TaskRuns(namespace).Get(ctx, tektonTaskRunName, metav1.GetOptions{})
+	if k8serrors.IsNotFound(err) {
+		return nil, nil
+	}
 	if err != nil {
-		return nil, serrors.RecoverableIf(err,
-			k8serrors.IsServerTimeout(err) ||
-				k8serrors.IsServiceUnavailable(err) ||
-				k8serrors.IsTimeout(err) ||
-				k8serrors.IsTooManyRequests(err) ||
-				k8serrors.IsInternalError(err) ||
-				k8serrors.IsUnexpectedServerError(err))
+		return nil, c.recoverableIfTransient(err)
 	}
 	return NewRun(run), nil
+}
+
+// DeleteRun deletes a tekton run based on a pipelineRun
+func (c *runManager) DeleteRun(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+	namespace := pipelineRun.GetRunNamespace()
+	if namespace == "" {
+		return fmt.Errorf("cannot delete taskrun, runnamespace not set in %q", pipelineRun.GetName())
+	}
+	err := c.factory.TektonV1beta1().TaskRuns(namespace).Delete(ctx, tektonTaskRunName, metav1.DeleteOptions{})
+
+	if k8serrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return c.recoverableIfTransient(err)
+	}
+	return nil
 }
 
 // Cleanup a run based on a pipelineRun

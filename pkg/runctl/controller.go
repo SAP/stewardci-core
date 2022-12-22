@@ -43,6 +43,8 @@ const (
 var (
 	// Interval for histogram creation set to prometheus default scrape interval
 	meteringInterval = 1 * time.Minute
+
+	defaultWaitTimeout = 10 * time.Minute
 )
 
 // Controller processes PipelineRun resources
@@ -384,24 +386,31 @@ func (c *Controller) syncHandler(key string) error {
 
 	runManager := c.createRunManager(pipelineRun)
 
-	// Process pipeline run based on current state
-	switch state := pipelineRun.GetStatus().State; state {
-	case api.StatePreparing:
+	var pipelineRunsConfig *cfg.PipelineRunsConfigStruct
+	state := pipelineRun.GetStatus().State
+	if state == api.StatePreparing || state == api.StateWaiting {
 		// the configuration should be loaded once per sync to avoid inconsistencies
 		// in case of concurrent configuration changes
-		pipelineRunsConfig, err := c.loadPipelineRunsConfig(ctx)
+		pipelineRunsConfig, err = c.loadPipelineRunsConfig(ctx)
 		if err != nil {
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
+			if state == api.StatePreparing {
+				return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
+			}
+			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
 		}
-		namespace, auxNamespace, err := runManager.Start(ctx, pipelineRun, pipelineRunsConfig)
+	}
+
+	// Process pipeline run based on current state
+	switch state {
+	case api.StatePreparing:
+
+		namespace, auxNamespace, err := runManager.Prepare(ctx, pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			resultClass := serrors.GetClass(err)
 			// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 			if resultClass != api.ResultUndefined {
-				pipelineRun.UpdateMessage(err.Error())
-				pipelineRun.StoreErrorAsMessage(err, "preparing failed")
-				return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, resultClass, metav1.Now())
+				return c.handleResultError(ctx, pipelineRun, resultClass, "preparing failed", err)
 			}
 			return err
 		}
@@ -412,11 +421,46 @@ func (c *Controller) syncHandler(key string) error {
 		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
 			return err
 		}
+
 	case api.StateWaiting:
 		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
 			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "waiting failed")
 		}
+
+		// Check for wait timeout
+		startTime := pipelineRun.GetStatus().StateDetails.StartedAt
+		timeout := c.getWaitTimeout(pipelineRunsConfig)
+		if startTime.Add(timeout.Duration).Before(time.Now()) {
+			err := fmt.Errorf(
+				"main pod has not started after %s",
+				timeout,
+			)
+			return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "waiting failed", err)
+		}
+
+		if run == nil {
+			if err = runManager.Start(ctx, pipelineRun, pipelineRunsConfig); err != nil {
+				c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
+				resultClass := serrors.GetClass(err)
+				// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
+				if resultClass != api.ResultUndefined {
+					return c.handleResultError(ctx, pipelineRun, resultClass, "waiting failed", err)
+				}
+				return err
+			}
+			return nil
+		} else if run.IsRestartable() {
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
+			if err = runManager.DeleteRun(ctx, pipelineRun); err != nil {
+				if serrors.IsRecoverable(err) {
+					return err
+				}
+				return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "run deletion for restart failed", err)
+			}
+			return nil
+		}
+
 		started := run.GetStartTime()
 		if started != nil {
 			if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateRunning, *started); err != nil {
@@ -428,6 +472,11 @@ func (c *Controller) syncHandler(key string) error {
 		if err != nil {
 			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "running failed")
 		}
+		if run == nil {
+			err = fmt.Errorf("task run not found in namespace %q", pipelineRun.GetRunNamespace())
+			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "running failed")
+		}
+
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
 		if finished, result := run.IsFinished(); finished {
@@ -453,6 +502,28 @@ func (c *Controller) syncHandler(key string) error {
 		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
 	return nil
+}
+
+func (c *Controller) getWaitTimeout(pipelineRunsConfig *cfg.PipelineRunsConfigStruct) *metav1.Duration {
+	timeout := pipelineRunsConfig.TimeoutWait
+	if isZeroDuration(timeout) {
+		timeout = metav1Duration(time.Duration(defaultWaitTimeout))
+	}
+	return timeout
+}
+
+func metav1Duration(d time.Duration) *metav1.Duration {
+	return &metav1.Duration{Duration: d}
+}
+
+func isZeroDuration(d *metav1.Duration) bool {
+	return d == nil || d.Truncate(time.Second) == 0
+}
+
+func (c *Controller) handleResultError(ctx context.Context, pipelineRun k8s.PipelineRun, result api.Result, message string, err error) error {
+	pipelineRun.UpdateMessage(err.Error())
+	pipelineRun.StoreErrorAsMessage(err, message)
+	return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, metav1.Now())
 }
 
 func (c *Controller) onGetRunError(ctx context.Context, pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun, err error, state api.State, result api.Result, message string) error {

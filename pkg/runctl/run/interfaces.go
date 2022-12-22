@@ -12,14 +12,17 @@ import (
 
 // Manager manages runs
 type Manager interface {
-	Start(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (string, string, error)
+	Prepare(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (string, string, error)
+	Start(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) error
 	GetRun(ctx context.Context, pipelineRun k8s.PipelineRun) (Run, error)
 	Cleanup(ctx context.Context, pipelineRun k8s.PipelineRun) error
+	DeleteRun(ctx context.Context, pipelineRun k8s.PipelineRun) error
 }
 
 // Run represents a pipeline run
 type Run interface {
 	GetStartTime() *metav1.Time
+	IsRestartable() bool
 	IsFinished() (bool, steward.Result)
 	GetCompletionTime() *metav1.Time
 	GetContainerInfo() *corev1.ContainerState

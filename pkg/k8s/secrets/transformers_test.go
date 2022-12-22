@@ -80,6 +80,41 @@ func Test_RenameByAnnotationTransformer(t *testing.T) {
 	}
 }
 
+func Test_RenameTransformer(t *testing.T) {
+	t.Parallel()
+	const originalName string = "orig1"
+	for _, tc := range []struct {
+		name         string
+		newName      string
+		expectedName string
+	}{
+		{
+			name:         "empty_name",
+			newName:      "",
+			expectedName: originalName,
+		}, {
+			name:         "working_rename",
+			newName:      "newName1",
+			expectedName: "newName1",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// SETUP
+
+			orig := fake.SecretOpaque(originalName, "secret1")
+			transformed := orig.DeepCopy()
+
+			// EXERCISE
+			RenameTransformer(tc.newName)(transformed)
+
+			// VERIFY
+			expected := orig.DeepCopy()
+			expected.SetName(tc.expectedName)
+			assert.DeepEqual(t, expected, transformed)
+		})
+	}
+}
+
 func Test_SetAnnotationTransformer_SetNew(t *testing.T) {
 	t.Parallel()
 

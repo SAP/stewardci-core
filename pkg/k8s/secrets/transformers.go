@@ -34,6 +34,17 @@ func RenameByAnnotationTransformer(key string) SecretTransformer {
 	}
 }
 
+// RenameTransformer returns a secret transformer function that sets
+// `metadata.name` to the provided value. If an empty string is provided
+// `metadata.name` is kept unchanged.
+func RenameTransformer(newName string) SecretTransformer {
+	return func(secret *v1.Secret) {
+		if newName != "" {
+			secret.SetName(newName)
+		}
+	}
+}
+
 // SetAnnotationTransformer returns a secret transformer function that sets the
 // annotation with the given key to the given value.
 func SetAnnotationTransformer(key string, value string) SecretTransformer {

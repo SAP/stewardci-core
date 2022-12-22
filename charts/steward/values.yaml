@@ -107,6 +107,7 @@ pipelineRuns:
     pipelineCloneRetryIntervalSec: ""
     pipelineCloneRetryTimeoutSec: ""
   timeout: "60m"
+  waitTimeout: "10m"
   defaultNetworkPolicyName: ""
   networkPolicies: {}
   limitRange: ""

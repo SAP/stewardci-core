@@ -21,7 +21,15 @@ func NewRun(tektonTaskRun *tekton.TaskRun) run.Run {
 }
 
 // GetStartTime returns start time of run if already started
+// start time must not be returned if condition is unknown but not running
 func (r *tektonRun) GetStartTime() *metav1.Time {
+	condition := r.getSucceededCondition()
+	if condition == nil {
+		return nil
+	}
+	if condition.IsUnknown() && condition.Reason != tekton.TaskRunReasonRunning.String() {
+		return nil
+	}
 	return r.tektonTaskRun.Status.StartTime
 }
 
@@ -55,6 +63,19 @@ func (r *tektonRun) GetContainerInfo() *corev1.ContainerState {
 
 func (r *tektonRun) getSucceededCondition() *knativeapis.Condition {
 	return r.tektonTaskRun.Status.GetCondition(knativeapis.ConditionSucceeded)
+}
+
+// IsRestartable returns true if run is finished but could be restarted
+func (r *tektonRun) IsRestartable() bool {
+	condition := r.getSucceededCondition()
+	if condition.IsFalse() {
+		// TaskRun finished unsuccessfully, check reason...
+		switch condition.Reason {
+		case tekton.TaskRunReasonImagePullFailed.String():
+			return true
+		}
+	}
+	return false
 }
 
 // IsFinished returns true if run is finished

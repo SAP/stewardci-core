@@ -189,6 +189,7 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 				mainConfigKeyPSCRunAsGroup:   "2222",
 				mainConfigKeyPSCFSGroup:      "3333",
 				mainConfigKeyTimeout:         "4444m",
+				mainConfigKeyTimeoutWait:     "555m",
 				mainConfigKeyImage:           "jfrImage1",
 				mainConfigKeyImagePullPolicy: "jfrImagePullPolicy1",
 				"someKeyThatShouldBeIgnored": "34957349",
@@ -210,6 +211,7 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 	assert.NilError(t, resultErr)
 	expectedConfig := &PipelineRunsConfigStruct{
 		Timeout:                          metav1Duration(time.Minute * 4444),
+		TimeoutWait:                      metav1Duration(time.Minute * 555),
 		LimitRange:                       "limitRange1",
 		ResourceQuota:                    "resourceQuota1",
 		JenkinsfileRunnerImage:           "jfrImage1",
@@ -273,6 +275,9 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 
 		{mainConfigKeyTimeout, "a"},
 		{mainConfigKeyTimeout, "1a"},
+
+		{mainConfigKeyTimeoutWait, "a"},
+		{mainConfigKeyTimeoutWait, "1a"},
 	} {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			tc := tc // capture current value before going parallel
@@ -311,6 +316,7 @@ func Test_processMainConfig(t *testing.T) {
 				"_example": "exampleString",
 
 				mainConfigKeyTimeout:       "4444m",
+				mainConfigKeyTimeoutWait:   "555m",
 				mainConfigKeyLimitRange:    "limitRange1",
 				mainConfigKeyResourceQuota: "resourceQuota1",
 
@@ -324,6 +330,7 @@ func Test_processMainConfig(t *testing.T) {
 			},
 			&PipelineRunsConfigStruct{
 				Timeout:       metav1Duration(time.Minute * 4444),
+				TimeoutWait:   metav1Duration(time.Minute * 555),
 				LimitRange:    "limitRange1",
 				ResourceQuota: "resourceQuota1",
 
@@ -338,6 +345,7 @@ func Test_processMainConfig(t *testing.T) {
 			"all_empty",
 			map[string]string{
 				mainConfigKeyTimeout:       "",
+				mainConfigKeyTimeoutWait:   "",
 				mainConfigKeyLimitRange:    "",
 				mainConfigKeyResourceQuota: "",
 
@@ -538,10 +546,6 @@ func newNetworkPolicyConfigMap(data map[string]string) *corev1.ConfigMap {
 		},
 		Data: data,
 	}
-}
-
-func metav1Duration(d time.Duration) *metav1.Duration {
-	return &metav1.Duration{Duration: d}
 }
 
 func int64Ptr(val int64) *int64 { return &val }
