@@ -1331,10 +1331,6 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	assert.DeepEqual(t, metav1Duration(4444), taskRun.Spec.Timeout)
 }
 
-var metav1Duration = func(d time.Duration) *metav1.Duration {
-	return &metav1.Duration{Duration: d}
-}
-
 func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	t.Parallel()
 

@@ -43,6 +43,8 @@ const (
 var (
 	// Interval for histogram creation set to prometheus default scrape interval
 	meteringInterval = 1 * time.Minute
+
+	defaultWaitTimeout = 10 * time.Minute
 )
 
 // Controller processes PipelineRun resources
@@ -428,7 +430,7 @@ func (c *Controller) syncHandler(key string) error {
 
 		// Check for wait timeout
 		startTime := pipelineRun.GetStatus().StateDetails.StartedAt
-		timeout := pipelineRunsConfig.TimeoutWait
+		timeout := c.getWaitTimeout(pipelineRunsConfig)
 		if startTime.Add(timeout.Duration).Before(time.Now()) {
 			err := fmt.Errorf(
 				"main pod has not started after %s",
@@ -500,6 +502,22 @@ func (c *Controller) syncHandler(key string) error {
 		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
 	return nil
+}
+
+func (c *Controller) getWaitTimeout(pipelineRunsConfig *cfg.PipelineRunsConfigStruct) *metav1.Duration {
+	timeout := pipelineRunsConfig.TimeoutWait
+	if isZeroDuration(timeout) {
+		timeout = metav1Duration(time.Duration(defaultWaitTimeout))
+	}
+	return timeout
+}
+
+func metav1Duration(d time.Duration) *metav1.Duration {
+	return &metav1.Duration{Duration: d}
+}
+
+func isZeroDuration(d *metav1.Duration) bool {
+	return d == nil || d.Truncate(time.Second) == 0
 }
 
 func (c *Controller) handleResultError(ctx context.Context, pipelineRun k8s.PipelineRun, result api.Result, message string, err error) error {

@@ -68,7 +68,6 @@ func Test_loadPipelineRunsConfig_EmptyMainConfig(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, resultErr)
 	expectedConfig := &PipelineRunsConfigStruct{
-		TimeoutWait:           metav1Duration(time.Minute * 10),
 		DefaultNetworkProfile: "key1",
 		NetworkPolicies: map[string]string{
 			"key1": "policy1",
@@ -356,27 +355,7 @@ func Test_processMainConfig(t *testing.T) {
 				mainConfigKeyPSCRunAsGroup:   "",
 				mainConfigKeyPSCFSGroup:      "",
 			},
-			&PipelineRunsConfigStruct{
-				TimeoutWait: metav1Duration(time.Minute * 10),
-			},
-		},
-		{
-			"wait_timout_zero",
-			map[string]string{
-				mainConfigKeyTimeout:       "",
-				mainConfigKeyTimeoutWait:   "0s",
-				mainConfigKeyLimitRange:    "",
-				mainConfigKeyResourceQuota: "",
-
-				mainConfigKeyImage:           "",
-				mainConfigKeyImagePullPolicy: "",
-				mainConfigKeyPSCRunAsUser:    "",
-				mainConfigKeyPSCRunAsGroup:   "",
-				mainConfigKeyPSCFSGroup:      "",
-			},
-			&PipelineRunsConfigStruct{
-				TimeoutWait: metav1Duration(time.Minute * 10),
-			},
+			&PipelineRunsConfigStruct{},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
