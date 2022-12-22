@@ -2299,7 +2299,7 @@ func Test__runManager_DeleteRun_MissingRunNamespace(t *testing.T) {
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 
 	examinee := newRunManager(mockFactory, mockSecretProvider)
-	
+
 	mockPipelineRun.EXPECT().GetName().Return("foo").Times(1)
 
 	// EXERCISE
