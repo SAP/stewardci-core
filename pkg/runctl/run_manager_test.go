@@ -32,6 +32,7 @@ import (
 	is "gotest.tools/v3/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
 	equality "k8s.io/apimachinery/pkg/api/equality"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -1975,20 +1976,22 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 }
 
 type testHelper1 struct {
-	t             *testing.T
-	ctx           context.Context
-	namespace1    string
-	pipelineRun1  string
-	runNamespace1 string
+	t               *testing.T
+	ctx             context.Context
+	namespace1      string
+	pipelineRun1    string
+	runNamespace1   string
+	tektonClientset *tektonfakeclient.Clientset
 }
 
 func newTestHelper1(t *testing.T) *testHelper1 {
 	h := &testHelper1{
-		t:             t,
-		ctx:           context.Background(),
-		namespace1:    "namespace1",
-		pipelineRun1:  "pipelinerun1",
-		runNamespace1: "runNamespace1",
+		t:               t,
+		ctx:             context.Background(),
+		namespace1:      "namespace1",
+		pipelineRun1:    "pipelinerun1",
+		runNamespace1:   "runNamespace1",
+		tektonClientset: tektonfakeclient.NewSimpleClientset(),
 	}
 	return h
 }
@@ -2111,8 +2114,7 @@ func (h *testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewar
 	stewardClientset := stewardfakeclient.NewSimpleClientset()
 	mockFactory.EXPECT().StewardV1alpha1().Return(stewardClientset.StewardV1alpha1()).AnyTimes()
 
-	tektonClientset := tektonfakeclient.NewSimpleClientset()
-	mockFactory.EXPECT().TektonV1beta1().Return(tektonClientset.TektonV1beta1()).AnyTimes()
+	mockFactory.EXPECT().TektonV1beta1().Return(h.tektonClientset.TektonV1beta1()).AnyTimes()
 
 	runNamespace := h.runNamespace1
 	auxNamespace := ""
@@ -2300,4 +2302,46 @@ func Test__runManager_DeleteRun_MissingRunNamespace(t *testing.T) {
 	assert.Error(t, resultError, `cannot delete taskrun, runnamespace not set in "foo"`)
 
 	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+}
+
+func Test__runManager_DeleteRun_Recoverable(t *testing.T) {
+	t.Parallel()
+
+	const (
+		anyInt     = 1
+		anyMessage = "message1"
+	)
+	var (
+		anyError    = fmt.Errorf("foo")
+		anyResource = resource("r1")
+	)
+	for _, tc := range []struct {
+		name           string
+		transientError error
+	}{
+		{"internal", k8serrors.NewInternalError(anyError)},
+		{"server timeout", k8serrors.NewServerTimeout(anyResource, anyMessage, anyInt)},
+		{"unavailable", k8serrors.NewServiceUnavailable(anyMessage)},
+		{"timeout", k8serrors.NewTimeoutError(anyMessage, anyInt)},
+		{"too many requests", k8serrors.NewTooManyRequestsError(anyMessage)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+
+			// SETUP
+			h := newTestHelper1(t)
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+
+			h.tektonClientset.PrependReactor("delete", "*", k8sfake.NewErrorReactor(tc.transientError))
+			examinee := newRunManager(mockFactory, mockSecretProvider)
+			// EXERCISE
+			resultError := examinee.DeleteRun(h.ctx, mockPipelineRun)
+
+			// VERIFY
+			assert.Assert(t, serrors.IsRecoverable(resultError), fmt.Sprintf("%+v", resultError))
+
+			mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+		})
+	}
 }
