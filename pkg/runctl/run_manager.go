@@ -707,7 +707,7 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 	return nil
 }
 
-func (c *runManager) wrapError(err error) error {
+func (c *runManager) recoverableIfTransient(err error) error {
 	return serrors.RecoverableIf(err,
 		k8serrors.IsServerTimeout(err) ||
 			k8serrors.IsServiceUnavailable(err) ||
