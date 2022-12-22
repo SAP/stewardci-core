@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strconv"
 	"testing"
-	"time"
 
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardfakeclient "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/fake"
@@ -2155,9 +2154,7 @@ func (h *testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewar
 }
 
 func newEmptyRunsConfig(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error) {
-	return &cfg.PipelineRunsConfigStruct{
-			TimeoutWait: metav1Duration(time.Minute * 10),
-		},
+	return &cfg.PipelineRunsConfigStruct{},
 		nil
 }
 
