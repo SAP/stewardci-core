@@ -53,13 +53,16 @@
   changes:
     - type: internal
       impact: minor
-      title: Implement retry on ImagePullBackOff 
+      title: Retry on ImagePullBackOff 
       description: |-
-        Steward is using Tekton to execute PipelineRuns.
-        Due to a [change in Tekton](https://github.com/tektoncd/pipeline/pull/4921) the behavior on ImagePullBackOff changed.
-        With this change we implement a retry mechanism to overcome problems with the changed Tekton behavior.
-        The Tekton TaskRun is now created in the `waiting` phase (instead of the `preparing` phase.
-        If the Tekton TaskRun fails with an image pull back off, the whole `waiting` phase is retried.
+        Since Tekton v0.41.0 TaskRuns fail if the corresponding pod is subject to
+        image pull back-off ([#4921](https://github.com/tektoncd/pipeline/pull/4921).
+        In case of transient image pull failures this can fail Steward PipelineRun
+        processing (`error_infra`).
+        
+        Steward now detects aborted TaskRuns due to ImagePullBackOff and retries with
+        a new TaskRun for a configurable period (`waitTimeout`).
+        This happens in the 'waiting' phase of Steward PipelineRun processing.
       pullRequestNumber: 345
       jiraIssueNumber: 1974
 
