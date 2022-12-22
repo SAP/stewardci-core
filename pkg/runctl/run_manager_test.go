@@ -1357,7 +1357,7 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	assert.Assert(t, result != nil)
 }
 
-func Test__runManager_Prepare__Perform_cleanup_on_error(t *testing.T) {
+func Test__runManager_Prepare__CleanupOnError(t *testing.T) {
 	t.Parallel()
 
 	prepareRunnamespaceErr := fmt.Errorf("cannot prepare run namespace: foo")
@@ -2214,6 +2214,7 @@ func Test__runManager_GetRun_Missing(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 	h.addTektonTaskRun(mockFactory)
+
 	examinee := newRunManager(mockFactory, mockSecretProvider)
 
 	// EXERCISE
@@ -2234,6 +2235,7 @@ func Test__runManager_GetRun_Existing(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+
 	examinee := newRunManager(mockFactory, mockSecretProvider)
 
 	// EXERCISE
@@ -2255,6 +2257,7 @@ func Test__runManager_DeleteRun_Success(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 	h.addTektonTaskRun(mockFactory)
+
 	examinee := newRunManager(mockFactory, mockSecretProvider)
 
 	// EXERCISE
@@ -2274,6 +2277,7 @@ func Test__runManager_DeleteRun_Missing(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+
 	examinee := newRunManager(mockFactory, mockSecretProvider)
 
 	// EXERCISE
@@ -2293,8 +2297,11 @@ func Test__runManager_DeleteRun_MissingRunNamespace(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
+
 	examinee := newRunManager(mockFactory, mockSecretProvider)
+	
 	mockPipelineRun.EXPECT().GetName().Return("foo").Times(1)
+
 	// EXERCISE
 	resultError := examinee.DeleteRun(h.ctx, mockPipelineRun)
 
@@ -2315,6 +2322,7 @@ func Test__runManager_DeleteRun_Recoverable(t *testing.T) {
 		anyError    = fmt.Errorf("foo")
 		anyResource = resource("r1")
 	)
+
 	for _, tc := range []struct {
 		name           string
 		transientError error
