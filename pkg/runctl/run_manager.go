@@ -744,9 +744,6 @@ func (c *runManager) DeleteRun(ctx context.Context, pipelineRun k8s.PipelineRun)
 	if err != nil {
 		return c.recoverableIfTransient(err)
 	}
-	if err != nil {
-		return fmt.Errorf("cannot delete taskrun in run namespace %q: %s", namespace, err.Error())
-	}
 	return nil
 }
 
