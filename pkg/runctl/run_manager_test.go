@@ -997,7 +997,7 @@ func Test__runManager_setupLimitRangeFromConfig__UnexpectedGroup(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	// We use a mocked client factory without expected calls, becausenewTestHelper1
+	// We use a mocked client factory without expected calls, because
 	// the SUT should not use it if policy decoding fails.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
