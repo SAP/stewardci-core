@@ -23,9 +23,9 @@ data:
     #   or "2h45m". Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
     timeout: 2h15m
 
-    # timeout.wait is the maximum time a pipeline is retrying to start a tekton task run
+    # waitTimeout is the maximum time a pipeline is retrying to start a tekton task run
     # which run into an image pull back off error before it gives up.
-    timeout.wait: 10m
+    waitTimeout: 10m
 
     limitRange: |
       apiVersion: v1
@@ -65,7 +65,7 @@ data:
     jenkinsfileRunner.podSecurityContext.fsGroup: "1000"
 
   timeout: {{ .Values.pipelineRuns.timeout | quote }}
-  timeout.wait: {{ .Values.pipelineRuns.waitTimeout | quote }}
+  waitTimeout: {{ .Values.pipelineRuns.waitTimeout | quote }}
   limitRange: {{ default ( .Files.Get "data/pipelineruns-default-limitrange.yaml" ) .Values.pipelineRuns.limitRange | quote }}
   resourceQuota: {{ .Values.pipelineRuns.resourceQuota | quote }}
 

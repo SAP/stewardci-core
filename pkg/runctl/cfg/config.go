@@ -19,7 +19,7 @@ import (
 const (
 	mainConfigMapName            = "steward-pipelineruns"
 	mainConfigKeyTimeout         = "timeout"
-	mainConfigKeyTimeoutWait     = "timeout.wait"
+	mainConfigKeyTimeoutWait     = "waitTimeout"
 	mainConfigKeyLimitRange      = "limitRange"
 	mainConfigKeyResourceQuota   = "resourceQuota"
 	mainConfigKeyImage           = "jenkinsfileRunner.image"
