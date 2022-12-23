@@ -51,6 +51,10 @@
 - version: NEXT
   date: TBD
   changes:
+
+- version: "0.24.0"
+  date: 2022-12-23
+  changes:
     - type: internal
       impact: minor
       title: Retry on ImagePullBackOff 
