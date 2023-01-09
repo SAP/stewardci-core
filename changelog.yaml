@@ -52,6 +52,15 @@
   date: TBD
   changes:
 
+    - type: internal
+      impact: patch
+      title: Fix Start Time
+      description: |-
+        The start time of running phase started at tekton task run start time.
+        With this fix we now take the start time of the step executing the jenkins file runner.
+      pullRequestNumber: 0
+      jiraIssueNumber: 1974
+      
 - version: "0.24.0"
   date: 2022-12-23
   changes:

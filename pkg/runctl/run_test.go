@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	time1                     = `2019-05-14T08:24:08Z`
+	time1                     = `2019-05-14T08:24:11Z`
 	emptyBuild                = `{}`
 	startedBuild              = `{"status": {"startTime": "` + time1 + `"}}`
 	runningBuild              = `{"status": {"steps": [{"name": "jenkinsfile-runner", "running": {"startedAt": "` + time1 + `"}}]}}`
@@ -32,13 +32,13 @@ const (
     status: Unknown
     type: Succeeded
   podName: build-pod-38aa76
-  startTime: "` + time1 + `"
+  startTime: "2019-05-14T08:24:08Z"
   steps:
   - container: step-jenkinsfile-runner
     imageID: docker-pullable://alpine@sha256:acd3ca9941a85e8ed16515bfc5328e4e2f8c128caa72959a58a127b7801ee01f
     name: jenkinsfile-runner
     running:
-      startedAt: "2019-05-14T08:24:11Z"
+      startedAt: "` + time1 + `"
 `
 
 	realCompletedSuccess = `status:

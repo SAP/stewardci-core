@@ -2,6 +2,7 @@ package runctl
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -109,7 +110,7 @@ func Test_Controller_Running(t *testing.T) {
 	runNs := run.GetRunNamespace()
 	taskRun := getTektonTaskRun(t, runNs, cf)
 	now := metav1.Now()
-	taskRun.Status.StartTime = &now
+	taskRun.Status.Steps = stepsWithRunningContainer(now)
 	condition := apis.Condition{
 		Type:   apis.ConditionSucceeded,
 		Status: corev1.ConditionUnknown,
@@ -121,6 +122,16 @@ func Test_Controller_Running(t *testing.T) {
 	run = getPipelineRun(t, "run1", "ns1", cf)
 	status := run.GetStatus()
 	assert.Equal(t, api.StateRunning, status.State)
+}
+
+func stepsWithRunningContainer(startTime metav1.Time) []tekton.StepState {
+	var stepState tekton.StepState
+	time, _ := json.Marshal(startTime)
+	s := fmt.Sprintf(`{ "running": {"startedAt": %s}, "container": %q, "name": "foo"}`, time, jfrStepName)
+	json.Unmarshal([]byte(s), &stepState)
+	return []tekton.StepState{
+		stepState,
+	}
 }
 
 func Test_Controller_Deletion(t *testing.T) {
