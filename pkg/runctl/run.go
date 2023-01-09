@@ -11,6 +11,10 @@ import (
 	knativeapis "knative.dev/pkg/apis"
 )
 
+const (
+	jfrStepName = "step-jenkinsfile-runner"
+)
+
 type tektonRun struct {
 	tektonTaskRun *tekton.TaskRun
 }
@@ -30,7 +34,12 @@ func (r *tektonRun) GetStartTime() *metav1.Time {
 	if condition.IsUnknown() && condition.Reason != tekton.TaskRunReasonRunning.String() {
 		return nil
 	}
-	return r.tektonTaskRun.Status.StartTime
+	for _, step := range r.tektonTaskRun.Status.Steps {
+		if step.ContainerName == jfrStepName && step.Running != nil {
+			return &step.Running.StartedAt
+		}
+	}
+	return nil
 }
 
 // GetCompletionTime returns completion time of run if already completed
