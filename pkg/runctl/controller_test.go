@@ -91,43 +91,51 @@ func Test_Controller_Success(t *testing.T) {
 func Test_Controller_Running(t *testing.T) {
 	t.Parallel()
 
-	// SETUP
-	cf := newFakeClientFactory(
-		fake.SecretOpaque("secret1", "ns1"),
-		fake.ClusterRole(string(runClusterRoleName)),
-	)
-	pr := fake.PipelineRun("run1", "ns1", api.PipelineSpec{
-		Secrets: []string{"secret1"},
-	})
+	for _, containerState := range []string{
+		"running",
+		"terminated",
+	} {
+		t.Run(containerState, func(t *testing.T) {
 
-	// EXERCISE
-	stopCh := startController(t, cf)
-	defer stopController(t, stopCh)
-	createRun(t, pr, cf)
+			// SETUP
+			cf := newFakeClientFactory(
+				fake.SecretOpaque("secret1", "ns1"),
+				fake.ClusterRole(string(runClusterRoleName)),
+			)
+			pr := fake.PipelineRun("run1", "ns1", api.PipelineSpec{
+				Secrets: []string{"secret1"},
+			})
 
-	// VERIFY
-	run := getPipelineRun(t, "run1", "ns1", cf)
-	runNs := run.GetRunNamespace()
-	taskRun := getTektonTaskRun(t, runNs, cf)
-	now := metav1.Now()
-	taskRun.Status.Steps = stepsWithRunningContainer(now)
-	condition := apis.Condition{
-		Type:   apis.ConditionSucceeded,
-		Status: corev1.ConditionUnknown,
-		Reason: tekton.TaskRunReasonRunning.String(),
+			// EXERCISE
+			stopCh := startController(t, cf)
+			defer stopController(t, stopCh)
+			createRun(t, pr, cf)
+
+			// VERIFY
+			run := getPipelineRun(t, "run1", "ns1", cf)
+			runNs := run.GetRunNamespace()
+			taskRun := getTektonTaskRun(t, runNs, cf)
+			now := metav1.Now()
+			taskRun.Status.Steps = stepsWithContainer(containerState, now)
+			condition := apis.Condition{
+				Type:   apis.ConditionSucceeded,
+				Status: corev1.ConditionUnknown,
+				Reason: tekton.TaskRunReasonRunning.String(),
+			}
+			taskRun.Status.SetCondition(&condition)
+			updateTektonTaskRun(t, taskRun, runNs, cf)
+			cf.Sleep("Waiting for Tekton TaskRun being started")
+			run = getPipelineRun(t, "run1", "ns1", cf)
+			status := run.GetStatus()
+			assert.Equal(t, api.StateRunning, status.State)
+		})
 	}
-	taskRun.Status.SetCondition(&condition)
-	updateTektonTaskRun(t, taskRun, runNs, cf)
-	cf.Sleep("Waiting for Tekton TaskRun being started")
-	run = getPipelineRun(t, "run1", "ns1", cf)
-	status := run.GetStatus()
-	assert.Equal(t, api.StateRunning, status.State)
 }
 
-func stepsWithRunningContainer(startTime metav1.Time) []tekton.StepState {
+func stepsWithContainer(state string, startTime metav1.Time) []tekton.StepState {
 	var stepState tekton.StepState
 	time, _ := json.Marshal(startTime)
-	s := fmt.Sprintf(`{ "running": {"startedAt": %s}, "container": %q, "name": "foo"}`, time, jfrStepName)
+	s := fmt.Sprintf(`{ %q: {"startedAt": %s}, "container": %q, "name": "foo"}`, state, time, jfrStepName)
 	json.Unmarshal([]byte(s), &stepState)
 	return []tekton.StepState{
 		stepState,

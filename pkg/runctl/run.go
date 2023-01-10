@@ -38,6 +38,9 @@ func (r *tektonRun) GetStartTime() *metav1.Time {
 		if step.ContainerName == jfrStepName && step.Running != nil {
 			return &step.Running.StartedAt
 		}
+		if step.ContainerName == jfrStepName && step.Terminated != nil {
+			return &step.Terminated.StartedAt
+		}
 	}
 	return nil
 }
