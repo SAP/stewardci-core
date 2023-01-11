@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	time1                     = `2019-05-14T08:24:08Z`
+	taskStartTime             = `2019-05-14T08:24:08Z`
+	stepStartTime             = `2019-05-14T08:24:11Z`
 	emptyBuild                = `{}`
-	startedBuild              = `{"status": {"startTime": "` + time1 + `"}}`
-	runningBuild              = `{"status": {"steps": [{"name": "jenkinsfile-runner", "running": {"startedAt": "` + time1 + `"}}]}}`
+	runningBuild              = `{"status": {"steps": [{"name": "jenkinsfile-runner", "running": {"startedAt": "` + stepStartTime + `"}}]}}`
 	completedSuccess          = `{"status": {"conditions": [{"message": "message1", "reason": "Succeeded", "status": "True", "type": "Succeeded"}], "steps": [{"name": "jenkinsfile-runner", "terminated": {"reason": "Completed", "message": "ok", "exitCode": 0}}]}}`
 	completedFail             = `{"status": {"conditions": [{"message": "message1", "reason": "Failed", "status": "False", "type": "Succeeded"}], "steps": [{"name": "jenkinsfile-runner", "terminated": {"reason": "Error", "message": "ko", "exitCode": 1}}]}}`
 	completedValidationFailed = `{"status": {"conditions": [{"message": "message1", "reason": "TaskRunValidationFailed", "status": "False", "type": "Succeeded"}]}}`
@@ -26,19 +26,19 @@ const (
 
 	realStartedBuild = `status:
   conditions:
-  - lastTransitionTime: "2019-05-14T08:24:12Z"
+  - lastTransitionTime: ` + taskStartTime + `
     message: Not all Steps in the Task have finished executing
     reason: Running
     status: Unknown
     type: Succeeded
   podName: build-pod-38aa76
-  startTime: "` + time1 + `"
+  startTime: 
   steps:
   - container: step-jenkinsfile-runner
     imageID: docker-pullable://alpine@sha256:acd3ca9941a85e8ed16515bfc5328e4e2f8c128caa72959a58a127b7801ee01f
     name: jenkinsfile-runner
     running:
-      startedAt: "2019-05-14T08:24:11Z"
+      startedAt: "` + stepStartTime + `"
 `
 
 	realCompletedSuccess = `status:
@@ -148,7 +148,7 @@ func Test__GetStartTime_UnsetReturnsNil(t *testing.T) {
 }
 
 func Test__GetStartTime_Set(t *testing.T) {
-	expectedTime := generateTime(time1)
+	expectedTime := generateTime(stepStartTime)
 	run := NewRun(fakeTektonTaskRunYaml(realStartedBuild))
 	startTime := run.GetStartTime()
 	assert.Assert(t, expectedTime.Equal(startTime), fmt.Sprintf("Expected: %s, Is: %s", expectedTime, startTime))

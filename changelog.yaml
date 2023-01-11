@@ -59,6 +59,20 @@
         This is fixed with this change.
       pullRequestNumber: 351
 
+    - type: internal
+      impact: patch
+      title: Fix start time of phase "running"
+      description: |-
+        The start time of phase "running" was set to the start time of the
+        Tekton TaskRun for JFR, which is when the pod has been _created_.
+        But phase "waiting" now covers the time until successful start-up
+        of the containers in the pod, which can be significantly after pod
+        creation, e.g. due to image pull time.
+        Therefore, the start time of phase "running" is now the start time
+        of the the JRF container.
+      pullRequestNumber: 350
+      jiraIssueNumber: 1974
+      
 - version: "0.24.0"
   date: 2022-12-23
   changes:
