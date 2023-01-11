@@ -51,6 +51,13 @@
 - version: NEXT
   date: TBD
   changes:
+    - type: bug
+      impact: minor
+      title: Fix not working imagePullPolicy parameter in backend-api
+      description: |-
+        Before the parameter `imagePullPolicy` in the PipelineRun was not handled correctly.
+        This is fixed with this change.
+      pullRequestNumber: 0
 
 - version: "0.24.0"
   date: 2022-12-23
