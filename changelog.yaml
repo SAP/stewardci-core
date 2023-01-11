@@ -57,7 +57,7 @@
       description: |-
         Before the parameter `imagePullPolicy` in the PipelineRun was not handled correctly.
         This is fixed with this change.
-      pullRequestNumber: 0
+      pullRequestNumber: 351
 
 - version: "0.24.0"
   date: 2022-12-23
