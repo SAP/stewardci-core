@@ -48,16 +48,17 @@
 # ! Do NOT add change entries to already released versions! Only add to version 'NEXT'.
 # ! Do NOT change any 'version' or 'date' values manually! The pipeline will take care.
 # ! Do NOT change the order of version blocks! 'NEXT' needs to stay the first version block.
-- version: NEXT
-  date: TBD
+- version: "0.23.1-hotfix1"
+  date: 2023-01-13
   changes:
+
     - type: hotfix
       impact: patch
       title: Fix not working imagePullPolicy parameter in backend-api
       description: |-
         Before the parameter `imagePullPolicy` in the PipelineRun was not handled correctly.
         This is fixed with this change.
-      pullRequestNumber: 1
+      pullRequestNumber: 351
 
 - version: "0.23.1"
   date: 2022-12-09
@@ -85,7 +86,7 @@
       impact: minor
       title: Add aggregated cluster roles for crds
       description: |-
-        Add aggregated cluster roles for the generic view, edit and admin roles 
+        Add aggregated cluster roles for the generic view, edit and admin roles
         for the custom resources tenants and pipelineruns.
       pullRequestNumber: 340
 
