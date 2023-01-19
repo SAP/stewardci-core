@@ -85,7 +85,7 @@ pipelineRuns:
     elasticsearch:
       indexURL: ""
   jenkinsfileRunner:
-    image: "stewardci/stewardci-jenkinsfile-runner:221118_24e6615"
+    image: "stewardci/stewardci-jenkinsfile-runner:TBD"
     imagePullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0

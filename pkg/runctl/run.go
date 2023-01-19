@@ -12,7 +12,9 @@ import (
 )
 
 const (
-	jfrStepName = "step-jenkinsfile-runner"
+	jfrStepName       = "step-jenkinsfile-runner"
+	jfrRcErrorContent = 2
+	jfrRcErrorConfig  = 3
 )
 
 type tektonRun struct {
@@ -105,8 +107,13 @@ func (r *tektonRun) IsFinished() (bool, steward.Result) {
 		return true, steward.ResultTimeout
 	case tekton.TaskRunReasonFailed.String():
 		jfrStepState := r.getJenkinsfileRunnerStepState()
-		if jfrStepState != nil && jfrStepState.Terminated != nil && jfrStepState.Terminated.ExitCode != 0 {
-			return true, steward.ResultErrorContent
+		if jfrStepState != nil && jfrStepState.Terminated != nil {
+			switch jfrStepState.Terminated.ExitCode {
+			case jfrRcErrorContent:
+				return true, steward.ResultErrorContent
+			case jfrRcErrorConfig:
+				return true, steward.ResultErrorConfig
+			}
 		}
 	default:
 		// TODO handle other failure reasons like quota exceedance
