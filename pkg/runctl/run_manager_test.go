@@ -255,6 +255,34 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 	assert.Assert(t, methodCalled == true)
 }
 
+func Test__runManager_createServiceAccountToken(t *testing.T) {
+	t.Parallel()
+
+	// SETUP
+	const (
+		serviceAccountName = "serviceAccount1"
+	)
+	h := newTestHelper1(t)
+
+	cf := newFakeClientFactory(
+		k8sfake.Namespace(h.runNamespace1),
+	)
+
+	secretProvider := secretproviderfakes.NewProvider(h.namespace1)
+
+	examinee := newRunManager(cf, secretProvider)
+	// EXERCISE
+	resultErr := examinee.createServiceAccountToken(h.ctx, serviceAccountName, h.runNamespace1)
+
+	// VERIFY
+	assert.NilError(t, resultErr)
+
+	secret, err := cf.CoreV1().Secrets(h.runNamespace1).Get(h.ctx, serviceAccountTokenName, metav1.GetOptions{})
+	assert.NilError(t, err)
+	assert.Assert(t, secret != nil)
+
+}
+
 func Test__runManager_ensureServiceAccountToken(t *testing.T) {
 	t.Parallel()
 
