@@ -244,21 +244,42 @@ func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext
 
 	runCtx.serviceAccount = serviceAccount
 
-	serviceAccountSecretName, err := c.getServiceAccountSecretName(ctx, runCtx)
-	if err != nil {
-		return errors.Wrapf(err,
-			"failed to get service account secret name %q in namespace %q",
-			serviceAccountName, runCtx.runNamespace,
-		)
-	}
-	err = c.ensureServiceAccountToken(ctx, serviceAccountSecretName, runCtx.runNamespace)
-	if err != nil {
-		return errors.Wrapf(err,
-			"failed to create token %q for service account %q in namespace %q",
-			serviceAccountSecretName, serviceAccountName, runCtx.runNamespace,
-		)
+	if featureflag.CreateServiceAccountTokenInRunNamespace.Enabled() {
+		err := c.createServiceAccountToken(ctx, serviceAccountName, runCtx.runNamespace)
+		if err != nil {
+			return err
+		}
+
+	} else {
+		serviceAccountSecretName, err := c.getServiceAccountSecretName(ctx, runCtx)
+		if err != nil {
+			return errors.Wrapf(err,
+				"failed to get service account secret name %q in namespace %q",
+				serviceAccountName, runCtx.runNamespace,
+			)
+		}
+		err = c.ensureServiceAccountToken(ctx, serviceAccountSecretName, runCtx.runNamespace)
+		if err != nil {
+			return errors.Wrapf(err,
+				"failed to create token %q for service account %q in namespace %q",
+				serviceAccountSecretName, serviceAccountName, runCtx.runNamespace,
+			)
+		}
 	}
 	return nil
+}
+
+func (c *runManager) createServiceAccountToken(ctx context.Context, serviceAccountName, runNamespace string) error {
+
+	newSecret := &corev1api.Secret{Type: "kubernetes.io/service-account-token"}
+	newSecret.SetName(serviceAccountTokenName)
+	newSecret.SetNamespace(runNamespace)
+	annotations := map[string]string{"kubernetes.io/service-account.name": serviceAccountName}
+	newSecret.SetAnnotations(annotations)
+
+	secretClient := c.factory.CoreV1().Secrets(runNamespace)
+	_, err := secretClient.Create(ctx, newSecret, metav1.CreateOptions{})
+	return err
 }
 
 func (c *runManager) ensureServiceAccountToken(ctx context.Context, serviceAccountSecretName, runNamespace string) error {
