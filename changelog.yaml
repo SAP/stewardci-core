@@ -58,7 +58,7 @@
         With K8S 1.24 or higher Service Account Tokens are not created automatically anymore.
         To avoid problems with this braking change the feature flag CreateServiceAccountTokenInRunNamespace
         is introduced with this change. Enable it when using steward on K8S 1.24+.
-      pullRequestNumber: 0
+      pullRequestNumber: 355
 
 - version: "0.24.1"
   date: 2023-01-12
