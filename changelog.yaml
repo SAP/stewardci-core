@@ -56,7 +56,7 @@
       title: Use JFR image with updated plugins
       description: |-
         Use Jenkins 2.346.3 with [updated plugins](https://github.com/SAP/stewardci-jenkinsfilerunner-image/pull/98).
-      pullRequestNumber: 0
+      pullRequestNumber: 356
 
     - type: internal
       impact: minor
