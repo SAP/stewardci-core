@@ -14,16 +14,74 @@ import (
 )
 
 const (
-	taskStartTime         = `2019-05-14T08:24:08Z`
-	stepStartTime         = `2019-05-14T08:24:11Z`
-	emptyBuild            = `{}`
-	runningBuild          = `{"status": {"steps": [{"name": "jenkinsfile-runner", "running": {"startedAt": "` + stepStartTime + `"}}]}}`
-	completedSuccess      = `{"status": {"conditions": [{"message": "message1", "reason": "Succeeded", "status": "True", "type": "Succeeded"}], "steps": [{"name": "jenkinsfile-runner", "terminated": {"reason": "Completed", "message": "ok", "exitCode": 0}}]}}`
-	completedErrorInfra   = `{"status": {"conditions": [{"message": "message1", "reason": "Failed", "status": "False", "type": "Succeeded"}], "steps": [{"name": "jenkinsfile-runner", "terminated": {"reason": "Error", "message": "ko", "exitCode": 1}}]}}`
-	completedErrorContent = `{"status": {"conditions": [{"message": "message1", "reason": "Failed", "status": "False", "type": "Succeeded"}], "steps": [{"name": "jenkinsfile-runner", "terminated": {"reason": "Error", "message": "ko", "exitCode": 2}}]}}`
-	completedErrorConfig  = `{"status": {"conditions": [{"message": "message1", "reason": "Failed", "status": "False", "type": "Succeeded"}], "steps": [{"name": "jenkinsfile-runner", "terminated": {"reason": "Error", "message": "ko", "exitCode": 3}}]}}`
+	taskStartTime = `2019-05-14T08:24:08Z`
+	stepStartTime = `2019-05-14T08:24:11Z`
+	emptyBuild    = `{}`
 
-	completedValidationFailed = `{"status": {"conditions": [{"message": "message1", "reason": "TaskRunValidationFailed", "status": "False", "type": "Succeeded"}]}}`
+	runningBuild = `{"status":
+	                  {"steps": [
+	                    {"name": "jenkinsfile-runner",
+	                     "running": {"startedAt": "` + stepStartTime + `"}}]}}`
+
+	completedSuccess = `{"status":
+	                        {"conditions": [
+	                            {"message": "message1",
+	                             "reason": "Succeeded",
+	                             "status": "True",
+	                             "type": "Succeeded"}],
+	                         "steps": [
+	                            {"name": "jenkinsfile-runner",
+	                             "terminated": {
+	                                "reason": "Completed",
+	                                "message": "ok",
+	                                "exitCode": 0}}]}}`
+
+	completedErrorInfra = `{"status":
+	                           {"conditions": [
+	                               {"message": "message1",
+	                                "reason": "Failed",
+	                                "status": "False",
+	                                "type": "Succeeded"}],
+	                            "steps": [
+	                               {"name": "jenkinsfile-runner",
+	                                "terminated": {
+	                                   "reason": "Error",
+	                                   "message": "ko",
+	                                   "exitCode": 1}}]}}`
+
+	completedErrorContent = `{"status":
+	                            {"conditions": [
+	                                {"message": "message1",
+	                                 "reason": "Failed",
+	                                 "status": "False",
+	                                 "type": "Succeeded"}],
+	                             "steps": [
+	                                {"name": "jenkinsfile-runner",
+	                                 "terminated": {
+	                                    "reason": "Error",
+	                                    "message": "ko",
+	                                    "exitCode": 2}}]}}`
+
+	completedErrorConfig = `{"status":
+	                           {"conditions": [
+	                               {"message": "message1",
+	                                "reason": "Failed",
+	                                "status": "False",
+	                                "type": "Succeeded"}],
+	                            "steps": [
+	                               {"name": "jenkinsfile-runner",
+	                                "terminated": {
+	                                   "reason": "Error",
+	                                   "message": "ko",
+	                                   "exitCode": 3}}]}}`
+
+	completedValidationFailed = `{"status":
+	                                {"conditions": [
+	                                    {"message": "message1",
+	                                     "reason": "TaskRunValidationFailed",
+	                                     "status": "False",
+	                                     "type": "Succeeded"}]}}`
+
 	//See issue https://github.com/SAP/stewardci-core/issues/? TODO: create public issue. internal: 21
 	timeout = `{"status": {"conditions": [{"message": "TaskRun \"steward-jenkinsfile-runner\" failed to finish within \"10m0s\"", "reason": "TaskRunTimeout", "status": "False", "type": "Succeeded"}]}}`
 
