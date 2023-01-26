@@ -56,7 +56,7 @@
       title: Use JFR image with improved error handling
       description: |-
         Steward can now handle different error codes provided by the improved JFR image.
-      pullRequestNumber: 0
+      pullRequestNumber: 354
       jiraIssueNumber: 715
 - version: "0.24.1"
   date: 2023-01-12
