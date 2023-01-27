@@ -59,6 +59,9 @@
       pullRequestNumber: 358
 - version: "0.25.0"
   date: 2023-01-26
+  recall:
+    message: |-
+      This version contains a non working JFR image. Use version 0.25.1 instead.
   changes:
     - type: enhancement
       impact: minor
