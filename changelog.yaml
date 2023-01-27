@@ -51,7 +51,12 @@
 - version: NEXT
   date: TBD
   changes:
-
+    - type: enhancement
+      impact: patch
+      title: Rollback updated plugins
+      description: |-
+        Rollback plugin update from 0.25.0
+      pullRequestNumber: 0
 - version: "0.25.0"
   date: 2023-01-26
   changes:
