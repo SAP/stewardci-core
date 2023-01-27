@@ -51,7 +51,7 @@
 - version: NEXT
   date: TBD
   changes:
-    - type: enhancement
+    - type: bug
       impact: patch
       title: Rollback updated plugins
       description: |-
