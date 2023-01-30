@@ -51,9 +51,17 @@
 - version: NEXT
   date: TBD
   changes:
-
+    - type: bug
+      impact: patch
+      title: Rollback updated plugins
+      description: |-
+        Rollback `stewardci/stewardci-jenkinsfile-runner` image to `230126_b29a3f0` version
+      pullRequestNumber: 358
 - version: "0.25.0"
   date: 2023-01-26
+  recall:
+    message: |-
+      This version contains a non working JFR image. Use version 0.25.1 instead.
   changes:
     - type: enhancement
       impact: minor
