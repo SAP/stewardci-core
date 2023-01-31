@@ -60,6 +60,35 @@
         is introduced with this change. Enable it when using steward on K8S 1.24+.
       pullRequestNumber: 355
 
+- version: "0.25.1"
+  date: 2023-01-30
+  changes:
+    - type: bug
+      impact: patch
+      title: Rollback updated plugins
+      description: |-
+        Rollback `stewardci/stewardci-jenkinsfile-runner` image to `230126_b29a3f0` version
+      pullRequestNumber: 358
+- version: "0.25.0"
+  date: 2023-01-26
+  recall:
+    message: |-
+      This version contains a non working JFR image. Use version 0.25.1 instead.
+  changes:
+    - type: enhancement
+      impact: minor
+      title: Use JFR image with updated plugins
+      description: |-
+        Use Jenkins 2.346.3 with [updated plugins](https://github.com/SAP/stewardci-jenkinsfilerunner-image/pull/98).
+      pullRequestNumber: 356
+
+    - type: internal
+      impact: minor
+      title: Use JFR image with improved error handling
+      description: |-
+        Steward can now handle different error codes provided by the improved JFR image.
+      pullRequestNumber: 354
+      jiraIssueNumber: 715
 - version: "0.24.1"
   date: 2023-01-12
   changes:
