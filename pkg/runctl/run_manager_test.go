@@ -44,7 +44,6 @@ func newRunManagerTestingWithAllNoopStubs() *runManagerTesting {
 	return &runManagerTesting{
 		cleanupStub:                               func(context.Context, *runContext) error { return nil },
 		copySecretsToRunNamespaceStub:             func(context.Context, *runContext) (string, []string, error) { return "", []string{}, nil },
-		getServiceAccountSecretNameStub:           func(context.Context, *runContext) (string, error) { return "", nil },
 		setupLimitRangeFromConfigStub:             func(context.Context, *runContext) error { return nil },
 		setupNetworkPolicyFromConfigStub:          func(context.Context, *runContext) error { return nil },
 		setupNetworkPolicyThatIsolatesAllPodsStub: func(context.Context, *runContext) error { return nil },
@@ -57,10 +56,7 @@ func newRunManagerTestingWithAllNoopStubs() *runManagerTesting {
 }
 
 func newRunManagerTestingWithRequiredStubs() *runManagerTesting {
-	return &runManagerTesting{
-		getServiceAccountSecretNameStub: func(context.Context, *runContext) (string, error) { return "", nil },
-		ensureServiceAccountTokenStub:   ensureServiceAccountTokenStub,
-	}
+	return &runManagerTesting{}
 }
 
 func contextWithSpec(t *testing.T, runNamespaceName string, spec stewardv1alpha1.PipelineSpec) *runContext {
@@ -253,100 +249,6 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 	// VERIFY
 	assert.Equal(t, expectedError, resultErr)
 	assert.Assert(t, methodCalled == true)
-}
-
-func Test__runManager_createServiceAccountToken(t *testing.T) {
-	t.Parallel()
-
-	// SETUP
-	const (
-		serviceAccountName = "serviceAccount1"
-	)
-	h := newTestHelper1(t)
-
-	cf := newFakeClientFactory(
-		k8sfake.Namespace(h.runNamespace1),
-	)
-
-	secretProvider := secretproviderfakes.NewProvider(h.namespace1)
-
-	examinee := newRunManager(cf, secretProvider)
-	// EXERCISE
-	resultErr := examinee.createServiceAccountToken(h.ctx, serviceAccountName, h.runNamespace1)
-
-	// VERIFY
-	assert.NilError(t, resultErr)
-
-	secret, err := cf.CoreV1().Secrets(h.runNamespace1).Get(h.ctx, serviceAccountTokenName, metav1.GetOptions{})
-	assert.NilError(t, err)
-	assert.Assert(t, secret != nil)
-
-}
-
-func Test__runManager_ensureServiceAccountToken(t *testing.T) {
-	t.Parallel()
-
-	// SETUP
-	const (
-		tokenSecretName          = "default1"
-		notExistingTokenName     = "not_existing1"
-		notExistingNamespaceName = "not_existing2"
-	)
-	h := newTestHelper1(t)
-	for _, tc := range []struct {
-		name          string
-		secretName    string
-		namespace     string
-		expectedError string
-	}{
-		{
-			name:       "success",
-			secretName: tokenSecretName,
-			namespace:  h.runNamespace1,
-		},
-		{
-			name:          "missing token",
-			secretName:    notExistingTokenName,
-			namespace:     h.runNamespace1,
-			expectedError: "secret not found: 'not_existing1'",
-		},
-		{
-			name:          "wrong namespace",
-			secretName:    tokenSecretName,
-			namespace:     notExistingNamespaceName,
-			expectedError: "secret not found: 'default1'",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			tc := tc
-			t.Parallel()
-
-			cf := newFakeClientFactory(
-				k8sfake.Namespace(h.runNamespace1),
-				k8sfake.SecretOpaque(tokenSecretName, h.runNamespace1),
-			)
-
-			secretProvider := secretproviderfakes.NewProvider(h.namespace1)
-
-			examinee := newRunManager(cf, secretProvider)
-
-			// EXERCISE
-			resultErr := examinee.ensureServiceAccountToken(h.ctx, tc.secretName, tc.namespace)
-
-			// VERIFY
-			if tc.expectedError == "" {
-				assert.NilError(t, resultErr)
-
-				secret, err := cf.CoreV1().Secrets(h.runNamespace1).Get(h.ctx, serviceAccountTokenName, metav1.GetOptions{})
-				assert.NilError(t, err)
-				assert.Assert(t, secret != nil)
-
-			} else {
-				assert.Error(t, resultErr, tc.expectedError)
-			}
-
-		})
-	}
 }
 
 func Test__runManager_setupStaticNetworkPolicies__Succeeds(t *testing.T) {
@@ -1299,7 +1201,6 @@ func Test__runManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet
 func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T) {
 	t.Parallel()
 
-	int32Ptr := func(val int32) *int32 { return &val }
 	int64Ptr := func(val int64) *int64 { return &val }
 
 	// SETUP
@@ -1333,6 +1234,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 
 	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
+	expiration := int64(7200)
 	expectedPodTemplate := &tektonPod.PodTemplate{
 		SecurityContext: &corev1.PodSecurityContext{
 			FSGroup:    int64Ptr(1111),
@@ -1343,9 +1245,15 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 			{
 				Name: "service-account-token",
 				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName:  serviceAccountTokenName,
-						DefaultMode: int32Ptr(0644),
+					Projected: &corev1.ProjectedVolumeSource{
+						Sources: []corev1.VolumeProjection{
+							corev1.VolumeProjection{
+								ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+									Path:              "token",
+									ExpirationSeconds: &expiration,
+								},
+							},
+						},
 					},
 				},
 			},

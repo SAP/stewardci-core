@@ -1035,12 +1035,7 @@ func ensureServiceAccountTokenStub(ctx context.Context, serviceAccountSecretName
 }
 
 func newTestRunManager(workFactory k8s.ClientFactory, secretProvider secrets.SecretProvider) run.Manager {
-	runManager := newRunManager(workFactory, secretProvider)
-	runManager.testing = &runManagerTesting{
-		getServiceAccountSecretNameStub: func(context.Context, *runContext) (string, error) { return "foo", nil },
-		ensureServiceAccountTokenStub:   ensureServiceAccountTokenStub,
-	}
-	return runManager
+	return newRunManager(workFactory, secretProvider)
 }
 
 func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {

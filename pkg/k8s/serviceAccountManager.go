@@ -216,8 +216,3 @@ type ServiceAccountHelper interface {
 	GetServiceAccountSecretNameRepeat(ctx context.Context) (string, error)
 	GetServiceAccountSecretName(ctx context.Context) (string, error)
 }
-
-// GetHelper returns a ServiceAccountHelper
-func (a *ServiceAccountWrap) GetHelper() ServiceAccountHelper {
-	return newServiceAccountHelper(a.factory, a.cache.DeepCopy())
-}
