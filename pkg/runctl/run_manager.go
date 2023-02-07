@@ -505,14 +505,20 @@ func (c *runManager) createResource(ctx context.Context, configStr string, resou
 }
 
 func (c *runManager) volumesWithServiceAccountSecret(secretName string) []corev1api.Volume {
-	var mode int32 = 0644
+	expiration := int64(7200) // TODO take timeout here
 	return []corev1api.Volume{
 		{
 			Name: "service-account-token",
 			VolumeSource: corev1api.VolumeSource{
-				Secret: &corev1api.SecretVolumeSource{
-					SecretName:  secretName,
-					DefaultMode: &mode,
+				Projected: &corev1api.ProjectedVolumeSource{
+					Sources: []corev1api.VolumeProjection{
+						corev1api.VolumeProjection{
+							ServiceAccountToken: &corev1api.ServiceAccountTokenProjection{
+								Path:              "token",
+								ExpirationSeconds: &expiration,
+							},
+						},
+					},
 				},
 			},
 		},
