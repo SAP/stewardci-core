@@ -466,6 +466,32 @@ func (c *runManager) volumesWithServiceAccountSecret() []corev1api.Volume {
 								ExpirationSeconds: &expiration,
 							},
 						},
+						corev1api.VolumeProjection{
+							ConfigMap: &corev1api.ConfigMapProjection{
+								Items: []corev1api.KeyToPath{
+									corev1api.KeyToPath{
+										Key:  "ca.crt",
+										Path: "ca.crt",
+									},
+								},
+								LocalObjectReference: corev1api.LocalObjectReference{
+									Name: "kube-root-ca.crt",
+								},
+							},
+						},
+						corev1api.VolumeProjection{
+							DownwardAPI: &corev1api.DownwardAPIProjection{
+								Items: []corev1api.DownwardAPIVolumeFile{
+									corev1api.DownwardAPIVolumeFile{
+										FieldRef: &corev1api.ObjectFieldSelector{
+											APIVersion: "v1",
+											FieldPath:  "metadata.namespace",
+										},
+										Path: "namespace",
+									},
+								},
+							},
+						},
 					},
 				},
 			},

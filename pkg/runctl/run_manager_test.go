@@ -1253,6 +1253,32 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 									ExpirationSeconds: &expiration,
 								},
 							},
+							corev1.VolumeProjection{
+								ConfigMap: &corev1.ConfigMapProjection{
+									Items: []corev1.KeyToPath{
+										corev1.KeyToPath{
+											Key:  "ca.crt",
+											Path: "ca.crt",
+										},
+									},
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "kube-root-ca.crt",
+									},
+								},
+							},
+							corev1.VolumeProjection{
+								DownwardAPI: &corev1.DownwardAPIProjection{
+									Items: []corev1.DownwardAPIVolumeFile{
+										corev1.DownwardAPIVolumeFile{
+											FieldRef: &corev1.ObjectFieldSelector{
+												APIVersion: "v1",
+												FieldPath:  "metadata.namespace",
+											},
+											Path: "namespace",
+										},
+									},
+								},
+							},
 						},
 					},
 				},
