@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 
@@ -55,6 +56,8 @@ const (
 	// tektonTaskRun is the name of the Tekton TaskRun in each
 	// run namespace.
 	tektonTaskRunName = "steward-jenkinsfile-runner"
+
+	defaultTokenTimeoutSeconds = int64(7200)
 )
 
 type runManager struct {
@@ -452,8 +455,7 @@ func (c *runManager) createResource(ctx context.Context, configStr string, resou
 	return nil
 }
 
-func (c *runManager) volumesWithServiceAccountSecret() []corev1api.Volume {
-	expiration := int64(7200) // TODO take timeout here
+func (c *runManager) volumesWithServiceAccountSecret(expiration int64) []corev1api.Volume {
 	return []corev1api.Volume{
 		{
 			Name: "service-account-token",
@@ -512,7 +514,13 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 	}
 
 	namespace := runCtx.runNamespace
-
+	timeoutSeconds := defaultTokenTimeoutSeconds
+	timeoutDuration := getTimeout(runCtx)
+	log.Printf("DURATION: %+v", timeoutDuration)
+	if timeoutDuration != nil {
+		timeoutSeconds = int64(timeoutDuration.Seconds())
+		log.Printf("SECONDS: %d", timeoutSeconds)
+	}
 	tektonTaskRun := tekton.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tektonTaskRunName,
@@ -542,7 +550,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 					RunAsGroup: copyInt64Ptr(runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
 					FSGroup:    copyInt64Ptr(runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup),
 				},
-				Volumes: c.volumesWithServiceAccountSecret(),
+				Volumes: c.volumesWithServiceAccountSecret(timeoutSeconds),
 			},
 		},
 	}

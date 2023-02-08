@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"testing"
+	"time"
 
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardfakeclient "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/fake"
@@ -1213,7 +1214,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 		pipelineRun:  mockPipelineRun,
 		runNamespace: h.namespace1,
 		pipelineRunsConfig: &cfg.PipelineRunsConfigStruct{
-			Timeout: metav1Duration(4444),
+			Timeout: metav1Duration(1 * time.Minute),
 			JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(1111),
 			JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
 			JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(3333),
@@ -1234,7 +1235,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 
 	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
-	expiration := int64(7200)
+	expiration := int64(60)
 	expectedPodTemplate := &tektonPod.PodTemplate{
 		SecurityContext: &corev1.PodSecurityContext{
 			FSGroup:    int64Ptr(1111),
@@ -1290,7 +1291,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	assert.Assert(t, podTemplate.SecurityContext.FSGroup != runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup)
 	assert.Assert(t, podTemplate.SecurityContext.RunAsGroup != runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup)
 	assert.Assert(t, podTemplate.SecurityContext.RunAsUser != runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsUser)
-	assert.DeepEqual(t, metav1Duration(4444), taskRun.Spec.Timeout)
+	assert.DeepEqual(t, metav1Duration(1*time.Minute), taskRun.Spec.Timeout)
 }
 
 func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
