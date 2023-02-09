@@ -524,10 +524,18 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 		},
 		Spec: tekton.TaskRunSpec{
 			ServiceAccountName: serviceAccountName,
+
 			TaskRef: &tekton.TaskRef{
-				Kind: tekton.ClusterTaskKind,
-				Name: tektonClusterTaskName,
+				ResolverRef: tekton.ResolverRef{
+					Resolver: "cluster",
+					Params: []tekton.Param{
+						tektonStringParam("kind", "task"),
+						tektonStringParam("name", tektonClusterTaskName),
+						tektonStringParam("namespace", runCtx.pipelineRunsConfig.TaskNamespace),
+					},
+				},
 			},
+
 			Params: []tekton.Param{
 				tektonStringParam("RUN_NAMESPACE", namespace),
 			},

@@ -84,11 +84,16 @@ type PipelineRunsConfigStruct struct {
 	// NetworkPolicies maps network profile names to network policies.
 	// Each value is a Kubernetes network policy manifest in YAML format.
 	NetworkPolicies map[string]string
+
+	// TaskNamespace is the name of the namespace containing the task definition.
+	TaskNamespace string
 }
 
 // LoadPipelineRunsConfig loads the pipelineruns configuration and returns it.
 func LoadPipelineRunsConfig(ctx context.Context, clientFactory k8s.ClientFactory) (*PipelineRunsConfigStruct, error) {
-	dest := &PipelineRunsConfigStruct{}
+	dest := &PipelineRunsConfigStruct{
+		TaskNamespace: system.Namespace(),
+	}
 
 	for _, p := range []struct {
 		configMapName string

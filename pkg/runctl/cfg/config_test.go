@@ -3,6 +3,7 @@ package cfg
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -19,8 +20,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/system"
-	_ "knative.dev/pkg/system/testing"
+	//	_ "knative.dev/pkg/system/testing"
 )
+
+const testSystemNamespaceName = "steward-testing"
+
+func init() {
+	os.Setenv(system.NamespaceEnvKey, testSystemNamespaceName)
+}
 
 func Test_loadPipelineRunsConfig_NoMainConfig(t *testing.T) {
 	t.Parallel()
@@ -45,6 +52,7 @@ func Test_loadPipelineRunsConfig_NoMainConfig(t *testing.T) {
 		NetworkPolicies: map[string]string{
 			"key1": "policy1",
 		},
+		TaskNamespace: testSystemNamespaceName,
 	}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
@@ -72,6 +80,7 @@ func Test_loadPipelineRunsConfig_EmptyMainConfig(t *testing.T) {
 		NetworkPolicies: map[string]string{
 			"key1": "policy1",
 		},
+		TaskNamespace: testSystemNamespaceName,
 	}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
@@ -89,7 +98,7 @@ func Test_loadPipelineRunsConfig_NoNetworkConfig(t *testing.T) {
 	resultConfig, resultErr := LoadPipelineRunsConfig(ctx, cf)
 
 	// VERIFY
-	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "knative-testing": is missing`)
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "steward-testing": is missing`)
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -106,7 +115,7 @@ func Test_loadPipelineRunsConfig_EmptyNetworkConfig(t *testing.T) {
 	resultConfig, resultErr := LoadPipelineRunsConfig(ctx, cf)
 
 	// VERIFY
-	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "knative-testing": key "_default" is missing`)
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "steward-testing": key "_default" is missing`)
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -136,7 +145,7 @@ func Test_loadPipelineRunsConfig_ErrorOnGetMainConfigMap(t *testing.T) {
 
 	// VERIFY
 	assert.Assert(t, serrors.IsRecoverable(resultErr))
-	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": some error`)
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns" in namespace "steward-testing": some error`)
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -170,7 +179,7 @@ func Test_loadPipelineRunsConfig_ErrorOnGetNetworkPoliciesConfigMap(t *testing.T
 
 	// VERIFY
 	assert.Assert(t, serrors.IsRecoverable(resultErr))
-	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "knative-testing": some error`)
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "steward-testing": some error`)
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -226,6 +235,7 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 			"networkPolicyKey2": "networkPolicy2",
 			"networkPolicyKey3": "networkPolicy3",
 		},
+		TaskNamespace: testSystemNamespaceName,
 	}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
