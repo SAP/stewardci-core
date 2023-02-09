@@ -14,7 +14,7 @@ runController:
     k8sAPIRequestTimeout: ""
   image:
     repository: stewardci/stewardci-run-controller
-    tag: "0.25.1" #Do not modify this line! RunController tag updated automatically
+    tag: "0.25.2" #Do not modify this line! RunController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -49,7 +49,7 @@ tenantController:
     k8sAPIRequestTimeout: ""
   image:
     repository: stewardci/stewardci-tenant-controller
-    tag: "0.25.1" #Do not modify this line! TenantController tag updated automatically
+    tag: "0.25.2" #Do not modify this line! TenantController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:

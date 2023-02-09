@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.25.2"
+  date: 2023-02-09
+  changes:
+
     - type: enhancement
       impact: patch
       title: Use JFR image with updated plugins
