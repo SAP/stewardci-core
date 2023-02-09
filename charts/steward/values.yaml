@@ -14,7 +14,7 @@ runController:
     k8sAPIRequestTimeout: ""
   image:
     repository: stewardci/stewardci-run-controller
-    tag: "0.25.1" #Do not modify this line! RunController tag updated automatically
+    tag: "0.25.2" #Do not modify this line! RunController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -49,7 +49,7 @@ tenantController:
     k8sAPIRequestTimeout: ""
   image:
     repository: stewardci/stewardci-tenant-controller
-    tag: "0.25.1" #Do not modify this line! TenantController tag updated automatically
+    tag: "0.25.2" #Do not modify this line! TenantController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -85,7 +85,7 @@ pipelineRuns:
     elasticsearch:
       indexURL: ""
   jenkinsfileRunner:
-    image: "stewardci/stewardci-jenkinsfile-runner:230126_b29a3f0"
+    image: "stewardci/stewardci-jenkinsfile-runner:230201_c535874"
     imagePullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0
