@@ -1203,6 +1203,11 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	t.Parallel()
 
 	int64Ptr := func(val int64) *int64 { return &val }
+	const (
+		waitTimeoutSeconds = 60
+		runTimeoutSeconds  = 100
+	)
+	var totalTimeoutSeconds = int64(waitTimeoutSeconds + runTimeoutSeconds)
 
 	// SETUP
 	h := newTestHelper1(t)
@@ -1214,7 +1219,8 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 		pipelineRun:  mockPipelineRun,
 		runNamespace: h.namespace1,
 		pipelineRunsConfig: &cfg.PipelineRunsConfigStruct{
-			Timeout: metav1Duration(1 * time.Minute),
+			Timeout:     metav1Duration(runTimeoutSeconds * time.Second),
+			TimeoutWait: metav1Duration(waitTimeoutSeconds * time.Second),
 			JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(1111),
 			JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
 			JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(3333),
@@ -1235,7 +1241,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 
 	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
-	expiration := int64(60)
+
 	expectedPodTemplate := &tektonPod.PodTemplate{
 		SecurityContext: &corev1.PodSecurityContext{
 			FSGroup:    int64Ptr(1111),
@@ -1251,7 +1257,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 							corev1.VolumeProjection{
 								ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
 									Path:              "token",
-									ExpirationSeconds: &expiration,
+									ExpirationSeconds: &totalTimeoutSeconds,
 								},
 							},
 							corev1.VolumeProjection{
@@ -1291,7 +1297,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	assert.Assert(t, podTemplate.SecurityContext.FSGroup != runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup)
 	assert.Assert(t, podTemplate.SecurityContext.RunAsGroup != runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup)
 	assert.Assert(t, podTemplate.SecurityContext.RunAsUser != runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsUser)
-	assert.DeepEqual(t, metav1Duration(1*time.Minute), taskRun.Spec.Timeout)
+	assert.DeepEqual(t, metav1Duration(runTimeoutSeconds*time.Second), taskRun.Spec.Timeout)
 }
 
 func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {

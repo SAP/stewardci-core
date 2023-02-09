@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/url"
 	"strings"
 
@@ -514,13 +513,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 	}
 
 	namespace := runCtx.runNamespace
-	timeoutSeconds := defaultTokenTimeoutSeconds
-	timeoutDuration := getTimeout(runCtx)
-	log.Printf("DURATION: %+v", timeoutDuration)
-	if timeoutDuration != nil {
-		timeoutSeconds = int64(timeoutDuration.Seconds())
-		log.Printf("SECONDS: %d", timeoutSeconds)
-	}
+
 	tektonTaskRun := tekton.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tektonTaskRunName,
@@ -550,7 +543,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 					RunAsGroup: copyInt64Ptr(runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
 					FSGroup:    copyInt64Ptr(runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup),
 				},
-				Volumes: c.volumesWithServiceAccountSecret(timeoutSeconds),
+				Volumes: c.volumesWithServiceAccountSecret(getTokenTimeout(runCtx)),
 			},
 		},
 	}
@@ -576,6 +569,17 @@ func getTimeout(runCtx *runContext) *metav1.Duration {
 		timeout = pipelineRunTimeout
 	}
 	return timeout
+}
+
+func getTokenTimeout(runCtx *runContext) int64 {
+	timeoutSeconds := defaultTokenTimeoutSeconds
+	timeoutDuration := getTimeout(runCtx)
+	if timeoutDuration != nil {
+		timeoutSeconds = int64(timeoutDuration.Seconds())
+	}
+	waitTimeout := getWaitTimeout(runCtx.pipelineRunsConfig)
+	waitTimeoutSeconds := int64(waitTimeout.Seconds())
+	return timeoutSeconds + waitTimeoutSeconds
 }
 
 func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext) error {
