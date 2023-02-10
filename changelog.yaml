@@ -59,6 +59,7 @@
         To avoid problems with this braking change the feature flag CreateServiceAccountTokenInRunNamespace
         is introduced with this change. Enable it when using steward on K8S 1.24+.
       pullRequestNumber: 355
+      jiraIssueNumber: 726
 
 - version: "0.25.2"
   date: 2023-02-09
