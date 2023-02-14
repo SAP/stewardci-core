@@ -433,8 +433,8 @@ func (c *Controller) syncHandler(key string) error {
 		timeout := c.getWaitTimeout(pipelineRunsConfig)
 		if startTime.Add(timeout.Duration).Before(time.Now()) {
 			err := fmt.Errorf(
-				"main pod has not started after %s",
-				timeout,
+				"main pod has not started after %d s",
+				timeout.Duration,
 			)
 			return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "waiting failed", err)
 		}

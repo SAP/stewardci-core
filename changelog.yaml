@@ -52,6 +52,13 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: patch
+      title: Improve message
+      description: |-
+        Improve readability of message in pipeline runs.
+      pullRequestNumber: 0
+
 - version: "0.25.2"
   date: 2023-02-09
   changes:
