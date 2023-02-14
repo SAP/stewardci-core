@@ -57,7 +57,7 @@
       title: Improve message
       description: |-
         Improve readability of message in pipeline runs.
-      pullRequestNumber: 0
+      pullRequestNumber: 364
 
 - version: "0.25.2"
   date: 2023-02-09
