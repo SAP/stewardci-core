@@ -51,12 +51,14 @@
 - version: NEXT
   date: TBD
   changes:
+
     - type: enhancement
       impact: minor
-      title: Introduce creation of Service Account Tokens for Run Namespaces
+      title: Use projected volume for service account token mounting
       description: |-
-        With K8S 1.24 or higher Service Account Tokens are not created automatically anymore.
-        To avoid problems with this breaking change steward uses projected volumes to map the required files.
+        With K8s v1.24+ Service Account tokens are no longer created automatically.
+        Steward now uses projected volumes to mount the service account token
+        into Jenkinsfile Runner pods.
       pullRequestNumber: 355
       jiraIssueNumber: 726
 
