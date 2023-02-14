@@ -54,11 +54,11 @@
 
     - type: enhancement
       impact: minor
-      title: Use projected volume for service account token mounting
+      title: Mount service account token via 'ServiceAccountTokenProjection'
       description: |-
         With K8s v1.24+ Service Account tokens are no longer created automatically.
-        Steward now uses projected volumes to mount the service account token
-        into Jenkinsfile Runner pods.
+        Steward now uses `ServiceAccountTokenProjection` to generate and unkect a
+        service account token of limited lifetime into Jenkinsfile Runner pods.
       pullRequestNumber: 355
       jiraIssueNumber: 726
 
