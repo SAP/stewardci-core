@@ -56,8 +56,7 @@
       title: Introduce creation of Service Account Tokens for Run Namespaces
       description: |-
         With K8S 1.24 or higher Service Account Tokens are not created automatically anymore.
-        To avoid problems with this braking change the feature flag CreateServiceAccountTokenInRunNamespace
-        is introduced with this change. Enable it when using steward on K8S 1.24+.
+        To avoid problems with this breaking change steward uses projected volumes to map the required files.
       pullRequestNumber: 355
       jiraIssueNumber: 726
 
