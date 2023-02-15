@@ -690,6 +690,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             api.ResultErrorInfra,
 				expectedState:              api.StateCleaning,
+				expectedMessage:            `ERROR: waiting failed \[PipelineRun{name: foo, namespace: ns1, state: waiting}\]: main pod has not started after 10m0s`,
 			},
 
 			{
