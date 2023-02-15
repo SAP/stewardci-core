@@ -61,7 +61,7 @@
         so that Kubernetes takes care for the token injection.
         During the prepare phase of pipeline runs Steward no longer waits
         for service account token secrets to be created by Kubernetes.        
-      pullRequestNumber: 355
+      pullRequestNumber: 361
       jiraIssueNumber: 726
 
     - type: enhancement
@@ -70,7 +70,7 @@
       description: |-
         As a consequence of using K8s auto-mount of service account
         tokens, Steward should now work on K8s v1.24+.
-      pullRequestNumber: 355
+      pullRequestNumber: 361
       jiraIssueNumber: 726
 
     - type: enhancement
