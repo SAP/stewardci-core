@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strconv"
 	"testing"
-	"time"
 
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardfakeclient "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/fake"
