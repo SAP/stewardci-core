@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.26.0"
+  date: 2023-02-15
+  changes:
+
     - type: enhancement
       impact: minor
       title: Use K8s auto-mount of service account token
