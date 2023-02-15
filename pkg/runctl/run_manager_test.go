@@ -1207,7 +1207,6 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 		waitTimeoutSeconds = 60
 		runTimeoutSeconds  = 100
 	)
-	var totalTimeoutSeconds = int64(waitTimeoutSeconds + runTimeoutSeconds)
 
 	// SETUP
 	h := newTestHelper1(t)
@@ -1241,56 +1240,14 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 
 	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonClusterTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
-
+	automount := true
 	expectedPodTemplate := &tektonPod.PodTemplate{
 		SecurityContext: &corev1.PodSecurityContext{
 			FSGroup:    int64Ptr(1111),
 			RunAsGroup: int64Ptr(2222),
 			RunAsUser:  int64Ptr(3333),
 		},
-		Volumes: []corev1.Volume{
-			{
-				Name: "service-account-token",
-				VolumeSource: corev1.VolumeSource{
-					Projected: &corev1.ProjectedVolumeSource{
-						Sources: []corev1.VolumeProjection{
-							corev1.VolumeProjection{
-								ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-									Path:              "token",
-									ExpirationSeconds: &totalTimeoutSeconds,
-								},
-							},
-							corev1.VolumeProjection{
-								ConfigMap: &corev1.ConfigMapProjection{
-									Items: []corev1.KeyToPath{
-										corev1.KeyToPath{
-											Key:  "ca.crt",
-											Path: "ca.crt",
-										},
-									},
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "kube-root-ca.crt",
-									},
-								},
-							},
-							corev1.VolumeProjection{
-								DownwardAPI: &corev1.DownwardAPIProjection{
-									Items: []corev1.DownwardAPIVolumeFile{
-										corev1.DownwardAPIVolumeFile{
-											FieldRef: &corev1.ObjectFieldSelector{
-												APIVersion: "v1",
-												FieldPath:  "metadata.namespace",
-											},
-											Path: "namespace",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+		AutomountServiceAccountToken: &automount,
 	}
 	podTemplate := taskRun.Spec.PodTemplate
 	assert.DeepEqual(t, expectedPodTemplate, podTemplate)

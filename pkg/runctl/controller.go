@@ -430,7 +430,7 @@ func (c *Controller) syncHandler(key string) error {
 
 		// Check for wait timeout
 		startTime := pipelineRun.GetStatus().StateDetails.StartedAt
-		timeout := getWaitTimeout(pipelineRunsConfig)
+		timeout := c.getWaitTimeout(pipelineRunsConfig)
 		if startTime.Add(timeout.Duration).Before(time.Now()) {
 			err := fmt.Errorf(
 				"main pod has not started after %s",
@@ -504,7 +504,7 @@ func (c *Controller) syncHandler(key string) error {
 	return nil
 }
 
-func getWaitTimeout(pipelineRunsConfig *cfg.PipelineRunsConfigStruct) *metav1.Duration {
+func (c *Controller) getWaitTimeout(pipelineRunsConfig *cfg.PipelineRunsConfigStruct) *metav1.Duration {
 	timeout := pipelineRunsConfig.TimeoutWait
 	if isZeroDuration(timeout) {
 		timeout = metav1Duration(time.Duration(defaultWaitTimeout))
