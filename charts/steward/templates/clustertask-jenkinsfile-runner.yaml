@@ -125,10 +125,6 @@ spec:
     resources:
       {{- toYaml .Values.pipelineRuns.jenkinsfileRunner.resources | nindent 6 }}
     terminationMessagePath: /tekton/results/jfr-termination-log
-    volumeMounts:
-    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
-      name: service-account-token
-      readOnly: true
   results:
   - name: jfr-termination-log
     description: The termination log message from the Jenkinsfile Runner
