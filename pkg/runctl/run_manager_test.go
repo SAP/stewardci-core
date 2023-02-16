@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strconv"
 	"testing"
-	"time"
 
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	stewardfakeclient "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/fake"
@@ -1203,11 +1202,6 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	t.Parallel()
 
 	int64Ptr := func(val int64) *int64 { return &val }
-	const (
-		waitTimeoutSeconds = 60
-		runTimeoutSeconds  = 100
-	)
-	var totalTimeoutSeconds = int64(waitTimeoutSeconds + runTimeoutSeconds)
 
 	// SETUP
 	h := newTestHelper1(t)
@@ -1219,8 +1213,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 		pipelineRun:  mockPipelineRun,
 		runNamespace: h.namespace1,
 		pipelineRunsConfig: &cfg.PipelineRunsConfigStruct{
-			Timeout:     metav1Duration(runTimeoutSeconds * time.Second),
-			TimeoutWait: metav1Duration(waitTimeoutSeconds * time.Second),
+			Timeout: metav1Duration(4444),
 			JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(1111),
 			JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
 			JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(3333),
@@ -1241,6 +1234,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 
 	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonTaskName, metav1.GetOptions{})
 	assert.NilError(t, err)
+	automount := true
 
 	expectedPodTemplate := &tektonPod.PodTemplate{
 		SecurityContext: &corev1.PodSecurityContext{
@@ -1248,56 +1242,14 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 			RunAsGroup: int64Ptr(2222),
 			RunAsUser:  int64Ptr(3333),
 		},
-		Volumes: []corev1.Volume{
-			{
-				Name: "service-account-token",
-				VolumeSource: corev1.VolumeSource{
-					Projected: &corev1.ProjectedVolumeSource{
-						Sources: []corev1.VolumeProjection{
-							corev1.VolumeProjection{
-								ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-									Path:              "token",
-									ExpirationSeconds: &totalTimeoutSeconds,
-								},
-							},
-							corev1.VolumeProjection{
-								ConfigMap: &corev1.ConfigMapProjection{
-									Items: []corev1.KeyToPath{
-										corev1.KeyToPath{
-											Key:  "ca.crt",
-											Path: "ca.crt",
-										},
-									},
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: "kube-root-ca.crt",
-									},
-								},
-							},
-							corev1.VolumeProjection{
-								DownwardAPI: &corev1.DownwardAPIProjection{
-									Items: []corev1.DownwardAPIVolumeFile{
-										corev1.DownwardAPIVolumeFile{
-											FieldRef: &corev1.ObjectFieldSelector{
-												APIVersion: "v1",
-												FieldPath:  "metadata.namespace",
-											},
-											Path: "namespace",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+		AutomountServiceAccountToken: &automount,
 	}
 	podTemplate := taskRun.Spec.PodTemplate
 	assert.DeepEqual(t, expectedPodTemplate, podTemplate)
 	assert.Assert(t, podTemplate.SecurityContext.FSGroup != runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup)
 	assert.Assert(t, podTemplate.SecurityContext.RunAsGroup != runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup)
 	assert.Assert(t, podTemplate.SecurityContext.RunAsUser != runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsUser)
-	assert.DeepEqual(t, metav1Duration(runTimeoutSeconds*time.Second), taskRun.Spec.Timeout)
+	assert.DeepEqual(t, metav1Duration(4444), taskRun.Spec.Timeout)
 }
 
 func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {

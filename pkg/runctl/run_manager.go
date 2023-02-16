@@ -55,8 +55,6 @@ const (
 	// tektonTaskRun is the name of the Tekton TaskRun in each
 	// run namespace.
 	tektonTaskRunName = "steward-jenkinsfile-runner"
-
-	defaultTokenTimeoutSeconds = int64(7200)
 )
 
 type runManager struct {
@@ -454,52 +452,6 @@ func (c *runManager) createResource(ctx context.Context, configStr string, resou
 	return nil
 }
 
-func (c *runManager) volumesWithServiceAccountSecret(expiration int64) []corev1api.Volume {
-	return []corev1api.Volume{
-		{
-			Name: "service-account-token",
-			VolumeSource: corev1api.VolumeSource{
-				Projected: &corev1api.ProjectedVolumeSource{
-					Sources: []corev1api.VolumeProjection{
-						corev1api.VolumeProjection{
-							ServiceAccountToken: &corev1api.ServiceAccountTokenProjection{
-								Path:              "token",
-								ExpirationSeconds: &expiration,
-							},
-						},
-						corev1api.VolumeProjection{
-							ConfigMap: &corev1api.ConfigMapProjection{
-								Items: []corev1api.KeyToPath{
-									corev1api.KeyToPath{
-										Key:  "ca.crt",
-										Path: "ca.crt",
-									},
-								},
-								LocalObjectReference: corev1api.LocalObjectReference{
-									Name: "kube-root-ca.crt",
-								},
-							},
-						},
-						corev1api.VolumeProjection{
-							DownwardAPI: &corev1api.DownwardAPIProjection{
-								Items: []corev1api.DownwardAPIVolumeFile{
-									corev1api.DownwardAPIVolumeFile{
-										FieldRef: &corev1api.ObjectFieldSelector{
-											APIVersion: "v1",
-											FieldPath:  "metadata.namespace",
-										},
-										Path: "namespace",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
 func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runContext) (*tekton.TaskRun, error) {
 
 	var err error
@@ -513,7 +465,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 	}
 
 	namespace := runCtx.runNamespace
-
+	automount := true
 	tektonTaskRun := tekton.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      tektonTaskRunName,
@@ -551,7 +503,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 					RunAsGroup: copyInt64Ptr(runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup),
 					FSGroup:    copyInt64Ptr(runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup),
 				},
-				Volumes: c.volumesWithServiceAccountSecret(getTokenTimeout(runCtx)),
+				AutomountServiceAccountToken: &automount,
 			},
 		},
 	}
@@ -577,17 +529,6 @@ func getTimeout(runCtx *runContext) *metav1.Duration {
 		timeout = pipelineRunTimeout
 	}
 	return timeout
-}
-
-func getTokenTimeout(runCtx *runContext) int64 {
-	timeoutSeconds := defaultTokenTimeoutSeconds
-	timeoutDuration := getTimeout(runCtx)
-	if timeoutDuration != nil {
-		timeoutSeconds = int64(timeoutDuration.Seconds())
-	}
-	waitTimeout := getWaitTimeout(runCtx.pipelineRunsConfig)
-	waitTimeoutSeconds := int64(waitTimeout.Seconds())
-	return timeoutSeconds + waitTimeoutSeconds
 }
 
 func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext) error {

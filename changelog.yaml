@@ -52,17 +52,49 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: minor
+      title: Replace cluster task by cluster resolver
+      description: |-
+        Cluster tasks are deprecated in tekton.
+        To avoid problems in the future, cluster resolver is used instead.
+      pullRequestNumber: 363
+
+- version: "0.26.0"
+  date: 2023-02-15
+  changes:
+
+    - type: enhancement
+      impact: minor
+      title: Use K8s auto-mount of service account token
+      description: |-
+        Instead of configuring a volume for the service account token,
+        Steward now just sets `automountServiceAccountToken` to true
+        so that Kubernetes takes care for the token injection.
+        During the prepare phase of pipeline runs Steward no longer waits
+        for service account token secrets to be created by Kubernetes.        
+      pullRequestNumber: 361
+      jiraIssueNumber: 726
+
+    - type: enhancement
+      impact: minor
+      title: Allow running on K8s v1.24+
+      description: |-
+        As a consequence of using K8s auto-mount of service account
+        tokens, Steward should now work on K8s v1.24+.
+      pullRequestNumber: 361
+      jiraIssueNumber: 726
+
+    - type: enhancement
+      impact: patch
+      title: Improve message
+      description: |-
+        Improve readability of message in pipeline runs.
+      pullRequestNumber: 364
+
 - version: "0.25.2"
   date: 2023-02-09
   changes:
-    - type: enhancement
-      impact: minor
-      title: Introduce creation of Service Account Tokens for Run Namespaces
-      description: |-
-        With K8S 1.24 or higher Service Account Tokens are not created automatically anymore.
-        To avoid problems with this braking change the feature flag CreateServiceAccountTokenInRunNamespace
-        is introduced with this change. Enable it when using steward on K8S 1.24+.
-      pullRequestNumber: 355
 
     - type: enhancement
       impact: patch
