@@ -12,15 +12,15 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.13.0
-	github.com/tektoncd/pipeline v0.44.0
+	github.com/tektoncd/pipeline v0.41.1
 	go.uber.org/zap v1.24.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.4.0
-	k8s.io/api v0.25.4
-	k8s.io/apimachinery v0.25.4
-	k8s.io/client-go v0.25.4
+	k8s.io/api v0.25.3
+	k8s.io/apimachinery v0.25.3
+	k8s.io/client-go v0.25.3
 	k8s.io/klog/v2 v2.80.1
-	knative.dev/pkg v0.0.0-20221123011842-b78020c16606
+	knative.dev/pkg v0.0.0-20221123011842-b78020c16606 // release-1.8
 )
 
 require (
