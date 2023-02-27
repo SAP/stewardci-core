@@ -54,10 +54,10 @@
 
     - type: enhancement
       impact: minor
-      title: Replace cluster task by cluster resolver
+      title: Use Tekton cluster resolver
       description: |-
-        Cluster tasks are deprecated in tekton.
-        To avoid problems in the future, cluster resolver is used instead.
+        Tekton ClusterTasks are deprecated since Tekton v0.41.0.
+        Therefore, Tekton's cluster resolver is used instead.
       pullRequestNumber: 363
 
 - version: "0.26.0"
