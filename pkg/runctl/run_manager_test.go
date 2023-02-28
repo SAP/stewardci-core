@@ -1172,7 +1172,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	_, mockPipelineRun, _ := h.prepareMocks(mockCtrl)
-	runConfig, _ := newEmptyRunsConfig(h.ctx)
+	runConfig := h.runsConfigWithTaskData()
 	runCtx := &runContext{
 		pipelineRun:        mockPipelineRun,
 		pipelineRunsConfig: runConfig,
@@ -1191,7 +1191,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet
 	// VERIFY
 	assert.NilError(t, resultError)
 
-	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonTaskName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonTaskRunName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	if equality.Semantic.DeepEqual(taskRun.Spec.PodTemplate, tektonPod.PodTemplate{}) {
 		t.Fatal("podTemplate of TaskRun is empty")
@@ -1209,15 +1209,15 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	defer mockCtrl.Finish()
 	_, mockPipelineRun, _ := h.prepareMocks(mockCtrl)
 	mockPipelineRun.UpdateRunNamespace(h.namespace1)
+	runConfig := h.runsConfigWithTaskData()
+	runConfig.Timeout = metav1Duration(4444)
+	runConfig.JenkinsfileRunnerPodSecurityContextFSGroup = int64Ptr(1111)
+	runConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup = int64Ptr(2222)
+	runConfig.JenkinsfileRunnerPodSecurityContextRunAsUser = int64Ptr(3333)
 	runCtx := &runContext{
-		pipelineRun:  mockPipelineRun,
-		runNamespace: h.namespace1,
-		pipelineRunsConfig: &cfg.PipelineRunsConfigStruct{
-			Timeout: metav1Duration(4444),
-			JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(1111),
-			JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
-			JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(3333),
-		},
+		pipelineRun:        mockPipelineRun,
+		runNamespace:       h.namespace1,
+		pipelineRunsConfig: runConfig,
 	}
 	cf := k8sfake.NewClientFactory()
 
@@ -1232,7 +1232,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	// VERIFY
 	assert.NilError(t, resultError)
 
-	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonTaskName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonTaskRunName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	automount := true
 
@@ -1903,6 +1903,8 @@ type testHelper1 struct {
 	pipelineRun1    string
 	runNamespace1   string
 	tektonClientset *tektonfakeclient.Clientset
+	taskName        string
+	taskNamespace   string
 }
 
 func newTestHelper1(t *testing.T) *testHelper1 {
@@ -1913,8 +1915,17 @@ func newTestHelper1(t *testing.T) *testHelper1 {
 		pipelineRun1:    "pipelinerun1",
 		runNamespace1:   "runNamespace1",
 		tektonClientset: tektonfakeclient.NewSimpleClientset(),
+		taskName:        "taskName1",
+		taskNamespace:   "taskNamespace1",
 	}
 	return h
+}
+
+func (h *testHelper1) runsConfigWithTaskData() *cfg.PipelineRunsConfigStruct {
+	return &cfg.PipelineRunsConfigStruct{
+		TaskName:      h.taskName,
+		TaskNamespace: h.taskNamespace,
+	}
 }
 
 func (h *testHelper1) getPipelineRunFromStorage(cf *k8sfake.ClientFactory, namespace, name string) *stewardv1alpha1.PipelineRun {
@@ -2063,11 +2074,6 @@ func (h *testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewar
 	mockSecretProvider := secretmocks.NewMockSecretProvider(ctrl)
 
 	return mockFactory, mockPipelineRun, mockSecretProvider
-}
-
-func newEmptyRunsConfig(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error) {
-	return &cfg.PipelineRunsConfigStruct{},
-		nil
 }
 
 func Test__runManager__getTimeout__retrievesPipelineTimeoutIfSetInThePipelineSpec(t *testing.T) {

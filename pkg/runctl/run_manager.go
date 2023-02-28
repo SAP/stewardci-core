@@ -44,10 +44,6 @@ const (
 
 	annotationPipelineRunKey = steward.GroupName + "/pipeline-run-key"
 
-	// tektonTaskName is the name of the Tekton Task
-	// that should be used to execute the Jenkinsfile Runner
-	tektonTaskName = "steward-jenkinsfile-runner"
-
 	// tektonTaskJenkinsfileRunnerStep is the name of the step
 	// in the Tekton TaskRun that executes the Jenkinsfile Runner
 	tektonTaskJenkinsfileRunnerStep = "jenkinsfile-runner"
@@ -482,7 +478,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 					Resolver: "cluster",
 					Params: []tekton.Param{
 						tektonStringParam("kind", "task"),
-						tektonStringParam("name", tektonTaskName),
+						tektonStringParam("name", runCtx.pipelineRunsConfig.TaskName),
 						tektonStringParam("namespace", runCtx.pipelineRunsConfig.TaskNamespace),
 					},
 				},

@@ -27,6 +27,8 @@ const (
 	mainConfigKeyPSCRunAsUser    = "jenkinsfileRunner.podSecurityContext.runAsUser"
 	mainConfigKeyPSCRunAsGroup   = "jenkinsfileRunner.podSecurityContext.runAsGroup"
 	mainConfigKeyPSCFSGroup      = "jenkinsfileRunner.podSecurityContext.fsGroup"
+	mainConfigKeyTaskName        = "taskName"
+	mainConfigKeyTaskNamespace   = "taskNamespace"
 
 	networkPoliciesConfigMapName    = "steward-pipelineruns-network-policies"
 	networkPoliciesConfigKeyDefault = "_default"
@@ -85,15 +87,16 @@ type PipelineRunsConfigStruct struct {
 	// Each value is a Kubernetes network policy manifest in YAML format.
 	NetworkPolicies map[string]string
 
+	// TaskName is the name of the task definition.
+	TaskName string
+
 	// TaskNamespace is the name of the namespace containing the task definition.
 	TaskNamespace string
 }
 
 // LoadPipelineRunsConfig loads the pipelineruns configuration and returns it.
 func LoadPipelineRunsConfig(ctx context.Context, clientFactory k8s.ClientFactory) (*PipelineRunsConfigStruct, error) {
-	dest := &PipelineRunsConfigStruct{
-		TaskNamespace: system.Namespace(),
-	}
+	dest := &PipelineRunsConfigStruct{}
 
 	for _, p := range []struct {
 		configMapName string
@@ -209,6 +212,8 @@ func processMainConfig(configData map[string]string, dest *PipelineRunsConfigStr
 	dest.ResourceQuota = configData[mainConfigKeyResourceQuota]
 	dest.JenkinsfileRunnerImage = configData[mainConfigKeyImage]
 	dest.JenkinsfileRunnerImagePullPolicy = configData[mainConfigKeyImagePullPolicy]
+	dest.TaskName = configData[mainConfigKeyTaskName]
+	dest.TaskNamespace = configData[mainConfigKeyTaskNamespace]
 
 	var err error
 

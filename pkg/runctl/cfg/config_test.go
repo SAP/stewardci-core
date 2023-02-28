@@ -51,7 +51,6 @@ func Test_loadPipelineRunsConfig_NoMainConfig(t *testing.T) {
 		NetworkPolicies: map[string]string{
 			"key1": "policy1",
 		},
-		TaskNamespace: testSystemNamespaceName,
 	}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
@@ -79,7 +78,6 @@ func Test_loadPipelineRunsConfig_EmptyMainConfig(t *testing.T) {
 		NetworkPolicies: map[string]string{
 			"key1": "policy1",
 		},
-		TaskNamespace: testSystemNamespaceName,
 	}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
@@ -200,6 +198,8 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 				mainConfigKeyTimeoutWait:     "555m",
 				mainConfigKeyImage:           "jfrImage1",
 				mainConfigKeyImagePullPolicy: "jfrImagePullPolicy1",
+				mainConfigKeyTaskName:        "taskName1",
+				mainConfigKeyTaskNamespace:   "taskNamespace1",
 				"someKeyThatShouldBeIgnored": "34957349",
 			},
 		),
@@ -234,7 +234,8 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 			"networkPolicyKey2": "networkPolicy2",
 			"networkPolicyKey3": "networkPolicy3",
 		},
-		TaskNamespace: testSystemNamespaceName,
+		TaskName:      "taskName1",
+		TaskNamespace: "taskNamespace1",
 	}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
