@@ -68,6 +68,8 @@ data:
   waitTimeout: {{ .Values.pipelineRuns.waitTimeout | quote }}
   limitRange: {{ default ( .Files.Get "data/pipelineruns-default-limitrange.yaml" ) .Values.pipelineRuns.limitRange | quote }}
   resourceQuota: {{ .Values.pipelineRuns.resourceQuota | quote }}
+  taskName: steward-jenkinsfile-runner
+  taskNamespace: {{ .Values.targetNamespace.name | quote }}
 
 {{- with .Values.pipelineRuns.jenkinsfileRunner }}
 {{- if kindIs "string" .image }}
