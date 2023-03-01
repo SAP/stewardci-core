@@ -87,11 +87,13 @@ type PipelineRunsConfigStruct struct {
 	// Each value is a Kubernetes network policy manifest in YAML format.
 	NetworkPolicies map[string]string
 
-	// TaskName is the name of the task definition.
-	TaskName string
+	// TektonTaskName is the name of the Tekton task to run the
+	// Jenkinsfile Runner pod.
+	TektonTaskName string
 
-	// TaskNamespace is the name of the namespace containing the task definition.
-	TaskNamespace string
+	// TektonTaskNamespace is the name of the namespace containing
+	// the Tekton task to run the Jenkinsfile Runner.
+	TektonTaskNamespace string
 }
 
 // LoadPipelineRunsConfig loads the pipelineruns configuration and returns it.
