@@ -188,19 +188,19 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 	cf := fake.NewClientFactory(
 		newMainConfigMap(
 			map[string]string{
-				"_example":                   "exampleString",
-				mainConfigKeyLimitRange:      "limitRange1",
-				mainConfigKeyResourceQuota:   "resourceQuota1",
-				mainConfigKeyPSCRunAsUser:    "1111",
-				mainConfigKeyPSCRunAsGroup:   "2222",
-				mainConfigKeyPSCFSGroup:      "3333",
-				mainConfigKeyTimeout:         "4444m",
-				mainConfigKeyTimeoutWait:     "555m",
-				mainConfigKeyImage:           "jfrImage1",
-				mainConfigKeyImagePullPolicy: "jfrImagePullPolicy1",
-				mainConfigKeyTaskName:        "taskName1",
-				mainConfigKeyTaskNamespace:   "taskNamespace1",
-				"someKeyThatShouldBeIgnored": "34957349",
+				"_example":                       "exampleString",
+				mainConfigKeyLimitRange:          "limitRange1",
+				mainConfigKeyResourceQuota:       "resourceQuota1",
+				mainConfigKeyPSCRunAsUser:        "1111",
+				mainConfigKeyPSCRunAsGroup:       "2222",
+				mainConfigKeyPSCFSGroup:          "3333",
+				mainConfigKeyTimeout:             "4444m",
+				mainConfigKeyTimeoutWait:         "555m",
+				mainConfigKeyImage:               "jfrImage1",
+				mainConfigKeyImagePullPolicy:     "jfrImagePullPolicy1",
+				mainConfigKeyTektonTaskName:      "taskName1",
+				mainConfigKeyTektonTaskNamespace: "taskNamespace1",
+				"someKeyThatShouldBeIgnored":     "34957349",
 			},
 		),
 		newNetworkPolicyConfigMap(map[string]string{
@@ -234,8 +234,8 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 			"networkPolicyKey2": "networkPolicy2",
 			"networkPolicyKey3": "networkPolicy3",
 		},
-		TaskName:      "taskName1",
-		TaskNamespace: "taskNamespace1",
+		TektonTaskName:      "taskName1",
+		TektonTaskNamespace: "taskNamespace1",
 	}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }

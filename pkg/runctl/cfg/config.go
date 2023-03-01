@@ -17,18 +17,18 @@ import (
 )
 
 const (
-	mainConfigMapName            = "steward-pipelineruns"
-	mainConfigKeyTimeout         = "timeout"
-	mainConfigKeyTimeoutWait     = "waitTimeout"
-	mainConfigKeyLimitRange      = "limitRange"
-	mainConfigKeyResourceQuota   = "resourceQuota"
-	mainConfigKeyImage           = "jenkinsfileRunner.image"
-	mainConfigKeyImagePullPolicy = "jenkinsfileRunner.imagePullPolicy"
-	mainConfigKeyPSCRunAsUser    = "jenkinsfileRunner.podSecurityContext.runAsUser"
-	mainConfigKeyPSCRunAsGroup   = "jenkinsfileRunner.podSecurityContext.runAsGroup"
-	mainConfigKeyPSCFSGroup      = "jenkinsfileRunner.podSecurityContext.fsGroup"
-	mainConfigKeyTaskName        = "taskName"
-	mainConfigKeyTaskNamespace   = "taskNamespace"
+	mainConfigMapName                = "steward-pipelineruns"
+	mainConfigKeyTimeout             = "timeout"
+	mainConfigKeyTimeoutWait         = "waitTimeout"
+	mainConfigKeyLimitRange          = "limitRange"
+	mainConfigKeyResourceQuota       = "resourceQuota"
+	mainConfigKeyImage               = "jenkinsfileRunner.image"
+	mainConfigKeyImagePullPolicy     = "jenkinsfileRunner.imagePullPolicy"
+	mainConfigKeyPSCRunAsUser        = "jenkinsfileRunner.podSecurityContext.runAsUser"
+	mainConfigKeyPSCRunAsGroup       = "jenkinsfileRunner.podSecurityContext.runAsGroup"
+	mainConfigKeyPSCFSGroup          = "jenkinsfileRunner.podSecurityContext.fsGroup"
+	mainConfigKeyTektonTaskName      = "tektonTaskName"
+	mainConfigKeyTektonTaskNamespace = "tektonTaskNamespace"
 
 	networkPoliciesConfigMapName    = "steward-pipelineruns-network-policies"
 	networkPoliciesConfigKeyDefault = "_default"
@@ -214,8 +214,8 @@ func processMainConfig(configData map[string]string, dest *PipelineRunsConfigStr
 	dest.ResourceQuota = configData[mainConfigKeyResourceQuota]
 	dest.JenkinsfileRunnerImage = configData[mainConfigKeyImage]
 	dest.JenkinsfileRunnerImagePullPolicy = configData[mainConfigKeyImagePullPolicy]
-	dest.TaskName = configData[mainConfigKeyTaskName]
-	dest.TaskNamespace = configData[mainConfigKeyTaskNamespace]
+	dest.TektonTaskName = configData[mainConfigKeyTektonTaskName]
+	dest.TektonTaskNamespace = configData[mainConfigKeyTektonTaskNamespace]
 
 	var err error
 

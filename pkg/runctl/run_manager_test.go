@@ -1897,34 +1897,34 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 }
 
 type testHelper1 struct {
-	t               *testing.T
-	ctx             context.Context
-	namespace1      string
-	pipelineRun1    string
-	runNamespace1   string
-	tektonClientset *tektonfakeclient.Clientset
-	taskName        string
-	taskNamespace   string
+	t                   *testing.T
+	ctx                 context.Context
+	namespace1          string
+	pipelineRun1        string
+	runNamespace1       string
+	tektonClientset     *tektonfakeclient.Clientset
+	tektonTaskName      string
+	tektonTaskNamespace string
 }
 
 func newTestHelper1(t *testing.T) *testHelper1 {
 	h := &testHelper1{
-		t:               t,
-		ctx:             context.Background(),
-		namespace1:      "namespace1",
-		pipelineRun1:    "pipelinerun1",
-		runNamespace1:   "runNamespace1",
-		tektonClientset: tektonfakeclient.NewSimpleClientset(),
-		taskName:        "taskName1",
-		taskNamespace:   "taskNamespace1",
+		t:                   t,
+		ctx:                 context.Background(),
+		namespace1:          "namespace1",
+		pipelineRun1:        "pipelinerun1",
+		runNamespace1:       "runNamespace1",
+		tektonClientset:     tektonfakeclient.NewSimpleClientset(),
+		tektonTaskName:      "taskName1",
+		tektonTaskNamespace: "taskNamespace1",
 	}
 	return h
 }
 
 func (h *testHelper1) runsConfigWithTaskData() *cfg.PipelineRunsConfigStruct {
 	return &cfg.PipelineRunsConfigStruct{
-		TaskName:      h.taskName,
-		TaskNamespace: h.taskNamespace,
+		TektonTaskName:      h.tektonTaskName,
+		TektonTaskNamespace: h.tektonTaskNamespace,
 	}
 }
 

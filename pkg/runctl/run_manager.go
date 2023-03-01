@@ -478,8 +478,8 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 					Resolver: "cluster",
 					Params: []tekton.Param{
 						tektonStringParam("kind", "task"),
-						tektonStringParam("name", runCtx.pipelineRunsConfig.TaskName),
-						tektonStringParam("namespace", runCtx.pipelineRunsConfig.TaskNamespace),
+						tektonStringParam("name", runCtx.pipelineRunsConfig.TektonTaskName),
+						tektonStringParam("namespace", runCtx.pipelineRunsConfig.TektonTaskNamespace),
 					},
 				},
 			},
