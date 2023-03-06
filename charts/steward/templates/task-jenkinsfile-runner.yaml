@@ -1,7 +1,8 @@
 apiVersion: tekton.dev/v1beta1
-kind: ClusterTask
+kind: Task
 metadata:
   name: steward-jenkinsfile-runner
+  namespace: {{ .Values.targetNamespace.name | quote }}
   labels:
     {{- include "steward.labels" . | nindent 4 }}
     {{- include "steward.runController.componentLabel" . | nindent 4 }}

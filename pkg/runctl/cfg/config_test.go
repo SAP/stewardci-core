@@ -3,6 +3,7 @@ package cfg
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -19,8 +20,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/system"
-	_ "knative.dev/pkg/system/testing"
 )
+
+const testSystemNamespaceName = "steward-testing"
+
+func init() {
+	os.Setenv(system.NamespaceEnvKey, testSystemNamespaceName)
+}
 
 func Test_loadPipelineRunsConfig_NoMainConfig(t *testing.T) {
 	t.Parallel()
@@ -89,7 +95,7 @@ func Test_loadPipelineRunsConfig_NoNetworkConfig(t *testing.T) {
 	resultConfig, resultErr := LoadPipelineRunsConfig(ctx, cf)
 
 	// VERIFY
-	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "knative-testing": is missing`)
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "steward-testing": is missing`)
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -106,7 +112,7 @@ func Test_loadPipelineRunsConfig_EmptyNetworkConfig(t *testing.T) {
 	resultConfig, resultErr := LoadPipelineRunsConfig(ctx, cf)
 
 	// VERIFY
-	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "knative-testing": key "_default" is missing`)
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "steward-testing": key "_default" is missing`)
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -136,7 +142,7 @@ func Test_loadPipelineRunsConfig_ErrorOnGetMainConfigMap(t *testing.T) {
 
 	// VERIFY
 	assert.Assert(t, serrors.IsRecoverable(resultErr))
-	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns" in namespace "knative-testing": some error`)
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns" in namespace "steward-testing": some error`)
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -170,7 +176,7 @@ func Test_loadPipelineRunsConfig_ErrorOnGetNetworkPoliciesConfigMap(t *testing.T
 
 	// VERIFY
 	assert.Assert(t, serrors.IsRecoverable(resultErr))
-	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "knative-testing": some error`)
+	assert.Error(t, resultErr, `invalid configuration: ConfigMap "steward-pipelineruns-network-policies" in namespace "steward-testing": some error`)
 	assert.Assert(t, resultConfig == nil)
 }
 
@@ -182,17 +188,19 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 	cf := fake.NewClientFactory(
 		newMainConfigMap(
 			map[string]string{
-				"_example":                   "exampleString",
-				mainConfigKeyLimitRange:      "limitRange1",
-				mainConfigKeyResourceQuota:   "resourceQuota1",
-				mainConfigKeyPSCRunAsUser:    "1111",
-				mainConfigKeyPSCRunAsGroup:   "2222",
-				mainConfigKeyPSCFSGroup:      "3333",
-				mainConfigKeyTimeout:         "4444m",
-				mainConfigKeyTimeoutWait:     "555m",
-				mainConfigKeyImage:           "jfrImage1",
-				mainConfigKeyImagePullPolicy: "jfrImagePullPolicy1",
-				"someKeyThatShouldBeIgnored": "34957349",
+				"_example":                       "exampleString",
+				mainConfigKeyLimitRange:          "limitRange1",
+				mainConfigKeyResourceQuota:       "resourceQuota1",
+				mainConfigKeyPSCRunAsUser:        "1111",
+				mainConfigKeyPSCRunAsGroup:       "2222",
+				mainConfigKeyPSCFSGroup:          "3333",
+				mainConfigKeyTimeout:             "4444m",
+				mainConfigKeyTimeoutWait:         "555m",
+				mainConfigKeyImage:               "jfrImage1",
+				mainConfigKeyImagePullPolicy:     "jfrImagePullPolicy1",
+				mainConfigKeyTektonTaskName:      "taskName1",
+				mainConfigKeyTektonTaskNamespace: "taskNamespace1",
+				"someKeyThatShouldBeIgnored":     "34957349",
 			},
 		),
 		newNetworkPolicyConfigMap(map[string]string{
@@ -226,6 +234,8 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 			"networkPolicyKey2": "networkPolicy2",
 			"networkPolicyKey3": "networkPolicy3",
 		},
+		TektonTaskName:      "taskName1",
+		TektonTaskNamespace: "taskNamespace1",
 	}
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }

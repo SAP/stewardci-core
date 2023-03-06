@@ -17,16 +17,18 @@ import (
 )
 
 const (
-	mainConfigMapName            = "steward-pipelineruns"
-	mainConfigKeyTimeout         = "timeout"
-	mainConfigKeyTimeoutWait     = "waitTimeout"
-	mainConfigKeyLimitRange      = "limitRange"
-	mainConfigKeyResourceQuota   = "resourceQuota"
-	mainConfigKeyImage           = "jenkinsfileRunner.image"
-	mainConfigKeyImagePullPolicy = "jenkinsfileRunner.imagePullPolicy"
-	mainConfigKeyPSCRunAsUser    = "jenkinsfileRunner.podSecurityContext.runAsUser"
-	mainConfigKeyPSCRunAsGroup   = "jenkinsfileRunner.podSecurityContext.runAsGroup"
-	mainConfigKeyPSCFSGroup      = "jenkinsfileRunner.podSecurityContext.fsGroup"
+	mainConfigMapName                = "steward-pipelineruns"
+	mainConfigKeyTimeout             = "timeout"
+	mainConfigKeyTimeoutWait         = "waitTimeout"
+	mainConfigKeyLimitRange          = "limitRange"
+	mainConfigKeyResourceQuota       = "resourceQuota"
+	mainConfigKeyImage               = "jenkinsfileRunner.image"
+	mainConfigKeyImagePullPolicy     = "jenkinsfileRunner.imagePullPolicy"
+	mainConfigKeyPSCRunAsUser        = "jenkinsfileRunner.podSecurityContext.runAsUser"
+	mainConfigKeyPSCRunAsGroup       = "jenkinsfileRunner.podSecurityContext.runAsGroup"
+	mainConfigKeyPSCFSGroup          = "jenkinsfileRunner.podSecurityContext.fsGroup"
+	mainConfigKeyTektonTaskName      = "tektonTaskName"
+	mainConfigKeyTektonTaskNamespace = "tektonTaskNamespace"
 
 	networkPoliciesConfigMapName    = "steward-pipelineruns-network-policies"
 	networkPoliciesConfigKeyDefault = "_default"
@@ -84,6 +86,14 @@ type PipelineRunsConfigStruct struct {
 	// NetworkPolicies maps network profile names to network policies.
 	// Each value is a Kubernetes network policy manifest in YAML format.
 	NetworkPolicies map[string]string
+
+	// TektonTaskName is the name of the Tekton task to run the
+	// Jenkinsfile Runner pod.
+	TektonTaskName string
+
+	// TektonTaskNamespace is the name of the namespace containing
+	// the Tekton task to run the Jenkinsfile Runner.
+	TektonTaskNamespace string
 }
 
 // LoadPipelineRunsConfig loads the pipelineruns configuration and returns it.
@@ -204,6 +214,8 @@ func processMainConfig(configData map[string]string, dest *PipelineRunsConfigStr
 	dest.ResourceQuota = configData[mainConfigKeyResourceQuota]
 	dest.JenkinsfileRunnerImage = configData[mainConfigKeyImage]
 	dest.JenkinsfileRunnerImagePullPolicy = configData[mainConfigKeyImagePullPolicy]
+	dest.TektonTaskName = configData[mainConfigKeyTektonTaskName]
+	dest.TektonTaskNamespace = configData[mainConfigKeyTektonTaskNamespace]
 
 	var err error
 

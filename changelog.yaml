@@ -52,6 +52,14 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: minor
+      title: Use Tekton cluster resolver
+      description: |-
+        Tekton ClusterTasks are deprecated since Tekton v0.41.0.
+        Therefore, Tekton's cluster resolver is used instead.
+      pullRequestNumber: 363
+
 - version: "0.26.0"
   date: 2023-02-15
   changes:
