@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.27.0"
+  date: 2023-03-06
+  changes:
+
     - type: enhancement
       impact: minor
       title: Use Tekton cluster resolver
