@@ -197,33 +197,12 @@ func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext
 		if !k8serrors.IsAlreadyExists(err) {
 			return errors.Wrapf(err, "failed to create service account %q", serviceAccountName)
 		}
-
 		// service account exists already, so we need to attach secrets to it
-		for { // retry loop
-			serviceAccount, err = accountManager.GetServiceAccount(ctx, serviceAccountName)
-			if err != nil {
-				return errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
-			}
-			if pipelineCloneSecretName != "" {
-				serviceAccount.AttachSecrets(pipelineCloneSecretName)
-			}
-			serviceAccount.AttachImagePullSecrets(imagePullSecrets...)
-			serviceAccount.SetDoAutomountServiceAccountToken(automountServiceAccountToken)
-			err = serviceAccount.Update(ctx)
-			if err == nil {
-				break // ...the retry loop
-			}
-			if k8serrors.IsConflict(err) {
-				// resource version conflict -> retry update with latest version
-				klog.V(4).Infof(
-					"retrying update of service account %q in namespace %q"+
-						" after resource version conflict",
-					serviceAccountName, runCtx.runNamespace,
-				)
-			} else {
-				return errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
-			}
+		err = attachAllSecrets(ctx, runCtx, accountManager, serviceAccount, pipelineCloneSecretName, imagePullSecrets)
+		if err != nil {
+			return err
 		}
+
 	}
 
 	// grant role to service account
@@ -236,6 +215,36 @@ func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext
 	}
 
 	runCtx.serviceAccount = serviceAccount
+	return nil
+}
+
+func attachAllSecrets(ctx context.Context, runCtx *runContext, accountManager k8s.ServiceAccountManager, serviceAccount *k8s.ServiceAccountWrap, pipelineCloneSecretName string, imagePullSecrets []string) error {
+	for { // retry loop
+		serviceAccount, err := accountManager.GetServiceAccount(ctx, serviceAccountName)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
+		}
+
+		if pipelineCloneSecretName != "" {
+			serviceAccount.AttachSecrets(pipelineCloneSecretName)
+		}
+		serviceAccount.AttachImagePullSecrets(imagePullSecrets...)
+		serviceAccount.SetDoAutomountServiceAccountToken(automountServiceAccountToken)
+		err = serviceAccount.Update(ctx)
+		if err == nil {
+			break // ...the retry loop
+		}
+		if k8serrors.IsConflict(err) {
+			// resource version conflict -> retry update with latest version
+			klog.V(4).Infof(
+				"retrying update of service account %q in namespace %q"+
+					" after resource version conflict",
+				serviceAccountName, runCtx.runNamespace,
+			)
+		} else {
+			return errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
+		}
+	}
 	return nil
 }
 
