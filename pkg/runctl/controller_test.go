@@ -1153,3 +1153,8 @@ func newIsMaintenanceModeStub(maintenanceMode bool, err error) func(ctx context.
 		return maintenanceMode, err
 	}
 }
+
+func newEmptyRunsConfig(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error) {
+	return &cfg.PipelineRunsConfigStruct{},
+		nil
+}

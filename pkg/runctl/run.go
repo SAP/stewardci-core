@@ -152,7 +152,7 @@ func (r *tektonRun) getJenkinsfileRunnerStepState() *tekton.StepState {
 	steps := r.tektonTaskRun.Status.Steps
 	if steps != nil {
 		for _, stepState := range steps {
-			if stepState.Name == tektonClusterTaskJenkinsfileRunnerStep {
+			if stepState.Name == tektonTaskJenkinsfileRunnerStep {
 				return &stepState
 			}
 		}

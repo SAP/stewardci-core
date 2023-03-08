@@ -30,7 +30,7 @@ In addition, a single index will be used to hold logs of all tenants, because El
 ## Configuration
 
 Logging to Elasticsearch requires passing certain parameters as environment variables to the Jenkinsfile Runner container (`PIPELINE_LOG_ELASTICSEARCH_*`).
-As we run the Jenkinsfile Runner container via Tekton, our Tekton ClusterTask sets those environment variables based on optional template parameters.
+As we run the Jenkinsfile Runner container via Tekton, our Tekton Task sets those environment variables based on optional template parameters.
 In the future all these parameters will be set by the Pipeline Run Controller based on configuration elsewhere.
 
 For now only `PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON` is set by the Pipeline Run Controller based on `spec.logging.elasticsearch.runID` of the respective PipelineRun resource.
@@ -39,7 +39,7 @@ Logging to Elasticsearch is disabled then and logs are written to the container'
 
 ### Enable logging to Elasticsearch
 
-To enable a Steward instance to forward pipeline run logs to Elasticsearch, the index URL must be statically set in Steward's ClusterTask for the Jenkinsfile Runner.
+To enable a Steward instance to forward pipeline run logs to Elasticsearch, the index URL must be statically set in Steward's Task for the Jenkinsfile Runner.
 The preferred way to do this is to specify the index URL as a parameter of the [Steward Helm chart](../../charts/steward/README.md).
 
 ## Testing
