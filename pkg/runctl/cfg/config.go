@@ -96,6 +96,30 @@ type PipelineRunsConfigStruct struct {
 	TektonTaskNamespace string
 }
 
+type configDataMap map[string]string
+
+func (cd configDataMap) parseInt64(key string) (*int64, error) {
+	if strVal, ok := cd[key]; ok && strVal != "" {
+		intVal, err := strconv.ParseInt(strVal, 10, 64)
+		if err != nil {
+			return nil, wrapParseError(err, key, strVal)
+		}
+		return &intVal, nil
+	}
+	return nil, nil
+}
+
+func (cd configDataMap) parseDuration(key string) (*metav1.Duration, error) {
+	if strVal, ok := cd[key]; ok && strVal != "" {
+		d, err := time.ParseDuration(strVal)
+		if err != nil {
+			return nil, wrapParseError(err, key, strVal)
+		}
+		return &metav1.Duration{Duration: d}, nil
+	}
+	return nil, nil
+}
+
 // LoadPipelineRunsConfig loads the pipelineruns configuration and returns it.
 func LoadPipelineRunsConfig(ctx context.Context, clientFactory k8s.ClientFactory) (*PipelineRunsConfigStruct, error) {
 	dest := &PipelineRunsConfigStruct{}
@@ -103,7 +127,7 @@ func LoadPipelineRunsConfig(ctx context.Context, clientFactory k8s.ClientFactory
 	for _, p := range []struct {
 		configMapName string
 		optional      bool
-		processFunc   func(map[string]string, *PipelineRunsConfigStruct) error
+		processFunc   func(configDataMap, *PipelineRunsConfigStruct) error
 	}{
 		{
 			configMapName: mainConfigMapName,
@@ -146,7 +170,7 @@ func processConfigMap(
 	ctx context.Context,
 	configMapName string,
 	optional bool,
-	processFunc func(map[string]string, *PipelineRunsConfigStruct) error,
+	processFunc func(configDataMap, *PipelineRunsConfigStruct) error,
 	dest *PipelineRunsConfigStruct,
 	clientFactory k8s.ClientFactory,
 ) error {
@@ -179,36 +203,14 @@ func processConfigMap(
 	return nil
 }
 
-func processMainConfig(configData map[string]string, dest *PipelineRunsConfigStruct) error {
+func wrapParseError(cause error, key, strVal string) error {
+	return errors.Wrapf(cause,
+		"key %q: cannot parse value %q",
+		key, strVal,
+	)
+}
 
-	wrapParseError := func(cause error, key, strVal string) error {
-		return errors.Wrapf(cause,
-			"key %q: cannot parse value %q",
-			key, strVal,
-		)
-	}
-
-	parseInt64 := func(key string) (*int64, error) {
-		if strVal, ok := configData[key]; ok && strVal != "" {
-			intVal, err := strconv.ParseInt(strVal, 10, 64)
-			if err != nil {
-				return nil, wrapParseError(err, key, strVal)
-			}
-			return &intVal, nil
-		}
-		return nil, nil
-	}
-
-	parseDuration := func(key string) (*metav1.Duration, error) {
-		if strVal, ok := configData[key]; ok && strVal != "" {
-			d, err := time.ParseDuration(strVal)
-			if err != nil {
-				return nil, wrapParseError(err, key, strVal)
-			}
-			return &metav1.Duration{Duration: d}, nil
-		}
-		return nil, nil
-	}
+func processMainConfig(configData configDataMap, dest *PipelineRunsConfigStruct) error {
 
 	dest.LimitRange = configData[mainConfigKeyLimitRange]
 	dest.ResourceQuota = configData[mainConfigKeyResourceQuota]
@@ -220,26 +222,26 @@ func processMainConfig(configData map[string]string, dest *PipelineRunsConfigStr
 	var err error
 
 	if dest.Timeout, err =
-		parseDuration(mainConfigKeyTimeout); err != nil {
+		configData.parseDuration(mainConfigKeyTimeout); err != nil {
 		return err
 	}
 
 	if dest.TimeoutWait, err =
-		parseDuration(mainConfigKeyTimeoutWait); err != nil {
+		configData.parseDuration(mainConfigKeyTimeoutWait); err != nil {
 		return err
 	}
 
 	if dest.JenkinsfileRunnerPodSecurityContextRunAsUser, err =
-		parseInt64(mainConfigKeyPSCRunAsUser); err != nil {
+		configData.parseInt64(mainConfigKeyPSCRunAsUser); err != nil {
 		return err
 	}
 	if dest.JenkinsfileRunnerPodSecurityContextRunAsGroup, err =
-		parseInt64(mainConfigKeyPSCRunAsGroup); err != nil {
+		configData.parseInt64(mainConfigKeyPSCRunAsGroup); err != nil {
 		return err
 	}
 
 	if dest.JenkinsfileRunnerPodSecurityContextFSGroup, err =
-		parseInt64(mainConfigKeyPSCFSGroup); err != nil {
+		configData.parseInt64(mainConfigKeyPSCFSGroup); err != nil {
 		return err
 	}
 
@@ -250,7 +252,7 @@ func metav1Duration(d time.Duration) *metav1.Duration {
 	return &metav1.Duration{Duration: d}
 }
 
-func processNetworkPoliciesConfig(configData map[string]string, dest *PipelineRunsConfigStruct) error {
+func processNetworkPoliciesConfig(configData configDataMap, dest *PipelineRunsConfigStruct) error {
 
 	isValidKey := func(key string) bool {
 		return key != "" && key == strings.TrimSpace(key) && !strings.HasPrefix(key, "_")
