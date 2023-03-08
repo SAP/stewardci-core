@@ -624,8 +624,7 @@ func (c *Controller) generateTenantRoleBinding(
 }
 
 func (c *Controller) isTenantRoleBindingUpToDate(current *rbacv1.RoleBinding, expected *rbacv1.RoleBinding) bool {
-	return true &&
-		equality.Semantic.DeepEqual(expected.GetLabels(), current.GetLabels()) &&
+	return equality.Semantic.DeepEqual(expected.GetLabels(), current.GetLabels()) &&
 		equality.Semantic.DeepEqual(expected.GetAnnotations(), current.GetAnnotations()) &&
 		equality.Semantic.DeepEqual(expected.RoleRef, current.RoleRef) &&
 		equality.Semantic.DeepEqual(expected.Subjects, current.Subjects)

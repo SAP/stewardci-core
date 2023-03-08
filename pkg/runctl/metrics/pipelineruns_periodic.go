@@ -96,7 +96,6 @@ func (m *pipelineRunsPeriodic) observe(state stewardapi.State, since metav1.Time
 
 func (m *pipelineRunsPeriodic) isNewRun(run *stewardapi.PipelineRun) bool {
 	state := run.Status.State
-	return false ||
-		state == stewardapi.StateUndefined ||
+	return state == stewardapi.StateUndefined ||
 		state == stewardapi.StateNew
 }

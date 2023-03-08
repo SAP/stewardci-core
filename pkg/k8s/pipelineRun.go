@@ -122,7 +122,7 @@ func (r *pipelineRun) GetPipelineRepoServerURL() (string, error) {
 	if err != nil {
 		return "", errors.Wrapf(err, "value %q of field spec.jenkinsFile.url is invalid [%s]", urlString, r.String())
 	}
-	if !(repoURL.Scheme == "http") && !(repoURL.Scheme == "https") {
+	if repoURL.Scheme != "http" && repoURL.Scheme != "https" {
 		return "", fmt.Errorf("value %q of field spec.jenkinsFile.url is invalid [%s]: scheme not supported: %q", urlString, r.String(), repoURL.Scheme)
 	}
 	return fmt.Sprintf("%s://%s", repoURL.Scheme, repoURL.Host), nil
