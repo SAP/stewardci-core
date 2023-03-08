@@ -291,97 +291,16 @@ func (c *Controller) isMaintenanceMode(ctx context.Context) (bool, error) {
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
 
-	if key == heartbeatStimulusKey {
-		c.heartbeat()
-		return nil
-	}
-
 	ctx := context.Background()
 
-	// Initial checks on cached pipelineRun
-	pipelineRunAPIObj, err := c.pipelineRunFetcher.ByKey(ctx, key)
-	if err != nil {
-		return err
-	}
-	// If pipelineRun is not found there is nothing to sync
+	pipelineRunAPIObj, err := c.getPipelineRunAPIObj(ctx, key)
 	if pipelineRunAPIObj == nil {
-		return nil
-	}
-	// don't process if labelled as to be ignored
-	if stewardlabels.IsLabelledAsIgnore(pipelineRunAPIObj) {
-		return nil
-	}
-	// fast exit - no finalizer cleanup needed
-	if pipelineRunAPIObj.Status.State == api.StateFinished && !utils.StringSliceContains(pipelineRunAPIObj.ObjectMeta.Finalizers, k8s.FinalizerName) {
-		return nil
-	}
-
-	// Get real pipelineRun bypassing cache
-	pipelineRun, err := k8s.NewPipelineRun(ctx, pipelineRunAPIObj, c.factory)
-	if err != nil {
 		return err
 	}
 
-	// If pipelineRun is not found there is nothing to sync
+	pipelineRun, err := c.ensureInitializedPipelineRun(ctx, pipelineRunAPIObj)
 	if pipelineRun == nil {
-		return nil
-	}
-
-	// fast exit with finalizer cleanup
-	if pipelineRun.GetStatus().State == api.StateFinished {
-		return pipelineRun.DeleteFinalizerIfExists(ctx)
-	}
-
-	// Check if object has deletion timestamp ...
-	if pipelineRun.HasDeletionTimestamp() {
-		runManager := c.createRunManager(pipelineRun)
-		err = runManager.Cleanup(ctx, pipelineRun)
-		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
-			return err
-		}
-		return c.updateStateAndResult(ctx, pipelineRun, api.StateFinished, api.ResultDeleted, metav1.Now())
-	}
-	// ... if not, try to add finalizer if missing
-	pipelineRun.AddFinalizer(ctx)
-
-	// Check if pipeline run is aborted
-	if err := c.handleAborted(ctx, pipelineRun); err != nil {
 		return err
-	}
-
-	// As soon as we have a result we can cleanup
-	if pipelineRun.GetStatus().Result != api.ResultUndefined && pipelineRun.GetStatus().State != api.StateCleaning {
-		err = c.changeState(pipelineRun, api.StateCleaning, metav1.Now())
-		if err != nil {
-			klog.V(1).Infof("WARN: change state to cleaning failed with: %s", err.Error())
-		}
-	}
-
-	// Init state when undefined
-	if pipelineRun.GetStatus().State == api.StateUndefined {
-
-		err = pipelineRun.InitState()
-		if err != nil {
-			return err
-		}
-	}
-
-	if pipelineRun.GetStatus().State == api.StateNew {
-		maintenanceMode, err := c.isMaintenanceMode(ctx)
-		if err != nil {
-			return err
-		}
-		if maintenanceMode {
-			err := fmt.Errorf("pipeline execution is paused while the system is in maintenance mode")
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
-			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
-			return err
-		}
-		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StatePreparing, metav1.Now()); err != nil {
-			return err
-		}
-		metrics.PipelineRunsStarted.Inc()
 	}
 
 	runManager := c.createRunManager(pipelineRun)
@@ -403,107 +322,237 @@ func (c *Controller) syncHandler(key string) error {
 	// Process pipeline run based on current state
 	switch state {
 	case api.StatePreparing:
-
-		namespace, auxNamespace, err := runManager.Prepare(ctx, pipelineRun, pipelineRunsConfig)
-		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
-			resultClass := serrors.GetClass(err)
-			// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
-			if resultClass != api.ResultUndefined {
-				return c.handleResultError(ctx, pipelineRun, resultClass, "preparing failed", err)
-			}
-			return err
-		}
-
-		pipelineRun.UpdateRunNamespace(namespace)
-		pipelineRun.UpdateAuxNamespace(auxNamespace)
-
-		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
+		doReturn, err := c.handlePipelineRunPrepare(ctx, runManager, pipelineRunAPIObj, pipelineRun, pipelineRunsConfig)
+		if doReturn {
 			return err
 		}
 
 	case api.StateWaiting:
-		const waitingFailed = "waiting failed"
-		run, err := runManager.GetRun(ctx, pipelineRun)
-		if err != nil {
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, waitingFailed)
-		}
-
-		// Check for wait timeout
-		startTime := pipelineRun.GetStatus().StateDetails.StartedAt
-		timeout := c.getWaitTimeout(pipelineRunsConfig)
-		if startTime.Add(timeout.Duration).Before(time.Now()) {
-			err := fmt.Errorf(
-				"main pod has not started after %s",
-				timeout.Duration,
-			)
-			return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, waitingFailed, err)
-		}
-
-		if run == nil {
-			if err = runManager.Start(ctx, pipelineRun, pipelineRunsConfig); err != nil {
-				c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
-				resultClass := serrors.GetClass(err)
-				// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
-				if resultClass != api.ResultUndefined {
-					return c.handleResultError(ctx, pipelineRun, resultClass, waitingFailed, err)
-				}
-				return err
-			}
-			return nil
-		} else if run.IsRestartable() {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
-			if err = runManager.DeleteRun(ctx, pipelineRun); err != nil {
-				if serrors.IsRecoverable(err) {
-					return err
-				}
-				return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "run deletion for restart failed", err)
-			}
-			return nil
-		}
-
-		started := run.GetStartTime()
-		if started != nil {
-			if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateRunning, *started); err != nil {
-				return err
-			}
+		doReturn, err := c.handlePipelineRunWaiting(ctx, runManager, pipelineRunAPIObj, pipelineRun, pipelineRunsConfig)
+		if doReturn {
+			return err
 		}
 	case api.StateRunning:
-		const runningFailed = "running failed"
-		run, err := runManager.GetRun(ctx, pipelineRun)
-		if err != nil {
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
-		}
-		if run == nil {
-			err = fmt.Errorf("task run not found in namespace %q", pipelineRun.GetRunNamespace())
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
-		}
-
-		containerInfo := run.GetContainerInfo()
-		pipelineRun.UpdateContainer(containerInfo)
-		if finished, result := run.IsFinished(); finished {
-			pipelineRun.UpdateMessage(run.GetMessage())
-			return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, *run.GetCompletionTime())
-		}
-		// commit container update
-		err = c.commitStatusAndMeter(ctx, pipelineRun)
-		if err != nil {
+		doReturn, err := c.handlePipelineRunRunning(ctx, runManager, pipelineRunAPIObj, pipelineRun, pipelineRunsConfig)
+		if doReturn {
 			return err
 		}
-
 	case api.StateCleaning:
-		err = runManager.Cleanup(ctx, pipelineRun)
-		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
-		}
-		if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateFinished, metav1.Now()); err != nil {
-			return err
-		}
-		return pipelineRun.DeleteFinalizerIfExists(ctx)
+		return c.handlePipelineRunCleaning(ctx, runManager, pipelineRunAPIObj, pipelineRun, pipelineRunsConfig)
 	default:
 		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
 	}
 	return nil
+}
+
+// return PipelineRunAPIObj if it should be processed, nil otherwise
+func (c *Controller) getPipelineRunAPIObj(ctx context.Context, key string) (*api.PipelineRun, error) {
+
+	if key == heartbeatStimulusKey {
+		c.heartbeat()
+		return nil, nil
+	}
+
+	// Initial checks on cached pipelineRun
+	pipelineRunAPIObj, err := c.pipelineRunFetcher.ByKey(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	// If pipelineRun is not found there is nothing to sync
+	if pipelineRunAPIObj == nil {
+		return nil, nil
+	}
+	// don't process if labelled as to be ignored
+	if stewardlabels.IsLabelledAsIgnore(pipelineRunAPIObj) {
+		return nil, nil
+	}
+	// fast exit - no finalizer cleanup needed
+	if pipelineRunAPIObj.Status.State == api.StateFinished && !utils.StringSliceContains(pipelineRunAPIObj.ObjectMeta.Finalizers, k8s.FinalizerName) {
+		return nil, nil
+	}
+	return pipelineRunAPIObj, nil
+}
+
+func (c *Controller) ensureInitializedPipelineRun(ctx context.Context, pipelineRunAPIObj *api.PipelineRun) (k8s.PipelineRun, error) {
+	// Get real pipelineRun bypassing cache
+	pipelineRun, err := k8s.NewPipelineRun(ctx, pipelineRunAPIObj, c.factory)
+	if err != nil {
+		return nil, err
+	}
+
+	// If pipelineRun is not found there is nothing to sync
+	if pipelineRun == nil {
+		return nil, nil
+	}
+
+	// fast exit with finalizer cleanup
+	if pipelineRun.GetStatus().State == api.StateFinished {
+		return nil, pipelineRun.DeleteFinalizerIfExists(ctx)
+	}
+
+	// Check if object has deletion timestamp ...
+	if pipelineRun.HasDeletionTimestamp() {
+		runManager := c.createRunManager(pipelineRun)
+		err = runManager.Cleanup(ctx, pipelineRun)
+		if err != nil {
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
+			return nil, err
+		}
+		return nil, c.updateStateAndResult(ctx, pipelineRun, api.StateFinished, api.ResultDeleted, metav1.Now())
+	}
+	// ... if not, try to add finalizer if missing
+	pipelineRun.AddFinalizer(ctx)
+
+	// Check if pipeline run is aborted
+	if err := c.handleAborted(ctx, pipelineRun); err != nil {
+		return nil, err
+	}
+
+	// As soon as we have a result we can cleanup
+	if pipelineRun.GetStatus().Result != api.ResultUndefined && pipelineRun.GetStatus().State != api.StateCleaning {
+		err = c.changeState(pipelineRun, api.StateCleaning, metav1.Now())
+		if err != nil {
+			klog.V(1).Infof("WARN: change state to cleaning failed with: %s", err.Error())
+		}
+	}
+
+	// Init state when undefined
+	if pipelineRun.GetStatus().State == api.StateUndefined {
+
+		err = pipelineRun.InitState()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.ensurePipelineRunInitialState(ctx, pipelineRunAPIObj, pipelineRun)
+}
+
+func (c *Controller) ensurePipelineRunInitialState(ctx context.Context, pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun) (k8s.PipelineRun, error) {
+	if pipelineRun.GetStatus().State == api.StateNew {
+		maintenanceMode, err := c.isMaintenanceMode(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if maintenanceMode {
+			err := fmt.Errorf("pipeline execution is paused while the system is in maintenance mode")
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
+			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
+			return nil, err
+		}
+		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StatePreparing, metav1.Now()); err != nil {
+			return nil, err
+		}
+		metrics.PipelineRunsStarted.Inc()
+	}
+	return pipelineRun, nil
+}
+
+func (c *Controller) handlePipelineRunPrepare(ctx context.Context, runManager run.Manager, pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (bool, error) {
+	namespace, auxNamespace, err := runManager.Prepare(ctx, pipelineRun, pipelineRunsConfig)
+	if err != nil {
+		c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
+		resultClass := serrors.GetClass(err)
+		// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
+		if resultClass != api.ResultUndefined {
+			return true, c.handleResultError(ctx, pipelineRun, resultClass, "preparing failed", err)
+		}
+		return true, err
+	}
+
+	pipelineRun.UpdateRunNamespace(namespace)
+	pipelineRun.UpdateAuxNamespace(auxNamespace)
+
+	if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
+		return true, err
+	}
+	return false, nil
+}
+
+func (c *Controller) handlePipelineRunWaiting(ctx context.Context, runManager run.Manager, pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (bool, error) {
+	const waitingFailed = "waiting failed"
+	run, err := runManager.GetRun(ctx, pipelineRun)
+	if err != nil {
+		return true, c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, waitingFailed)
+	}
+
+	// Check for wait timeout
+	startTime := pipelineRun.GetStatus().StateDetails.StartedAt
+	timeout := c.getWaitTimeout(pipelineRunsConfig)
+	if startTime.Add(timeout.Duration).Before(time.Now()) {
+		err := fmt.Errorf(
+			"main pod has not started after %s",
+			timeout.Duration,
+		)
+		return true, c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, waitingFailed, err)
+	}
+
+	if run == nil {
+		if err = runManager.Start(ctx, pipelineRun, pipelineRunsConfig); err != nil {
+			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
+			resultClass := serrors.GetClass(err)
+			// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
+			if resultClass != api.ResultUndefined {
+				return true, c.handleResultError(ctx, pipelineRun, resultClass, waitingFailed, err)
+			}
+			return true, err
+		}
+		return true, nil
+	} else if run.IsRestartable() {
+		c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
+		if err = runManager.DeleteRun(ctx, pipelineRun); err != nil {
+			if serrors.IsRecoverable(err) {
+				return true, err
+			}
+			return true, c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "run deletion for restart failed", err)
+		}
+		return true, nil
+	}
+
+	started := run.GetStartTime()
+	if started != nil {
+		if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateRunning, *started); err != nil {
+			return true, err
+		}
+	}
+	return false, nil
+}
+
+func (c *Controller) handlePipelineRunRunning(ctx context.Context, runManager run.Manager, pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (bool, error) {
+
+	const runningFailed = "running failed"
+	run, err := runManager.GetRun(ctx, pipelineRun)
+	if err != nil {
+		return true, c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
+	}
+	if run == nil {
+		err = fmt.Errorf("task run not found in namespace %q", pipelineRun.GetRunNamespace())
+		return true, c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
+	}
+
+	containerInfo := run.GetContainerInfo()
+	pipelineRun.UpdateContainer(containerInfo)
+	if finished, result := run.IsFinished(); finished {
+		pipelineRun.UpdateMessage(run.GetMessage())
+		return true, c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, *run.GetCompletionTime())
+	}
+	// commit container update
+	err = c.commitStatusAndMeter(ctx, pipelineRun)
+	if err != nil {
+		return true, err
+	}
+	return false, nil
+}
+
+func (c *Controller) handlePipelineRunCleaning(ctx context.Context, runManager run.Manager, pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) error {
+
+	err := runManager.Cleanup(ctx, pipelineRun)
+	if err != nil {
+		c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
+	}
+	if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateFinished, metav1.Now()); err != nil {
+		return err
+	}
+	return pipelineRun.DeleteFinalizerIfExists(ctx)
 }
 
 func (c *Controller) getWaitTimeout(pipelineRunsConfig *cfg.PipelineRunsConfigStruct) *metav1.Duration {
