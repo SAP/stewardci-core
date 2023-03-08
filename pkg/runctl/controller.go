@@ -423,9 +423,10 @@ func (c *Controller) syncHandler(key string) error {
 		}
 
 	case api.StateWaiting:
+		const waitingFailed = "waiting failed"
 		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "waiting failed")
+			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, waitingFailed)
 		}
 
 		// Check for wait timeout
@@ -436,7 +437,7 @@ func (c *Controller) syncHandler(key string) error {
 				"main pod has not started after %s",
 				timeout.Duration,
 			)
-			return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "waiting failed", err)
+			return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, waitingFailed, err)
 		}
 
 		if run == nil {
@@ -445,7 +446,7 @@ func (c *Controller) syncHandler(key string) error {
 				resultClass := serrors.GetClass(err)
 				// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 				if resultClass != api.ResultUndefined {
-					return c.handleResultError(ctx, pipelineRun, resultClass, "waiting failed", err)
+					return c.handleResultError(ctx, pipelineRun, resultClass, waitingFailed, err)
 				}
 				return err
 			}
@@ -468,13 +469,14 @@ func (c *Controller) syncHandler(key string) error {
 			}
 		}
 	case api.StateRunning:
+		const runningFailed = "running failed"
 		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "running failed")
+			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
 		}
 		if run == nil {
 			err = fmt.Errorf("task run not found in namespace %q", pipelineRun.GetRunNamespace())
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "running failed")
+			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
 		}
 
 		containerInfo := run.GetContainerInfo()
