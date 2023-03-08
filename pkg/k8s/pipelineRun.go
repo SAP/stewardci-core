@@ -53,6 +53,11 @@ type pipelineRun struct {
 	commitRecorders []commitRecorderFunc
 }
 
+type retryData struct {
+	count       uint64
+	changeError error
+}
+
 type changeFunc func(*api.PipelineStatus) (commitRecorderFunc, error)
 type commitRecorderFunc func() *api.StateItem
 
@@ -380,16 +385,19 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 		return nil, nil
 	}
 
-	retryCount := uint64(0)
+	retryState := &retryData{
+		count: uint64(0),
+	}
+
 	defer func(start time.Time) {
-		if retryCount > 0 {
+		if retryState.count > 0 {
 			codeLocationSkipFrames := uint16(1)
 			codeLocation := metrics.CodeLocation(codeLocationSkipFrames)
 			latency := time.Since(start)
-			metrics.Retries.Observe(codeLocation, retryCount, latency)
+			metrics.Retries.Observe(codeLocation, retryState.count, latency)
 			klog.V(5).InfoS("retry was required",
 				"location", codeLocation,
-				"count", retryCount,
+				"count", retryState.count,
 				"latency", latency,
 				"namespace", r.GetNamespace(),
 				"pipelineRun", r.GetName(),
@@ -397,11 +405,24 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 		}
 	}(time.Now())
 
-	var changeError error
-	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		var err error
+	err := retry.RetryOnConflict(retry.DefaultBackoff, r.doRetry(ctx, retryState))
+	r.changes = []changeFunc{}
+	if retryState.changeError != nil {
+		return nil, retryState.changeError
+	}
+	result := []*api.StateItem{}
+	for _, recorder := range r.commitRecorders {
+		if recorder != nil {
+			result = append(result, recorder())
+		}
+	}
+	return result, errors.Wrapf(err, "failed to update status [%s]", r.String())
+}
 
-		if retryCount > 0 {
+func (r *pipelineRun) doRetry(ctx context.Context, retryState *retryData) func() error {
+	return func() error {
+		var err error
+		if retryState.count > 0 {
 			klog.V(5).Infof("commitStatus reload pipeline run for retry %q ...", r.String())
 			new, err := r.client.Get(ctx, r.apiObj.GetName(), metav1.GetOptions{})
 			if err != nil {
@@ -411,12 +432,12 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 			r.apiObj = new
 			r.copied = true
 			r.commitRecorders = []commitRecorderFunc{}
-			var commitRecorder func() *api.StateItem
+			var commitRecorder commitRecorderFunc
 			klog.V(5).Infof("commitStatus applies %d change(s)", len(r.changes))
 			for i, change := range r.changes {
-				commitRecorder, changeError = change(r.GetStatus())
-				if changeError != nil {
-					klog.V(5).Infof("applying change %d failed with error: %s", i, changeError.Error())
+				commitRecorder, retryState.changeError = change(r.GetStatus())
+				if retryState.changeError != nil {
+					klog.V(5).Infof("applying change %d failed with error: %s", i, retryState.changeError.Error())
 					return nil
 				}
 				r.commitRecorders = append(r.commitRecorders, commitRecorder)
@@ -428,20 +449,9 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 			r.apiObj = result
 			return nil
 		}
-		retryCount++
+		retryState.count++
 		return err
-	})
-	r.changes = []changeFunc{}
-	if changeError != nil {
-		return nil, changeError
 	}
-	result := []*api.StateItem{}
-	for _, recorder := range r.commitRecorders {
-		if recorder != nil {
-			result = append(result, recorder())
-		}
-	}
-	return result, errors.Wrapf(err, "failed to update status [%s]", r.String())
 }
 
 func (r *pipelineRun) ensureCopy() {
