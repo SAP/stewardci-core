@@ -305,22 +305,13 @@ func (c *Controller) syncHandler(key string) error {
 
 	runManager := c.createRunManager(pipelineRun)
 
-	var pipelineRunsConfig *cfg.PipelineRunsConfigStruct
-	state := pipelineRun.GetStatus().State
-	if state == api.StatePreparing || state == api.StateWaiting {
-		// the configuration should be loaded once per sync to avoid inconsistencies
-		// in case of concurrent configuration changes
-		pipelineRunsConfig, err = c.loadPipelineRunsConfig(ctx)
-		if err != nil {
-			if state == api.StatePreparing {
-				return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
-			}
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
-		}
+	pipelineRunsConfig, doReturn, err := c.ensurePipelineRunConfig(ctx, pipelineRunAPIObj, pipelineRun)
+	if doReturn {
+		return err
 	}
 
 	// Process pipeline run based on current state
-	switch state {
+	switch pipelineRun.GetStatus().State {
 	case api.StatePreparing:
 		doReturn, err := c.handlePipelineRunPrepare(ctx, runManager, pipelineRunAPIObj, pipelineRun, pipelineRunsConfig)
 		if doReturn {
@@ -447,6 +438,24 @@ func (c *Controller) ensurePipelineRunInitialState(ctx context.Context, pipeline
 	return pipelineRun, nil
 }
 
+func (c *Controller) ensurePipelineRunConfig(ctx context.Context, pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun) (*cfg.PipelineRunsConfigStruct, bool, error) {
+	var pipelineRunsConfig *cfg.PipelineRunsConfigStruct
+	state := pipelineRun.GetStatus().State
+	if state == api.StatePreparing || state == api.StateWaiting {
+		// the configuration should be loaded once per sync to avoid inconsistencies
+		// in case of concurrent configuration changes
+		var err error
+		pipelineRunsConfig, err = c.loadPipelineRunsConfig(ctx)
+		if err != nil {
+			if state == api.StatePreparing {
+				return nil, true, c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
+			}
+			return nil, true, c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
+		}
+	}
+	return pipelineRunsConfig, false, nil
+}
+
 func (c *Controller) handlePipelineRunPrepare(ctx context.Context, runManager run.Manager, pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (bool, error) {
 	namespace, auxNamespace, err := runManager.Prepare(ctx, pipelineRun, pipelineRunsConfig)
 	if err != nil {
@@ -499,13 +508,7 @@ func (c *Controller) handlePipelineRunWaiting(ctx context.Context, runManager ru
 		return true, nil
 	} else if run.IsRestartable() {
 		c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
-		if err = runManager.DeleteRun(ctx, pipelineRun); err != nil {
-			if serrors.IsRecoverable(err) {
-				return true, err
-			}
-			return true, c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "run deletion for restart failed", err)
-		}
-		return true, nil
+		return c.restart(ctx, runManager, pipelineRun)
 	}
 
 	started := run.GetStartTime()
@@ -515,6 +518,16 @@ func (c *Controller) handlePipelineRunWaiting(ctx context.Context, runManager ru
 		}
 	}
 	return false, nil
+}
+
+func (c *Controller) restart(ctx context.Context, runManager run.Manager, pipelineRun k8s.PipelineRun) (bool, error) {
+	if err := runManager.DeleteRun(ctx, pipelineRun); err != nil {
+		if serrors.IsRecoverable(err) {
+			return true, err
+		}
+		return true, c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "run deletion for restart failed", err)
+	}
+	return true, nil
 }
 
 func (c *Controller) handlePipelineRunRunning(ctx context.Context, runManager run.Manager, pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (bool, error) {
