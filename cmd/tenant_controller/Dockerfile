@@ -1,5 +1,5 @@
 ARG GOLANG_VERSION
-FROM golang:${GOLANG_VERSION}-alpine as builder
+FROM golang:${GOLANG_VERSION}-alpine AS builder
 RUN mkdir /build
 ADD . /build/
 WORKDIR /build
