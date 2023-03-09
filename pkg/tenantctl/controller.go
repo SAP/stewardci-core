@@ -226,27 +226,12 @@ func (c *Controller) heartbeat() {
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
 
-	if key == heartbeatStimulusKey {
-		c.heartbeat()
-		return nil
-	}
-
 	ctx := context.Background()
 
-	origTenant, err := c.fetcher.ByKey(ctx, key)
-	if err != nil {
+	origTenant, err := c.getTenant(ctx, key)
+	if origTenant == nil {
 		return err
 	}
-
-	if origTenant == nil {
-		return nil
-	}
-
-	// don't process if labelled as to be ignored
-	if stewardlabels.IsLabelledAsIgnore(origTenant) {
-		return nil
-	}
-
 	tenant := origTenant.DeepCopy()
 
 	klog.V(4).Infof(c.formatLog(tenant, "started reconciliation"))
@@ -262,20 +247,8 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	if !tenant.ObjectMeta.DeletionTimestamp.IsZero() {
-		klog.V(3).Infof(c.formatLog(tenant, "tenant is marked as deleted"))
-		if !c.hasFinalizer(tenant) {
-			klog.V(3).Infof(c.formatLog(tenant, "dependent resources cleaned already, nothing to do"))
-			return nil
-		}
-		err = c.deleteTenantNamespace(ctx, tenant.Status.TenantNamespaceName, tenant, config)
-		if err != nil {
-			return err
-		}
-		_, err = c.removeFinalizerAndUpdate(ctx, tenant)
-		if err == nil {
-			c.syncCount++
-		}
+	doReturn, err := c.handleDelete(ctx, tenant, config)
+	if doReturn {
 		return err
 	}
 
@@ -303,6 +276,50 @@ func (c *Controller) syncHandler(key string) error {
 	c.updateMetrics()
 	c.syncCount++
 	return nil
+}
+
+func (c *Controller) getTenant(ctx context.Context, key string) (*stewardv1alpha1.Tenant, error) {
+	if key == heartbeatStimulusKey {
+		c.heartbeat()
+		return nil, nil
+	}
+
+	origTenant, err := c.fetcher.ByKey(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+
+	if origTenant == nil {
+		return nil, nil
+	}
+
+	// don't process if labelled as to be ignored
+	if stewardlabels.IsLabelledAsIgnore(origTenant) {
+		return nil, nil
+	}
+
+	return origTenant.DeepCopy(), nil
+
+}
+
+func (c *Controller) handleDelete(ctx context.Context, tenant *stewardv1alpha1.Tenant, config clientConfig) (bool, error) {
+	if !tenant.ObjectMeta.DeletionTimestamp.IsZero() {
+		klog.V(3).Infof(c.formatLog(tenant, "tenant is marked as deleted"))
+		if !c.hasFinalizer(tenant) {
+			klog.V(3).Infof(c.formatLog(tenant, "dependent resources cleaned already, nothing to do"))
+			return true, nil
+		}
+		err := c.deleteTenantNamespace(ctx, tenant.Status.TenantNamespaceName, tenant, config)
+		if err != nil {
+			return true, err
+		}
+		_, err = c.removeFinalizerAndUpdate(ctx, tenant)
+		if err == nil {
+			c.syncCount++
+		}
+		return true, err
+	}
+	return false, nil
 }
 
 func (c *Controller) isInitialized(tenant *stewardv1alpha1.Tenant) bool {
@@ -526,6 +543,19 @@ func (c *Controller) reconcileTenantRoleBinding(ctx context.Context, tenant *ste
 		return c.testing.reconcileTenantRoleBindingStub(tenant, namespace, config)
 	}
 
+	needForUpdateDetected, err = c.reconcileTRB(ctx, namespace, config, tenant)
+
+	if err != nil {
+		err = errors.WithMessagef(err,
+			"failed to reconcile the RoleBinding in tenant namespace %q",
+			namespace,
+		)
+		klog.V(4).Infof(c.formatLog(tenant), err)
+	}
+	return
+}
+
+func (c *Controller) reconcileTRB(ctx context.Context, namespace string, config clientConfig, tenant *stewardv1alpha1.Tenant) (needForUpdateDetected bool, err error) {
 	/*
 		The roleRef of an existing RoleBinding cannot be updated (prohibited by
 		server). This means we need to create a new RoleBinding when we want to
@@ -542,43 +572,31 @@ func (c *Controller) reconcileTenantRoleBinding(ctx context.Context, tenant *ste
 		We manage only those RoleBinding objects that are marked as "managed by
 		Steward". All others will not be touched or taken into account.
 	*/
-
-	err = func() error {
-		rbList, err := c.listManagedRoleBindings(ctx, namespace)
-		if err != nil {
-			return err
-		}
-
-		clientNamespace := tenant.GetNamespace()
-		expectedTenantRB := c.generateTenantRoleBinding(namespace, clientNamespace, config)
-
-		if len(rbList.Items) != 1 || !c.isTenantRoleBindingUpToDate(&rbList.Items[0], expectedTenantRB) {
-			needForUpdateDetected = true
-		}
-
-		if needForUpdateDetected {
-			klog.V(4).Infof(c.formatLogf(tenant, "updating RoleBinding in tenant namespace %q", namespace))
-			_, err = c.createRoleBinding(ctx, expectedTenantRB)
-			if err != nil {
-				return err
-			}
-			err = c.deleteRoleBindingsFromList(ctx, rbList)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}()
-
+	rbList, err := c.listManagedRoleBindings(ctx, namespace)
 	if err != nil {
-		err = errors.WithMessagef(err,
-			"failed to reconcile the RoleBinding in tenant namespace %q",
-			namespace,
-		)
-		klog.V(4).Infof(c.formatLog(tenant), err)
+		return false, err
 	}
-	return
+
+	clientNamespace := tenant.GetNamespace()
+	expectedTenantRB := c.generateTenantRoleBinding(namespace, clientNamespace, config)
+
+	if len(rbList.Items) != 1 || !c.isTenantRoleBindingUpToDate(&rbList.Items[0], expectedTenantRB) {
+		needForUpdateDetected = true
+	}
+
+	if needForUpdateDetected {
+		klog.V(4).Infof(c.formatLogf(tenant, "updating RoleBinding in tenant namespace %q", namespace))
+		_, err = c.createRoleBinding(ctx, expectedTenantRB)
+		if err != nil {
+			return true, err
+		}
+		err = c.deleteRoleBindingsFromList(ctx, rbList)
+		if err != nil {
+			return true, err
+		}
+	}
+
+	return needForUpdateDetected, nil
 }
 
 /**
