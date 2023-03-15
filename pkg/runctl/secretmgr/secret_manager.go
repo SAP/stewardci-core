@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	jenkinsIO = "jenkins.io/"
-	tektonDev = "tekton.dev/"
+	annotationPrefixJenkins = "jenkins.io/"
+	annotationPrefixTekton  = "tekton.dev/"
 )
 
 // SecretManager manages the serets in a run-namespace for the controller.
@@ -52,9 +52,9 @@ func (s SecretManager) CopyAll(ctx context.Context, pipelineRun k8s.PipelineRun)
 func (s SecretManager) copyImagePullSecretsToRunNamespace(ctx context.Context, pipelineRun k8s.PipelineRun) ([]string, error) {
 	secretNames := pipelineRun.GetSpec().ImagePullSecrets
 	transformers := []secrets.SecretTransformer{
-		secrets.StripAnnotationsTransformer(tektonDev),
-		secrets.StripAnnotationsTransformer(jenkinsIO),
-		secrets.StripLabelsTransformer(jenkinsIO),
+		secrets.StripAnnotationsTransformer(annotationPrefixTekton),
+		secrets.StripAnnotationsTransformer(annotationPrefixJenkins),
+		secrets.StripLabelsTransformer(annotationPrefixJenkins),
 		secrets.UniqueNameTransformer(),
 	}
 	return s.copySecrets(ctx, pipelineRun, secretNames, secrets.DockerOnly, transformers...)
@@ -70,8 +70,8 @@ func (s SecretManager) copyPipelineCloneSecretToRunNamespace(ctx context.Context
 		return "", serrors.Classify(err, v1alpha1.ResultErrorContent)
 	}
 	transformers := []secrets.SecretTransformer{
-		secrets.StripAnnotationsTransformer(jenkinsIO),
-		secrets.StripLabelsTransformer(jenkinsIO),
+		secrets.StripAnnotationsTransformer(annotationPrefixJenkins),
+		secrets.StripLabelsTransformer(annotationPrefixJenkins),
 		secrets.UniqueNameTransformer(),
 		secrets.SetAnnotationTransformer("tekton.dev/git-0", repoServerURL),
 	}
@@ -85,7 +85,7 @@ func (s SecretManager) copyPipelineCloneSecretToRunNamespace(ctx context.Context
 func (s SecretManager) copyPipelineSecretsToRunNamespace(ctx context.Context, pipelineRun k8s.PipelineRun) ([]string, error) {
 	secretNames := pipelineRun.GetSpec().Secrets
 	transformers := []secrets.SecretTransformer{
-		secrets.StripAnnotationsTransformer(tektonDev),
+		secrets.StripAnnotationsTransformer(annotationPrefixTekton),
 		secrets.RenameByAnnotationTransformer(v1alpha1.AnnotationSecretRename),
 	}
 	return s.copySecrets(ctx, pipelineRun, secretNames, nil, transformers...)
