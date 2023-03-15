@@ -52,7 +52,7 @@
   date: TBD
   changes:
     - type: internal
-      impact: minor
+      impact: patch
       title: Only Refactoring
       description: |-
         This change only contains refactorings:
