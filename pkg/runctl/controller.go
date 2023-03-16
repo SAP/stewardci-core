@@ -19,6 +19,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	"github.com/SAP/stewardci-core/pkg/runctl/metrics"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
+	"github.com/SAP/stewardci-core/pkg/runctl/runmgr"
 	"github.com/SAP/stewardci-core/pkg/stewardlabels"
 	"github.com/SAP/stewardci-core/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -269,7 +270,7 @@ func (c *Controller) newRunManager(workFactory k8s.ClientFactory, secretProvider
 		return c.testing.newRunManagerStub(workFactory, secretProvider)
 
 	}
-	return newRunManager(workFactory, secretProvider)
+	return runmgr.NewRunManager(workFactory, secretProvider)
 }
 
 func (c *Controller) loadPipelineRunsConfig(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error) {
@@ -570,18 +571,10 @@ func (c *Controller) handlePipelineRunCleaning(ctx context.Context, runManager r
 
 func (c *Controller) getWaitTimeout(pipelineRunsConfig *cfg.PipelineRunsConfigStruct) *metav1.Duration {
 	timeout := pipelineRunsConfig.TimeoutWait
-	if isZeroDuration(timeout) {
-		timeout = metav1Duration(time.Duration(defaultWaitTimeout))
+	if utils.IsZeroDuration(timeout) {
+		timeout = utils.Metav1Duration(time.Duration(defaultWaitTimeout))
 	}
 	return timeout
-}
-
-func metav1Duration(d time.Duration) *metav1.Duration {
-	return &metav1.Duration{Duration: d}
-}
-
-func isZeroDuration(d *metav1.Duration) bool {
-	return d == nil || d.Truncate(time.Second) == 0
 }
 
 func (c *Controller) handleResultError(ctx context.Context, pipelineRun k8s.PipelineRun, result api.Result, message string, err error) error {
@@ -679,8 +672,8 @@ func (c *Controller) handleTektonTaskRun(obj interface{}) {
 		klog.V(3).Infof("Recovered deleted object '%s' from tombstone", object.GetName())
 	}
 	klog.V(4).Infof("Processing object: %s", object.GetSelfLink())
-	annotations := object.GetAnnotations()
-	runKey := annotations[annotationPipelineRunKey]
+
+	runKey := runmgr.GetPipelineRunKeyAnnotation(object)
 	if runKey != "" {
 		klog.V(4).Infof("Add to workqueue '%s'", runKey)
 		c.workqueue.Add(runKey)

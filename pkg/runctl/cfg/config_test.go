@@ -14,6 +14,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	corev1clientmocks "github.com/SAP/stewardci-core/pkg/k8s/mocks/client-go/corev1"
+	"github.com/SAP/stewardci-core/pkg/utils"
 	gomock "github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"gotest.tools/v3/assert"
@@ -218,8 +219,8 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, resultErr)
 	expectedConfig := &PipelineRunsConfigStruct{
-		Timeout:                          metav1Duration(time.Minute * 4444),
-		TimeoutWait:                      metav1Duration(time.Minute * 555),
+		Timeout:                          utils.Metav1Duration(time.Minute * 4444),
+		TimeoutWait:                      utils.Metav1Duration(time.Minute * 555),
 		LimitRange:                       "limitRange1",
 		ResourceQuota:                    "resourceQuota1",
 		JenkinsfileRunnerImage:           "jfrImage1",
@@ -339,8 +340,8 @@ func Test_processMainConfig(t *testing.T) {
 				"someKeyThatShouldBeIgnored": "34957349",
 			},
 			&PipelineRunsConfigStruct{
-				Timeout:       metav1Duration(time.Minute * 4444),
-				TimeoutWait:   metav1Duration(time.Minute * 555),
+				Timeout:       utils.Metav1Duration(time.Minute * 4444),
+				TimeoutWait:   utils.Metav1Duration(time.Minute * 555),
 				LimitRange:    "limitRange1",
 				ResourceQuota: "resourceQuota1",
 

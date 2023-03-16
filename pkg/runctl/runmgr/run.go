@@ -1,7 +1,8 @@
-package runctl
+package runmgr
 
 import (
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	"github.com/SAP/stewardci-core/pkg/runctl/constants"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	termination "github.com/tektoncd/pipeline/pkg/termination"
@@ -12,7 +13,6 @@ import (
 )
 
 const (
-	jfrStepName       = "step-jenkinsfile-runner"
 	jfrRcErrorContent = 2
 	jfrRcErrorConfig  = 3
 )
@@ -37,10 +37,10 @@ func (r *tektonRun) GetStartTime() *metav1.Time {
 		return nil
 	}
 	for _, step := range r.tektonTaskRun.Status.Steps {
-		if step.ContainerName == jfrStepName && step.Running != nil {
+		if step.ContainerName == constants.JFRStepName && step.Running != nil {
 			return &step.Running.StartedAt
 		}
-		if step.ContainerName == jfrStepName && step.Terminated != nil {
+		if step.ContainerName == constants.JFRStepName && step.Terminated != nil {
 			return &step.Terminated.StartedAt
 		}
 	}

@@ -14,9 +14,12 @@ import (
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	cfg "github.com/SAP/stewardci-core/pkg/runctl/cfg"
+	"github.com/SAP/stewardci-core/pkg/runctl/constants"
 	metricstesting "github.com/SAP/stewardci-core/pkg/runctl/metrics/testing"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
 	runmocks "github.com/SAP/stewardci-core/pkg/runctl/run/mocks"
+	"github.com/SAP/stewardci-core/pkg/runctl/runmgr"
+	runctltesting "github.com/SAP/stewardci-core/pkg/runctl/testing"
 	gomock "github.com/golang/mock/gomock"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	assert "gotest.tools/v3/assert"
@@ -25,7 +28,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/record"
 	klog "k8s.io/klog/v2"
 	"knative.dev/pkg/apis"
@@ -40,11 +42,11 @@ func Test_meterAllPipelineRunsPeriodic(t *testing.T) {
 
 	mockMetric := metricstesting.NewMockPipelineRunsMetric(mockCtrl)
 	defer metricstesting.PatchPipelineRunsPeriodic(mockMetric)()
-
 	cf := newFakeClientFactory(
 		fake.SecretOpaque("secret1", "ns1"),
-		fake.ClusterRole(string(runClusterRoleName)),
+		runctltesting.FakeClusterRole(),
 	)
+
 	c := NewController(cf, ControllerOpts{})
 
 	run := fake.PipelineRun("r1", "ns1", api.PipelineSpec{})
@@ -68,8 +70,9 @@ func Test_Controller_Success(t *testing.T) {
 	// SETUP
 	cf := newFakeClientFactory(
 		fake.SecretOpaque("secret1", "ns1"),
-		fake.ClusterRole(string(runClusterRoleName)),
+		runctltesting.FakeClusterRole(),
 	)
+
 	pr := fake.PipelineRun("run1", "ns1", api.PipelineSpec{
 		Secrets: []string{"secret1"},
 	})
@@ -100,8 +103,9 @@ func Test_Controller_Running(t *testing.T) {
 			// SETUP
 			cf := newFakeClientFactory(
 				fake.SecretOpaque("secret1", "ns1"),
-				fake.ClusterRole(string(runClusterRoleName)),
+				runctltesting.FakeClusterRole(),
 			)
+
 			pr := fake.PipelineRun("run1", "ns1", api.PipelineSpec{
 				Secrets: []string{"secret1"},
 			})
@@ -135,7 +139,7 @@ func Test_Controller_Running(t *testing.T) {
 func stepsWithContainer(state string, startTime metav1.Time) []tekton.StepState {
 	var stepState tekton.StepState
 	time, _ := json.Marshal(startTime)
-	s := fmt.Sprintf(`{ %q: {"startedAt": %s}, "container": %q, "name": "foo"}`, state, time, jfrStepName)
+	s := fmt.Sprintf(`{ %q: {"startedAt": %s}, "container": %q, "name": "foo"}`, state, time, constants.JFRStepName)
 	json.Unmarshal([]byte(s), &stepState)
 	return []tekton.StepState{
 		stepState,
@@ -151,7 +155,7 @@ func Test_Controller_Deletion(t *testing.T) {
 	})
 	cf := newFakeClientFactory(
 		fake.SecretOpaque("secret1", "ns1"),
-		fake.ClusterRole(string(runClusterRoleName)),
+		runctltesting.FakeClusterRole(),
 	)
 
 	// EXERCISE
@@ -196,9 +200,10 @@ func Test_Controller_syncHandler_givesUp_onPipelineRunNotFound(t *testing.T) {
 	assert.NilError(t, err)
 }
 
-func newController(runs ...*api.PipelineRun) (*Controller, *fake.ClientFactory) {
+func newController(t *testing.T, runs ...*api.PipelineRun) (*Controller, *fake.ClientFactory) {
+	t.Helper()
 	ctx := context.Background()
-	cf := newFakeClientFactory(fake.ClusterRole(string(runClusterRoleName)))
+	cf := newFakeClientFactory(runctltesting.FakeClusterRole())
 	client := cf.StewardV1alpha1()
 	for _, run := range runs {
 		client.PipelineRuns(run.GetNamespace()).Create(ctx, run, metav1.CreateOptions{})
@@ -281,7 +286,7 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 				run.Status.State = currentState
 				now := metav1.Now()
 				run.SetDeletionTimestamp(&now)
-				controller, cf := newController(run)
+				controller, cf := newController(t, run)
 				mockCtrl := gomock.NewController(t)
 				defer mockCtrl.Finish()
 				runManager := runmocks.NewMockManager(mockCtrl)
@@ -337,7 +342,7 @@ func Test_Controller_syncHandler_delete_on_finished_keeps_result_unchanged(t *te
 				run.Status.Result = currentResult
 				now := metav1.Now()
 				run.SetDeletionTimestamp(&now)
-				controller, cf := newController(run)
+				controller, cf := newController(t, run)
 				mockCtrl := gomock.NewController(t)
 				defer mockCtrl.Finish()
 				runManager := runmocks.NewMockManager(mockCtrl)
@@ -457,7 +462,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				// SETUP
 				run := fake.PipelineRun("foo", "ns1", test.pipelineSpec)
 				run.Status = currentStatus
-				controller, cf := newController(run)
+				controller, cf := newController(t, run)
 				mockCtrl := gomock.NewController(t)
 				defer mockCtrl.Finish()
 				runManager := runmocks.NewMockManager(mockCtrl)
@@ -883,7 +888,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				run.Status.StateDetails = api.StateItem{
 					StartedAt: test.startedAt,
 				}
-				controller, cf := newController(run)
+				controller, cf := newController(t, run)
 				mockCtrl := gomock.NewController(t)
 				defer mockCtrl.Finish()
 				runManager := runmocks.NewMockManager(mockCtrl)
@@ -960,7 +965,7 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 		fake.Namespace("tenant-ns-1"),
 
 		// the Steward PipelineRun in status running
-		StewardObjectFromJSON(t, `{
+		runctltesting.StewardObjectFromJSON(t, `{
 			"apiVersion": "steward.sap.com/v1alpha1",
 			"kind": "PipelineRun",
 			"metadata": {
@@ -977,7 +982,7 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 
 		// the run namespace
 		// label is required for deletion
-		CoreV1ObjectFromJSON(t, `{
+		runctltesting.CoreV1ObjectFromJSON(t, `{
 			"apiVersion": "v1",
 			"kind": "Namespace",
 			"metadata": {
@@ -990,7 +995,7 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 		}`),
 
 		// the Tekton TaskRun
-		TektonObjectFromJSON(t, `{
+		runctltesting.TektonObjectFromJSON(t, `{
 			"apiVersion": "tekton.dev/v1beta1",
 			"kind": "TaskRun",
 			"metadata": {
@@ -1012,8 +1017,7 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 				"completionTime": "2019-09-16T12:55:40Z"
 			}
 		}`),
-
-		fake.ClusterRole(string(runClusterRoleName)),
+		runctltesting.FakeClusterRole(),
 	)
 
 	// EXERCISE
@@ -1036,7 +1040,7 @@ func ensureServiceAccountTokenStub(ctx context.Context, serviceAccountSecretName
 }
 
 func newTestRunManager(workFactory k8s.ClientFactory, secretProvider secrets.SecretProvider) run.Manager {
-	return newRunManager(workFactory, secretProvider)
+	return runmgr.NewRunManager(workFactory, secretProvider)
 }
 
 func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
@@ -1066,10 +1070,6 @@ func start(t *testing.T, controller *Controller, stopCh chan struct{}) {
 	if err := controller.Run(1, stopCh); err != nil {
 		t.Logf("Error running controller %s", err.Error())
 	}
-}
-
-func resource(resource string) schema.GroupResource {
-	return schema.GroupResource{Group: "", Resource: resource}
 }
 
 func getPipelineRun(t *testing.T, name string, namespace string, cf *fake.ClientFactory) k8s.PipelineRun {
@@ -1121,7 +1121,7 @@ func updateRun(t *testing.T, run *api.PipelineRun, namespace string, cf *fake.Cl
 func getTektonTaskRun(t *testing.T, namespace string, cf *fake.ClientFactory) *tekton.TaskRun {
 	t.Helper()
 	ctx := context.Background()
-	taskRun, err := cf.TektonV1beta1().TaskRuns(namespace).Get(ctx, tektonTaskRunName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(namespace).Get(ctx, constants.TektonTaskRunName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("could not get Tekton task run: %s", err.Error())
 	}

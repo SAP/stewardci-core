@@ -248,10 +248,6 @@ func processMainConfig(configData configDataMap, dest *PipelineRunsConfigStruct)
 	return nil
 }
 
-func metav1Duration(d time.Duration) *metav1.Duration {
-	return &metav1.Duration{Duration: d}
-}
-
 func processNetworkPoliciesConfig(configData configDataMap, dest *PipelineRunsConfigStruct) error {
 
 	isValidKey := func(key string) bool {
