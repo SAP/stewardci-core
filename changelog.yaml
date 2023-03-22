@@ -62,6 +62,13 @@
         - Reduce Complexity of functions
       pullRequestNumber: 371
 
+    - type: internal
+      impact: patch
+      title: Upgrade Go SDK to v1.18.10
+      description: |-
+        Use Go SDK to v1.18.10.
+      pullRequestNumber: 371
+
 - version: "0.27.0"
   date: 2023-03-06
   changes:
@@ -86,7 +93,7 @@
         Steward now just sets `automountServiceAccountToken` to true
         so that Kubernetes takes care for the token injection.
         During the prepare phase of pipeline runs Steward no longer waits
-        for service account token secrets to be created by Kubernetes.        
+        for service account token secrets to be created by Kubernetes.
       pullRequestNumber: 361
       jiraIssueNumber: 726
 
