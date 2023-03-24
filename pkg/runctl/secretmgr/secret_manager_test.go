@@ -95,7 +95,7 @@ func Test_copyPipelineCloneSecretToRunNamespace_Success(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	// VERIFY
-	mockPipelineRun.EXPECT().GetPipelineRepoServerURL().Return("server", nil).AnyTimes()
+	mockPipelineRun.EXPECT().GetValidatedJenkinsfileRepoServerURL().Return("server", nil).AnyTimes()
 	mockSecretHelper.EXPECT().
 		CopySecrets(th.ctx, []string{"scm_secret1"}, nil, th.cloneSecretTransormerMatcher).
 		Return([]string{"scm_secret1"}, nil)
@@ -113,7 +113,7 @@ func Test_copyPipelineCloneSecretToRunNamespace_FailsWithContentErrorOnGetPipeli
 	defer mockCtrl.Finish()
 
 	// EXPECT
-	mockPipelineRun.EXPECT().GetPipelineRepoServerURL().Return("", fmt.Errorf("err1")).AnyTimes()
+	mockPipelineRun.EXPECT().GetValidatedJenkinsfileRepoServerURL().Return("", fmt.Errorf("err1")).AnyTimes()
 
 	// EXERCISE
 	_, err := examinee.copyPipelineCloneSecretToRunNamespace(th.ctx, mockPipelineRun)

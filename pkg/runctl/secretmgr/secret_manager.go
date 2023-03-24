@@ -65,7 +65,7 @@ func (s SecretManager) copyPipelineCloneSecretToRunNamespace(ctx context.Context
 	if secretName == "" {
 		return "", nil
 	}
-	repoServerURL, err := pipelineRun.GetPipelineRepoServerURL()
+	repoServerURL, err := pipelineRun.GetValidatedJenkinsfileRepoServerURL()
 	if err != nil {
 		return "", serrors.Classify(err, v1alpha1.ResultErrorContent)
 	}

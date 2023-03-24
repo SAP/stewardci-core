@@ -187,7 +187,7 @@ func (h *testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewar
 	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
 	mockPipelineRun.EXPECT().GetStatus().Return(&stewardv1alpha1.PipelineStatus{}).AnyTimes()
 	mockPipelineRun.EXPECT().GetKey().Return("key").AnyTimes()
-	mockPipelineRun.EXPECT().GetPipelineRepoServerURL().Return("server", nil).AnyTimes()
+	mockPipelineRun.EXPECT().GetValidatedJenkinsfileRepoServerURL().Return("server", nil).AnyTimes()
 	mockPipelineRun.EXPECT().GetRunNamespace().DoAndReturn(func() string {
 		return runNamespace
 	}).AnyTimes()
