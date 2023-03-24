@@ -368,18 +368,18 @@ func (mr *MockPipelineRunMockRecorder) GetNamespace() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNamespace", reflect.TypeOf((*MockPipelineRun)(nil).GetNamespace))
 }
 
-// GetOrigAPIObject mocks base method.
-func (m *MockPipelineRun) GetOrigAPIObject() *v1alpha1.PipelineRun {
+// GetReference mocks base method.
+func (m *MockPipelineRun) GetReference() *v1.ObjectReference {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetOrigAPIObject")
-	ret0, _ := ret[0].(*v1alpha1.PipelineRun)
+	ret := m.ctrl.Call(m, "GetReference")
+	ret0, _ := ret[0].(*v1.ObjectReference)
 	return ret0
 }
 
-// GetOrigAPIObject indicates an expected call of GetOrigAPIObject.
-func (mr *MockPipelineRunMockRecorder) GetOrigAPIObject() *gomock.Call {
+// GetReference indicates an expected call of GetReference.
+func (mr *MockPipelineRunMockRecorder) GetReference() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrigAPIObject", reflect.TypeOf((*MockPipelineRun)(nil).GetOrigAPIObject))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReference", reflect.TypeOf((*MockPipelineRun)(nil).GetReference))
 }
 
 // GetRunNamespace mocks base method.

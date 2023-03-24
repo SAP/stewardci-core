@@ -406,7 +406,7 @@ func (c *Controller) handlePipelineRunFinalizerAndDeletion(
 		runManager := c.createRunManager(pipelineRun)
 		err := runManager.Cleanup(ctx, pipelineRun)
 		if err != nil {
-			c.eventRecorder.Event(pipelineRun.GetOrigAPIObject(), corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
+			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
 			return true, err
 		}
 		return false, c.updateStateAndResult(ctx, pipelineRun, api.StateFinished, api.ResultDeleted, metav1.Now())
@@ -451,7 +451,7 @@ func (c *Controller) handlePipelineRunNew(
 		}
 		if maintenanceMode {
 			err := fmt.Errorf("pipeline execution is paused while the system is in maintenance mode")
-			c.eventRecorder.Event(pipelineRun.GetOrigAPIObject(), corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
+			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
 			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
 			return true, err
 		}
@@ -479,7 +479,6 @@ func (c *Controller) ensurePipelineRunsConfig(ctx context.Context, pipelineRun k
 			}
 			err = c.onGetRunError(
 				ctx,
-				pipelineRun.GetOrigAPIObject(),
 				pipelineRun,
 				err,
 				targetState,
@@ -501,7 +500,7 @@ func (c *Controller) handlePipelineRunPrepare(
 	if pipelineRun.GetStatus().State == api.StatePreparing {
 		namespace, auxNamespace, err := runManager.Prepare(ctx, pipelineRun, pipelineRunsConfig)
 		if err != nil {
-			c.eventRecorder.Event(pipelineRun.GetOrigAPIObject(), corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
+			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			resultClass := serrors.GetClass(err)
 			// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 			if resultClass != api.ResultUndefined {
@@ -534,7 +533,7 @@ func (c *Controller) handlePipelineRunWaiting(
 
 		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
-			return true, c.onGetRunError(ctx, pipelineRun.GetOrigAPIObject(), pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, waitingFailed)
+			return true, c.onGetRunError(ctx, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, waitingFailed)
 		}
 
 		// Check for wait timeout
@@ -550,7 +549,7 @@ func (c *Controller) handlePipelineRunWaiting(
 
 		if run == nil {
 			if err = runManager.Start(ctx, pipelineRun, pipelineRunsConfig); err != nil {
-				c.eventRecorder.Event(pipelineRun.GetOrigAPIObject(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
+				c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
 				resultClass := serrors.GetClass(err)
 				// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 				if resultClass != api.ResultUndefined {
@@ -560,7 +559,7 @@ func (c *Controller) handlePipelineRunWaiting(
 			}
 			return true, nil
 		} else if run.IsRestartable() {
-			c.eventRecorder.Event(pipelineRun.GetOrigAPIObject(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
+			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
 			return c.restart(ctx, runManager, pipelineRun)
 		}
 
@@ -602,11 +601,11 @@ func (c *Controller) handlePipelineRunRunning(
 
 		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
-			return true, c.onGetRunError(ctx, pipelineRun.GetOrigAPIObject(), pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
+			return true, c.onGetRunError(ctx, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
 		}
 		if run == nil {
 			err = fmt.Errorf("task run not found in namespace %q", pipelineRun.GetRunNamespace())
-			return true, c.onGetRunError(ctx, pipelineRun.GetOrigAPIObject(), pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
+			return true, c.onGetRunError(ctx, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
 		}
 
 		containerInfo := run.GetContainerInfo()
@@ -635,7 +634,7 @@ func (c *Controller) handlePipelineRunCleaning(
 	if pipelineRun.GetStatus().State == api.StateCleaning {
 		err := runManager.Cleanup(ctx, pipelineRun)
 		if err != nil {
-			c.eventRecorder.Event(pipelineRun.GetOrigAPIObject(), corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
+			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
 			return true, err
 		}
 		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateFinished, metav1.Now()); err != nil {
@@ -668,14 +667,13 @@ func (c *Controller) handleResultError(ctx context.Context, pipelineRun k8s.Pipe
 // failed, but also in other context.
 func (c *Controller) onGetRunError(
 	ctx context.Context,
-	pipelineRunAPIObj *api.PipelineRun,
 	pipelineRun k8s.PipelineRun,
 	err error,
 	targetState api.State,
 	result api.Result,
 	message string,
 ) error {
-	c.eventRecorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
+	c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
 	if serrors.IsRecoverable(err) {
 		return err
 	}

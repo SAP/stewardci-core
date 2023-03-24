@@ -7,14 +7,17 @@ import (
 	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	"github.com/SAP/stewardci-core/pkg/client/clientset/versioned/scheme"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	ref "k8s.io/client-go/tools/reference"
 	"k8s.io/client-go/util/retry"
 	klog "k8s.io/klog/v2"
 )
@@ -24,10 +27,9 @@ import (
 type PipelineRun interface {
 	fmt.Stringer
 
-	// GetOrigAPIObject returns the original PipelineRun API object
+	// GetReference returns a reference to the original PipelineRun API object
 	// pointer this instance has been created with.
-	// Note that the referenced may have been mutated meanwhile.
-	GetOrigAPIObject() *api.PipelineRun
+	GetReference() *v1.ObjectReference
 
 	// GetAPIObject returns the underlying PipelineRun API object which
 	// may contain uncommitted changes.
@@ -143,7 +145,7 @@ type PipelineRun interface {
 // pipelineRun is the (only) implementation of interface PipelineRun.
 type pipelineRun struct {
 	client          stewardv1alpha1.PipelineRunInterface
-	origAPIObj      *api.PipelineRun
+	reference       *v1.ObjectReference
 	apiObj          *api.PipelineRun
 	copied          bool
 	changes         []changeFunc
@@ -167,11 +169,17 @@ func NewPipelineRun(ctx context.Context, apiObj *api.PipelineRun, factory Client
 	if apiObj == nil {
 		return nil, nil
 	}
+
+	reference, err := ref.GetReference(scheme.Scheme, apiObj)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create reference for apiObj: %v", apiObj)
+	}
+
 	if factory == nil {
 		return &pipelineRun{
-			origAPIObj: apiObj,
-			apiObj:     apiObj,
-			copied:     false,
+			reference: reference,
+			apiObj:    apiObj,
+			copied:    false,
 		}, nil
 	}
 	client := factory.StewardV1alpha1().PipelineRuns(apiObj.GetNamespace())
@@ -183,7 +191,7 @@ func NewPipelineRun(ctx context.Context, apiObj *api.PipelineRun, factory Client
 		return nil, err
 	}
 	return &pipelineRun{
-		origAPIObj:      apiObj,
+		reference:       reference,
 		apiObj:          fetchedAPIObj,
 		copied:          true,
 		client:          client,
@@ -192,9 +200,9 @@ func NewPipelineRun(ctx context.Context, apiObj *api.PipelineRun, factory Client
 	}, nil
 }
 
-// GetAPIObject implements part of interface `PipelineRun`.
-func (r *pipelineRun) GetOrigAPIObject() *api.PipelineRun {
-	return r.origAPIObj
+// GetReference implements part of interface `PipelineRun`.
+func (r *pipelineRun) GetReference() *v1.ObjectReference {
+	return r.reference
 }
 
 // GetAPIObject implements part of interface `PipelineRun`.
