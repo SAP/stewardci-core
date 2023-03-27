@@ -7,46 +7,145 @@ import (
 	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	"github.com/SAP/stewardci-core/pkg/client/clientset/versioned/scheme"
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	ref "k8s.io/client-go/tools/reference"
 	"k8s.io/client-go/util/retry"
 	klog "k8s.io/klog/v2"
 )
 
-// PipelineRun is a wrapper for the K8s PipelineRun resource
+// PipelineRun is a set of utility functions working on an underlying
+// api.PipelineRun API object.
 type PipelineRun interface {
 	fmt.Stringer
+
+	// GetReference returns a reference to the original PipelineRun API object
+	// this instance has been created with.
+	GetReference() *v1.ObjectReference
+
+	// GetAPIObject returns the underlying PipelineRun API object which
+	// may contain uncommitted changes.
+	// The underlying PipelineRun API object MUST NOT be modified.
 	GetAPIObject() *api.PipelineRun
+
+	// GetStatus returns the status of the underlying PipelineRun API object.
+	// The status of the underlying PipelineRun object MUST NOT be modified
+	// directly. Instead the provided update functions must be used.
 	GetStatus() *api.PipelineStatus
+
+	// GetSpec returns the spec of the underlying PipelineRun API object.
+	// The spec of the underlying PipelineRun object MUST NOT be modified.
 	GetSpec() *api.PipelineSpec
+
+	// GetName returns the name of the underlying PipelineRun API object.
 	GetName() string
+
+	// GetKey returns the key of the pipeline run to be used in the
+	// controller workqueue or informer cache.
 	GetKey() string
+
+	// GetRunNamespace returns the namespace in which the build takes place
+	// if available in the status of the underlying PipelineRun API object,
+	// otherwise the empty string.
 	GetRunNamespace() string
+
+	// GetAuxNamespace returns the namespace hosting auxiliary services
+	// if available in the status of the underlying PipelineRun API object,
+	// otherwise the empty string.
 	GetAuxNamespace() string
+
+	// GetNamespace returns the namespace of the underlying pipelineRun object
 	GetNamespace() string
-	GetPipelineRepoServerURL() (string, error)
+
+	// GetValidatedJenkinsfileRepoServerURL validates the Jenkinsfile
+	// Git repository URL and returns the URL without path.
+	GetValidatedJenkinsfileRepoServerURL() (string, error)
+
+	// HasDeletionTimestamp return whether the underlying PipelineRun API
+	// object has a deletion timestamp set.
 	HasDeletionTimestamp() bool
-	AddFinalizer(ctx context.Context) error
+
+	// AddFinalizerAndCommitIfNotPresent adds the Steward finalizer to the list
+	// of finalizers of the underlying PipelineRun API object if it is not
+	// present already. The change is immediately committed.
+	//
+	// There must not be any other pending changes.
+	AddFinalizerAndCommitIfNotPresent(ctx context.Context) error
+
+	// CommitStatus writes the status of the underlying PipelineRun object to
+	// storage.
+	//
+	// In case of a conflict (object in storage is different version than
+	// ours), the update is retried with backoff:
+	//   - wait
+	//   - fetch object from storage
+	//   - re-apply recorded status changes
+	//   - update object status in storage
+	//
+	// After too many conflicts retrying is aborted, in which case an
+	// error is returned.
+	//
+	// Non-conflict errors are returned without retrying.
+	//
+	// Pitfall: If the underlying PipelineRun API object was changed in memory
+	// compared to the version in storage _before calling this function_,
+	// that change _gets_ persisted in case there's _no_ update conflict, but
+	// gets _lost_ in case there _is_ an update conflict! This is hard to find
+	// by tests, as those typically do not encounter update conflicts.
 	CommitStatus(ctx context.Context) ([]*api.StateItem, error)
-	DeleteFinalizerIfExists(ctx context.Context) error
+
+	// DeleteFinalizerAndCommitIfExists deletes the Steward finalizer from the
+	// list of finalizers of the underlying PipelineRun API object if it is
+	// present. The change is immediately committed.
+	//
+	// There must not be any other pending changes.
+	DeleteFinalizerAndCommitIfExists(ctx context.Context) error
+
+	// InitState initializes the state as 'new' if it was undefined (empty)
+	// before.
+	// The state's start time will be set to the object's creation time.
+	// Fails if a state is set already.
 	InitState() error
-	UpdateState(api.State, metav1.Time) error
-	UpdateResult(api.Result, metav1.Time)
-	UpdateContainer(*corev1.ContainerState)
-	StoreErrorAsMessage(error, string) error
-	UpdateRunNamespace(string)
-	UpdateAuxNamespace(string)
-	UpdateMessage(string)
+
+	// UpdateState sets timestamp as end time of current (defined) state (A) and
+	// stores it in the history. If no current state is defined a new state (A)
+	// with creation time of the pipeline run as start time is created. It also
+	// creates a new current state (B) with timestamp as start time.
+	UpdateState(state api.State, timestamp metav1.Time) error
+
+	// UpdateResult updates the result and finish timestamp.
+	UpdateResult(result api.Result, finishedAt metav1.Time)
+
+	// UpdateContainer updates the container info in the status.
+	UpdateContainer(newContainerState *corev1.ContainerState)
+
+	// StoreErrorAsMessage stores err with prefix as message in the status.
+	// If err is nil, the message is NOT updated.
+	StoreErrorAsMessage(err error, prefix string) error
+
+	// UpdateRunNamespace sets namespace as the run namespace in the status.
+	UpdateRunNamespace(namespace string)
+
+	// UpdateAuxNamespace sets namespace as the auxiliary namespace in the
+	// status.
+	UpdateAuxNamespace(namespace string)
+
+	// UpdateMessage sets msg as message in the status.
+	UpdateMessage(msg string)
 }
 
+// pipelineRun is the (only) implementation of interface PipelineRun.
 type pipelineRun struct {
 	client          stewardv1alpha1.PipelineRunInterface
+	reference       *v1.ObjectReference
 	apiObj          *api.PipelineRun
 	copied          bool
 	changes         []changeFunc
@@ -54,9 +153,11 @@ type pipelineRun struct {
 }
 
 type changeFunc func(*api.PipelineStatus) (commitRecorderFunc, error)
+
 type commitRecorderFunc func() *api.StateItem
 
-// NewPipelineRun creates a managed pipeline run object.
+// NewPipelineRun creates a new instance of PipelineRun based on the given apiObj.
+//
 // If a factory is provided a new version of the pipelinerun is fetched.
 // All changes are done on the fetched object.
 // If no pipeline run can be found matching the apiObj, nil,nil is returned.
@@ -65,14 +166,24 @@ type commitRecorderFunc func() *api.StateItem
 // If you use functions changing the pipeline run without factroy set you will get an error.
 // The provided PipelineRun object is never modified and copied as late as possible.
 func NewPipelineRun(ctx context.Context, apiObj *api.PipelineRun, factory ClientFactory) (PipelineRun, error) {
+	if apiObj == nil {
+		return nil, nil
+	}
+
+	reference, err := ref.GetReference(scheme.Scheme, apiObj)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create reference for apiObj: %v", apiObj)
+	}
+
 	if factory == nil {
 		return &pipelineRun{
-			apiObj: apiObj,
-			copied: false,
+			reference: reference,
+			apiObj:    apiObj,
+			copied:    false,
 		}, nil
 	}
 	client := factory.StewardV1alpha1().PipelineRuns(apiObj.GetNamespace())
-	obj, err := client.Get(ctx, apiObj.GetName(), metav1.GetOptions{})
+	fetchedAPIObj, err := client.Get(ctx, apiObj.GetName(), metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, nil
@@ -80,7 +191,8 @@ func NewPipelineRun(ctx context.Context, apiObj *api.PipelineRun, factory Client
 		return nil, err
 	}
 	return &pipelineRun{
-		apiObj:          obj,
+		reference:       reference,
+		apiObj:          fetchedAPIObj,
 		copied:          true,
 		client:          client,
 		changes:         []changeFunc{},
@@ -88,35 +200,39 @@ func NewPipelineRun(ctx context.Context, apiObj *api.PipelineRun, factory Client
 	}, nil
 }
 
+// GetReference implements part of interface `PipelineRun`.
+func (r *pipelineRun) GetReference() *v1.ObjectReference {
+	return r.reference
+}
+
 // GetAPIObject implements part of interface `PipelineRun`.
 func (r *pipelineRun) GetAPIObject() *api.PipelineRun {
 	return r.apiObj
 }
 
-// GetRunNamespace returns the namespace in which the build takes place
+// GetRunNamespace implements part of interface `PipelineRun`.
 func (r *pipelineRun) GetRunNamespace() string {
 	return r.apiObj.Status.Namespace
 }
 
-// GetAuxNamespace returns the namespace hosting auxiliary services
-// for the pipeline run.
+// GetAuxNamespace implements part of interface `PipelineRun`.
 func (r *pipelineRun) GetAuxNamespace() string {
 	return r.apiObj.Status.AuxiliaryNamespace
 }
 
-// GetKey returns the key of the pipelineRun
+// GetKey implements part of interface `PipelineRun`.
 func (r *pipelineRun) GetKey() string {
 	key, _ := cache.MetaNamespaceKeyFunc(r.apiObj)
 	return key
 }
 
-// GetNamespace returns the namespace of the underlying pipelineRun object
+// GetNamespace implements part of interface `PipelineRun`.
 func (r *pipelineRun) GetNamespace() string {
 	return r.apiObj.GetNamespace()
 }
 
-// GetPipelineRepoServerURL returns the server hosting the Jenkinsfile repository
-func (r *pipelineRun) GetPipelineRepoServerURL() (string, error) {
+// GetValidatedJenkinsfileRepoServerURL implements part of interface `PipelineRun`.
+func (r *pipelineRun) GetValidatedJenkinsfileRepoServerURL() (string, error) {
 	urlString := r.GetSpec().JenkinsFile.URL
 	repoURL, err := url.Parse(urlString)
 	if err != nil {
@@ -128,33 +244,29 @@ func (r *pipelineRun) GetPipelineRepoServerURL() (string, error) {
 	return fmt.Sprintf("%s://%s", repoURL.Scheme, repoURL.Host), nil
 }
 
+// GetName implements part of interface `PipelineRun`.
 func (r *pipelineRun) GetName() string {
 	return r.apiObj.GetName()
 }
 
-// GetStatus return the Status
-// the returned PipelineStatus MUST NOT be modified
-// use the prodided Update* functions instead
+// GetStatus implements part of interface `PipelineRun`.
 func (r *pipelineRun) GetStatus() *api.PipelineStatus {
 	return &r.apiObj.Status
 }
 
-// GetSpec return the spec part of the PipelineRun resource
-// the returned PipelineSpec MUST NOT be modified
+// GetSpec implements part of interface `PipelineRun`.
 func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 	return &r.apiObj.Spec
 }
 
-// InitState initializes the state as 'new' if state was undefined (empty) before.
-// The state's start time will be set to the object's creation time.
-// Fails if a state is set already.
+// InitState implements part of interface `PipelineRun`.
 func (r *pipelineRun) InitState() error {
 	r.ensureCopy()
 	klog.V(3).Infof("Set State to New [%s]", r.String())
 	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 
 		if s.State != api.StateUndefined {
-			return nil, fmt.Errorf("Cannot initialize multiple times")
+			return nil, fmt.Errorf("cannot initialize multiple times")
 		}
 
 		newStateDetails := api.StateItem{
@@ -167,10 +279,8 @@ func (r *pipelineRun) InitState() error {
 	})
 }
 
-// UpdateState set end time of current (defined) state (A) and store it to the history.
-// if no current state is defined a new state (A) with cretiontime of the pipelinerun as start time is created.
-// It also creates a new current state (B) with start time.
-func (r *pipelineRun) UpdateState(state api.State, ts metav1.Time) error {
+// UpdateState implements part of interface `PipelineRun`.
+func (r *pipelineRun) UpdateState(state api.State, timestamp metav1.Time) error {
 	if r.apiObj.Status.State == api.StateUndefined {
 		if err := r.InitState(); err != nil {
 			return err
@@ -183,21 +293,21 @@ func (r *pipelineRun) UpdateState(state api.State, ts metav1.Time) error {
 	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		currentStateDetails := s.StateDetails
 		if currentStateDetails.State != oldStateDetails.State {
-			return nil, fmt.Errorf("State cannot be updated as it was changed concurrently from %q to %q", oldStateDetails.State, currentStateDetails.State)
+			return nil, fmt.Errorf("state cannot be updated as it was changed concurrently from %q to %q", oldStateDetails.State, currentStateDetails.State)
 		}
 		if state == api.StatePreparing {
-			s.StartedAt = &ts
+			s.StartedAt = &timestamp
 		}
-		currentStateDetails.FinishedAt = ts
+		currentStateDetails.FinishedAt = timestamp
 		his := s.StateHistory
 		his = append(his, currentStateDetails)
 
 		commitRecorderFunc := func() *api.StateItem {
 			return &currentStateDetails
 		}
-		newStateDetails := api.StateItem{State: state, StartedAt: ts}
+		newStateDetails := api.StateItem{State: state, StartedAt: timestamp}
 		if state == api.StateFinished {
-			newStateDetails.FinishedAt = ts
+			newStateDetails.FinishedAt = timestamp
 		}
 
 		s.StateDetails = newStateDetails
@@ -207,45 +317,45 @@ func (r *pipelineRun) UpdateState(state api.State, ts metav1.Time) error {
 	})
 }
 
-// String returns the full qualified name of the pipeline run
+// String implements interface fmt.Stringer.
 func (r *pipelineRun) String() string {
 	return fmt.Sprintf("PipelineRun{name: %s, namespace: %s, state: %s}", r.GetName(), r.GetNamespace(), string(r.GetStatus().State))
 }
 
-// UpdateResult of the pipeline run
-func (r *pipelineRun) UpdateResult(result api.Result, ts metav1.Time) {
+// UpdateResult implements part of interface `PipelineRun`.
+func (r *pipelineRun) UpdateResult(result api.Result, finishedAT metav1.Time) {
 	r.ensureCopy()
 	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.Result = result
-		s.FinishedAt = &ts
+		s.FinishedAt = &finishedAT
 		return nil, nil
 	})
 }
 
-// UpdateContainer ...
-func (r *pipelineRun) UpdateContainer(c *corev1.ContainerState) {
-	if c == nil {
+// UpdateContainer implements part of interface `PipelineRun`.
+func (r *pipelineRun) UpdateContainer(newContainerState *corev1.ContainerState) {
+	if newContainerState == nil {
 		return
 	}
 	r.ensureCopy()
 	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
-		s.Container = *c
+		s.Container = *newContainerState
 		return nil, nil
 	})
 }
 
-// StoreErrorAsMessage stores the error as message in the status
-func (r *pipelineRun) StoreErrorAsMessage(err error, message string) error {
+// StoreErrorAsMessage implements part of interface `PipelineRun`.
+func (r *pipelineRun) StoreErrorAsMessage(err error, prefix string) error {
 	if err != nil {
-		text := fmt.Sprintf("ERROR: %s [%s]: %s", utils.Trim(message), r.String(), err.Error())
+		text := fmt.Sprintf("ERROR: %s [%s]: %s", utils.Trim(prefix), r.String(), err.Error())
 		klog.V(3).Infof(text)
 		r.UpdateMessage(text)
 	}
 	return nil
 }
 
-// UpdateMessage stores string as message in the status
-func (r *pipelineRun) UpdateMessage(message string) {
+// UpdateMessage implements part of interface `PipelineRun`.
+func (r *pipelineRun) UpdateMessage(msg string) {
 	r.ensureCopy()
 
 	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
@@ -255,13 +365,13 @@ func (r *pipelineRun) UpdateMessage(message string) {
 			his = append(his, old)
 			s.History = his
 		}
-		s.Message = utils.Trim(message)
-		s.MessageShort = utils.ShortenMessage(message, 100)
+		s.Message = utils.Trim(msg)
+		s.MessageShort = utils.ShortenMessage(msg, 100)
 		return nil, nil
 	})
 }
 
-// UpdateRunNamespace overrides the namespace in which the builds happens
+// UpdateRunNamespace implements part of interface `PipelineRun`.
 func (r *pipelineRun) UpdateRunNamespace(ns string) {
 	r.ensureCopy()
 	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
@@ -270,8 +380,7 @@ func (r *pipelineRun) UpdateRunNamespace(ns string) {
 	})
 }
 
-// UpdateAuxNamespace overrides the namespace hosting auxiliary services
-// for the pipeline run.
+// UpdateAuxNamespace implements part of interface `PipelineRun`.
 func (r *pipelineRun) UpdateAuxNamespace(ns string) {
 	r.ensureCopy()
 	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
@@ -280,37 +389,40 @@ func (r *pipelineRun) UpdateAuxNamespace(ns string) {
 	})
 }
 
-//HasDeletionTimestamp returns true if deletion timestamp is set
+// HasDeletionTimestamp implements part of interface `PipelineRun`.
 func (r *pipelineRun) HasDeletionTimestamp() bool {
 	return !r.apiObj.ObjectMeta.DeletionTimestamp.IsZero()
 }
 
-// AddFinalizer adds a finalizer to pipeline run
-func (r *pipelineRun) AddFinalizer(ctx context.Context) error {
+// AddFinalizerAndCommitIfNotPresent implements part of interface `PipelineRun`.
+func (r *pipelineRun) AddFinalizerAndCommitIfNotPresent(ctx context.Context) error {
+	r.mustBeChangeable()
+	r.mustNotHavePendingChanges()
+
 	changed, finalizerList := utils.AddStringIfMissing(r.apiObj.ObjectMeta.Finalizers, FinalizerName)
 	if changed {
-		err := r.updateFinalizers(ctx, finalizerList)
+		err := r.commitFinalizerListExclusively(ctx, finalizerList)
 		return err
 	}
 	return nil
 }
 
-// DeleteFinalizerIfExists deletes a finalizer from pipeline run
-func (r *pipelineRun) DeleteFinalizerIfExists(ctx context.Context) error {
+// Panics if the instance holds any uncommitted changes.
+func (r *pipelineRun) DeleteFinalizerAndCommitIfExists(ctx context.Context) error {
+	r.mustBeChangeable()
+	r.mustNotHavePendingChanges()
+
 	changed, finalizerList := utils.RemoveString(r.apiObj.ObjectMeta.Finalizers, FinalizerName)
 	if changed {
-		return r.updateFinalizers(ctx, finalizerList)
+		return r.commitFinalizerListExclusively(ctx, finalizerList)
 	}
 	return nil
 }
 
-func (r *pipelineRun) updateFinalizers(ctx context.Context, finalizerList []string) error {
-	if len(r.changes) > 0 {
-		return fmt.Errorf("cannot add finalizers when we have uncommited status updates")
-	}
-	if r.client == nil {
-		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
-	}
+func (r *pipelineRun) commitFinalizerListExclusively(ctx context.Context, finalizerList []string) error {
+	r.mustBeChangeable()
+	r.mustNotHavePendingChanges()
+
 	r.ensureCopy()
 	start := time.Now()
 	r.apiObj.ObjectMeta.Finalizers = finalizerList
@@ -320,7 +432,7 @@ func (r *pipelineRun) updateFinalizers(ctx context.Context, finalizerList []stri
 	klog.V(4).Infof("finish update finalizer after %s in %s", elapsed, r.apiObj.Name)
 	if err != nil {
 		return errors.Wrap(err,
-			fmt.Sprintf("Failed to update finalizers [%s]", r.String()))
+			fmt.Sprintf("failed to update finalizers [%s]", r.String()))
 	}
 	r.apiObj = result
 	return nil
@@ -339,7 +451,6 @@ func (r *pipelineRun) mustChangeStatusAndStoreForRetry(change changeFunc) {
 // This function get executed on the current memory representation of the pipeline run
 // and remembered so that it can be re-applied later in case of a re-try. The change function
 // must only apply changes to pipelinerun.Status.
-//
 func (r *pipelineRun) changeStatusAndStoreForRetry(change changeFunc) error {
 	commitRecorder, err := change(r.GetStatus())
 	if err == nil {
@@ -350,29 +461,9 @@ func (r *pipelineRun) changeStatusAndStoreForRetry(change changeFunc) error {
 	return err
 }
 
-// CommitStatus executes `change` and writes the
-// status of the underlying PipelineRun object to storage afterwards.
-// `change` is expected to mutate only the status of the underlying
-// object, not more.
-// In case of a conflict (object in storage is different version than
-// ours), the update is retried with backoff:
-//     - wait
-//     - fetch object from storage
-//     - run `change`
-//     - write object status to storage
-// After too many conflicts retrying is aborted, in which case an
-// error is returned.
-// Non-conflict errors are returned without retrying.
-//
-// Pitfall: If the underlying PipelineRun object was changed in memory
-// compared to the version in storage _before calling this function_,
-// that change _gets_ persisted in case there's _no_ update conflict, but
-// gets _lost_ in case there _is_ an update conflict! This is hard to find
-// by tests, as those typically do not encounter update conflicts.
+// CommitStatus implements part of interface `PipelineRun`.
 func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error) {
-	if r.client == nil {
-		panic(fmt.Errorf("No factory provided to store updates [%s]", r.String()))
-	}
+	r.mustBeChangeable()
 
 	klog.V(5).Infof("enter commitStatus for pipeline run %q ...", r.String())
 	if len(r.changes) == 0 {
@@ -456,5 +547,17 @@ func (r *pipelineRun) ensureCopy() {
 	if !r.copied {
 		r.apiObj = r.apiObj.DeepCopy()
 		r.copied = true
+	}
+}
+
+func (r *pipelineRun) mustBeChangeable() {
+	if r.client == nil {
+		panic(fmt.Errorf("read-only instance"))
+	}
+}
+
+func (r *pipelineRun) mustNotHavePendingChanges() {
+	if len(r.changes) > 0 {
+		panic(fmt.Errorf("there are pending changes"))
 	}
 }

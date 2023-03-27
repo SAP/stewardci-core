@@ -210,7 +210,7 @@ func newController(t *testing.T, runs ...*api.PipelineRun) (*Controller, *fake.C
 	}
 	controller := NewController(cf, ControllerOpts{})
 	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(client)
-	controller.recorder = record.NewFakeRecorder(20)
+	controller.eventRecorder = record.NewFakeRecorder(20)
 	return controller, cf
 }
 
@@ -1035,16 +1035,12 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 	assert.Equal(t, "message from Succeeded condition", status.Message)
 }
 
-func ensureServiceAccountTokenStub(ctx context.Context, serviceAccountSecretName, runNamespace string) error {
-	return nil
-}
-
 func newTestRunManager(workFactory k8s.ClientFactory, secretProvider secrets.SecretProvider) run.Manager {
 	return runmgr.NewRunManager(workFactory, secretProvider)
 }
 
 func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
-	stopCh := make(chan struct{}, 0)
+	stopCh := make(chan struct{})
 	controller := NewController(cf, ControllerOpts{})
 	controller.testing = &controllerTesting{
 		newRunManagerStub:          newTestRunManager,
