@@ -202,7 +202,6 @@ func (a *ServiceAccountWrap) AddRoleBinding(ctx context.Context, clusterRole Rol
 			Name:     string(clusterRole),
 		},
 	}
-
 	return roleBindingClient.Create(ctx, roleBinding, metav1.CreateOptions{})
 }
 

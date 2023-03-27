@@ -195,7 +195,7 @@ func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext
 			return errors.Wrapf(err, "failed to create service account %q", serviceAccountName)
 		}
 		// service account exists already, so we need to attach secrets to it
-		err = c.attachAllSecrets(ctx, runCtx, accountManager, pipelineCloneSecretName, imagePullSecrets)
+		serviceAccount, err = c.attachAllSecrets(ctx, runCtx, accountManager, pipelineCloneSecretName, imagePullSecrets)
 		if err != nil {
 			return err
 		}
@@ -215,11 +215,13 @@ func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext
 	return nil
 }
 
-func (c *runManager) attachAllSecrets(ctx context.Context, runCtx *runContext, accountManager k8s.ServiceAccountManager, pipelineCloneSecretName string, imagePullSecrets []string) error {
+func (c *runManager) attachAllSecrets(ctx context.Context, runCtx *runContext, accountManager k8s.ServiceAccountManager, pipelineCloneSecretName string, imagePullSecrets []string) (*k8s.ServiceAccountWrap, error) {
+	var serviceAccount *k8s.ServiceAccountWrap
 	for { // retry loop
-		serviceAccount, err := accountManager.GetServiceAccount(ctx, serviceAccountName)
+		var err error
+		serviceAccount, err = accountManager.GetServiceAccount(ctx, serviceAccountName)
 		if err != nil {
-			return errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
+			return nil, errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
 		}
 
 		if pipelineCloneSecretName != "" {
@@ -239,10 +241,10 @@ func (c *runManager) attachAllSecrets(ctx context.Context, runCtx *runContext, a
 				serviceAccountName, runCtx.runNamespace,
 			)
 		} else {
-			return errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
+			return nil, errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
 		}
 	}
-	return nil
+	return serviceAccount, nil
 }
 
 func (c *runManager) copySecretsToRunNamespace(ctx context.Context, runCtx *runContext) (string, []string, error) {
