@@ -195,7 +195,7 @@ func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext
 			return errors.Wrapf(err, "failed to create service account %q", serviceAccountName)
 		}
 		// service account exists already, so we need to attach secrets to it
-		err = c.attachAllSecrets(ctx, runCtx, accountManager, serviceAccount, pipelineCloneSecretName, imagePullSecrets)
+		err = c.attachAllSecrets(ctx, runCtx, accountManager, pipelineCloneSecretName, imagePullSecrets)
 		if err != nil {
 			return err
 		}
@@ -215,7 +215,7 @@ func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext
 	return nil
 }
 
-func (c *runManager) attachAllSecrets(ctx context.Context, runCtx *runContext, accountManager k8s.ServiceAccountManager, serviceAccount *k8s.ServiceAccountWrap, pipelineCloneSecretName string, imagePullSecrets []string) error {
+func (c *runManager) attachAllSecrets(ctx context.Context, runCtx *runContext, accountManager k8s.ServiceAccountManager, pipelineCloneSecretName string, imagePullSecrets []string) error {
 	for { // retry loop
 		serviceAccount, err := accountManager.GetServiceAccount(ctx, serviceAccountName)
 		if err != nil {

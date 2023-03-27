@@ -158,7 +158,7 @@ type commitRecorderFunc func() *api.StateItem
 
 // NewPipelineRun creates a new instance of PipelineRun based on the given apiObj.
 //
-// If a factory is provided a new version of the pipelinerun is fetched.
+// If a factory is provided a new version of the pipelinerun is fetched.git
 // All changes are done on the fetched object.
 // If no pipeline run can be found matching the apiObj, nil,nil is returned.
 // An error is only returned if a Get for the pipelinerun returns an error other than a NotFound error.
@@ -494,14 +494,14 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 
 		if retryCount > 0 {
 			klog.V(5).Infof("commitStatus reload pipeline run for retry %q ...", r.String())
-			new, err := r.client.Get(ctx, r.apiObj.GetName(), metav1.GetOptions{})
+			fetchedAPIObj, err := r.client.Get(ctx, r.apiObj.GetName(), metav1.GetOptions{})
 			if err != nil {
 				return errors.Wrap(err,
 					"failed to fetch pipeline after update conflict")
 			}
 
 			klog.V(5).Infof("commitStatus applies %d change(s)", len(r.changes))
-			changeError = r.redoChanges(new)
+			changeError = r.redoChanges(fetchedAPIObj)
 			if changeError != nil {
 				return nil
 			}
@@ -528,8 +528,8 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 	return result, errors.Wrapf(err, "failed to update status [%s]", r.String())
 }
 
-func (r *pipelineRun) redoChanges(new *api.PipelineRun) error {
-	r.apiObj = new
+func (r *pipelineRun) redoChanges(fetchedAPIObj *api.PipelineRun) error {
+	r.apiObj = fetchedAPIObj
 	r.copied = true
 	r.commitRecorders = []commitRecorderFunc{}
 	for i, change := range r.changes {
