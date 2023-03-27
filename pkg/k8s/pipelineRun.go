@@ -28,7 +28,7 @@ type PipelineRun interface {
 	fmt.Stringer
 
 	// GetReference returns a reference to the original PipelineRun API object
-	// pointer this instance has been created with.
+	// this instance has been created with.
 	GetReference() *v1.ObjectReference
 
 	// GetAPIObject returns the underlying PipelineRun API object which
