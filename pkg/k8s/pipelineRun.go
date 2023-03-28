@@ -158,7 +158,7 @@ type commitRecorderFunc func() *api.StateItem
 
 // NewPipelineRun creates a new instance of PipelineRun based on the given apiObj.
 //
-// If a factory is provided a new version of the pipelinerun is fetched.git
+// If a factory is provided a new version of the pipelinerun is fetched.
 // All changes are done on the fetched object.
 // If no pipeline run can be found matching the apiObj, nil,nil is returned.
 // An error is only returned if a Get for the pipelinerun returns an error other than a NotFound error.
