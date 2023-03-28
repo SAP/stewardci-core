@@ -1,4 +1,4 @@
-package runctl
+package runmgr
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
+	"github.com/SAP/stewardci-core/pkg/runctl/constants"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	"github.com/SAP/stewardci-core/pkg/runctl/secretmgr"
 	slabels "github.com/SAP/stewardci-core/pkg/stewardlabels"
@@ -42,15 +43,11 @@ const (
 	// in general, the token of the above service account should not be automatically mounted into pods
 	automountServiceAccountToken = false
 
-	annotationPipelineRunKey = steward.GroupName + "/pipeline-run-key"
-
 	// tektonTaskJenkinsfileRunnerStep is the name of the step
 	// in the Tekton TaskRun that executes the Jenkinsfile Runner
 	tektonTaskJenkinsfileRunnerStep = "jenkinsfile-runner"
 
-	// tektonTaskRun is the name of the Tekton TaskRun in each
-	// run namespace.
-	tektonTaskRunName = "steward-jenkinsfile-runner"
+	annotationPipelineRunKey = steward.GroupName + "/pipeline-run-key"
 )
 
 type runManager struct {
@@ -84,8 +81,8 @@ type runContext struct {
 	serviceAccount     *k8s.ServiceAccountWrap
 }
 
-// newRunManager creates a new runManager.
-func newRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider) *runManager {
+// NewRunManager creates a new runManager.
+func NewRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider) runifc.Manager {
 	return &runManager{
 		factory:        factory,
 		secretProvider: secretProvider,
@@ -197,37 +194,16 @@ func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext
 		if !k8serrors.IsAlreadyExists(err) {
 			return errors.Wrapf(err, "failed to create service account %q", serviceAccountName)
 		}
-
 		// service account exists already, so we need to attach secrets to it
-		for { // retry loop
-			serviceAccount, err = accountManager.GetServiceAccount(ctx, serviceAccountName)
-			if err != nil {
-				return errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
-			}
-			if pipelineCloneSecretName != "" {
-				serviceAccount.AttachSecrets(pipelineCloneSecretName)
-			}
-			serviceAccount.AttachImagePullSecrets(imagePullSecrets...)
-			serviceAccount.SetDoAutomountServiceAccountToken(automountServiceAccountToken)
-			err = serviceAccount.Update(ctx)
-			if err == nil {
-				break // ...the retry loop
-			}
-			if k8serrors.IsConflict(err) {
-				// resource version conflict -> retry update with latest version
-				klog.V(4).Infof(
-					"retrying update of service account %q in namespace %q"+
-						" after resource version conflict",
-					serviceAccountName, runCtx.runNamespace,
-				)
-			} else {
-				return errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
-			}
+		serviceAccount, err = c.attachAllSecrets(ctx, runCtx, accountManager, pipelineCloneSecretName, imagePullSecrets)
+		if err != nil {
+			return err
 		}
+
 	}
 
 	// grant role to service account
-	_, err = serviceAccount.AddRoleBinding(ctx, runClusterRoleName, runCtx.runNamespace)
+	_, err = serviceAccount.AddRoleBinding(ctx, constants.RunClusterRoleName, runCtx.runNamespace)
 	if err != nil {
 		return errors.Wrapf(err,
 			"failed to create role binding for service account %q in namespace %q",
@@ -237,6 +213,38 @@ func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext
 
 	runCtx.serviceAccount = serviceAccount
 	return nil
+}
+
+func (c *runManager) attachAllSecrets(ctx context.Context, runCtx *runContext, accountManager k8s.ServiceAccountManager, pipelineCloneSecretName string, imagePullSecrets []string) (*k8s.ServiceAccountWrap, error) {
+	var serviceAccount *k8s.ServiceAccountWrap
+	for { // retry loop
+		var err error
+		serviceAccount, err = accountManager.GetServiceAccount(ctx, serviceAccountName)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get service account %q", serviceAccountName)
+		}
+
+		if pipelineCloneSecretName != "" {
+			serviceAccount.AttachSecrets(pipelineCloneSecretName)
+		}
+		serviceAccount.AttachImagePullSecrets(imagePullSecrets...)
+		serviceAccount.SetDoAutomountServiceAccountToken(automountServiceAccountToken)
+		err = serviceAccount.Update(ctx)
+		if err == nil {
+			break // ...the retry loop
+		}
+		if k8serrors.IsConflict(err) {
+			// resource version conflict -> retry update with latest version
+			klog.V(4).Infof(
+				"retrying update of service account %q in namespace %q"+
+					" after resource version conflict",
+				serviceAccountName, runCtx.runNamespace,
+			)
+		} else {
+			return nil, errors.Wrapf(err, "failed to update service account %q", serviceAccountName)
+		}
+	}
+	return serviceAccount, nil
 }
 
 func (c *runManager) copySecretsToRunNamespace(ctx context.Context, runCtx *runContext) (string, []string, error) {
@@ -448,6 +456,12 @@ func (c *runManager) createResource(ctx context.Context, configStr string, resou
 	return nil
 }
 
+// GetPipelineRunKeyAnnotation returns the run key of an object
+func GetPipelineRunKeyAnnotation(object metav1.Object) string {
+	annotations := object.GetAnnotations()
+	return annotations[annotationPipelineRunKey]
+}
+
 func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runContext) (*tekton.TaskRun, error) {
 
 	var err error
@@ -464,7 +478,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 	automount := true
 	tektonTaskRun := tekton.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      tektonTaskRunName,
+			Name:      constants.TektonTaskRunName,
 			Namespace: namespace,
 			Annotations: map[string]string{
 				annotationPipelineRunKey: runCtx.pipelineRun.GetKey(),
@@ -670,7 +684,7 @@ func (c *runManager) recoverableIfTransient(err error) error {
 // GetRun based on a pipelineRun
 func (c *runManager) GetRun(ctx context.Context, pipelineRun k8s.PipelineRun) (runifc.Run, error) {
 	namespace := pipelineRun.GetRunNamespace()
-	run, err := c.factory.TektonV1beta1().TaskRuns(namespace).Get(ctx, tektonTaskRunName, metav1.GetOptions{})
+	run, err := c.factory.TektonV1beta1().TaskRuns(namespace).Get(ctx, constants.TektonTaskRunName, metav1.GetOptions{})
 	if k8serrors.IsNotFound(err) {
 		return nil, nil
 	}
@@ -686,7 +700,7 @@ func (c *runManager) DeleteRun(ctx context.Context, pipelineRun k8s.PipelineRun)
 	if namespace == "" {
 		return fmt.Errorf("cannot delete taskrun, runnamespace not set in %q", pipelineRun.GetName())
 	}
-	err := c.factory.TektonV1beta1().TaskRuns(namespace).Delete(ctx, tektonTaskRunName, metav1.DeleteOptions{})
+	err := c.factory.TektonV1beta1().TaskRuns(namespace).Delete(ctx, constants.TektonTaskRunName, metav1.DeleteOptions{})
 
 	if k8serrors.IsNotFound(err) {
 		return nil
@@ -838,7 +852,7 @@ func ensureValidElasticsearchIndexURL(indexURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !(strings.ToLower(validURL.Scheme) == "http") && !(strings.ToLower(validURL.Scheme) == "https") {
+	if strings.ToLower(validURL.Scheme) != "http" && strings.ToLower(validURL.Scheme) != "https" {
 		return "", fmt.Errorf("scheme not supported: %q", validURL.Scheme)
 	}
 

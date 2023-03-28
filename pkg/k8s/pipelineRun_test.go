@@ -275,7 +275,7 @@ func Test_pipelineRun_InitState_ReturnsErrorIfCalledMultipleTimes(t *testing.T) 
 			resultErr = examinee.InitState()
 
 			// VERIFY
-			assert.Error(t, resultErr, "Cannot initialize multiple times")
+			assert.Error(t, resultErr, "cannot initialize multiple times")
 			assert.Equal(t, oldState, examinee.GetStatus().State)
 		})
 	}
@@ -437,7 +437,7 @@ func Test_pipelineRun_UpdateResult(t *testing.T) {
 	assert.Equal(t, api.ResultSuccess, status.Result)
 	assert.Assert(t, !examinee.GetStatus().FinishedAt.IsZero())
 }
-func Test_pipelineRun_GetPipelineRepoServerURL_CorrectURLs(t *testing.T) {
+func Test_pipelineRun_GetValidatedJenkinsfileRepoServerURL_CorrectURLs(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct {
@@ -459,7 +459,7 @@ func Test_pipelineRun_GetPipelineRepoServerURL_CorrectURLs(t *testing.T) {
 			assert.NilError(t, err)
 
 			// EXERCISE
-			url, err := r.GetPipelineRepoServerURL()
+			url, err := r.GetValidatedJenkinsfileRepoServerURL()
 
 			// VERIFY
 			assert.NilError(t, err)
@@ -467,7 +467,7 @@ func Test_pipelineRun_GetPipelineRepoServerURL_CorrectURLs(t *testing.T) {
 		})
 	}
 }
-func Test_pipelineRun_GetPipelineRepoServerURL_WrongURLs(t *testing.T) {
+func Test_pipelineRun_GetValidatedJenkinsfileRepoServerURL_WrongURLs(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct {
@@ -485,7 +485,7 @@ func Test_pipelineRun_GetPipelineRepoServerURL_WrongURLs(t *testing.T) {
 			assert.NilError(t, err)
 
 			// EXERCISE
-			url, err := r.GetPipelineRepoServerURL()
+			url, err := r.GetValidatedJenkinsfileRepoServerURL()
 
 			// VERIFY
 			assert.Assert(t, is.Regexp(test.expectedErrorPattern, err.Error()))

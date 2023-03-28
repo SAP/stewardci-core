@@ -1,4 +1,4 @@
-package runctl
+package runmgr
 
 import (
 	"encoding/json"

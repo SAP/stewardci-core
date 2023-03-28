@@ -12,6 +12,11 @@ import (
 	klog "k8s.io/klog/v2"
 )
 
+const (
+	annotationPrefixJenkins = "jenkins.io/"
+	annotationPrefixTekton  = "tekton.dev/"
+)
+
 // SecretManager manages the serets in a run-namespace for the controller.
 type SecretManager struct {
 	secretHelper secrets.SecretHelper
@@ -47,9 +52,9 @@ func (s SecretManager) CopyAll(ctx context.Context, pipelineRun k8s.PipelineRun)
 func (s SecretManager) copyImagePullSecretsToRunNamespace(ctx context.Context, pipelineRun k8s.PipelineRun) ([]string, error) {
 	secretNames := pipelineRun.GetSpec().ImagePullSecrets
 	transformers := []secrets.SecretTransformer{
-		secrets.StripAnnotationsTransformer("tekton.dev/"),
-		secrets.StripAnnotationsTransformer("jenkins.io/"),
-		secrets.StripLabelsTransformer("jenkins.io/"),
+		secrets.StripAnnotationsTransformer(annotationPrefixTekton),
+		secrets.StripAnnotationsTransformer(annotationPrefixJenkins),
+		secrets.StripLabelsTransformer(annotationPrefixJenkins),
 		secrets.UniqueNameTransformer(),
 	}
 	return s.copySecrets(ctx, pipelineRun, secretNames, secrets.DockerOnly, transformers...)
@@ -60,13 +65,13 @@ func (s SecretManager) copyPipelineCloneSecretToRunNamespace(ctx context.Context
 	if secretName == "" {
 		return "", nil
 	}
-	repoServerURL, err := pipelineRun.GetPipelineRepoServerURL()
+	repoServerURL, err := pipelineRun.GetValidatedJenkinsfileRepoServerURL()
 	if err != nil {
 		return "", serrors.Classify(err, v1alpha1.ResultErrorContent)
 	}
 	transformers := []secrets.SecretTransformer{
-		secrets.StripAnnotationsTransformer("jenkins.io/"),
-		secrets.StripLabelsTransformer("jenkins.io/"),
+		secrets.StripAnnotationsTransformer(annotationPrefixJenkins),
+		secrets.StripLabelsTransformer(annotationPrefixJenkins),
 		secrets.UniqueNameTransformer(),
 		secrets.SetAnnotationTransformer("tekton.dev/git-0", repoServerURL),
 	}
@@ -80,7 +85,7 @@ func (s SecretManager) copyPipelineCloneSecretToRunNamespace(ctx context.Context
 func (s SecretManager) copyPipelineSecretsToRunNamespace(ctx context.Context, pipelineRun k8s.PipelineRun) ([]string, error) {
 	secretNames := pipelineRun.GetSpec().Secrets
 	transformers := []secrets.SecretTransformer{
-		secrets.StripAnnotationsTransformer("tekton.dev/"),
+		secrets.StripAnnotationsTransformer(annotationPrefixTekton),
 		secrets.RenameByAnnotationTransformer(v1alpha1.AnnotationSecretRename),
 	}
 	return s.copySecrets(ctx, pipelineRun, secretNames, nil, transformers...)

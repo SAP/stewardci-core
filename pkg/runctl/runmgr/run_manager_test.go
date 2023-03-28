@@ -1,34 +1,31 @@
-package runctl
+package runmgr
 
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"sort"
-	"strconv"
 	"testing"
 
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	stewardfakeclient "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/fake"
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	featureflag "github.com/SAP/stewardci-core/pkg/featureflag"
 	featureflagtesting "github.com/SAP/stewardci-core/pkg/featureflag/testing"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
+	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	k8sfake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	k8smocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
-	secretmocks "github.com/SAP/stewardci-core/pkg/k8s/secrets/mocks"
 	secretproviderfakes "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/fake"
 	cfg "github.com/SAP/stewardci-core/pkg/runctl/cfg"
+	"github.com/SAP/stewardci-core/pkg/runctl/constants"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	runmocks "github.com/SAP/stewardci-core/pkg/runctl/run/mocks"
-	tektonfakeclient "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/fake"
+	runctltesting "github.com/SAP/stewardci-core/pkg/runctl/testing"
+	"github.com/SAP/stewardci-core/pkg/utils"
 	spew "github.com/davecgh/go-spew/spew"
 	gomock "github.com/golang/mock/gomock"
 	errors "github.com/pkg/errors"
 	tektonPod "github.com/tektoncd/pipeline/pkg/apis/pipeline/pod"
 	tektonv1beta1 "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	assert "gotest.tools/v3/assert"
-	assertcmp "gotest.tools/v3/assert/cmp"
 	is "gotest.tools/v3/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
 	equality "k8s.io/apimachinery/pkg/api/equality"
@@ -37,7 +34,6 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
-	kubefake "k8s.io/client-go/kubernetes/fake"
 )
 
 func newRunManagerTestingWithAllNoopStubs() *runManagerTesting {
@@ -86,7 +82,7 @@ func Test__runManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
 			config := &cfg.PipelineRunsConfigStruct{}
 			secretProvider := secretproviderfakes.NewProvider(h.namespace1)
 
-			examinee := newRunManager(cf, secretProvider)
+			examinee := NewRunManager(cf, secretProvider).(*runManager)
 			examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
 			pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
@@ -107,11 +103,11 @@ func Test__runManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
 				pipelineRun1 := h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1)
 				expectedNamespaces := []string{h.namespace1}
 
-				h.verifyNamespace(cf, runCtx.runNamespace, "main")
+				h.VerifyNamespace(cf, runCtx.runNamespace, "main", runNamespaceRandomLength)
 				expectedNamespaces = append(expectedNamespaces, runCtx.runNamespace)
 
 				if ffEnabled {
-					h.verifyNamespace(cf, runCtx.auxNamespace, "aux")
+					h.VerifyNamespace(cf, runCtx.auxNamespace, "aux", runNamespaceRandomLength)
 					expectedNamespaces = append(expectedNamespaces, runCtx.auxNamespace)
 				} else {
 					assert.Equal(t, pipelineRun1.Status.AuxiliaryNamespace, "")
@@ -139,7 +135,7 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 	pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
-	examinee := newRunManager(cf, secretProvider)
+	examinee := NewRunManager(cf, secretProvider).(*runManager)
 	examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
 	expectedError := errors.New("some error")
@@ -180,7 +176,7 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 	pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
-	examinee := newRunManager(cf, secretProvider)
+	examinee := NewRunManager(cf, secretProvider).(*runManager)
 	examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
 	expectedPipelineCloneSecretName := "pipelineCloneSecret1"
@@ -227,7 +223,7 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 	pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
-	examinee := newRunManager(cf, secretProvider)
+	examinee := NewRunManager(cf, secretProvider).(*runManager)
 	examinee.testing = newRunManagerTestingWithAllNoopStubs()
 
 	expectedError := errors.New("some error")
@@ -1191,7 +1187,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet
 	// VERIFY
 	assert.NilError(t, resultError)
 
-	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonTaskRunName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, constants.TektonTaskRunName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	if equality.Semantic.DeepEqual(taskRun.Spec.PodTemplate, tektonPod.PodTemplate{}) {
 		t.Fatal("podTemplate of TaskRun is empty")
@@ -1210,7 +1206,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	_, mockPipelineRun, _ := h.prepareMocks(mockCtrl)
 	mockPipelineRun.UpdateRunNamespace(h.namespace1)
 	runConfig := h.runsConfigWithTaskData()
-	runConfig.Timeout = metav1Duration(4444)
+	runConfig.Timeout = utils.Metav1Duration(4444)
 	runConfig.JenkinsfileRunnerPodSecurityContextFSGroup = int64Ptr(1111)
 	runConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup = int64Ptr(2222)
 	runConfig.JenkinsfileRunnerPodSecurityContextRunAsUser = int64Ptr(3333)
@@ -1232,7 +1228,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	// VERIFY
 	assert.NilError(t, resultError)
 
-	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, tektonTaskRunName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, constants.TektonTaskRunName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	automount := true
 
@@ -1249,7 +1245,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	assert.Assert(t, podTemplate.SecurityContext.FSGroup != runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextFSGroup)
 	assert.Assert(t, podTemplate.SecurityContext.RunAsGroup != runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsGroup)
 	assert.Assert(t, podTemplate.SecurityContext.RunAsUser != runCtx.pipelineRunsConfig.JenkinsfileRunnerPodSecurityContextRunAsUser)
-	assert.DeepEqual(t, metav1Duration(4444), taskRun.Spec.Timeout)
+	assert.DeepEqual(t, utils.Metav1Duration(4444), taskRun.Spec.Timeout)
 }
 
 func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
@@ -1260,10 +1256,10 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
-	h.preparePredefinedClusterRole(mockFactory, mockPipelineRun)
+	h.preparePredefinedClusterRole(mockFactory)
 	config := &cfg.PipelineRunsConfigStruct{}
 
-	examinee := newRunManager(mockFactory, mockSecretProvider)
+	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
@@ -1273,7 +1269,7 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	// VERIFY
 	runNamespace := mockPipelineRun.GetRunNamespace()
 	result, err := mockFactory.TektonV1beta1().TaskRuns(runNamespace).Get(
-		h.ctx, tektonTaskRunName, metav1.GetOptions{})
+		h.ctx, constants.TektonTaskRunName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	assert.Assert(t, result != nil)
 }
@@ -1326,7 +1322,7 @@ func Test__runManager_Prepare__CleanupOnError(t *testing.T) {
 			mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 			config := &cfg.PipelineRunsConfigStruct{}
 
-			examinee := newRunManager(mockFactory, mockSecretProvider)
+			examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
 			examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 			var cleanupCalled int
@@ -1465,10 +1461,10 @@ func Test__runManager_Prepare__DoesNotSetPipelineRunStatus(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
-	h.preparePredefinedClusterRole(mockFactory, mockPipelineRun)
+	h.preparePredefinedClusterRole(mockFactory)
 	config := &cfg.PipelineRunsConfigStruct{}
 
-	examinee := newRunManager(mockFactory, mockSecretProvider)
+	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
@@ -1488,10 +1484,10 @@ func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
-	h.preparePredefinedClusterRole(mockFactory, mockPipelineRun)
+	h.preparePredefinedClusterRole(mockFactory)
 	config := &cfg.PipelineRunsConfigStruct{}
 
-	examinee := newRunManager(mockFactory, mockSecretProvider)
+	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
 	examinee.testing = newRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
@@ -1556,7 +1552,7 @@ func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
 			config := &cfg.PipelineRunsConfigStruct{}
 			secretProvider := secretproviderfakes.NewProvider(h.namespace1)
 
-			examinee := newRunManager(cf, secretProvider)
+			examinee := NewRunManager(cf, secretProvider).(*runManager)
 			examinee.testing = newRunManagerTestingWithAllNoopStubs()
 			examinee.testing.cleanupStub = nil
 
@@ -1630,7 +1626,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 	) (
 		examinee *runManager, runCtx *runContext, cf *k8sfake.ClientFactory,
 	) {
-		pipelineRun := StewardObjectFromJSON(t, pipelineRunJSON).(*stewardv1alpha1.PipelineRun)
+		pipelineRun := runctltesting.StewardObjectFromJSON(t, pipelineRunJSON).(*stewardv1alpha1.PipelineRun)
 		t.Log("decoded:\n", spew.Sdump(pipelineRun))
 
 		cf = k8sfake.NewClientFactory(
@@ -1641,10 +1637,10 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 		k8sPipelineRun, err := k8s.NewPipelineRun(ctx, pipelineRun, cf)
 		assert.NilError(t, err)
 		config := &cfg.PipelineRunsConfigStruct{}
-		examinee = newRunManager(
+		examinee = NewRunManager(
 			cf,
 			k8s.NewTenantNamespace(cf, pipelineRun.GetNamespace()).GetSecretProvider(),
-		)
+		).(*runManager)
 		examinee.testing = newRunManagerTestingWithRequiredStubs()
 		runCtx = &runContext{
 			pipelineRun:        k8sPipelineRun,
@@ -1896,192 +1892,12 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 	}
 }
 
-type testHelper1 struct {
-	t                   *testing.T
-	ctx                 context.Context
-	namespace1          string
-	pipelineRun1        string
-	runNamespace1       string
-	tektonClientset     *tektonfakeclient.Clientset
-	tektonTaskName      string
-	tektonTaskNamespace string
-}
-
-func newTestHelper1(t *testing.T) *testHelper1 {
-	h := &testHelper1{
-		t:                   t,
-		ctx:                 context.Background(),
-		namespace1:          "namespace1",
-		pipelineRun1:        "pipelinerun1",
-		runNamespace1:       "runNamespace1",
-		tektonClientset:     tektonfakeclient.NewSimpleClientset(),
-		tektonTaskName:      "taskName1",
-		tektonTaskNamespace: "taskNamespace1",
-	}
-	return h
-}
-
-func (h *testHelper1) runsConfigWithTaskData() *cfg.PipelineRunsConfigStruct {
-	return &cfg.PipelineRunsConfigStruct{
-		TektonTaskName:      h.tektonTaskName,
-		TektonTaskNamespace: h.tektonTaskNamespace,
-	}
-}
-
-func (h *testHelper1) getPipelineRunFromStorage(cf *k8sfake.ClientFactory, namespace, name string) *stewardv1alpha1.PipelineRun {
-	t := h.t
-	t.Helper()
-
-	pipelineRun, err := cf.StewardV1alpha1().PipelineRuns(namespace).Get(h.ctx, name, metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("could not get pipeline run %q from namespace %q: %s", name, namespace, err.Error())
-	}
-	if pipelineRun == nil {
-		t.Fatalf("could not get pipeline run %q from namespace %q: get was successfull but returned nil", name, namespace)
-	}
-	return pipelineRun
-}
-
-func (h *testHelper1) verifyNamespace(cf *k8sfake.ClientFactory, nsName, expectedPurpose string) {
-	t := h.t
-	t.Helper()
-
-	namePattern := regexp.MustCompile(
-		`^(steward-run-([[:alnum:]]{` + strconv.Itoa(runNamespaceRandomLength) + `})-` +
-			regexp.QuoteMeta(expectedPurpose) +
-			`-)[[:alnum:]]*$`)
-	assert.Assert(t, assertcmp.Regexp(namePattern, nsName))
-
-	namespace, err := cf.CoreV1().Namespaces().Get(h.ctx, nsName, metav1.GetOptions{})
-	assert.NilError(t, err)
-	assert.Equal(t, namespace.ObjectMeta.GenerateName, namePattern.FindStringSubmatch(nsName)[1])
-
-	// labels
-	{
-		_, exists := namespace.GetLabels()[stewardv1alpha1.LabelSystemManaged]
-		assert.Assert(t, exists)
-	}
-}
-
-func (h *testHelper1) assertThatExactlyTheseNamespacesExist(cf *k8sfake.ClientFactory, expected ...string) {
-	t := h.t
-	t.Helper()
-
-	list, err := cf.CoreV1().Namespaces().List(h.ctx, metav1.ListOptions{})
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	actual := []string{}
-	for _, item := range list.Items {
-		if item.GetName() != "" {
-			actual = append(actual, item.GetName())
-		}
-	}
-	sort.Strings(actual)
-
-	if expected == nil {
-		expected = []string{}
-	}
-	{
-		temp := []string{}
-		for _, item := range expected {
-			if item != "" {
-				temp = append(temp, item)
-			}
-		}
-		expected = temp
-	}
-	sort.Strings(expected)
-
-	assert.DeepEqual(t, expected, actual)
-}
-
-func (h *testHelper1) preparePredefinedClusterRole(cf *k8smocks.MockClientFactory, pipelineRun *k8smocks.MockPipelineRun) {
-	t := h.t
-	t.Helper()
-
-	_, err := cf.RbacV1().ClusterRoles().Create(h.ctx, k8sfake.ClusterRole(string(runClusterRoleName)), metav1.CreateOptions{})
-	if err != nil {
-		t.Fatalf("could not create cluster role: %s", err.Error())
-	}
-}
-
-func (h *testHelper1) addTektonTaskRun(cf *k8smocks.MockClientFactory) {
-	t := h.t
-	t.Helper()
-	_, err := cf.TektonV1beta1().TaskRuns(h.runNamespace1).Create(h.ctx, h.dummyTektonTaskRun(), metav1.CreateOptions{})
-	if err != nil {
-		t.Fatalf("could not create tekton task run: %s", err.Error())
-	}
-}
-
-func (h *testHelper1) dummyTektonTaskRun() *tektonv1beta1.TaskRun {
-	t := h.t
-	t.Helper()
-	return &tektonv1beta1.TaskRun{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      tektonTaskRunName,
-			Namespace: h.runNamespace1,
-		},
-	}
-}
-
-func (h *testHelper1) prepareMocks(ctrl *gomock.Controller) (*k8smocks.MockClientFactory, *k8smocks.MockPipelineRun, *secretmocks.MockSecretProvider) {
-	return h.prepareMocksWithSpec(ctrl, &stewardv1alpha1.PipelineSpec{})
-}
-
-func (h *testHelper1) prepareMocksWithSpec(ctrl *gomock.Controller, spec *stewardv1alpha1.PipelineSpec) (*k8smocks.MockClientFactory, *k8smocks.MockPipelineRun, *secretmocks.MockSecretProvider) {
-	mockFactory := k8smocks.NewMockClientFactory(ctrl)
-
-	kubeClientSet := kubefake.NewSimpleClientset()
-	kubeClientSet.PrependReactor("create", "*", k8sfake.GenerateNameReactor(0))
-
-	mockFactory.EXPECT().CoreV1().Return(kubeClientSet.CoreV1()).AnyTimes()
-	mockFactory.EXPECT().RbacV1().Return(kubeClientSet.RbacV1()).AnyTimes()
-	mockFactory.EXPECT().NetworkingV1().Return(kubeClientSet.NetworkingV1()).AnyTimes()
-
-	dynamicClient := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
-	mockFactory.EXPECT().Dynamic().Return(dynamicClient).AnyTimes()
-
-	stewardClientset := stewardfakeclient.NewSimpleClientset()
-	mockFactory.EXPECT().StewardV1alpha1().Return(stewardClientset.StewardV1alpha1()).AnyTimes()
-
-	mockFactory.EXPECT().TektonV1beta1().Return(h.tektonClientset.TektonV1beta1()).AnyTimes()
-
-	runNamespace := h.runNamespace1
-	auxNamespace := ""
-	mockPipelineRun := k8smocks.NewMockPipelineRun(ctrl)
-	mockPipelineRun.EXPECT().GetAPIObject().Return(&stewardv1alpha1.PipelineRun{Spec: *spec}).AnyTimes()
-	mockPipelineRun.EXPECT().GetSpec().Return(spec).AnyTimes()
-	mockPipelineRun.EXPECT().GetStatus().Return(&stewardv1alpha1.PipelineStatus{}).AnyTimes()
-	mockPipelineRun.EXPECT().GetKey().Return("key").AnyTimes()
-	mockPipelineRun.EXPECT().GetPipelineRepoServerURL().Return("server", nil).AnyTimes()
-	mockPipelineRun.EXPECT().GetRunNamespace().DoAndReturn(func() string {
-		return runNamespace
-	}).AnyTimes()
-	mockPipelineRun.EXPECT().GetAuxNamespace().DoAndReturn(func() string {
-		return auxNamespace
-	}).AnyTimes()
-
-	mockPipelineRun.EXPECT().UpdateRunNamespace(gomock.Any()).Do(func(arg string) {
-		runNamespace = arg
-	}).MaxTimes(1)
-	mockPipelineRun.EXPECT().UpdateAuxNamespace(gomock.Any()).Do(func(arg string) {
-		auxNamespace = arg
-	}).MaxTimes(1)
-	mockPipelineRun.EXPECT().CommitStatus(gomock.Any()).MaxTimes(1)
-
-	mockSecretProvider := secretmocks.NewMockSecretProvider(ctrl)
-
-	return mockFactory, mockPipelineRun, mockSecretProvider
-}
-
 func Test__runManager__getTimeout__retrievesPipelineTimeoutIfSetInThePipelineSpec(t *testing.T) {
 	t.Parallel()
 
 	//SETUP
-	defaultTimeout := metav1Duration(200)
-	customTimeout := metav1Duration(300)
+	defaultTimeout := utils.Metav1Duration(200)
+	customTimeout := utils.Metav1Duration(300)
 	ctx := context.Background()
 
 	k8sPipelineRun, err := k8s.NewPipelineRun(ctx, &stewardv1alpha1.PipelineRun{
@@ -2116,7 +1932,7 @@ func Test__runManager__getTimeout__retrievesTheDefaultPipelineTimeoutIfTimeoutIs
 	ctx := context.Background()
 	k8sPipelineRun, err := k8s.NewPipelineRun(ctx, &stewardv1alpha1.PipelineRun{}, nil)
 	assert.NilError(t, err)
-	defaultTimeout := metav1Duration(200)
+	defaultTimeout := utils.Metav1Duration(200)
 	config := &cfg.PipelineRunsConfigStruct{
 		Timeout: defaultTimeout,
 	}
@@ -2142,7 +1958,7 @@ func Test__runManager_GetRun_Missing(t *testing.T) {
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 	h.addTektonTaskRun(mockFactory)
 
-	examinee := newRunManager(mockFactory, mockSecretProvider)
+	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
 
 	// EXERCISE
 	run, resultError := examinee.GetRun(h.ctx, mockPipelineRun)
@@ -2163,7 +1979,7 @@ func Test__runManager_GetRun_Existing(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 
-	examinee := newRunManager(mockFactory, mockSecretProvider)
+	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
 
 	// EXERCISE
 	run, resultError := examinee.GetRun(h.ctx, mockPipelineRun)
@@ -2185,7 +2001,7 @@ func Test__runManager_DeleteRun_Success(t *testing.T) {
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 	h.addTektonTaskRun(mockFactory)
 
-	examinee := newRunManager(mockFactory, mockSecretProvider)
+	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
 
 	// EXERCISE
 	resultError := examinee.DeleteRun(h.ctx, mockPipelineRun)
@@ -2205,7 +2021,7 @@ func Test__runManager_DeleteRun_Missing(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 
-	examinee := newRunManager(mockFactory, mockSecretProvider)
+	examinee := NewRunManager(mockFactory, mockSecretProvider)
 
 	// EXERCISE
 	resultError := examinee.DeleteRun(h.ctx, mockPipelineRun)
@@ -2225,7 +2041,7 @@ func Test__runManager_DeleteRun_MissingRunNamespace(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 
-	examinee := newRunManager(mockFactory, mockSecretProvider)
+	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
 
 	mockPipelineRun.EXPECT().GetName().Return("foo").Times(1)
 
@@ -2269,7 +2085,7 @@ func Test__runManager_DeleteRun_Recoverable(t *testing.T) {
 			mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 
 			h.tektonClientset.PrependReactor("delete", "*", k8sfake.NewErrorReactor(tc.transientError))
-			examinee := newRunManager(mockFactory, mockSecretProvider)
+			examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
 			// EXERCISE
 			resultError := examinee.DeleteRun(h.ctx, mockPipelineRun)
 
@@ -2279,4 +2095,18 @@ func Test__runManager_DeleteRun_Recoverable(t *testing.T) {
 			mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
 		})
 	}
+}
+
+func newFakeClientFactory(objects ...runtime.Object) *fake.ClientFactory {
+	cf := fake.NewClientFactory(objects...)
+
+	cf.KubernetesClientset().PrependReactor("create", "*", fake.GenerateNameReactor(0))
+
+	cf.StewardClientset().PrependReactor("create", "*", fake.NewCreationTimestampReactor())
+
+	return cf
+}
+
+func resource(resource string) schema.GroupResource {
+	return schema.GroupResource{Group: "", Resource: resource}
 }

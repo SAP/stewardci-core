@@ -11,7 +11,6 @@ import (
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/client/clientset/versioned/scheme"
-	"github.com/SAP/stewardci-core/pkg/client/listers/steward/v1alpha1"
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
@@ -19,6 +18,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	"github.com/SAP/stewardci-core/pkg/runctl/metrics"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
+	"github.com/SAP/stewardci-core/pkg/runctl/runmgr"
 	"github.com/SAP/stewardci-core/pkg/stewardlabels"
 	"github.com/SAP/stewardci-core/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -51,12 +51,11 @@ var (
 type Controller struct {
 	factory              k8s.ClientFactory
 	pipelineRunFetcher   k8s.PipelineRunFetcher
-	pipelineRunSynced    cache.InformerSynced
+	pipelineRunsSynced   cache.InformerSynced
 	tektonTaskRunsSynced cache.InformerSynced
 	workqueue            workqueue.RateLimitingInterface
 	testing              *controllerTesting
-	recorder             record.EventRecorder
-	pipelineRunLister    v1alpha1.PipelineRunLister
+	eventRecorder        record.EventRecorder
 	pipelineRunStore     cache.Store
 
 	heartbeatInterval time.Duration
@@ -87,23 +86,21 @@ type ControllerOpts struct {
 // NewController creates new Controller
 func NewController(factory k8s.ClientFactory, opts ControllerOpts) *Controller {
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
-	pipelineRunLister := pipelineRunInformer.Lister()
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1beta1().TaskRuns()
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(klog.V(3).Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
+	eventRecorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
 
 	controller := &Controller{
 		factory:            factory,
 		pipelineRunFetcher: pipelineRunFetcher,
-		pipelineRunLister:  pipelineRunLister,
-		pipelineRunSynced:  pipelineRunInformer.Informer().HasSynced,
+		pipelineRunsSynced: pipelineRunInformer.Informer().HasSynced,
 
 		tektonTaskRunsSynced: tektonTaskRunInformer.Informer().HasSynced,
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), metrics.WorkqueueName),
-		recorder:             recorder,
+		eventRecorder:        eventRecorder,
 		pipelineRunStore:     pipelineRunInformer.Informer().GetStore(),
 	}
 
@@ -114,15 +111,15 @@ func NewController(factory k8s.ClientFactory, opts ControllerOpts) *Controller {
 	}
 
 	pipelineRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.addPipelineRun,
+		AddFunc: controller.addToWorkqueue,
 		UpdateFunc: func(old, new interface{}) {
-			controller.addPipelineRun(new)
+			controller.addToWorkqueue(new)
 		},
 	})
 	tektonTaskRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: controller.handleTektonTaskRun,
+		AddFunc: controller.addToWorkqueueFromAssociated,
 		UpdateFunc: func(old, new interface{}) {
-			controller.handleTektonTaskRun(new)
+			controller.addToWorkqueueFromAssociated(new)
 		},
 	})
 
@@ -149,7 +146,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer c.workqueue.ShutDown()
 
 	klog.V(2).Infof("Sync cache")
-	if ok := cache.WaitForCacheSync(stopCh, c.pipelineRunSynced, c.tektonTaskRunsSynced); !ok {
+	if ok := cache.WaitForCacheSync(stopCh, c.pipelineRunsSynced, c.tektonTaskRunsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
@@ -269,7 +266,7 @@ func (c *Controller) newRunManager(workFactory k8s.ClientFactory, secretProvider
 		return c.testing.newRunManagerStub(workFactory, secretProvider)
 
 	}
-	return newRunManager(workFactory, secretProvider)
+	return runmgr.NewRunManager(workFactory, secretProvider)
 }
 
 func (c *Controller) loadPipelineRunsConfig(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error) {
@@ -298,134 +295,245 @@ func (c *Controller) syncHandler(key string) error {
 
 	ctx := context.Background()
 
-	// Initial checks on cached pipelineRun
-	pipelineRunAPIObj, err := c.pipelineRunFetcher.ByKey(ctx, key)
+	pipelineRun, err := c.getPipelineRunToProcess(ctx, key)
+	if pipelineRun == nil {
+		// If pipelineRun is not found there is nothing to sync
+		return err
+	}
+
+	doReturn, err := c.handlePipelineRunFinalizerAndDeletion(ctx, pipelineRun)
+	if doReturn || err != nil {
+		return err
+	}
+
+	err = c.handlePipelineRunAbort(ctx, pipelineRun)
 	if err != nil {
 		return err
 	}
+
+	err = c.handlePipelineRunResultExistsButNotCleaned(ctx, pipelineRun)
+	if err != nil {
+		return err
+	}
+
+	doReturn, err = c.handlePipelineRunNew(ctx, pipelineRun)
+	if doReturn || err != nil {
+		return err
+	}
+
+	runManager := c.createRunManager(pipelineRun)
+
+	// the configuration should be loaded once per sync to avoid inconsistencies
+	// in case of concurrent configuration changes
+	pipelineRunsConfig, doReturn, err := c.ensurePipelineRunsConfig(ctx, pipelineRun)
+	if doReturn || err != nil {
+		return err
+	}
+
+	doReturn, err = c.handlePipelineRunPrepare(ctx, runManager, pipelineRun, pipelineRunsConfig)
+	if doReturn || err != nil {
+		return err
+	}
+
+	doReturn, err = c.handlePipelineRunWaiting(ctx, runManager, pipelineRun, pipelineRunsConfig)
+	if doReturn || err != nil {
+		return err
+	}
+
+	doReturn, err = c.handlePipelineRunRunning(ctx, runManager, pipelineRun, pipelineRunsConfig)
+	if doReturn || err != nil {
+		return err
+	}
+
+	doReturn, err = c.handlePipelineRunCleaning(ctx, runManager, pipelineRun)
+	if doReturn || err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Controller) getPipelineRunToProcess(ctx context.Context, key string) (k8s.PipelineRun, error) {
+	// Get pipeline run from informer cache
+	pipelineRunAPIObj, err := c.pipelineRunFetcher.ByKey(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+
+	// Initial checks on cached pipelineRun
+	if !c.isPipelineRunAPIObjThatNeedsProcessing(ctx, pipelineRunAPIObj) {
+		return nil, nil
+	}
+
+	// Fetches latest revision from storage bypassing the informer cache
+	pipelineRun, err := k8s.NewPipelineRun(ctx, pipelineRunAPIObj, c.factory)
+	if err != nil {
+		return nil, err
+	}
+
+	return pipelineRun, nil
+}
+
+// isPipelineRunAPIObjThatNeedsProcessing sorts out pipeline runs that do not
+// need processing.
+func (c *Controller) isPipelineRunAPIObjThatNeedsProcessing(ctx context.Context, pipelineRunAPIObj *api.PipelineRun) bool {
 	// If pipelineRun is not found there is nothing to sync
 	if pipelineRunAPIObj == nil {
-		return nil
+		return false
 	}
 	// don't process if labelled as to be ignored
 	if stewardlabels.IsLabelledAsIgnore(pipelineRunAPIObj) {
-		return nil
+		return false
 	}
 	// fast exit - no finalizer cleanup needed
-	if pipelineRunAPIObj.Status.State == api.StateFinished && !utils.StringSliceContains(pipelineRunAPIObj.ObjectMeta.Finalizers, k8s.FinalizerName) {
-		return nil
+	if pipelineRunAPIObj.Status.State == api.StateFinished &&
+		!utils.StringSliceContains(pipelineRunAPIObj.ObjectMeta.Finalizers, k8s.FinalizerName) {
+		return false
 	}
+	return true
+}
 
-	// Get real pipelineRun bypassing cache
-	pipelineRun, err := k8s.NewPipelineRun(ctx, pipelineRunAPIObj, c.factory)
-	if err != nil {
-		return err
-	}
-
-	// If pipelineRun is not found there is nothing to sync
-	if pipelineRun == nil {
-		return nil
-	}
-
-	// fast exit with finalizer cleanup
+func (c *Controller) handlePipelineRunFinalizerAndDeletion(
+	ctx context.Context,
+	pipelineRun k8s.PipelineRun,
+) (bool, error) {
 	if pipelineRun.GetStatus().State == api.StateFinished {
-		return pipelineRun.DeleteFinalizerIfExists(ctx)
+		err := pipelineRun.DeleteFinalizerAndCommitIfExists(ctx)
+		return true, err
 	}
 
-	// Check if object has deletion timestamp ...
 	if pipelineRun.HasDeletionTimestamp() {
 		runManager := c.createRunManager(pipelineRun)
-		err = runManager.Cleanup(ctx, pipelineRun)
+		err := runManager.Cleanup(ctx, pipelineRun)
 		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
-			return err
+			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
+			return true, err
 		}
-		return c.updateStateAndResult(ctx, pipelineRun, api.StateFinished, api.ResultDeleted, metav1.Now())
-	}
-	// ... if not, try to add finalizer if missing
-	pipelineRun.AddFinalizer(ctx)
-
-	// Check if pipeline run is aborted
-	if err := c.handleAborted(ctx, pipelineRun); err != nil {
-		return err
+		return false, c.updateStateAndResult(ctx, pipelineRun, api.StateFinished, api.ResultDeleted, metav1.Now())
 	}
 
-	// As soon as we have a result we can cleanup
-	if pipelineRun.GetStatus().Result != api.ResultUndefined && pipelineRun.GetStatus().State != api.StateCleaning {
-		err = c.changeState(pipelineRun, api.StateCleaning, metav1.Now())
+	return false, pipelineRun.AddFinalizerAndCommitIfNotPresent(ctx)
+}
+
+func (c *Controller) handlePipelineRunResultExistsButNotCleaned(
+	ctx context.Context,
+	pipelineRun k8s.PipelineRun,
+) error {
+	result := pipelineRun.GetStatus().Result
+	state := pipelineRun.GetStatus().State
+
+	if result != api.ResultUndefined &&
+		state != api.StateCleaning &&
+		state != api.StateFinished {
+
+		err := c.changeState(pipelineRun, api.StateCleaning, metav1.Now())
 		if err != nil {
-			klog.V(1).Infof("WARN: change state to cleaning failed with: %s", err.Error())
+			panic(err)
 		}
 	}
+	return nil
+}
 
-	// Init state when undefined
+func (c *Controller) handlePipelineRunNew(
+	ctx context.Context,
+	pipelineRun k8s.PipelineRun,
+) (bool, error) {
 	if pipelineRun.GetStatus().State == api.StateUndefined {
-
-		err = pipelineRun.InitState()
-		if err != nil {
-			return err
+		if err := pipelineRun.InitState(); err != nil {
+			panic(err)
 		}
 	}
 
 	if pipelineRun.GetStatus().State == api.StateNew {
 		maintenanceMode, err := c.isMaintenanceMode(ctx)
 		if err != nil {
-			return err
+			return true, err
 		}
 		if maintenanceMode {
 			err := fmt.Errorf("pipeline execution is paused while the system is in maintenance mode")
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
+			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
 			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
-			return err
+			return true, err
 		}
 		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StatePreparing, metav1.Now()); err != nil {
-			return err
+			return true, err
 		}
 		metrics.PipelineRunsStarted.Inc()
 	}
+	return false, nil
+}
 
-	runManager := c.createRunManager(pipelineRun)
-
+func (c *Controller) ensurePipelineRunsConfig(ctx context.Context, pipelineRun k8s.PipelineRun) (*cfg.PipelineRunsConfigStruct, bool, error) {
 	var pipelineRunsConfig *cfg.PipelineRunsConfigStruct
 	state := pipelineRun.GetStatus().State
+	// TODO do not assume in which phase the config is (not) needed
 	if state == api.StatePreparing || state == api.StateWaiting {
-		// the configuration should be loaded once per sync to avoid inconsistencies
-		// in case of concurrent configuration changes
+		var err error
 		pipelineRunsConfig, err = c.loadPipelineRunsConfig(ctx)
 		if err != nil {
+			var targetState api.State
 			if state == api.StatePreparing {
-				return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateFinished, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
+				targetState = api.StateFinished
+			} else {
+				targetState = api.StateCleaning
 			}
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "failed to load configuration for pipeline runs")
+			err = c.onGetRunError(
+				ctx,
+				pipelineRun,
+				err,
+				targetState,
+				api.ResultErrorInfra,
+				"failed to load configuration for pipeline runs",
+			)
+			return nil, true, err
 		}
 	}
+	return pipelineRunsConfig, false, nil
+}
 
-	// Process pipeline run based on current state
-	switch state {
-	case api.StatePreparing:
-
+func (c *Controller) handlePipelineRunPrepare(
+	ctx context.Context,
+	runManager run.Manager,
+	pipelineRun k8s.PipelineRun,
+	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
+) (bool, error) {
+	if pipelineRun.GetStatus().State == api.StatePreparing {
 		namespace, auxNamespace, err := runManager.Prepare(ctx, pipelineRun, pipelineRunsConfig)
 		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
+			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			resultClass := serrors.GetClass(err)
 			// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 			if resultClass != api.ResultUndefined {
-				return c.handleResultError(ctx, pipelineRun, resultClass, "preparing failed", err)
+				return true, c.handleResultError(ctx, pipelineRun, resultClass, "preparing failed", err)
 			}
-			return err
+			return true, err
 		}
 
 		pipelineRun.UpdateRunNamespace(namespace)
 		pipelineRun.UpdateAuxNamespace(auxNamespace)
 
 		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
-			return err
+			return true, err
 		}
 
-	case api.StateWaiting:
+		// TODO return (false, nil) to continue with next phase
+		return true, nil
+	}
+	return false, nil
+}
+
+func (c *Controller) handlePipelineRunWaiting(
+	ctx context.Context,
+	runManager run.Manager,
+	pipelineRun k8s.PipelineRun,
+	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
+) (bool, error) {
+	if pipelineRun.GetStatus().State == api.StateWaiting {
+		const waitingFailed = "waiting failed"
+
 		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "waiting failed")
+			return true, c.onGetRunError(ctx, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, waitingFailed)
 		}
 
 		// Check for wait timeout
@@ -436,103 +544,141 @@ func (c *Controller) syncHandler(key string) error {
 				"main pod has not started after %s",
 				timeout.Duration,
 			)
-			return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "waiting failed", err)
+			return true, c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, waitingFailed, err)
 		}
 
 		if run == nil {
 			if err = runManager.Start(ctx, pipelineRun, pipelineRunsConfig); err != nil {
-				c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
+				c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
 				resultClass := serrors.GetClass(err)
 				// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 				if resultClass != api.ResultUndefined {
-					return c.handleResultError(ctx, pipelineRun, resultClass, "waiting failed", err)
+					return true, c.handleResultError(ctx, pipelineRun, resultClass, waitingFailed, err)
 				}
-				return err
+				return true, err
 			}
-			return nil
+			return true, nil
 		} else if run.IsRestartable() {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
-			if err = runManager.DeleteRun(ctx, pipelineRun); err != nil {
-				if serrors.IsRecoverable(err) {
-					return err
-				}
-				return c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "run deletion for restart failed", err)
-			}
-			return nil
+			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
+			return c.restart(ctx, runManager, pipelineRun)
 		}
 
 		started := run.GetStartTime()
 		if started != nil {
 			if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateRunning, *started); err != nil {
-				return err
+				return true, err
 			}
 		}
-	case api.StateRunning:
+
+		// TODO return (false, nil) to continue with next phase
+		return true, nil
+	}
+	return false, nil
+}
+
+func (c *Controller) restart(
+	ctx context.Context,
+	runManager run.Manager,
+	pipelineRun k8s.PipelineRun,
+) (bool, error) {
+	if err := runManager.DeleteRun(ctx, pipelineRun); err != nil {
+		if serrors.IsRecoverable(err) {
+			return true, err
+		}
+		return true, c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "run deletion for restart failed", err)
+	}
+	return true, nil
+}
+
+func (c *Controller) handlePipelineRunRunning(
+	ctx context.Context,
+	runManager run.Manager,
+	pipelineRun k8s.PipelineRun,
+	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
+) (bool, error) {
+	if pipelineRun.GetStatus().State == api.StateRunning {
+		const runningFailed = "running failed"
+
 		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "running failed")
+			return true, c.onGetRunError(ctx, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
 		}
 		if run == nil {
 			err = fmt.Errorf("task run not found in namespace %q", pipelineRun.GetRunNamespace())
-			return c.onGetRunError(ctx, pipelineRunAPIObj, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, "running failed")
+			return true, c.onGetRunError(ctx, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
 		}
 
 		containerInfo := run.GetContainerInfo()
 		pipelineRun.UpdateContainer(containerInfo)
 		if finished, result := run.IsFinished(); finished {
 			pipelineRun.UpdateMessage(run.GetMessage())
-			return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, *run.GetCompletionTime())
+			return true, c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, *run.GetCompletionTime())
 		}
 		// commit container update
 		err = c.commitStatusAndMeter(ctx, pipelineRun)
 		if err != nil {
-			return err
+			return true, err
 		}
 
-	case api.StateCleaning:
-		err = runManager.Cleanup(ctx, pipelineRun)
-		if err != nil {
-			c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
-		}
-		if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateFinished, metav1.Now()); err != nil {
-			return err
-		}
-		return pipelineRun.DeleteFinalizerIfExists(ctx)
-	default:
-		klog.V(2).Infof("Skip PipelineRun with state %s", pipelineRun.GetStatus().State)
+		// TODO return (false, nil) to continue with next phase
+		return true, nil
 	}
-	return nil
+	return false, nil
+}
+
+func (c *Controller) handlePipelineRunCleaning(
+	ctx context.Context,
+	runManager run.Manager,
+	pipelineRun k8s.PipelineRun,
+) (bool, error) {
+	if pipelineRun.GetStatus().State == api.StateCleaning {
+		err := runManager.Cleanup(ctx, pipelineRun)
+		if err != nil {
+			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
+			return true, err
+		}
+		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateFinished, metav1.Now()); err != nil {
+			return true, err
+		}
+		if err = pipelineRun.DeleteFinalizerAndCommitIfExists(ctx); err != nil {
+			return true, err
+		}
+	}
+	return false, nil
 }
 
 func (c *Controller) getWaitTimeout(pipelineRunsConfig *cfg.PipelineRunsConfigStruct) *metav1.Duration {
 	timeout := pipelineRunsConfig.TimeoutWait
-	if isZeroDuration(timeout) {
-		timeout = metav1Duration(time.Duration(defaultWaitTimeout))
+	if utils.IsZeroDuration(timeout) {
+		timeout = utils.Metav1Duration(time.Duration(defaultWaitTimeout))
 	}
 	return timeout
 }
 
-func metav1Duration(d time.Duration) *metav1.Duration {
-	return &metav1.Duration{Duration: d}
-}
-
-func isZeroDuration(d *metav1.Duration) bool {
-	return d == nil || d.Truncate(time.Second) == 0
-}
-
+// TODO find better name
 func (c *Controller) handleResultError(ctx context.Context, pipelineRun k8s.PipelineRun, result api.Result, message string, err error) error {
 	pipelineRun.UpdateMessage(err.Error())
 	pipelineRun.StoreErrorAsMessage(err, message)
 	return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, metav1.Now())
 }
 
-func (c *Controller) onGetRunError(ctx context.Context, pipelineRunAPIObj *api.PipelineRun, pipelineRun k8s.PipelineRun, err error, state api.State, result api.Result, message string) error {
-	c.recorder.Event(pipelineRunAPIObj, corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
+// TODO change name to express semantics
+// This method is not only called when pipelineManager.GetRun()
+// failed, but also in other context.
+func (c *Controller) onGetRunError(
+	ctx context.Context,
+	pipelineRun k8s.PipelineRun,
+	err error,
+	targetState api.State,
+	result api.Result,
+	message string,
+) error {
+	c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
 	if serrors.IsRecoverable(err) {
 		return err
 	}
 	pipelineRun.StoreErrorAsMessage(err, message)
-	return c.updateStateAndResult(ctx, pipelineRun, state, result, metav1.Now())
+	return c.updateStateAndResult(ctx, pipelineRun, targetState, result, metav1.Now())
 }
 
 func (c *Controller) changeAndCommitStateAndMeter(ctx context.Context, pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
@@ -549,7 +695,7 @@ func (c *Controller) updateStateAndResult(ctx context.Context, pipelineRun k8s.P
 	}
 	metrics.PipelineRunsResult.Observe(pipelineRun.GetStatus().Result)
 	if state == api.StateFinished {
-		return pipelineRun.DeleteFinalizerIfExists(ctx)
+		return pipelineRun.DeleteFinalizerAndCommitIfExists(ctx)
 	}
 	return nil
 }
@@ -571,10 +717,10 @@ func (c *Controller) commitStatusAndMeter(ctx context.Context, pipelineRun k8s.P
 	return nil
 }
 
-// handleAborted checks if pipeline run should be aborted.
+// handlePipelineRunAbort checks if pipeline run should be aborted.
 // If the user requested abortion it updates message, result and state
 // to trigger a cleanup.
-func (c *Controller) handleAborted(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+func (c *Controller) handlePipelineRunAbort(ctx context.Context, pipelineRun k8s.PipelineRun) error {
 	intent := pipelineRun.GetSpec().Intent
 	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {
 		pipelineRun.UpdateMessage("Aborted")
@@ -583,7 +729,7 @@ func (c *Controller) handleAborted(ctx context.Context, pipelineRun k8s.Pipeline
 	return nil
 }
 
-func (c *Controller) addPipelineRun(obj interface{}) {
+func (c *Controller) addToWorkqueue(obj interface{}) {
 	var key string
 	var err error
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
@@ -594,11 +740,11 @@ func (c *Controller) addPipelineRun(obj interface{}) {
 	c.workqueue.Add(key)
 }
 
-// handleTektonTaskRun takes any resource implementing metav1.Object and attempts
+// addToWorkqueueFromAssociated takes any resource implementing metav1.Object and attempts
 // to find the PipelineRun resource that 'owns' it. It does this by looking for
 // a specific annotation. If such annotation exists, the named PipelineRun
 // is put into the controller's work queue to be processed.
-func (c *Controller) handleTektonTaskRun(obj interface{}) {
+func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 	var object metav1.Object
 	var ok bool
 	if object, ok = obj.(metav1.Object); !ok {
@@ -615,8 +761,8 @@ func (c *Controller) handleTektonTaskRun(obj interface{}) {
 		klog.V(3).Infof("Recovered deleted object '%s' from tombstone", object.GetName())
 	}
 	klog.V(4).Infof("Processing object: %s", object.GetSelfLink())
-	annotations := object.GetAnnotations()
-	runKey := annotations[annotationPipelineRunKey]
+
+	runKey := runmgr.GetPipelineRunKeyAnnotation(object)
 	if runKey != "" {
 		klog.V(4).Infof("Add to workqueue '%s'", runKey)
 		c.workqueue.Add(runKey)

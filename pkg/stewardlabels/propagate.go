@@ -40,44 +40,17 @@ func propagate(destObj metav1.Object, sourceObj metav1.Object, labelSpec map[str
 	sourceLabels := sourceObj.GetLabels()
 
 	// fail if source has any value conflict with enforced value
-	for k, v := range labelSpec {
-		if v != "" { // value enforced
-			sourceValue, found := sourceLabels[k]
-			if found && sourceValue != v {
-				return fmt.Errorf(
-					"value conflict: source object label %q has value %q but %q is expected",
-					k, sourceValue, v,
-				)
-			}
-		}
+	err := checkConflict(labelSpec, sourceLabels)
+	if err != nil {
+		return err
 	}
 
 	destLabels := destObj.GetLabels()
 
-	// don't modify labels of dest object until propagation finished without errors
-	propagatedLabels := make(map[string]string)
-
 	// propagate
-	for k, v := range labelSpec {
-		if v == "" { // value not enforced
-			var foundOnSource bool
-			v, foundOnSource = sourceLabels[k]
-			if !foundOnSource {
-				// do not touch this label on dest object
-				continue
-			}
-		}
-		destValue, found := destLabels[k]
-		if found {
-			if destValue != v {
-				return fmt.Errorf(
-					"value conflict: destination object label %q has existing value %q but %q is expected",
-					k, destValue, v,
-				)
-			}
-		} else {
-			propagatedLabels[k] = v
-		}
+	propagatedLabels, err := getPropagatedLabels(labelSpec, sourceLabels, destLabels)
+	if err != nil {
+		return err
 	}
 
 	// don't modify if nothing is propagated
@@ -98,4 +71,47 @@ func propagate(destObj metav1.Object, sourceObj metav1.Object, labelSpec map[str
 		}
 	}
 	return nil
+}
+
+func checkConflict(labelSpec, sourceLabels map[string]string) error {
+	for k, v := range labelSpec {
+		if v != "" { // value enforced
+			sourceValue, found := sourceLabels[k]
+			if found && sourceValue != v {
+				return fmt.Errorf(
+					"value conflict: source object label %q has value %q but %q is expected",
+					k, sourceValue, v,
+				)
+			}
+		}
+	}
+	return nil
+}
+
+func getPropagatedLabels(labelSpec, sourceLabels, destLabels map[string]string) (map[string]string, error) {
+	// don't modify labels of dest object until propagation finished without errors
+	propagatedLabels := make(map[string]string)
+
+	for k, v := range labelSpec {
+		if v == "" { // value not enforced
+			var foundOnSource bool
+			v, foundOnSource = sourceLabels[k]
+			if !foundOnSource {
+				// do not touch this label on dest object
+				continue
+			}
+		}
+		destValue, found := destLabels[k]
+		if found {
+			if destValue != v {
+				return nil, fmt.Errorf(
+					"value conflict: destination object label %q has existing value %q but %q is expected",
+					k, destValue, v,
+				)
+			}
+		} else {
+			propagatedLabels[k] = v
+		}
+	}
+	return propagatedLabels, nil
 }
