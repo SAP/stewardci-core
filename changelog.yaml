@@ -53,13 +53,14 @@
   changes:
     - type: internal
       impact: patch
-      title: Only Refactoring
+      title: Refactorings
       description: |-
         This change only contains refactorings:
         - Introduce constants where strings are used multiple times
-        - Remove unnecessary Boolean literals
+        - Remove unnecessary boolean literals
         - Use opposite operator in favour of negation
-        - Reduce Complexity of functions
+        - Reduce complexity of functions
+        - Change function names to better reflect their semantics
       pullRequestNumber: 371
 
     - type: internal
