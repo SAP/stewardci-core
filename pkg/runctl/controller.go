@@ -303,7 +303,10 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	c.handleFastExit(ctx, pipelineRun)
+	err = c.handleFastExit(ctx, pipelineRun)
+	if err != nil {
+		return err
+	}
 
 	doReturn, err := c.handlePipelineRunNew(ctx, pipelineRun)
 	if doReturn || err != nil {
