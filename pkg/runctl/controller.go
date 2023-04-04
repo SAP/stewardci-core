@@ -38,6 +38,8 @@ const (
 	// It is an invalid Kubernetes name to avoid conflicts with real
 	// pipeline runs.
 	heartbeatStimulusKey = "Heartbeat Stimulus"
+
+	waitingFailed = "waiting failed"
 )
 
 var (
@@ -209,6 +211,11 @@ func (c *Controller) processNextWorkItem() bool {
 			return nil
 		}
 
+		if key == heartbeatStimulusKey {
+			c.heartbeat()
+			return nil
+		}
+
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
 		if err := c.syncHandler(key); err != nil {
@@ -288,11 +295,6 @@ func (c *Controller) isMaintenanceMode(ctx context.Context) (bool, error) {
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
 
-	if key == heartbeatStimulusKey {
-		c.heartbeat()
-		return nil
-	}
-
 	ctx := context.Background()
 
 	pipelineRun, err := c.getPipelineRunToProcess(ctx, key)
@@ -301,22 +303,9 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	doReturn, err := c.handlePipelineRunFinalizerAndDeletion(ctx, pipelineRun)
-	if doReturn || err != nil {
-		return err
-	}
+	c.handleFastExit(ctx, pipelineRun)
 
-	err = c.handlePipelineRunAbort(ctx, pipelineRun)
-	if err != nil {
-		return err
-	}
-
-	err = c.handlePipelineRunResultExistsButNotCleaned(ctx, pipelineRun)
-	if err != nil {
-		return err
-	}
-
-	doReturn, err = c.handlePipelineRunNew(ctx, pipelineRun)
+	doReturn, err := c.handlePipelineRunNew(ctx, pipelineRun)
 	if doReturn || err != nil {
 		return err
 	}
@@ -350,6 +339,24 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
+	return nil
+}
+
+func (c *Controller) handleFastExit(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+	doReturn, err := c.handlePipelineRunFinalizerAndDeletion(ctx, pipelineRun)
+	if doReturn || err != nil {
+		return err
+	}
+
+	err = c.handlePipelineRunAbort(ctx, pipelineRun)
+	if err != nil {
+		return err
+	}
+
+	err = c.handlePipelineRunResultExistsButNotCleaned(ctx, pipelineRun)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -529,7 +536,6 @@ func (c *Controller) handlePipelineRunWaiting(
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
 	if pipelineRun.GetStatus().State == api.StateWaiting {
-		const waitingFailed = "waiting failed"
 
 		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
@@ -548,16 +554,7 @@ func (c *Controller) handlePipelineRunWaiting(
 		}
 
 		if run == nil {
-			if err = runManager.Start(ctx, pipelineRun, pipelineRunsConfig); err != nil {
-				c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
-				resultClass := serrors.GetClass(err)
-				// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
-				if resultClass != api.ResultUndefined {
-					return true, c.handleResultError(ctx, pipelineRun, resultClass, waitingFailed, err)
-				}
-				return true, err
-			}
-			return true, nil
+			return c.startPipelineRun(ctx, runManager, pipelineRun, pipelineRunsConfig)
 		} else if run.IsRestartable() {
 			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
 			return c.restart(ctx, runManager, pipelineRun)
@@ -574,6 +571,22 @@ func (c *Controller) handlePipelineRunWaiting(
 		return true, nil
 	}
 	return false, nil
+}
+
+func (c *Controller) startPipelineRun(ctx context.Context,
+	runManager run.Manager,
+	pipelineRun k8s.PipelineRun,
+	pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (bool, error) {
+	if err := runManager.Start(ctx, pipelineRun, pipelineRunsConfig); err != nil {
+		c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
+		resultClass := serrors.GetClass(err)
+		// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
+		if resultClass != api.ResultUndefined {
+			return true, c.handleResultError(ctx, pipelineRun, resultClass, waitingFailed, err)
+		}
+		return true, err
+	}
+	return true, nil
 }
 
 func (c *Controller) restart(
