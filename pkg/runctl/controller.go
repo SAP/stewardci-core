@@ -39,7 +39,9 @@ const (
 	// pipeline runs.
 	heartbeatStimulusKey = "Heartbeat Stimulus"
 
-	waitingFailed = "waiting failed"
+	errorMessageWaitingFailed   = "waiting failed"
+	errorMessagePreparingFailed = "preparing failed"
+	errorMessageRunningFailed   = "running failed"
 )
 
 var (
@@ -507,7 +509,7 @@ func (c *Controller) handlePipelineRunPrepare(
 			resultClass := serrors.GetClass(err)
 			// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 			if resultClass != api.ResultUndefined {
-				return true, c.handleResultError(ctx, pipelineRun, resultClass, "preparing failed", err)
+				return true, c.handleResultError(ctx, pipelineRun, resultClass, errorMessagePreparingFailed, err)
 			}
 			return true, err
 		}
@@ -535,7 +537,7 @@ func (c *Controller) handlePipelineRunWaiting(
 
 		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
-			return true, c.onGetRunError(ctx, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, waitingFailed)
+			return true, c.onGetRunError(ctx, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, errorMessageWaitingFailed)
 		}
 
 		// Check for wait timeout
@@ -546,7 +548,7 @@ func (c *Controller) handlePipelineRunWaiting(
 				"main pod has not started after %s",
 				timeout.Duration,
 			)
-			return true, c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, waitingFailed, err)
+			return true, c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, errorMessageWaitingFailed, err)
 		}
 
 		if run == nil {
@@ -578,7 +580,7 @@ func (c *Controller) startPipelineRun(ctx context.Context,
 		resultClass := serrors.GetClass(err)
 		// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 		if resultClass != api.ResultUndefined {
-			return true, c.handleResultError(ctx, pipelineRun, resultClass, waitingFailed, err)
+			return true, c.handleResultError(ctx, pipelineRun, resultClass, errorMessageWaitingFailed, err)
 		}
 		return true, err
 	}
@@ -606,15 +608,14 @@ func (c *Controller) handlePipelineRunRunning(
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
 	if pipelineRun.GetStatus().State == api.StateRunning {
-		const runningFailed = "running failed"
 
 		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
-			return true, c.onGetRunError(ctx, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
+			return true, c.onGetRunError(ctx, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, errorMessageRunningFailed)
 		}
 		if run == nil {
 			err = fmt.Errorf("task run not found in namespace %q", pipelineRun.GetRunNamespace())
-			return true, c.onGetRunError(ctx, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, runningFailed)
+			return true, c.onGetRunError(ctx, pipelineRun, err, api.StateCleaning, api.ResultErrorInfra, errorMessageRunningFailed)
 		}
 
 		containerInfo := run.GetContainerInfo()
