@@ -319,7 +319,6 @@ func (c *Controller) syncHandler(key string) error {
 	if err != nil {
 		return err
 	}
-	return nil
 
 	doReturn, err = c.handlePipelineRunNew(ctx, pipelineRun)
 	if doReturn || err != nil {
@@ -552,7 +551,7 @@ func (c *Controller) handlePipelineRunWaiting(
 		}
 
 		if run == nil {
-			return c.startPipelineRun(ctx, runManager, pipelineRun, pipelineRunsConfig)
+			return true, c.startPipelineRun(ctx, runManager, pipelineRun, pipelineRunsConfig)
 		} else if run.IsRestartable() {
 			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
 			return c.restart(ctx, runManager, pipelineRun)
@@ -574,17 +573,17 @@ func (c *Controller) handlePipelineRunWaiting(
 func (c *Controller) startPipelineRun(ctx context.Context,
 	runManager run.Manager,
 	pipelineRun k8s.PipelineRun,
-	pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (bool, error) {
+	pipelineRunsConfig *cfg.PipelineRunsConfigStruct) error {
 	if err := runManager.Start(ctx, pipelineRun, pipelineRunsConfig); err != nil {
 		c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
 		resultClass := serrors.GetClass(err)
 		// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
 		if resultClass != api.ResultUndefined {
-			return true, c.handleResultError(ctx, pipelineRun, resultClass, errorMessageWaitingFailed, err)
+			return c.handleResultError(ctx, pipelineRun, resultClass, errorMessageWaitingFailed, err)
 		}
-		return true, err
+		return err
 	}
-	return true, nil
+	return nil
 }
 
 func (c *Controller) restart(
