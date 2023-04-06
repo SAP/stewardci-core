@@ -211,11 +211,6 @@ func (c *Controller) processNextWorkItem() bool {
 			return nil
 		}
 
-		if key == heartbeatStimulusKey {
-			c.heartbeat()
-			return nil
-		}
-
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
 		if err := c.syncHandler(key); err != nil {
@@ -295,6 +290,11 @@ func (c *Controller) isMaintenanceMode(ctx context.Context) (bool, error) {
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
 
+	if key == heartbeatStimulusKey {
+		c.heartbeat()
+		return nil
+	}
+
 	ctx := context.Background()
 
 	pipelineRun, err := c.getPipelineRunToProcess(ctx, key)
@@ -303,12 +303,23 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	err = c.handleFastExit(ctx, pipelineRun)
+	doReturn, err := c.handlePipelineRunFinalizerAndDeletion(ctx, pipelineRun)
+	if doReturn || err != nil {
+		return err
+	}
+
+	err = c.handlePipelineRunAbort(ctx, pipelineRun)
 	if err != nil {
 		return err
 	}
 
-	doReturn, err := c.handlePipelineRunNew(ctx, pipelineRun)
+	err = c.handlePipelineRunResultExistsButNotCleaned(ctx, pipelineRun)
+	if err != nil {
+		return err
+	}
+	return nil
+
+	doReturn, err = c.handlePipelineRunNew(ctx, pipelineRun)
 	if doReturn || err != nil {
 		return err
 	}
@@ -342,24 +353,6 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	return nil
-}
-
-func (c *Controller) handleFastExit(ctx context.Context, pipelineRun k8s.PipelineRun) error {
-	doReturn, err := c.handlePipelineRunFinalizerAndDeletion(ctx, pipelineRun)
-	if doReturn || err != nil {
-		return err
-	}
-
-	err = c.handlePipelineRunAbort(ctx, pipelineRun)
-	if err != nil {
-		return err
-	}
-
-	err = c.handlePipelineRunResultExistsButNotCleaned(ctx, pipelineRun)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
