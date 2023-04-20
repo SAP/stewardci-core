@@ -519,13 +519,18 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 	if changeError != nil {
 		return nil, changeError
 	}
+
+	return r.getNonEmptyStateItems(), errors.Wrapf(err, "failed to update status [%s]", r.String())
+}
+
+func (r *pipelineRun) getNonEmptyStateItems() []*api.StateItem {
 	result := []*api.StateItem{}
 	for _, recorder := range r.commitRecorders {
 		if recorder != nil {
 			result = append(result, recorder())
 		}
 	}
-	return result, errors.Wrapf(err, "failed to update status [%s]", r.String())
+	return result
 }
 
 func (r *pipelineRun) redoChanges(fetchedAPIObj *api.PipelineRun) error {
