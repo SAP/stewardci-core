@@ -129,3 +129,7 @@ spec:
   results:
   - name: jfr-termination-log
     description: The termination log message from the Jenkinsfile Runner
+  sidecars:
+    - image: concise.common.cdn.repositories.cloud.sap/test/custom-fluentd:v1.16-1
+      name: log-forwarder
+
