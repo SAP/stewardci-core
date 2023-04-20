@@ -84,6 +84,18 @@ pipelineRuns:
   logging:
     elasticsearch:
       indexURL: ""
+    forwarding:
+      # If "true" a forwarder will be used instead of sending logs directly to the destination
+      enabled: false
+      # The hostname of the forwarder
+      host: ""
+      # If "true", the fowarder is expected to run as a sidecare of the jenkinsfileRunner pod.
+      # In that case "host" will be ignored.
+      useSidecar: true
+      # The port the forwarder is listening to
+      port: '24224'
+      # The tag to use when sending data to the forwarder
+      tag: BUILD_LOGS
   jenkinsfileRunner:
     image: "stewardci/stewardci-jenkinsfile-runner:230201_c535874"
     imagePullPolicy: IfNotPresent
@@ -106,6 +118,9 @@ pipelineRuns:
       fsGroup: 1000
     pipelineCloneRetryIntervalSec: ""
     pipelineCloneRetryTimeoutSec: ""
+  # defines a list of sidecars for this tasks
+  # see: https://tekton.dev/vault/pipelines-main/tasks/#specifying-sidecars
+  sidecars: []
   timeout: "60m"
   waitTimeout: "10m"
   defaultNetworkPolicyName: ""
