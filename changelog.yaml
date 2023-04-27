@@ -51,6 +51,10 @@
 - version: NEXT
   date: TBD
   changes:
+
+- version: "0.28.0"
+  date: 2023-04-27
+  changes:
     - type: enhancement
       impact: minor
       title: Enable log forwarding
