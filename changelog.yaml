@@ -51,6 +51,22 @@
 - version: NEXT
   date: TBD
   changes:
+    - type: enhancement
+      impact: minor
+      title: Enable log forwarding
+      description: |-
+        We want to add support for log-forwarders (i.e. fluentd) instead of sending logs directly to OpenSearch/ElasticSearch.
+        For this purpose, two configuration extension are prepared:
+
+        * Set environment variables to configure the elasticsearch-log-plugin to forward data to fluentd
+        * Enable the use of tekton sidecars. This can be used to run the forwarder as a sidecar container in the JFR pod
+      upgradeNotes: |-
+        The change does not affect the current behavior as long as the new configuration options are not used.
+
+        In order to use log forwarding, a version of the JFR image later than "230426_ed390b3" is required.
+
+      pullRequestNumber: 379
+      jiraIssueNumber: CPCCICD-1045
 
 - version: "0.27.2"
   date: 2023-04-20

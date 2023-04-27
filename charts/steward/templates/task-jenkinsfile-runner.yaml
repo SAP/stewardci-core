@@ -123,9 +123,28 @@ spec:
       value: '$(params.RUN_CAUSE)'
     - name: TERMINATION_LOG_PATH
       value: /tekton/results/jfr-termination-log
+    {{ with .Values.pipelineRuns.logging.forwarding }}{{ if .enabled }}
+    - name: PIPELINE_LOG_FLUENTD_HOST
+      {{ if .useSidecar }}
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+      {{ else }}
+      value: {{ required "the host name of the log-forwarder" .host  }}
+      {{ end }}
+    - name: PIPELINE_LOG_FLUENTD_PORT
+      value: {{ .port | quote }}
+    - name: PIPELINE_LOG_FLUENTD_TAG
+      value: {{ .tag }}
+    {{ end }}{{ end}}
     resources:
       {{- toYaml .Values.pipelineRuns.jenkinsfileRunner.resources | nindent 6 }}
     terminationMessagePath: /tekton/results/jfr-termination-log
   results:
   - name: jfr-termination-log
     description: The termination log message from the Jenkinsfile Runner
+  {{ with .Values.pipelineRuns.sidecars }}
+  sidecars:
+    {{ toYaml . | nindent 4 }}
+  {{ end }}
+

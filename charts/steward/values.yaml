@@ -84,8 +84,14 @@ pipelineRuns:
   logging:
     elasticsearch:
       indexURL: ""
+    forwarding:
+      enabled: false
+      host: ""
+      useSidecar: true
+      port: '24224'
+      tag: BUILD_LOGS
   jenkinsfileRunner:
-    image: "stewardci/stewardci-jenkinsfile-runner:230201_c535874"
+    image: "stewardci/stewardci-jenkinsfile-runner:230426_ed390b3"
     imagePullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0
@@ -106,6 +112,7 @@ pipelineRuns:
       fsGroup: 1000
     pipelineCloneRetryIntervalSec: ""
     pipelineCloneRetryTimeoutSec: ""
+  sidecars: []
   timeout: "60m"
   waitTimeout: "10m"
   defaultNetworkPolicyName: ""
