@@ -38,6 +38,7 @@ runController:
   podSecurityPolicyName: ""
 
 tenantController:
+  enabled: true
   args:
     qps: 5
     burst: 10
