@@ -63,8 +63,8 @@
       upgradeNotes: |-
         The change does not affect the current behavior as long as the new configuration options are not used.
 
-        In order to use log forwarding, a version of the JFR image is required which contain this fix:
-        https://github.com/SAP/stewardci-jenkinsfilerunner-image/pull/101
+        In order to use log forwarding, a version of the JFR image later than "230426_ed390b3" is required.
+
       pullRequestNumber: 379
       jiraIssueNumber: CPCCICD-1045
 
