@@ -14,7 +14,7 @@ runController:
     k8sAPIRequestTimeout: ""
   image:
     repository: stewardci/stewardci-run-controller
-    tag: "0.27.2" #Do not modify this line! RunController tag updated automatically
+    tag: "0.28.0" #Do not modify this line! RunController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -50,7 +50,7 @@ tenantController:
     k8sAPIRequestTimeout: ""
   image:
     repository: stewardci/stewardci-tenant-controller
-    tag: "0.27.2" #Do not modify this line! TenantController tag updated automatically
+    tag: "0.28.0" #Do not modify this line! TenantController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -85,8 +85,14 @@ pipelineRuns:
   logging:
     elasticsearch:
       indexURL: ""
+    forwarding:
+      enabled: false
+      host: ""
+      useSidecar: true
+      port: '24224'
+      tag: BUILD_LOGS
   jenkinsfileRunner:
-    image: "stewardci/stewardci-jenkinsfile-runner:230201_c535874"
+    image: "stewardci/stewardci-jenkinsfile-runner:230426_ed390b3"
     imagePullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0
@@ -107,6 +113,7 @@ pipelineRuns:
       fsGroup: 1000
     pipelineCloneRetryIntervalSec: ""
     pipelineCloneRetryTimeoutSec: ""
+  sidecars: []
   timeout: "60m"
   waitTimeout: "10m"
   defaultNetworkPolicyName: ""

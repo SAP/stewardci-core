@@ -163,6 +163,11 @@ Common parameters:
 | Parameter | Description | Default |
 |---|---|---|
 | <code>pipelineRuns.<wbr/><b>logging.<wbr/>elasticsearch.<wbr/>indexURL</b></code><br/><i>string</i> |  The URL of the Elasticsearch index to send logs to. If null or empty, logging to Elasticsearch is disabled. Example: `http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc` | empty |
+| <code>pipelineRuns.<wbr/><b>logging.<wbr/>forwarding.<wbr/>enabled</b></code><br/><i>boolean</i> |  If "true" a forwarder will be used instead of sending logs directly to the destination. | <code>false</code> |
+| <code>pipelineRuns.<wbr/><b>logging.<wbr/>forwarding.<wbr/>host</b></code><br/><i>string</i> | The hostname of the forwarder. | empty |
+| <code>pipelineRuns.<wbr/><b>logging.<wbr/>forwarding.<wbr/>useSidecar</b></code><br/><i>boolean</i> | If "true", the fowarder is expected to run as a sidecare of the jenkinsfileRunner pod. In that case "host" will be ignored. | <code>false</code> |
+| <code>pipelineRuns.<wbr/><b>logging.<wbr/>forwarding.<wbr/>port</b></code><br/><i>string</i> | The port the forwarder is listening to. | empty |
+| <code>pipelineRuns.<wbr/><b>logging.<wbr/>forwarding.<wbr/>tag</b></code><br/><i>string</i> | The tag to use when sending data to the forwarder. | empty |
 | <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>image.<wbr/>repository</b></code><br/><i>string</i> |  <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</b></code> instead. | |
 | <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>image.<wbr/>tag</b></code><br/><i>string</i> |  <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</b></code> instead.  | |
 | <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>image.<wbr/>pullPolicy</b></code><br/><i>string</i> |  <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>imagePullPolicy</b></code> instead. | |
@@ -176,6 +181,8 @@ Common parameters:
 | <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>pipelineCloneRetryIntervalSec</b></code><br/><i>string</i> |  The retry interval for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
 | <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>pipelineCloneRetryTimeoutSec</b></code><br/><i>string</i> |  The retry timeout for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
 | <code>pipelineRuns.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by pipeline run pods. If empty, a default pod security policy will be created. | empty |
+| <code>pipelineRuns.<wbr/><b>sidecars</b></code><br/><i>list</i> | A list of sidecar containers for the task, as specified by [Tekton documentation](https://tekton.dev/vault/pipelines-main/tasks/#specifying-sidecars). | empty |
+| <code>pipelineRuns.<wbr/><b></b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by pipeline run pods. If empty, a default pod security policy will be created. | empty |
 | <code>pipelineRuns.<wbr/><b>timeout</b></code><br/><i>[duration][type-duration]</i> |  The maximum execution time of pipelines. | `60m` |
 | <code>pipelineRuns.<wbr/><b>networkPolicy</b></code><br/><i>string</i> | <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>networkPolicies</code> instead. | |
 | <code>pipelineRuns.<wbr/><b>defaultNetworkPolicyName</b></code> | The name of the network policy which is used when no network profile is selected by a pipeline run spec. | `default` if <code>pipelineRuns.<wbr/>networkPolicies</code> is not set or empty. |
