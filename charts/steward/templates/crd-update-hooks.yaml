@@ -1,8 +1,9 @@
 {{- range $path, $content := .Files.Glob "crds/*.yaml" -}}
 {{- $name := regexReplaceAll "\\.[^.]*$" ( $path | base ) "" -}}
 ---
-{{- /* don't create crd for tenants unless tenantController is enabled */ }}
-{{- /* this logic can be removed once 'tenants.yaml' is removed completely from 'crds' directory */ }}
+{{- /* don't create crd for tenants unless tenantController is enabled
+       this logic can be removed once 'tenants.yaml' is removed completely from 'crds' directory
+*/}}
 {{ if or (ne $name "tenants") $.Values.tenantController.enabled }}
 {{ template "steward.hooks.crd-update" ( list $ $name ) }}
 {{- end }}
