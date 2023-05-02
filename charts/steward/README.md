@@ -120,31 +120,6 @@ The tables in the following sections list the configurable parameters of the Ste
 | <code>runController.<wbr/><b>args.<wbr/>k8sAPIRequestTimeout</b></code><br/><i>[duration][type-duration]</i> | The timeout for Kubernetes API requests. A value of zero means no timeout. If empty, a default timeout will be applied. | empty |
 | <code>runController.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by the run controller. If empty, a default pod security policy will be created. | empty |
 
-### Tenant Controller
-
-| Parameter | Description | Default |
-|---|---|---|
-| <code>tenantController.<wbr/><b>enabled</b></code><br/><i>bool</i> | Switch for enabling tenant controller and use of client and tenants. | false |
-| <code>tenantController.<wbr/><b>image.<wbr/>repository</b></code><br/><i>string</i> |  The container registry and repository of the Tenant Controller image. | `stewardci/stewardci-tenant-controller` |
-| <code>tenantController.<wbr/><b>image.<wbr/>tag</b></code><br/><i>string</i> |  The tag of the Tenant Controller image in the container registry. | A fixed image tag. |
-| <code>tenantController.<wbr/><b>image.<wbr/>pullPolicy</b></code><br/><i>string</i> |  The image pull policy for the Tenant Controller image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation.  | `IfNotPresent` |
-| <code>tenantController.<wbr/><b>resources</b></code><br/><i>object of [`RecourceRequirements`][k8s-resourcerequirements]</i> |  The resource requirements of the Tenant Controller container. When overriding, override the complete value, not just subvalues, because the default value might change in future versions and a partial override might not make sense anymore. | Limits and requests set (see `values.yaml`) |
-| <code>tenantController.<wbr/><b>podSecurityContext</b></code><br/><i>object of [`PodSecurityContext`][k8s-podsecuritycontext]</i> |  The pod security context of the Tenant Controller pod. | `{}` |
-| <code>tenantController.<wbr/><b>securityContext</b></code><br/><i>object of [`SecurityContext`][k8s-securitycontext]</i> |  The security context of the Tenant Controller container. | `{}` |
-| <code>tenantController.<wbr/><b>nodeSelector</b></code><br/><i>object</i> |  The `nodeSelector` field of the Tenant Controller [pod spec][k8s-podspec]. | `{}` |
-| <code>tenantController.<wbr/><b>affinity</b></code><br/><i>object of [`Affinity`][k8s-affinity]</i> |  The `affinity` field of the Tenant Controller [pod spec][k8s-podspec]. | `{}` |
-| <code>tenantController.<wbr/><b>tolerations</b></code><br/><i>array of [`Toleration`][k8s-tolerations]</i> |  The `tolerations` field of the Tenant Controller [pod spec][k8s-podspec]. | `[]` |
-| <code>tenantController.<wbr/><b>args.<wbr/>qps</b></code><br/><i>integer</i> |  The maximum queries per second (QPS) from the controller to the cluster. | 5 |
-| <code>tenantController.<wbr/><b>args.<wbr/>burst</b></code><br/><i>integer</i> |  The burst limit for throttle connections (maximum number of concurrent requests). | 10 |
-| <code>tenantController.<wbr/><b>args.<wbr/>threadiness</b></code><br/><i>integer</i> |  The maximum number of reconciliations performed in parallel. | 2 |
-| <code>tenantController.<wbr/><b>args.<wbr/>logVerbosity</b></code> | The log verbosity. Levels are adopted from [Kubernetes logging conventions][k8s-logging-conventions]. | 3 |
-| <code>tenantController.<wbr/><b>args.<wbr/>heartbeatInterval</b></code><br/><i>[duration][type-duration]</i> |  The interval of controller heartbeats. | `1m` |
-| <code>tenantController.<wbr/><b>args.<wbr/>heartbeatLogging</b></code><br/><i>bool</i> |  Whether controller heartbeats should be logged. | `true` |
-| <code>tenantController.<wbr/><b>args.<wbr/>heartbeatLogLevel</b></code><br/><i>bool</i> |  The log level to be used for controller heartbeats. | `3` |
-| <code>tenantController.<wbr/><b>args.<wbr/>k8sAPIRequestTimeout</b></code><br/><i>[duration][type-duration]</i> | The timeout for Kubernetes API requests. A value of zero means no timeout. If empty, a default timeout will be applied. | empty |
-| <code>tenantController.<wbr/><b>possibleTenantRoles</b></code><br/><i>array of string</i> |  The names of all possible tenant roles. A tenant role is a Kubernetes ClusterRole that the controller binds within a tenant namespace to (a) the default service account of the client namespace the tenant belongs to and (b) to the default service account of the tenant namespace. The tenant role to be used can be configured per Steward client namespace via annotation `steward.sap.com/tenant-role`. | `['steward-tenant']` |
-| <code>tenantController.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by the tenant controller. If empty, a default pod security policy will be created. | empty |
-
 Common parameters:
 
 | Parameter | Description | Default |
