@@ -10,14 +10,14 @@ import (
 
 const name string = "MyName"
 
-func Test_tenantNamespace_GetSecretProvider_works(t *testing.T) {
+func Test_contentNamespace_GetSecretProvider_works(t *testing.T) {
 	// SETUP
 	ctx := context.Background()
 
 	cf := fake.NewClientFactory(
 		fake.SecretOpaque(name, ns1),
 	)
-	examinee := NewTenantNamespace(cf, ns1)
+	examinee := NewContentNamespace(cf, ns1)
 
 	// EXERCISE
 	result := examinee.GetSecretProvider()

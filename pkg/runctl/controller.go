@@ -260,9 +260,9 @@ func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) run.Manager {
 	if c.testing != nil && c.testing.createRunManagerStub != nil {
 		return c.testing.createRunManagerStub
 	}
-	tenant := k8s.NewTenantNamespace(c.factory, pipelineRun.GetNamespace())
-	workFactory := tenant.TargetClientFactory()
-	return c.newRunManager(workFactory, tenant.GetSecretProvider())
+	content := k8s.NewContentNamespace(c.factory, pipelineRun.GetNamespace())
+	workFactory := content.TargetClientFactory()
+	return c.newRunManager(workFactory, content.GetSecretProvider())
 }
 
 func (c *Controller) newRunManager(workFactory k8s.ClientFactory, secretProvider secrets.SecretProvider) run.Manager {

@@ -1639,7 +1639,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 		config := &cfg.PipelineRunsConfigStruct{}
 		examinee = NewRunManager(
 			cf,
-			k8s.NewTenantNamespace(cf, pipelineRun.GetNamespace()).GetSecretProvider(),
+			k8s.NewContentNamespace(cf, pipelineRun.GetNamespace()).GetSecretProvider(),
 		).(*runManager)
 		examinee.testing = newRunManagerTestingWithRequiredStubs()
 		runCtx = &runContext{
