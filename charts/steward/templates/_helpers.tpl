@@ -39,12 +39,6 @@ The component label for the run controller.
 app.kubernetes.io/component: run-controller
 {{- end -}}
 
-{{/*
-The component label for the tenant controller.
-*/}}
-{{- define "steward.tenantController.componentLabel" -}}
-app.kubernetes.io/component: tenant-controller
-{{- end -}}
 
 {{/*
 The additional labels for the service monitors.
@@ -61,17 +55,6 @@ The name of the pod security policy for the run controller.
 {{- define "steward.runController.podSecurityPolicyName" -}}
 {{- if .Values.runController.podSecurityPolicyName -}}
 {{- .Values.runController.podSecurityPolicyName -}}
-{{- else -}}
-{{- include "steward.controllers.podSecurityPolicyName.builtin" . -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-The name of the pod security policy for the tenant controller.
-*/}}
-{{- define "steward.tenantController.podSecurityPolicyName" -}}
-{{- if .Values.tenantController.podSecurityPolicyName -}}
-{{- .Values.tenantController.podSecurityPolicyName -}}
 {{- else -}}
 {{- include "steward.controllers.podSecurityPolicyName.builtin" . -}}
 {{- end -}}
@@ -110,7 +93,7 @@ pod security policy for Steward controllers, otherwise resolves
 to the empty string.
 */}}
 {{- define "steward.controllers.generatePodSecurityPolicy" -}}
-{{- if not (and .Values.tenantController.podSecurityPolicyName .Values.runController.podSecurityPolicyName) -}}
+{{- if not .Values.runController.podSecurityPolicyName -}}
 true
 {{- end -}}
 {{- end -}}
