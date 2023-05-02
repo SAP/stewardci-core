@@ -8,7 +8,6 @@ import (
 	"github.com/mohae/deepcopy"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -115,120 +114,10 @@ func Test__LabelAsSystemManaged__NilArg(t *testing.T) {
 	LabelAsSystemManaged(nil)
 }
 
-func Test__LabelAsOwnedByClientNamespace(t *testing.T) {
-	const (
-		ownerName = "owning-client-namespace-1"
-	)
-
-	// SETUP
-	obj := &DummyObject1{}
-
-	owner := &corev1.Namespace{}
-	owner.SetName(ownerName)
-
-	// EXERCISE
-	resultErr := LabelAsOwnedByClientNamespace(obj, owner)
-
-	// VERIFY
-	assert.NilError(t, resultErr)
-	expectedResultLabels := map[string]string{
-		stewardv1alpha1.LabelOwnerClientName:      ownerName,
-		stewardv1alpha1.LabelOwnerClientNamespace: ownerName,
-	}
-	assert.DeepEqual(t, expectedResultLabels, obj.GetLabels())
-}
-
-func Test__LabelAsOwnedByClientNamespace__NilArg__obj(t *testing.T) {
-	// SETUP
-	owner := &corev1.Namespace{}
-	owner.SetName("name1")
-
-	// EXERCISE
-	resultErr := LabelAsOwnedByClientNamespace(nil, owner)
-
-	// VERIFY
-	assert.NilError(t, resultErr)
-}
-
-func Test__LabelAsOwnedByClientNamespace__NilArg__owner(t *testing.T) {
-	// SETUP
-	obj := &DummyObject1{}
-	obj.SetName("name1")
-
-	// EXERCISE and VERIFY
-	assert.Assert(t, cmp.Panics(func() {
-		LabelAsOwnedByClientNamespace(obj, nil)
-	}))
-}
-
-func Test__LabelAsOwnedByTenant(t *testing.T) {
-	const (
-		ownerName       = "tenant-1"
-		ownerNamespace  = "client-namespace-1"
-		tenantNamespace = "tenant-1-namespace"
-	)
-
-	// SETUP
-	obj := &DummyObject1{}
-
-	owner := &stewardv1alpha1.Tenant{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ownerName,
-			Namespace: ownerNamespace,
-		},
-		Status: stewardv1alpha1.TenantStatus{
-			TenantNamespaceName: tenantNamespace,
-		},
-	}
-
-	// EXERCISE
-	resultErr := LabelAsOwnedByTenant(obj, owner)
-
-	// VERIFY
-	assert.NilError(t, resultErr)
-
-	expectedResultLabels := map[string]string{
-		stewardv1alpha1.LabelOwnerClientName:      ownerNamespace,
-		stewardv1alpha1.LabelOwnerClientNamespace: ownerNamespace,
-		stewardv1alpha1.LabelOwnerTenantName:      ownerName,
-		stewardv1alpha1.LabelOwnerTenantNamespace: tenantNamespace,
-	}
-	assert.DeepEqual(t, expectedResultLabels, obj.GetLabels())
-}
-
-func Test__LabelAsOwnedByTenant__NilArg__obj(t *testing.T) {
-	// SETUP
-	owner := &stewardv1alpha1.Tenant{}
-	owner.SetName("name1")
-	owner.SetNamespace("namespace1")
-
-	// EXERCISE
-	resultErr := LabelAsOwnedByTenant(nil, owner)
-
-	// VERIFY
-	assert.NilError(t, resultErr)
-}
-
-func Test__LabelAsOwnedByTenant__NilArg__owner(t *testing.T) {
-	// SETUP
-	obj := &DummyObject1{}
-	obj.SetName("name1")
-
-	// EXERCISE and VERIFY
-	assert.Assert(t, cmp.Panics(func() {
-		LabelAsOwnedByTenant(obj, nil)
-	}))
-}
-
 func Test__LabelAsOwnedByPipelineRun(t *testing.T) {
 	const (
 		ownerName      = "pipelinerun-1"
 		ownerNamespace = "tenant-1-namespace"
-
-		tenantName = "tenant-1"
-
-		clientName      = "client-1-namespace"
-		clientNamespace = "client-1-namespace"
 	)
 
 	// SETUP
@@ -238,11 +127,6 @@ func Test__LabelAsOwnedByPipelineRun(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ownerName,
 			Namespace: ownerNamespace,
-			Labels: map[string]string{
-				stewardv1alpha1.LabelOwnerClientName:      clientName,
-				stewardv1alpha1.LabelOwnerClientNamespace: clientNamespace,
-				stewardv1alpha1.LabelOwnerTenantName:      tenantName,
-			},
 		},
 	}
 
@@ -253,10 +137,6 @@ func Test__LabelAsOwnedByPipelineRun(t *testing.T) {
 	assert.NilError(t, resultErr)
 
 	expectedResultLabels := map[string]string{
-		stewardv1alpha1.LabelOwnerClientName:      clientName,
-		stewardv1alpha1.LabelOwnerClientNamespace: clientNamespace,
-		stewardv1alpha1.LabelOwnerTenantName:      tenantName,
-		stewardv1alpha1.LabelOwnerTenantNamespace: ownerNamespace,
 		stewardv1alpha1.LabelOwnerPipelineRunName: ownerName,
 	}
 	assert.DeepEqual(t, expectedResultLabels, obj.GetLabels())

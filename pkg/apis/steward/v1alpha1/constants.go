@@ -6,21 +6,6 @@ import (
 
 // annotations
 const (
-	// AnnotationTenantNamespacePrefix is the key of the annotation
-	// of a Steward client namespace defining the prefix of tenant namespaces
-	// belonging to this client.
-	AnnotationTenantNamespacePrefix = steward.GroupName + "/tenant-namespace-prefix"
-
-	// AnnotationTenantNamespaceSuffixLength is the key of the annotation
-	// of a Steward client namespace defining the number of characters used for
-	// the random suffix of a tenant namespace name.
-	AnnotationTenantNamespaceSuffixLength = steward.GroupName + "/tenant-namespace-suffix-length"
-
-	// AnnotationTenantRole is the key of the annotation of a Steward client
-	// namespace defining the name of the ClusterRole to be assigned to the
-	// default service account of a tenant namespace.
-	AnnotationTenantRole = steward.GroupName + "/tenant-role"
-
 	// AnnotationSecretRename is the key of the annotation used to rename a secret.
 	// If this annotation is set on a secret it will be created in the run namespace
 	// with this name if it is listed in the pipelineRuns spec.secrets list.
@@ -52,16 +37,6 @@ const (
 	// namespace assigned to the Steward _client_ that the labelled object is
 	// owned by.
 	LabelOwnerClientNamespace = steward.GroupName + "/owner-client-namespace"
-
-	// LabelOwnerTenantName is the key of the label that identifies the Steward
-	// _tenant_ that the labelled object is owned by.
-	// The label value is the name of the Tenant custom resource.
-	LabelOwnerTenantName = steward.GroupName + "/owner-tenant-name"
-
-	// LabelOwnerTenantNamespace is the key of the label that identifies the
-	// namespace assigned to the Steward _tenant_ that the labelled object is
-	// owned by.
-	LabelOwnerTenantNamespace = steward.GroupName + "/owner-tenant-namespace"
 
 	// LabelOwnerPipelineRunName is the key of the label that identifies the
 	// Steward _pipeline run_ that the labelled object is owned by.
