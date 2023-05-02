@@ -51,6 +51,16 @@
 - version: NEXT
   date: TBD
   changes:
+    - type: enhancement
+      impact: minor
+      title: Introduce switch for usage of tenants and clients 
+      description: |-
+        Steward is providing a client/tenant concept which can be used.
+        It is also possible to use Steward without client namespaces and tenants and use plain k8s namespaces instead. 
+        This change provides a possibility to disable the usage of tenants and client namespaces in the helm chart.
+        This results in less resource consumption on the k8s cluster by saving one controller. 
+      pullRequestNumber: 381
+      jiraIssueNumber: 1126
 
 - version: "0.28.0"
   date: 2023-04-27

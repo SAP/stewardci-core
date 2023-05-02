@@ -124,6 +124,7 @@ The tables in the following sections list the configurable parameters of the Ste
 
 | Parameter | Description | Default |
 |---|---|---|
+| <code>tenantController.<wbr/><b>enabled</b></code><br/><i>bool</i> | Switch for enabling tenant controller and use of client namespaces and tenants. | true |
 | <code>tenantController.<wbr/><b>image.<wbr/>repository</b></code><br/><i>string</i> |  The container registry and repository of the Tenant Controller image. | `stewardci/stewardci-tenant-controller` |
 | <code>tenantController.<wbr/><b>image.<wbr/>tag</b></code><br/><i>string</i> |  The tag of the Tenant Controller image in the container registry. | A fixed image tag. |
 | <code>tenantController.<wbr/><b>image.<wbr/>pullPolicy</b></code><br/><i>string</i> |  The image pull policy for the Tenant Controller image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation.  | `IfNotPresent` |

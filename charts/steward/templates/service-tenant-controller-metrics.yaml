@@ -1,3 +1,4 @@
+{{- if .Values.tenantController.enabled }}
 # Services used for metric collection
 apiVersion: v1
 kind: Service
@@ -19,3 +20,4 @@ spec:
     {{- include "steward.tenantController.componentLabel" . | nindent 4 }}
   sessionAffinity: None
   type: ClusterIP
+{{- end }}
