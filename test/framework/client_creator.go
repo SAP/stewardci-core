@@ -29,14 +29,12 @@ func Setup(t *testing.T) context.Context {
 	if factory == nil {
 		t.Fatalf("failed to create client factory for config file '%s'.", kubeconfig)
 	}
-	testClient := os.Getenv("STEWARD_TEST_CLIENT")
-	if testClient == "" {
-		t.Fatalf("environment variable STEWARD_TEST_CLIENT undefined")
+	namespace := os.Getenv("STEWARD_TEST_NAMESPACE")
+	if namespace == "" {
+		t.Fatalf("environment variable STEWARD_TEST_NAMESPACE undefined")
 	}
-	tenantNamespace := os.Getenv("STEWARD_TEST_TENANT")
 	ctx := context.Background()
-	ctx = SetNamespace(ctx, testClient)
-	ctx = SetTenantNamespace(ctx, tenantNamespace)
+	ctx = SetNamespace(ctx, namespace)
 	ctx = SetClientFactory(ctx, factory)
 	ctx = SetRealmUUID(ctx)
 	klog.V(3).Infof("RealmUUID: %q", GetRealmUUID(ctx))

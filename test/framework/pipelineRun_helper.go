@@ -30,9 +30,7 @@ func ExecutePipelineRunTests(t *testing.T, testPlans ...TestPlan) {
 }
 
 func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...TestPlan) {
-	rollback, ctx := ensureTenant(ctx, t)
-	defer rollback()
-	tnn := GetTenantNamespace(ctx)
+	tnn := GetNamespace(ctx)
 	var waitWG sync.WaitGroup
 	for _, testPlan := range testPlans {
 		waitWG.Add(testPlan.Count)
@@ -180,7 +178,7 @@ func DeletePipelineRun(ctx context.Context, pipelineRun *api.PipelineRun) error 
 	if pipelineRun == nil {
 		return nil
 	}
-	stewardClient := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetTenantNamespace(ctx))
+	stewardClient := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
 	uid := pipelineRun.GetObjectMeta().GetUID()
 	return stewardClient.Delete(ctx, pipelineRun.GetName(), metav1.DeleteOptions{
 		Preconditions: &metav1.Preconditions{UID: &uid},
