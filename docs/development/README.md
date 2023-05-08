@@ -26,7 +26,7 @@ The project "Steward" sources are structured in the following folders:
 
   The controllers use client-go library extensively. The details of interaction points of the controllers with various mechanisms from this library are explained [here][sample-controller].
 
-- pkg/runctl & pkg/tenantctl
+- pkg/runctl
 
   The go implementation of the controllers
 
@@ -35,7 +35,7 @@ The project "Steward" sources are structured in the following folders:
 Although the controller images and the Helm chart are independent they are always released together. Our **release pipeline** performs the following steps:
 
 - Identify the new semver2 release version to release. This is done by taking the `version` from the Chart.yaml and removing the `-dev` suffix. This means, if we need to increase the major or minor version we can do so in the Chart.yaml before, while keeping the `-dev` suffix.
-- Update the Helm chart with the new release version. This includes `version` and `appVersion` in the `Chart.yaml` and `tenantController.image.tag` and `runController.image.tag` in the `values.yaml`. The image tags are prepared with the new version, although the images do not exist yet.
+- Update the Helm chart with the new release version. This includes `version` and `appVersion` in the `Chart.yaml` and `runController.image.tag` in the `values.yaml`. The image tags are prepared with the new version, although the images do not exist yet.
 - Push commit to GitHub into a `prepare-<version>` branch.
 - Push the controller images built and validated earlier in the pipeline with the new version tag.
 - Create a GitHub release tag based on the pushed commit with the chart version changes.
@@ -100,9 +100,6 @@ To build only the controllers run:
 ```sh
 # Build the run controller executable
 go build -o runController ./cmd/run_controller/
-
-# Build the tenant controller executable
-go build -o tenantController ./cmd/tenant_controller/
 ```
 
 ### Code Generation

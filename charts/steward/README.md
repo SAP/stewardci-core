@@ -13,7 +13,6 @@ Install and configure [Steward][] on Kubernetes.
   - [Chart Configuration](#chart-configuration)
     - [Target Namespace](#target-namespace)
     - [Pipeline Run Controller](#pipeline-run-controller)
-    - [Tenant Controller](#tenant-controller)
     - [Monitoring](#monitoring)
     - [Pipeline Runs](#pipeline-runs)
     - [Feature Flags](#feature-flags)
@@ -217,7 +216,7 @@ Chart parameters of type duration must be specified as a string understood by [G
 
 ## Custom Resource Definitions
 
-Steward extends Kubernetes by a set of _custom resources types_ like Tenant and PipelineRun.
+Steward extends Kubernetes by a set of _custom resources types_ like PipelineRun.
 The respective _custom resource definitions_ (CRDs) are handled in a special way:
 
 -   Upon _install_, _upgrade_ and _rollback_ the CRDs will be created or updated to the version from this chart.

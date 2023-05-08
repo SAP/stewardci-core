@@ -37,7 +37,7 @@ The installation can start when there are no pipeline runs at all or _all_ pipel
 For each pipeline run without state you can also see an event with reason 'MaintenanceMode':
 
 ```bash
-kubectl get event -n  "$TENANT_NAMESPACE"
+kubectl get event -n  "$CONTENT_NAMESPACE"
 LAST SEEN   TYPE     REASON            OBJECT                 MESSAGE
 12s         Normal   MaintenanceMode   pipelinerun/ok-n9lcl   Maintenance mode skip
 ```

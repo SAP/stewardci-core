@@ -147,12 +147,12 @@ func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
 	return run
 }
 
-// CreatePipelineRunFromJSON creates a Tenant resource on a client
+// CreatePipelineRunFromJSON creates a PipelineRun resource on a client
 func CreatePipelineRunFromJSON(ctx context.Context, pipelineRunJSON string) (result *api.PipelineRun, err error) {
 	return createPipelineRunFromString(ctx, pipelineRunJSON, "application/json")
 }
 
-// CreatePipelineRunFromYAML creates a Tenant resource on a client
+// CreatePipelineRunFromYAML creates a PipelineRun resource on a client
 func CreatePipelineRunFromYAML(ctx context.Context, pipelineRunYAML string) (result *api.PipelineRun, err error) {
 	return createPipelineRunFromString(ctx, pipelineRunYAML, "application/yaml")
 }
@@ -173,7 +173,7 @@ func createPipelineRunFromString(ctx context.Context, pipelineRunString string, 
 	return
 }
 
-// DeletePipelineRun deletes a Tenant resource from a client
+// DeletePipelineRun deletes a PipelineRun resource from a client
 func DeletePipelineRun(ctx context.Context, pipelineRun *api.PipelineRun) error {
 	if pipelineRun == nil {
 		return nil

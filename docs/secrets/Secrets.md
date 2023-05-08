@@ -29,7 +29,6 @@ By default the images are hosted in a public repository on Docker Hub, which doe
 
 Affected images:
 
-- Tenant Controller pod
 - Run Controller pod
 
 The required image pull secrets must be created in namespace `steward-system` and attached to the `default` service account of that namespace.
