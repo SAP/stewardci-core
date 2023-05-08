@@ -18,6 +18,7 @@ Framework tests test the test framework itself.
 Running the test framework tests:
 
 ```bash
+kubectl -n "$STEWARD_TEST_NAMESPACE" delete secret --all
 ( cd framework && go test ./... -count=1 -tags=frameworktest -v -- --kubeconfig "$KUBECONFIG" )
 ```
 
@@ -25,22 +26,31 @@ Running the test framework tests:
 
 ### Integration Tests
 
+Integratin tests are split into tree groups to avoid client-side throttling and too much load on the test cluster.
+
 ```bash
-( cd integrationtest && go test ./... -count=1 -tags=e2e -v -- --kubeconfig "$KUBECONFIG" )
+kubectl -n "$STEWARD_TEST_NAMESPACE" delete secret --all
+( cd integrationtest && \
+  go test ./... -count=1 -tags=e2eb -v -- --kubeconfig "$KUBECONFIG" && \
+  go test ./... -count=1 -tags=e2ej -v -- --kubeconfig "$KUBECONFIG" && \
+  go test ./... -count=1 -tags=e2es -v -- --kubeconfig "$KUBECONFIG" && \
+)
 ```
 
 ```bash
+kubectl -n "$STEWARD_TEST_NAMESPACE" delete secret --all
 ( cd crds && go test ./... -count=1 -tags=e2e -v -- --kubeconfig "$KUBECONFIG" )
 ```
 
 ### Load Tests
 
 ```bash
+kubectl -n "$STEWARD_TEST_NAMESPACE" delete secret --all
 ( cd loadtest && go test ./... -count=1 -tags=loadtest -v -- --kubeconfig "$KUBECONFIG" )
 ```
 
 ## Cleanup
 
 ```bash
-kubectl delete namespace "$STEWARD_TEST_CLIENT"
+kubectl delete namespace "$STEWARD_TEST_NAMESPACE"
 ```
