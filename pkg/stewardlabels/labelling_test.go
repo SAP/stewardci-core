@@ -117,7 +117,7 @@ func Test__LabelAsSystemManaged__NilArg(t *testing.T) {
 func Test__LabelAsOwnedByPipelineRun(t *testing.T) {
 	const (
 		ownerName      = "pipelinerun-1"
-		ownerNamespace = "tenant-1-namespace"
+		ownerNamespace = "owner-1-namespace"
 	)
 
 	// SETUP
