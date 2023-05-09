@@ -52,12 +52,23 @@
   date: TBD
   changes:
     - type: enhancement
+      impact: incompatible
+      title: Remove tenants and clients coding
+      description: |-
+        Support for tenants and clients is removed by this change.
+      pullRequestNumber: 383
+      jiraIssueNumber: 1126
+
+- version: "0.29.0"
+  date: 2023-05-02
+  changes:
+    - type: enhancement
       impact: minor
       title: Introduce switch for usage of tenants and clients 
       description: |-
         Steward is providing a client/tenant concept which can be used.
-        It is also possible to use Steward without clients and tenants and use plain k8s namespaces instead. 
-        This change provides a possibility to disable the usage of tenants and clients in the helm chart.
+        It is also possible to use Steward without client namespaces and tenants and use plain k8s namespaces instead.
+        This change provides a possibility to disable the usage of tenants and client namespaces in the helm chart.
         This results in less resource consumption on the k8s cluster by saving one controller. 
       pullRequestNumber: 381
       jiraIssueNumber: 1126
