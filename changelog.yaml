@@ -60,7 +60,7 @@
         Replace the usage of client namespaces and tenants with plain k8s namespaces.
         See [README.md](https://github.com/SAP/stewardci-core/blob/master/backend-k8s/steward-client-example/README.md)
       pullRequestNumber: 383
-      jiraIssueNumber: 1126
+      jiraIssueNumber: 819
 
 - version: "0.29.0"
   date: 2023-05-02
