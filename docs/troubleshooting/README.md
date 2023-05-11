@@ -2,16 +2,14 @@
 
 This page provides tips and tricks for troubleshooting
 
-## Run Controller is unresponsible
+## Run Controller is unresponsive
 
-When Run Controller is unresponsive a thread dump can be triggered by
+When the run controller is unresponsive a thread dump can be triggered by
 sending `SIGQUIT` to the corresponding processes:
 
 ```bash
-pkill -QUIT -f '<PATTERN>'
+pkill -QUIT -f 'steward-runctl'
 ```
-
-where `PATTERN` depicts the application `steward-runctl`.
 
 For issuing the command above in a Kubernetes cluster a suitable pod needs to be launched, e.g.
 
@@ -30,5 +28,5 @@ the same node like the run-controller.
 The logs can be accesses via:
 
 ```bash
-kubectl -n steward-system logs -f <POD>
+kubectl -n steward-system logs -f "<POD>"
 ```
