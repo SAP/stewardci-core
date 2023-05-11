@@ -51,13 +51,46 @@
 - version: NEXT
   date: TBD
   changes:
+
     - type: enhancement
       impact: incompatible
-      title: Remove tenants and clients coding
+      title: Remove the tenants concept
       description: |-
-        Support for tenants and clients is removed by this change.
+        The tenants concept was neither really used nor is it a core competency
+        of Steward to manage namespaces. It has therefore been removed completely.
+        Users of Steward are now required to set up the namespaces to manage
+        `PipelineRun` objects on their own.
       upgradeNotes: |-
-        Replace the usage of client namespaces and tenants with plain k8s namespaces.
+        Replace the usage of client namespaces and tenants by plain K8s namespaces.
+        
+        The Helm upgrade does _not_ remove the tenant CRD. This must be done manually:
+        
+        - For all client namespaces where all tenants can be deleted together with all their
+          data in the respective tenant namespaces:
+        
+            - ___Before___ the upgrade of Steward, delete the respective client namespaces.
+              This implicitly deletes the contained tenant object, which in turn lets
+              Steward delete the corresponding tenant namespaces with all their contents,
+              especially PipelineRun objects.
+
+        - ___After___ the upgrade of Steward:
+        
+            - Remove finalizers from all Tenant objects:
+            
+                ```
+                for item in $(kubectl get tenants.steward.sap.com -A -o name); do
+                    kubectl patch "$item" --type='json' -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
+                done
+                ```
+
+            - Remove tenant CRD:
+
+                ```
+                kubectl delete crd tenants.steward.sap.com
+                ```
+                
+                This implicitly deletes all Tenant objects. But as the Tenant controller of Steward
+                has been removed, the corresponding tenant namespaces are kept.
       pullRequestNumber: 383
       jiraIssueNumber: 1126
 
