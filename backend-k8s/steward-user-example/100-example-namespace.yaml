@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  # Specify namespace name here
-  name: steward-content
-  
