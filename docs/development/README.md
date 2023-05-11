@@ -4,10 +4,6 @@
 
 The project "Steward" sources are structured in the following folders:
 
-- backend-k8s
-
-  This folder contains the components which need to be applied to a k8s cluster to provide the backend.
-
 - cmd
 
   The go coding for the command line / image for the pipeline executor
