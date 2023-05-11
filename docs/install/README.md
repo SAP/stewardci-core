@@ -28,15 +28,17 @@ cd stewardci-core
 
 See the [Steward Helm Chart documentation](../../charts/steward/README.md).
 
-### Prepare Namespaces and Service Account for execution of Pipeline Runs
+### Prepare a Namespace to Manage Pipeline Runs
 
-For the execution of Pipeline Runs a separate namespace should be created.
-To be able to create Pipeline Runs in this namespace the corresponding ServiceAccount needs to be mapped to
-the ClusterRole 'steward-edit' or the Default ClusterRole 'edit'. The ClusterRole 'steward-edit' is also
-aggregated to the ClusterRole 'admin'.
+It is recommended to use a dedicated namespace to manage Steward PipelineRun objects
+and associated objects like Secrets.
 
-To be able to create secrets in the new namespace the corresponding permissions need to
-be granted to the service account separately.
+K8s users or service accounts must have the respective privileges to work with Steward
+PipelineRun and K8s Secret objects in the namespace.
+Steward ships with a cluster role `steward-edit` that users and service accounts can
+be bound to. It is also aggregated into cluster roles 'edit' and 'admin'.
+However, using these predefined cluster roles is optional.
+Permissions can also be granted by any other RBAC configuration.
 
 ## More
 
