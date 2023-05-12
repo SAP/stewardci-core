@@ -31,10 +31,7 @@ Integration tests are split into tree groups to avoid client-side throttling and
 ```bash
 kubectl -n "$STEWARD_TEST_NAMESPACE" delete secret --all
 ( cd integrationtest && \
-  go test ./... -count=1 -tags=e2eb -v -- --kubeconfig "$KUBECONFIG" && \
-  go test ./... -count=1 -tags=e2ej -v -- --kubeconfig "$KUBECONFIG" && \
-  go test ./... -count=1 -tags=e2es -v -- --kubeconfig "$KUBECONFIG" && \
-)
+  go test ./... -count=1 -tags=e2e -run Test_PipelineRunSingle -v -- --kubeconfig "$KUBECONFIG" )
 ```
 
 ```bash
