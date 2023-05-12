@@ -137,7 +137,8 @@ func Test__LabelAsOwnedByPipelineRun(t *testing.T) {
 	assert.NilError(t, resultErr)
 
 	expectedResultLabels := map[string]string{
-		stewardv1alpha1.LabelOwnerPipelineRunName: ownerName,
+		stewardv1alpha1.LabelOwnerPipelineRunNamespace: ownerNamespace,
+		stewardv1alpha1.LabelOwnerPipelineRunName:      ownerName,
 	}
 	assert.DeepEqual(t, expectedResultLabels, obj.GetLabels())
 }
