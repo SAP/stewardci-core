@@ -26,8 +26,6 @@ kubectl -n "$STEWARD_TEST_NAMESPACE" delete secret --all
 
 ### Integration Tests
 
-Integration tests are split into tree groups to avoid client-side throttling and too much load on the test cluster.
-
 ```bash
 kubectl -n "$STEWARD_TEST_NAMESPACE" delete secret --all
 ( cd integrationtest && \
