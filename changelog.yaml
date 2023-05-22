@@ -94,6 +94,18 @@
       pullRequestNumber: 383
       jiraIssueNumber: 1126
 
+- version: "0.29.1"
+  date: 2023-05-16
+  changes:
+    - type: internal
+      impact: patch
+      title: Update JFR image (patch)
+      description: |-
+        The elasticsearch plugin of the JFR had an internal bug that is now fixed with
+        https://github.com/SAP/stewardci-jenkinsfilerunner-image/pull/105
+      pullRequestNumber: 385
+      jiraIssueNumber: CPCCICD-1125
+
 - version: "0.29.0"
   date: 2023-05-02
   changes:
