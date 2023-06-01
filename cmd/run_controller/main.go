@@ -22,6 +22,10 @@ const (
 	// metricsPort is the TCP port number to be used by the metrics
 	// HTTP server.
 	metricsPort = 9090
+
+	// errorExitCode is the exit code sent if error occurs during
+	// startup.
+	errorExitCode = 1
 )
 
 var (
@@ -100,16 +104,18 @@ func main() {
 	var err error
 
 	if kubeconfig == "" {
-		klog.Infof("In cluster")
+		klog.InfoS("In cluster")
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			klog.Exitf("failed to load kubeconfig: %s; Hint: You can use parameter '-kubeconfig' for local testing", err.Error())
+			klog.ErrorS(err, "Failed to load kubeconfig. Hint: You can use parameter '-kubeconfig' for local testing")
+			timeoutAndExit(errorExitCode)
 		}
 	} else {
-		klog.Infof("Outside cluster")
+		klog.InfoS("Outside cluster")
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
-			klog.Exitln(err.Error())
+			klog.ErrorS(err, "Failed to create kubeconfig from command line flag", "flag", "-kubeconfig", "path", kubeconfig)
+			timeoutAndExit(errorExitCode)
 		}
 	}
 
@@ -144,4 +150,8 @@ func main() {
 	if err = controller.Run(threadiness, stopCh); err != nil {
 		klog.Fatalf("Error running controller: %s", err.Error())
 	}
+}
+
+func timeoutAndExit(exitCode int) {
+	klog.FlushAndExit(klog.ExitFlushTimeout, exitCode)
 }
