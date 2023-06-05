@@ -62,7 +62,7 @@ type PipelineSpec struct {
 	// run to completion, while the value `abort` indicates that the pipeline
 	// processing should be stopped as soon as possible. An empty string value
 	// is equivalent to value `run`.
-	// TODO: Controller should set intent=run explicitely if not set
+	// TODO: Controller should set intent=run explicitly if not set
 	// +optional
 	Intent Intent `json:"intent,omitempty"`
 
