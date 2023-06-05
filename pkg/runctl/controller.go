@@ -132,7 +132,7 @@ func NewController(factory k8s.ClientFactory, opts ControllerOpts) *Controller {
 
 // meterAllPipelineRunsPeriodic observes certain metrics of all existing pipeline runs (in the informer cache).
 func (c *Controller) meterAllPipelineRunsPeriodic() {
-	klog.V(4).Infof("metering all pipeline runs")
+	klog.V(4).InfoS("Meter all the pipeline runs from informer cache")
 	objs := c.pipelineRunStore.List()
 	for _, obj := range objs {
 		pipelineRun := obj.(*api.PipelineRun)
@@ -149,29 +149,29 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
 
-	klog.V(2).Infof("Sync cache")
+	klog.V(2).InfoS("Sync cache")
 	if ok := cache.WaitForCacheSync(stopCh, c.pipelineRunsSynced, c.tektonTaskRunsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	klog.V(2).Infof("Starting metering of pipeline runs with interval %v", meteringInterval)
+	klog.V(2).InfoS("Start metering of pipeline runs", "interval", meteringInterval)
 	go wait.Until(c.meterAllPipelineRunsPeriodic, meteringInterval, stopCh)
 
 	if c.heartbeatInterval > 0 {
-		klog.V(2).Infof("Starting controller heartbeat stimulator with interval %s", c.heartbeatInterval)
+		klog.V(2).InfoS("Starting controller heartbeat stimulator", "heartbeatInterval", c.heartbeatInterval)
 		go wait.Until(c.heartbeatStimulus, c.heartbeatInterval, stopCh)
 	} else {
 		klog.V(2).Info("Controller heartbeat is disabled")
 	}
 
-	klog.V(2).Infof("Start workers")
+	klog.V(2).InfoS("Start workers", "threadiness", threadiness)
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
-	klog.V(2).Infof("Workers running")
+	klog.V(2).InfoS("Workers running", "threadiness", threadiness)
 
 	<-stopCh
-	klog.V(2).Infof("Workers stopped")
+	klog.V(2).Info("Workers stopped")
 	return nil
 }
 
@@ -223,7 +223,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		klog.V(5).Infof("Finished syncing '%s'", key)
+		klog.V(5).InfoS("Finished syncing pipeline run resource", "pipelineRun", key)
 		return nil
 	}(obj)
 
@@ -246,10 +246,16 @@ func (c *Controller) heartbeat() {
 	metrics.ControllerHeartbeats.Inc()
 }
 
-func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
+func (c *Controller) changeState(ctx context.Context, pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
+	logger := klog.FromContext(ctx)
+
 	err := pipelineRun.UpdateState(state, ts)
 	if err != nil {
-		klog.V(3).Infof("Failed to UpdateState of [%s] to %q: %q", pipelineRun.String(), state, err.Error())
+		logger.V(3).Error(
+			err,
+			"Failed to update the state of pipeline run",
+			"state", state,
+		)
 		return err
 	}
 
@@ -304,6 +310,11 @@ func (c *Controller) syncHandler(key string) error {
 		// If pipelineRun is not found there is nothing to sync
 		return err
 	}
+
+	const pipelineRunLoggerName = "run"
+
+	// create new logger context for logging pipeline run resource's context information
+	ctx = k8s.NewPipelineRunLoggingContext(ctx, pipelineRunLoggerName, pipelineRun)
 
 	doReturn, err := c.handlePipelineRunFinalizerAndDeletion(ctx, pipelineRun)
 	if doReturn || err != nil {
@@ -401,6 +412,9 @@ func (c *Controller) handlePipelineRunFinalizerAndDeletion(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
+	logger := klog.LoggerWithName(klog.FromContext(ctx), "finalize-delete")
+	ctx = klog.NewContext(ctx, logger)
+
 	if pipelineRun.GetStatus().State == api.StateFinished {
 		err := pipelineRun.DeleteFinalizerAndCommitIfExists(ctx)
 		return true, err
@@ -430,7 +444,7 @@ func (c *Controller) handlePipelineRunResultExistsButNotCleaned(
 		state != api.StateCleaning &&
 		state != api.StateFinished {
 
-		err := c.changeState(pipelineRun, api.StateCleaning, metav1.Now())
+		err := c.changeState(ctx, pipelineRun, api.StateCleaning, metav1.Now())
 		if err != nil {
 			panic(err)
 		}
@@ -691,7 +705,7 @@ func (c *Controller) onGetRunError(
 }
 
 func (c *Controller) changeAndCommitStateAndMeter(ctx context.Context, pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
-	if err := c.changeState(pipelineRun, state, ts); err != nil {
+	if err := c.changeState(ctx, pipelineRun, state, ts); err != nil {
 		return err
 	}
 	return c.commitStatusAndMeter(ctx, pipelineRun)
@@ -713,7 +727,7 @@ func (c *Controller) commitStatusAndMeter(ctx context.Context, pipelineRun k8s.P
 	start := time.Now()
 	finishedStates, err := pipelineRun.CommitStatus(ctx)
 	if err != nil {
-		klog.V(6).Infof("commitStatus failed with error %s", err.Error())
+		klog.V(6).InfoS("Pipeline run committing status failed", "err", err.Error())
 		return err
 	}
 	end := time.Now()

@@ -423,13 +423,15 @@ func (r *pipelineRun) commitFinalizerListExclusively(ctx context.Context, finali
 	r.mustBeChangeable()
 	r.mustNotHavePendingChanges()
 
+	logger := klog.FromContext(ctx)
+
 	r.ensureCopy()
 	start := time.Now()
 	r.apiObj.ObjectMeta.Finalizers = finalizerList
 	result, err := r.client.Update(ctx, r.apiObj, metav1.UpdateOptions{})
 	end := time.Now()
 	elapsed := end.Sub(start)
-	klog.V(4).Infof("finish update finalizer after %s in %s", elapsed, r.apiObj.Name)
+	logger.V(4).Info("finish update finalizer after %s in %s", elapsed, r.apiObj.Name)
 	if err != nil {
 		return errors.Wrap(err,
 			fmt.Sprintf("failed to update finalizers [%s]", r.String()))
@@ -565,4 +567,41 @@ func (r *pipelineRun) mustNotHavePendingChanges() {
 	if len(r.changes) > 0 {
 		panic(fmt.Errorf("there are pending changes"))
 	}
+}
+
+func NewPipelineRunLoggingContext(ctx context.Context, loggerName string, pipelineRun PipelineRun) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	if loggerName == "" {
+		loggerName = "run"
+	}
+
+	// pipeline run namespace/run-name
+	runResource := fmt.Sprintf("%s/%s", pipelineRun.GetNamespace(), pipelineRun.GetName())
+
+	// labels
+	labels := pipelineRun.GetAPIObject().GetLabels()
+
+	jobID := labels["com.sap.cloudci.data/jobId"]
+	buildID := labels["com.sap.cloudci.data/buildId"]
+	subaccountID := labels["com.sap.cloudci.data/subaccountId"]
+
+	logger := klog.LoggerWithValues(
+		klog.LoggerWithName(klog.Background(), loggerName),
+		"pipelineRun", runResource,
+		"currentState", pipelineRun.GetStatus().State,
+		"jobID", jobID,
+		"buildID", buildID,
+		"subaccountID", subaccountID,
+	)
+	pipelineRun.GetAPIObject().GetLabels()
+
+	ctx = klog.NewContext(ctx, logger)
+	return ctx
+}
+
+func UpdatePipelineRunLoggingContext(logger klog.Logger, loggerExtendedName string) context.Context {
+	return nil
 }
