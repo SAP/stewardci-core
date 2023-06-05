@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
@@ -23,7 +24,7 @@ const (
 	// HTTP server.
 	metricsPort = 9090
 
-	// errorExitCode is the exit code sent if error occurs during
+	// errorExitCode is the exit code sent if an error occurs during
 	// startup.
 	errorExitCode = 1
 )
@@ -96,8 +97,6 @@ func init() {
 }
 
 func main() {
-	defer klog.Flush()
-
 	system.Namespace() // ensure that namespace is set in environment
 
 	var config *rest.Config
@@ -119,16 +118,34 @@ func main() {
 		}
 	}
 
-	klog.V(3).Infof("Create Factory (resync period: %s, QPS: %d, burst: %d, k8s-api-request-timeout: %s)", resyncPeriod.String(), qps, burst, k8sAPIRequestTimeout.String())
+	klog.V(3).InfoS("Create client factory",
+		"resyncPeriod", resyncPeriod.String(),
+		"QPS", qps,
+		"burst", burst,
+		"kubeAPIRequestTimeout", k8sAPIRequestTimeout.String(),
+	)
+
 	config.QPS = float32(qps)
 	config.Burst = burst
 	config.Timeout = k8sAPIRequestTimeout
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
-	klog.V(2).Infof("Provide metrics on http://0.0.0.0:%d/metrics", metricsPort)
+	if factory == nil {
+		klog.ErrorS(nil, "Failed to create Kubernetes clients",
+			"resyncPeriod", resyncPeriod.String(),
+			"QPS", qps,
+			"burst", burst,
+			"kubeAPIRequestTimeout", k8sAPIRequestTimeout.String(),
+		)
+		timeoutAndExit(errorExitCode)
+	}
+
+	klog.V(2).InfoS("Start metrics server",
+		"endpoint", fmt.Sprintf("http://0.0.0.0:%d/metrics", metricsPort),
+	)
 	metrics.StartServer(metricsPort)
 
-	klog.V(3).Infof("Create Controller")
+	klog.V(3).InfoS("Create Controller")
 	controllerOpts := runctl.ControllerOpts{
 		HeartbeatInterval: heartbeatInterval,
 	}
@@ -138,17 +155,18 @@ func main() {
 	}
 	controller := runctl.NewController(factory, controllerOpts)
 
-	klog.V(3).Infof("Create Signal Handlers")
+	klog.V(3).InfoS("Create Signal Handlers")
 	stopCh := signals.SetupShutdownSignalHandler()
 	signals.SetupThreadDumpSignalHandler()
 
-	klog.V(2).Infof("Start Informer")
+	klog.V(2).InfoS("Start Informer")
 	factory.StewardInformerFactory().Start(stopCh)
 	factory.TektonInformerFactory().Start(stopCh)
 
-	klog.V(2).Infof("Run controller (threadiness=%d)", threadiness)
+	klog.V(2).InfoS("Run pipeline run controller", "threadiness", threadiness)
 	if err = controller.Run(threadiness, stopCh); err != nil {
-		klog.Fatalf("Error running controller: %s", err.Error())
+		klog.ErrorS(err, "Failed to run controller")
+		timeoutAndExit(errorExitCode)
 	}
 }
 
