@@ -22,6 +22,10 @@ import (
 	klog "k8s.io/klog/v2"
 )
 
+// PipelineRunLoggerName is a meaningful root name for pipeline run logger
+// and it is used in the contextual logging.
+const PipelineRunLoggerName = "run"
+
 // PipelineRun is a set of utility functions working on an underlying
 // api.PipelineRun API object.
 type PipelineRun interface {
@@ -287,7 +291,6 @@ func (r *pipelineRun) UpdateState(state api.State, timestamp metav1.Time) error 
 		}
 	}
 	r.ensureCopy()
-	klog.V(3).Infof("Update State to %s [%s]", state, r.String())
 	oldStateDetails := r.apiObj.Status.StateDetails
 
 	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
@@ -348,7 +351,7 @@ func (r *pipelineRun) UpdateContainer(newContainerState *corev1.ContainerState) 
 func (r *pipelineRun) StoreErrorAsMessage(err error, prefix string) error {
 	if err != nil {
 		text := fmt.Sprintf("ERROR: %s [%s]: %s", utils.Trim(prefix), r.String(), err.Error())
-		klog.V(3).Infof(text)
+		klog.V(3).Info(text)
 		r.UpdateMessage(text)
 	}
 	return nil
@@ -420,10 +423,10 @@ func (r *pipelineRun) DeleteFinalizerAndCommitIfExists(ctx context.Context) erro
 }
 
 func (r *pipelineRun) commitFinalizerListExclusively(ctx context.Context, finalizerList []string) error {
+	logger := klog.FromContext(ctx)
+
 	r.mustBeChangeable()
 	r.mustNotHavePendingChanges()
-
-	logger := klog.FromContext(ctx)
 
 	r.ensureCopy()
 	start := time.Now()
@@ -431,7 +434,7 @@ func (r *pipelineRun) commitFinalizerListExclusively(ctx context.Context, finali
 	result, err := r.client.Update(ctx, r.apiObj, metav1.UpdateOptions{})
 	end := time.Now()
 	elapsed := end.Sub(start)
-	logger.V(4).Info("finish update finalizer after %s in %s", elapsed, r.apiObj.Name)
+	logger.V(4).Info("Finished updating finalizer", "duration", elapsed)
 	if err != nil {
 		return errors.Wrap(err,
 			fmt.Sprintf("failed to update finalizers [%s]", r.String()))
@@ -465,11 +468,13 @@ func (r *pipelineRun) changeStatusAndStoreForRetry(change changeFunc) error {
 
 // CommitStatus implements part of interface `PipelineRun`.
 func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error) {
+	logger := klog.FromContext(ctx)
+
 	r.mustBeChangeable()
 
-	klog.V(5).Infof("enter commitStatus for pipeline run %q ...", r.String())
+	logger.V(5).Info("Committing pipeline run state")
 	if len(r.changes) == 0 {
-		klog.V(5).Infof("commitStatus no changes found for pipeline run %q.", r.String())
+		klog.V(5).Infof("No pipeline run state change found for committing")
 		return nil, nil
 	}
 
@@ -480,12 +485,10 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 			codeLocation := metrics.CodeLocation(codeLocationSkipFrames)
 			latency := time.Since(start)
 			metrics.Retries.Observe(codeLocation, retryCount, latency)
-			klog.V(5).InfoS("retry was required",
+			logger.V(5).Info("retry required",
 				"location", codeLocation,
 				"count", retryCount,
 				"latency", latency,
-				"namespace", r.GetNamespace(),
-				"pipelineRun", r.GetName(),
 			)
 		}
 	}(time.Now())
@@ -495,14 +498,14 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 		var err error
 
 		if retryCount > 0 {
-			klog.V(5).Infof("commitStatus reload pipeline run for retry %q ...", r.String())
+			logger.V(5).Info("Reload pipeline run for committing its state")
 			fetchedAPIObj, err := r.client.Get(ctx, r.apiObj.GetName(), metav1.GetOptions{})
 			if err != nil {
 				return errors.Wrap(err,
 					"failed to fetch pipeline after update conflict")
 			}
 
-			klog.V(5).Infof("commitStatus applies %d change(s)", len(r.changes))
+			logger.V(5).Info("Apply pipeline run state commit", "changes", len(r.changes))
 			changeError = r.redoChanges(fetchedAPIObj)
 			if changeError != nil {
 				return nil
@@ -569,6 +572,8 @@ func (r *pipelineRun) mustNotHavePendingChanges() {
 	}
 }
 
+// NewPipelineRunLoggingContext will return new pipeline run logging context for
+// contextual logging
 func NewPipelineRunLoggingContext(ctx context.Context, loggerName string, pipelineRun PipelineRun) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -579,7 +584,7 @@ func NewPipelineRunLoggingContext(ctx context.Context, loggerName string, pipeli
 	}
 
 	// pipeline run namespace/run-name
-	runResource := fmt.Sprintf("%s/%s", pipelineRun.GetNamespace(), pipelineRun.GetName())
+	run := fmt.Sprintf("%s/%s", pipelineRun.GetNamespace(), pipelineRun.GetName())
 
 	// labels
 	labels := pipelineRun.GetAPIObject().GetLabels()
@@ -590,8 +595,7 @@ func NewPipelineRunLoggingContext(ctx context.Context, loggerName string, pipeli
 
 	logger := klog.LoggerWithValues(
 		klog.LoggerWithName(klog.Background(), loggerName),
-		"pipelineRun", runResource,
-		"currentState", pipelineRun.GetStatus().State,
+		"pipelineRun", run,
 		"jobID", jobID,
 		"buildID", buildID,
 		"subaccountID", subaccountID,
@@ -602,6 +606,31 @@ func NewPipelineRunLoggingContext(ctx context.Context, loggerName string, pipeli
 	return ctx
 }
 
-func UpdatePipelineRunLoggingContext(logger klog.Logger, loggerExtendedName string) context.Context {
-	return nil
+// UpdateLoggerContext adds new logging parameters (key-value pairs) to enable
+// contextual logging. Conditionally it will append the logger name describing
+// the scope or specific action or state of system in the log messages.
+//
+// ctx is the existing context.Context object.
+//
+// loggerExtendedName is an optional parameter. If you want to append the root logger
+// (from the ctx) then provide appropriate string. The log message will then start with
+// 'root-logger/extended-logger-name ...'. In case of empty string (""),
+// only the logging parameters (kvs) will be updated to the context object.
+//
+// kvs is a slice with the elements as key-value pairs to enable structured logging.
+// For example - ["key1", "value1", "key2", "value2"]
+//
+// Returns new context object with the updated values.
+func UpdateLoggerContext(ctx context.Context, loggerExtendedName string, kvs ...interface{}) context.Context {
+
+	logger := klog.FromContext(ctx)
+	if loggerExtendedName != "" {
+		logger = klog.LoggerWithName(klog.FromContext(ctx), loggerExtendedName)
+	}
+
+	if kvs != nil && len(kvs)%2 == 0 {
+		logger = klog.LoggerWithValues(logger, kvs...)
+	}
+
+	return klog.NewContext(ctx, logger)
 }

@@ -216,6 +216,8 @@ func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext
 }
 
 func (c *runManager) attachAllSecrets(ctx context.Context, runCtx *runContext, accountManager k8s.ServiceAccountManager, pipelineCloneSecretName string, imagePullSecrets []string) (*k8s.ServiceAccountWrap, error) {
+	logger := klog.FromContext(ctx)
+
 	var serviceAccount *k8s.ServiceAccountWrap
 	for { // retry loop
 		var err error
@@ -235,10 +237,10 @@ func (c *runManager) attachAllSecrets(ctx context.Context, runCtx *runContext, a
 		}
 		if k8serrors.IsConflict(err) {
 			// resource version conflict -> retry update with latest version
-			klog.V(4).Infof(
-				"retrying update of service account %q in namespace %q"+
-					" after resource version conflict",
-				serviceAccountName, runCtx.runNamespace,
+			logger.V(4).Info("Retrying service account update",
+				"serviceAccount", serviceAccountName,
+				"namespace", runCtx.runNamespace,
+				"reason", "service account update conflict",
 			)
 		} else {
 			return nil, errors.Wrapf(err, "failed to update service account %q", serviceAccountName)

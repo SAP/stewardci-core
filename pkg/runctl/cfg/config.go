@@ -120,7 +120,7 @@ func (cd configDataMap) parseDuration(key string) (*metav1.Duration, error) {
 	return nil, nil
 }
 
-// LoadPipelineRunsConfig loads the pipelineruns configuration and returns it.
+// LoadPipelineRunsConfig loads the pipeline run's configuration and returns it.
 func LoadPipelineRunsConfig(ctx context.Context, clientFactory k8s.ClientFactory) (*PipelineRunsConfigStruct, error) {
 	dest := &PipelineRunsConfigStruct{}
 

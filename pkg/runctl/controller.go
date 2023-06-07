@@ -249,11 +249,12 @@ func (c *Controller) heartbeat() {
 func (c *Controller) changeState(ctx context.Context, pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
 	logger := klog.FromContext(ctx)
 
+	logger.V(3).Info("Update state", "state", state)
 	err := pipelineRun.UpdateState(state, ts)
 	if err != nil {
 		logger.V(3).Error(
 			err,
-			"Failed to update the state of pipeline run",
+			"Failed to update the state",
 			"state", state,
 		)
 		return err
@@ -311,10 +312,8 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	const pipelineRunLoggerName = "run"
-
 	// create new logger context for logging pipeline run resource's context information
-	ctx = k8s.NewPipelineRunLoggingContext(ctx, pipelineRunLoggerName, pipelineRun)
+	ctx = k8s.NewPipelineRunLoggingContext(ctx, k8s.PipelineRunLoggerName, pipelineRun)
 
 	doReturn, err := c.handlePipelineRunFinalizerAndDeletion(ctx, pipelineRun)
 	if doReturn || err != nil {
@@ -412,8 +411,7 @@ func (c *Controller) handlePipelineRunFinalizerAndDeletion(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
-	logger := klog.LoggerWithName(klog.FromContext(ctx), "finalize-delete")
-	ctx = klog.NewContext(ctx, logger)
+	ctx = k8s.UpdateLoggerContext(ctx, "finalize-delete")
 
 	if pipelineRun.GetStatus().State == api.StateFinished {
 		err := pipelineRun.DeleteFinalizerAndCommitIfExists(ctx)
@@ -437,6 +435,8 @@ func (c *Controller) handlePipelineRunResultExistsButNotCleaned(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) error {
+	ctx = k8s.UpdateLoggerContext(ctx, "cleaning")
+
 	result := pipelineRun.GetStatus().Result
 	state := pipelineRun.GetStatus().State
 
@@ -456,6 +456,8 @@ func (c *Controller) handlePipelineRunNew(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
+	ctx = k8s.UpdateLoggerContext(ctx, "new")
+
 	if pipelineRun.GetStatus().State == api.StateUndefined {
 		if err := pipelineRun.InitState(); err != nil {
 			panic(err)
@@ -468,7 +470,7 @@ func (c *Controller) handlePipelineRunNew(
 			return true, err
 		}
 		if maintenanceMode {
-			err := fmt.Errorf("pipeline execution is paused while the system is in maintenance mode")
+			err := fmt.Errorf("pipeline run execution is paused while the system is in maintenance mode")
 			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
 			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
 			return true, err
@@ -484,6 +486,8 @@ func (c *Controller) handlePipelineRunNew(
 func (c *Controller) ensurePipelineRunsConfig(ctx context.Context, pipelineRun k8s.PipelineRun) (*cfg.PipelineRunsConfigStruct, bool, error) {
 	var pipelineRunsConfig *cfg.PipelineRunsConfigStruct
 	state := pipelineRun.GetStatus().State
+	ctx = k8s.UpdateLoggerContext(ctx, "config-check", "state", state)
+	logger := klog.FromContext(ctx)
 	// TODO do not assume in which phase the config is (not) needed
 	if state == api.StatePreparing || state == api.StateWaiting {
 		var err error
@@ -506,6 +510,7 @@ func (c *Controller) ensurePipelineRunsConfig(ctx context.Context, pipelineRun k
 			return nil, true, err
 		}
 	}
+	logger.V(3).Info("Loaded pipeline run config", getPipelineRunConfigForLogging(*pipelineRunsConfig)...)
 	return pipelineRunsConfig, false, nil
 }
 
@@ -515,6 +520,8 @@ func (c *Controller) handlePipelineRunPrepare(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
+	ctx = k8s.UpdateLoggerContext(ctx, "preparing", getPipelineRunConfigForLogging(*pipelineRunsConfig)...)
+
 	if pipelineRun.GetStatus().State == api.StatePreparing {
 		namespace, auxNamespace, err := runManager.Prepare(ctx, pipelineRun, pipelineRunsConfig)
 		if err != nil {
@@ -526,6 +533,14 @@ func (c *Controller) handlePipelineRunPrepare(
 			}
 			return true, err
 		}
+
+		ctx = k8s.UpdateLoggerContext(ctx, "",
+			"runBuildNamespace", namespace,
+			"runBuildAuxNamespace", auxNamespace,
+		)
+
+		logger := klog.FromContext(ctx)
+		logger.V(3).Info("Created namespace(s) to execute pipeline run builds")
 
 		pipelineRun.UpdateRunNamespace(namespace)
 		pipelineRun.UpdateAuxNamespace(auxNamespace)
@@ -546,6 +561,8 @@ func (c *Controller) handlePipelineRunWaiting(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
+	ctx = k8s.UpdateLoggerContext(ctx, "waiting", getPipelineRunConfigForLogging(*pipelineRunsConfig)...)
+
 	if pipelineRun.GetStatus().State == api.StateWaiting {
 
 		run, err := runManager.GetRun(ctx, pipelineRun)
@@ -680,7 +697,10 @@ func (c *Controller) getWaitTimeout(pipelineRunsConfig *cfg.PipelineRunsConfigSt
 
 // TODO find better name
 func (c *Controller) handleResultError(ctx context.Context, pipelineRun k8s.PipelineRun, result api.Result, message string, err error) error {
+	logger := klog.FromContext(ctx)
+
 	pipelineRun.UpdateMessage(err.Error())
+	logger.V(3).Info("Follows error message")
 	pipelineRun.StoreErrorAsMessage(err, message)
 	return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, metav1.Now())
 }
@@ -696,10 +716,13 @@ func (c *Controller) onGetRunError(
 	result api.Result,
 	message string,
 ) error {
+	logger := klog.FromContext(ctx)
+
 	c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
 	if serrors.IsRecoverable(err) {
 		return err
 	}
+	logger.V(3).Info("Follows error message")
 	pipelineRun.StoreErrorAsMessage(err, message)
 	return c.updateStateAndResult(ctx, pipelineRun, targetState, result, metav1.Now())
 }
@@ -724,15 +747,17 @@ func (c *Controller) updateStateAndResult(ctx context.Context, pipelineRun k8s.P
 }
 
 func (c *Controller) commitStatusAndMeter(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+	logger := klog.FromContext(ctx)
+
 	start := time.Now()
 	finishedStates, err := pipelineRun.CommitStatus(ctx)
 	if err != nil {
-		klog.V(6).InfoS("Pipeline run committing status failed", "err", err.Error())
+		logger.V(6).Info("Pipeline run committing status failed", "err", err.Error())
 		return err
 	}
 	end := time.Now()
 	elapsed := end.Sub(start)
-	klog.V(6).Infof("commit of %q took %v", pipelineRun.String(), elapsed)
+	logger.V(6).Info("Completed pipeline run state", "duration", elapsed)
 	metrics.UpdatesLatency.Observe("UpdateState", elapsed)
 	for _, finishedState := range finishedStates {
 		metrics.PipelineRunsStateFinished.Observe(finishedState)
@@ -744,6 +769,8 @@ func (c *Controller) commitStatusAndMeter(ctx context.Context, pipelineRun k8s.P
 // If the user requested abortion it updates message, result and state
 // to trigger a cleanup.
 func (c *Controller) handlePipelineRunAbort(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+	ctx = k8s.UpdateLoggerContext(ctx, "abort")
+
 	intent := pipelineRun.GetSpec().Intent
 	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {
 		pipelineRun.UpdateMessage("Aborted")
@@ -790,4 +817,22 @@ func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 		klog.V(4).Infof("Add to workqueue '%s'", runKey)
 		c.workqueue.Add(runKey)
 	}
+}
+
+func getPipelineRunConfigForLogging(runConfig cfg.PipelineRunsConfigStruct) []interface{} {
+	return []interface{}{
+		"timeout", runConfig.Timeout.Duration,
+		"timeoutWaiting", runConfig.TimeoutWait.Duration,
+		"limitRange", runConfig.LimitRange,
+		"resourceQuota", runConfig.ResourceQuota,
+		"jfrImage", runConfig.JenkinsfileRunnerImage,
+		"defaultNetworkProfile", runConfig.DefaultNetworkProfile,
+		"tektonTask", runConfig.TektonTaskName,
+		"tektonTaskNamespace", runConfig.TektonTaskNamespace,
+	}
+}
+
+func getPipelineRunStatusForLogging(run k8s.PipelineRun) []interface{} {
+	// WIP - jaythamke
+	return []interface{}{}
 }
