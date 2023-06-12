@@ -38,10 +38,6 @@ func (c *FakeStewardV1alpha1) PipelineRuns(namespace string) v1alpha1.PipelineRu
 	return &FakePipelineRuns{c, namespace}
 }
 
-func (c *FakeStewardV1alpha1) Tenants(namespace string) v1alpha1.TenantInterface {
-	return &FakeTenants{c, namespace}
-}
-
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeStewardV1alpha1) RESTClient() rest.Interface {

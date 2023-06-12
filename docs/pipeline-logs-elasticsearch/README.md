@@ -6,10 +6,9 @@ The [Jenkins Pipeline Elasticsearch Logs plug-in][jenkins-elasticsearch-logs] is
 It connects to the Elasticsearch instance directly, which requires to pass Elasticsearch credentials to the Jenkinsfile Runner.
 
 __Passing Elasticsearch credentials to the Jenkinsfile Runner is a severe security issue.__
-User-supplied code can access these credentials and use them to write arbitrary log entries to Elasticsearch, especially those that appear to belong to another tenant.
+User-supplied code can access these credentials and use them to write arbitrary log entries to Elasticsearch, especially those that appear to belong to another pipeline run.
 
-There is a single Elasticsearch instance used for all tenants' logs, because tenant-specific ElasticSeach instances are too expensive.
-In addition, a single index will be used to hold logs of all tenants, because Elasticsearch does not scale with hundreds or thousands of one-per-tenant indices.
+The logs of _all_ pipeline runs are written to a single index of a single Elasticsearch instance.
 
 ### Future Extensions
 

@@ -10,9 +10,6 @@ rules:
   - apiGroups:
       - steward.sap.com
     resources:
-{{- if .Values.tenantController.enabled }}    
-      - tenants
-{{- end }}
       - pipelineruns
     verbs:
       - create
@@ -35,9 +32,6 @@ rules:
   - apiGroups:
       - steward.sap.com
     resources:
-{{- if .Values.tenantController.enabled }}
-      - tenants
-{{- end }}
       - pipelineruns
     verbs:
       - get

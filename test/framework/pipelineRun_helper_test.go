@@ -19,7 +19,6 @@ func setupTestContext() context.Context {
 	ctx := context.Background()
 	ctx = SetNamespace(ctx, "ns1")
 	factory := fake.NewClientFactory()
-	ctx = SetTenantNamespace(ctx, "ns1")
 	return SetClientFactory(ctx, factory)
 }
 

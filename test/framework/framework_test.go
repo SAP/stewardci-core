@@ -25,7 +25,7 @@ func Test_FirstFinishBeforeSecondStarts(t *testing.T) {
 	test := TestPlan{TestBuilder: PipelineRunWrongName,
 		Count:         2,
 		CreationDelay: time.Second * 1,
-		Name:          "FirstFinishBeforeSecondStartsu",
+		Name:          "FirstFinishBeforeSecondStarts",
 	}
 	ctx := Setup(t)
 	executePipelineRunTests(ctx, t, test)

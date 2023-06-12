@@ -13,7 +13,9 @@ import (
 	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	k8sfake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	k8smocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
+	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	secretproviderfakes "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/fake"
+	k8ssecretprovider "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/k8s"
 	cfg "github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	"github.com/SAP/stewardci-core/pkg/runctl/constants"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
@@ -1600,6 +1602,11 @@ func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
 	}
 }
 
+func dummySecretProvider(factory k8s.ClientFactory, namespace string) secrets.SecretProvider {
+	secretsClient := factory.CoreV1().Secrets(namespace)
+	return k8ssecretprovider.NewProvider(secretsClient, namespace)
+}
+
 func Test__runManager__Log_Elasticsearch(t *testing.T) {
 	t.Parallel()
 
@@ -1639,7 +1646,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 		config := &cfg.PipelineRunsConfigStruct{}
 		examinee = NewRunManager(
 			cf,
-			k8s.NewTenantNamespace(cf, pipelineRun.GetNamespace()).GetSecretProvider(),
+			dummySecretProvider(cf, pipelineRun.GetNamespace()),
 		).(*runManager)
 		examinee.testing = newRunManagerTestingWithRequiredStubs()
 		runCtx = &runContext{

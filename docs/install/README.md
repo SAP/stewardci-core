@@ -28,26 +28,20 @@ cd stewardci-core
 
 See the [Steward Helm Chart documentation](../../charts/steward/README.md).
 
-### Prepare Namespaces for Clients
+### Prepare a Namespace to Manage Pipeline Runs
 
-Each Steward client gets its own client namespace to interact with Steward.
+It is recommended to use a dedicated namespace to manage Steward PipelineRun objects
+and associated objects like Secrets.
 
-Typically a client is a (Web) application that uses Steward as pipeline execution engine.
-Typically one Steward instance has only one client, but there can be any number of clients, e.g. in a test environment.
-
-**Example only:**
-
-```bash
-# edit yaml and apply
-kubectl apply -f ./backend-k8s/steward-client-example
-```
-
-See the yaml files in this folder for more details about configuration options.
+K8s users or service accounts must have the respective privileges to work with Steward
+PipelineRun and K8s Secret objects in the namespace.
+Steward ships with a cluster role `steward-edit` that users and service accounts can
+be bound to. It is also aggregated into cluster roles 'edit' and 'admin'.
+However, using these predefined cluster roles is optional.
+Permissions can also be granted by any other RBAC configuration.
 
 ## More
 
 As a next step you might want to [test your project "Steward"](../examples/README.md) by running example pipelines.
-
-
 
 [tekton-install]: https://github.com/tektoncd/pipeline/blob/master/docs/install.md

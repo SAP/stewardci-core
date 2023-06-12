@@ -25,5 +25,3 @@ limitations under the License.
 package v1alpha1
 
 type PipelineRunExpansion interface{}
-
-type TenantExpansion interface{}

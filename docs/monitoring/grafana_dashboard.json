@@ -52,12 +52,7 @@
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "tenants",
-          "yaxis": 2
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -67,12 +62,6 @@
           "hide": false,
           "legendFormat": "running pipelines",
           "refId": "A"
-        },
-        {
-          "expr": "sum(steward_tenants_total)",
-          "hide": false,
-          "legendFormat": "tenants",
-          "refId": "B"
         }
       ],
       "thresholds": [],
@@ -98,15 +87,6 @@
           "decimals": 0,
           "format": "short",
           "label": "pipelines",
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "decimals": 0,
-          "format": "short",
-          "label": "tenants",
           "logBase": 1,
           "max": null,
           "min": null,
