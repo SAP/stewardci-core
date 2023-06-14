@@ -60,7 +60,7 @@
 
         With this change it is used to be able to define log destinations per
         pipeline run.
-      pullRequestNumber: 0
+      pullRequestNumber: 389
       jiraIssueNumber: 990
 
 - version: "0.30.0"
