@@ -656,14 +656,14 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 
 		if spec.Logging.Elasticsearch.IndexURL != "" {
 
-			_, err := ensureValidElasticsearchIndexURL(spec.Logging.Elasticsearch.IndexURL)
+			validURL, err := ensureValidElasticsearchIndexURL(spec.Logging.Elasticsearch.IndexURL)
 			if err != nil {
 				return errors.Wrapf(err,
 					"field \"spec.logging.elasticsearch.indexURL\" has invalid value %q",
 					spec.Logging.Elasticsearch.IndexURL,
 				)
 			}
-			// use default values from build template for now
+			params = append(params, tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_INDEX_URL", validURL))
 		}
 	}
 	tektonTaskRun.Spec.Params = append(tektonTaskRun.Spec.Params, params...)
