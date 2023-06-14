@@ -10,4 +10,4 @@ spec:
   logging:
     elasticsearch:
       runID: {"build": 1}
-      indexURL: "http://steward-opensearch-proxy-basic-auth-proxy.steward-opensearch-proxy.svc.cluster.local/mr03/_doc"
+      indexURL: "http://steward-opensearch-proxy-basic-auth-proxy.steward-opensearch-proxy.svc.cluster.local/example1/_doc"
