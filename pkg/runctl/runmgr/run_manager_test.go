@@ -1250,6 +1250,100 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	assert.DeepEqual(t, utils.Metav1Duration(4444), taskRun.Spec.Timeout)
 }
 
+func Test__runManager_addTektonTaskRunParamsForLoggingElasticsearch(t *testing.T) {
+	t.Parallel()
+	const (
+		TaskRunParamNameIndexURL  = "PIPELINE_LOG_ELASTICSEARCH_INDEX_URL"
+		TaskRunParamNameRunIDJSON = "PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON"
+		DummyRunID                = "runID1"
+		SampleURL                 = "http://foo.bar/baz"
+	)
+	idParam := tektonStringParam(TaskRunParamNameRunIDJSON, fmt.Sprintf("%q", DummyRunID))
+
+	for _, test := range []struct {
+		name           string
+		spec           *stewardv1alpha1.PipelineSpec
+		expectedParams []tektonv1beta1.Param
+		expectedError  error
+	}{
+		{
+			name: "url in pipeline",
+			spec: &stewardv1alpha1.PipelineSpec{
+				Logging: &stewardv1alpha1.Logging{
+					Elasticsearch: &stewardv1alpha1.Elasticsearch{
+						RunID:    &stewardv1alpha1.CustomJSON{DummyRunID},
+						IndexURL: SampleURL,
+					},
+				},
+			},
+			expectedParams: []tektonv1beta1.Param{
+				idParam,
+				tektonStringParam(TaskRunParamNameIndexURL, SampleURL),
+			},
+		},
+		{
+			name: "no url in pipeline",
+			spec: &stewardv1alpha1.PipelineSpec{
+				Logging: &stewardv1alpha1.Logging{
+					Elasticsearch: &stewardv1alpha1.Elasticsearch{
+						RunID: &stewardv1alpha1.CustomJSON{DummyRunID},
+					},
+				},
+			},
+			expectedParams: []tektonv1beta1.Param{
+				idParam,
+			},
+		},
+		{
+			name: "no logging configured will set url to empty string",
+			spec: &stewardv1alpha1.PipelineSpec{},
+			expectedParams: []tektonv1beta1.Param{
+				tektonStringParam(TaskRunParamNameIndexURL, ""),
+			},
+		},
+		{
+			name: "wrong url returns error",
+			spec: &stewardv1alpha1.PipelineSpec{
+				Logging: &stewardv1alpha1.Logging{
+					Elasticsearch: &stewardv1alpha1.Elasticsearch{
+						RunID:    &stewardv1alpha1.CustomJSON{DummyRunID},
+						IndexURL: "wrongscheme://foo.bar",
+					},
+				},
+			},
+			expectedError: fmt.Errorf(`field "spec.logging.elasticsearch.indexURL" has invalid value "wrongscheme://foo.bar": scheme not supported: "wrongscheme"`),
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			// SETUP
+			h := newTestHelper1(t)
+			mockCtrl := gomock.NewController(t)
+			defer mockCtrl.Finish()
+			mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocksWithSpec(mockCtrl, test.spec)
+
+			examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
+			examinee.testing = newRunManagerTestingWithRequiredStubs()
+
+			runCtx := &runContext{
+				pipelineRun: mockPipelineRun,
+			}
+
+			tektonTaskRun := &tektonv1beta1.TaskRun{}
+
+			// EXERCISE
+			resultError := examinee.addTektonTaskRunParamsForLoggingElasticsearch(runCtx, tektonTaskRun)
+
+			// VERIFY
+			if test.expectedError == nil {
+				assert.NilError(t, resultError)
+			} else {
+				assert.Error(t, resultError, test.expectedError.Error())
+			}
+
+			assert.DeepEqual(t, tektonTaskRun.Spec.Params, test.expectedParams)
+		})
+	}
+}
 func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	t.Parallel()
 
