@@ -250,7 +250,7 @@ func (c *Controller) heartbeat() {
 func (c *Controller) changeState(ctx context.Context, pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
 	logger := klog.FromContext(ctx)
 
-	logger.V(3).Info("Update state", "state", state)
+	logger.V(3).Info("Update state", "updatedState", state)
 	err := pipelineRun.UpdateState(state, ts)
 	if err != nil {
 		logger.V(3).Error(
@@ -563,7 +563,11 @@ func (c *Controller) handlePipelineRunWaiting(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
-	ctx = k8s.UpdateLoggerContext(ctx, "waiting", getPipelineRunConfigForLogging(*pipelineRunsConfig)...)
+	runDetailsForLogging := append(
+		getPipelineRunConfigForLogging(*pipelineRunsConfig),
+		getPipelineRunStatusForLogging(pipelineRun)...,
+	)
+	ctx = k8s.UpdateLoggerContext(ctx, "waiting", runDetailsForLogging...)
 
 	if pipelineRun.GetStatus().State == api.StateWaiting {
 
@@ -639,6 +643,12 @@ func (c *Controller) handlePipelineRunRunning(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
+	runDetailsForLogging := append(
+		getPipelineRunConfigForLogging(*pipelineRunsConfig),
+		getPipelineRunStatusForLogging(pipelineRun)...,
+	)
+	ctx = k8s.UpdateLoggerContext(ctx, "running", runDetailsForLogging...)
+
 	if pipelineRun.GetStatus().State == api.StateRunning {
 
 		run, err := runManager.GetRun(ctx, pipelineRun)
@@ -673,6 +683,12 @@ func (c *Controller) handlePipelineRunCleaning(
 	runManager run.Manager,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
+	ctx = k8s.UpdateLoggerContext(
+		ctx,
+		"cleaning",
+		getPipelineRunStatusForLogging(pipelineRun)...,
+	)
+
 	if pipelineRun.GetStatus().State == api.StateCleaning {
 		err := runManager.Cleanup(ctx, pipelineRun)
 		if err != nil {
@@ -835,6 +851,9 @@ func getPipelineRunConfigForLogging(runConfig cfg.PipelineRunsConfigStruct) []in
 }
 
 func getPipelineRunStatusForLogging(run k8s.PipelineRun) []interface{} {
-	// WIP - jaythamke
-	return []interface{}{}
+	runStatus := run.GetStatus()
+	return []interface{}{
+		"state", runStatus.State,
+		"namespace", runStatus.Namespace,
+	}
 }
