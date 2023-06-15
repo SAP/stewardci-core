@@ -11,12 +11,11 @@ import (
 type contextKey string
 
 const (
-	factoryKey         contextKey = "factory"
-	pipelineRunKey     contextKey = "PipelineRun"
-	namespaceKey       contextKey = "Namespace"
-	tenantNamespaceKey contextKey = "TenantNamespace"
-	testNameKey        contextKey = "testName"
-	realmUUIDKey       contextKey = "realmUUID"
+	factoryKey     contextKey = "factory"
+	pipelineRunKey contextKey = "PipelineRun"
+	namespaceKey   contextKey = "Namespace"
+	testNameKey    contextKey = "testName"
+	realmUUIDKey   contextKey = "realmUUID"
 )
 
 // GetClientFactory returns the client factory from the context
@@ -37,20 +36,6 @@ func GetNamespace(ctx context.Context) string {
 // SetNamespace sets the client namespace to the context
 func SetNamespace(ctx context.Context, namespace string) context.Context {
 	return context.WithValue(ctx, namespaceKey, namespace)
-}
-
-// GetTenantNamespace returns the tenant namespace from the context
-func GetTenantNamespace(ctx context.Context) string {
-	val := ctx.Value(tenantNamespaceKey)
-	if val == nil {
-		return ""
-	}
-	return val.(string)
-}
-
-// SetTenantNamespace sets the tenant namespace to the context
-func SetTenantNamespace(ctx context.Context, namespace string) context.Context {
-	return context.WithValue(ctx, tenantNamespaceKey, namespace)
 }
 
 // GetPipelineRun returns the pipeline run from the context

@@ -1,6 +1,6 @@
 # Secrets examples
 
-To run these examples you need to [create a Tenant](../README.md#tenant) and [set the environment variable](../README.md#pipelinerun) `TENANT_NAMESPACE` accordingly.
+To run these examples you need to set the environment variable `CONTENT_NAMESPACE` accordingly.
 
 ## Basic examples
 
@@ -11,8 +11,8 @@ You can find some basic examples in [secretExamples.yaml](secretExamples.yaml).
 If a secret is referenced in a pipeline run spec but does not exist, the pipeline run will fail with result `error_content`.
 
 ```bash
-spr=$(kubectl -n "$TENANT_NAMESPACE" create -f pipelinerun_missing_secret.yaml -o name)
-kubectl  -n "$TENANT_NAMESPACE" get "$spr" -o wide
+spr=$(kubectl -n "$CONTENT_NAMESPACE" create -f pipelinerun_missing_secret.yaml -o name)
+kubectl  -n "$CONTENT_NAMESPACE" get "$spr" -o wide
 ```
 
 ```
@@ -28,9 +28,9 @@ As a preparation you need to create the secret with the rename annotation.
 You can find the renamed secret in the run namespace as listed below.
 
 ```bash
-kubectl -n "$TENANT_NAMESPACE" create -f secret_rename.yaml
-spr=$(kubectl -n "$TENANT_NAMESPACE" create -f pipelinerun_secret_rename.yaml -o name)
-runnamespace=$(kubectl  -n "$TENANT_NAMESPACE" get "$spr" -o jsonpath='{.status.namespace}')
+kubectl -n "$CONTENT_NAMESPACE" create -f secret_rename.yaml
+spr=$(kubectl -n "$CONTENT_NAMESPACE" create -f pipelinerun_secret_rename.yaml -o name)
+runnamespace=$(kubectl  -n "$CONTENT_NAMESPACE" get "$spr" -o jsonpath='{.status.namespace}')
 kubectl -n "$runnamespace" get secret
 ```
 

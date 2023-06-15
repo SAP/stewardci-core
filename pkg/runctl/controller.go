@@ -14,6 +14,7 @@ import (
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
+	k8ssecretprovider "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/k8s"
 	"github.com/SAP/stewardci-core/pkg/maintenancemode"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
 	"github.com/SAP/stewardci-core/pkg/runctl/metrics"
@@ -267,9 +268,10 @@ func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) run.Manager {
 	if c.testing != nil && c.testing.createRunManagerStub != nil {
 		return c.testing.createRunManagerStub
 	}
-	tenant := k8s.NewTenantNamespace(c.factory, pipelineRun.GetNamespace())
-	workFactory := tenant.TargetClientFactory()
-	return c.newRunManager(workFactory, tenant.GetSecretProvider())
+	namespace := pipelineRun.GetNamespace()
+	secretsClient := c.factory.CoreV1().Secrets(namespace)
+	secretProvider := k8ssecretprovider.NewProvider(secretsClient, namespace)
+	return c.newRunManager(c.factory, secretProvider)
 }
 
 func (c *Controller) newRunManager(workFactory k8s.ClientFactory, secretProvider secrets.SecretProvider) run.Manager {

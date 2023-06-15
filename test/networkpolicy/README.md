@@ -5,9 +5,8 @@ You need to be in the directory of this README to execute this tests.
 ## Preparation
 
 ```bash
-# create client
-export STEWARD_TEST_CLIENT=$(kubectl apply -f test-client.yaml -o=name)
-export STEWARD_TEST_CLIENT=${STEWARD_TEST_CLIENT#*/}
+STEWARD_TEST_NAMESPACE=$(kubectl create -f - -o name <<<'{ "apiVersion": "v1", "kind": "Namespace", "metadata": { "generateName": "steward-test-networkpolicies-" } }') && \
+export STEWARD_TEST_NAMESPACE=${STEWARD_TEST_NAMESPACE#*/}
 ```
 
 ## Run tests
@@ -33,5 +32,5 @@ cp open_policy{_gcp,}.yaml
 
 ```bash
 # delete client
-kubectl delete namespace $STEWARD_TEST_CLIENT
+kubectl delete namespace "$STEWARD_TEST_NAMESPACE"
 ```

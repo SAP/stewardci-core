@@ -32,8 +32,6 @@ import (
 type Interface interface {
 	// PipelineRuns returns a PipelineRunInformer.
 	PipelineRuns() PipelineRunInformer
-	// Tenants returns a TenantInformer.
-	Tenants() TenantInformer
 }
 
 type version struct {
@@ -50,9 +48,4 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // PipelineRuns returns a PipelineRunInformer.
 func (v *version) PipelineRuns() PipelineRunInformer {
 	return &pipelineRunInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// Tenants returns a TenantInformer.
-func (v *version) Tenants() TenantInformer {
-	return &tenantInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

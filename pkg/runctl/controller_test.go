@@ -961,8 +961,8 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 	// SETUP
 	cf := newFakeClientFactory(
 
-		// the tenant namespace
-		fake.Namespace("tenant-ns-1"),
+		// the content namespace
+		fake.Namespace("content-ns-1"),
 
 		// the Steward PipelineRun in status running
 		runctltesting.StewardObjectFromJSON(t, `{
@@ -970,7 +970,7 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 			"kind": "PipelineRun",
 			"metadata": {
 				"name": "run1",
-				"namespace": "tenant-ns-1",
+				"namespace": "content-ns-1",
 				"uid": "a9e79ee8-69a8-4d8b-8a29-f51b53ada9b7"
 			},
 			"spec": {},
@@ -988,7 +988,7 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 			"metadata": {
 				"name": "steward-run-ns-1",
 				"labels": {
-					"id": "tenant1",
+					"id": "content1",
 					"prefix": "steward-run"
 				}
 			}
@@ -1025,7 +1025,7 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 	defer stopController(t, stopCh)
 
 	// VERIFY
-	run := getPipelineRun(t, "run1", "tenant-ns-1", cf)
+	run := getPipelineRun(t, "run1", "content-ns-1", cf)
 	status := run.GetStatus()
 
 	assert.Assert(t, status != nil)

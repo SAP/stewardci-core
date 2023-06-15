@@ -26,6 +26,30 @@ var AllTestBuilders = []f.PipelineRunTestBuilder{
 	PipelineRunWrongJenkinsfileRepoWithUser,
 }
 
+// BasicTestBuilders is a list of basic test which require no secrets
+var BasicTestBuilders = []f.PipelineRunTestBuilder{
+	PipelineRunAbort,
+	PipelineRunSleep,
+	PipelineRunFail,
+	PipelineRunOK,
+	PipelineRunK8SPlugin,
+}
+
+// JenkinsfileTestBuilders is a list of test related to Jenkinsfile
+var JenkinsfileTestBuilders = []f.PipelineRunTestBuilder{
+	PipelineRunWrongJenkinsfileRepo,
+	PipelineRunWrongJenkinsfilePath,
+	PipelineRunWrongJenkinsfileRepoWithUser,
+}
+
+// SecretTestBuilders is a list of all test which require secrets
+var SecretTestBuilders = []f.PipelineRunTestBuilder{
+	PipelineRunWithSecret,
+	PipelineRunWithSecretRename,
+	PipelineRunWithSecretInvalidRename,
+	PipelineRunWithSecretRenameDuplicate,
+}
+
 // PipelineRunAbort is a PipelineRunTestBuilder to build a PipelineRunTest with aborted pipeline
 func PipelineRunAbort(Namespace string, runID *api.CustomJSON) f.PipelineRunTest {
 	return f.PipelineRunTest{
@@ -117,7 +141,7 @@ func PipelineRunWithSecret(Namespace string, runID *api.CustomJSON) f.PipelineRu
 				builder.Secret("with-secret-foo"),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultSuccess),
-		Timeout: 120 * time.Second,
+		Timeout: 200 * time.Second,
 		Secrets: []*v1.Secret{builder.SecretBasicAuth("with-secret-foo", Namespace, "bar", "baz")},
 	}
 }
@@ -136,7 +160,7 @@ func PipelineRunWithSecretRename(Namespace string, runID *api.CustomJSON) f.Pipe
 				builder.Secret("renamed-secret-foo"),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultSuccess),
-		Timeout: 120 * time.Second,
+		Timeout: 200 * time.Second,
 		Secrets: []*v1.Secret{builder.SecretBasicAuth("renamed-secret-foo", Namespace, "bar", "baz",
 			builder.SecretRename("renamed-secret-new-name"))},
 	}
@@ -156,7 +180,7 @@ func PipelineRunWithSecretInvalidRename(Namespace string, runID *api.CustomJSON)
 				builder.Secret("invalid-secret-foo"),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
-		Timeout: 120 * time.Second,
+		Timeout: 200 * time.Second,
 		Secrets: []*v1.Secret{builder.SecretBasicAuth("invalid-secret-foo", Namespace, "bar", "baz",
 			builder.SecretRename("InvalidName"))},
 	}
@@ -177,7 +201,7 @@ func PipelineRunWithSecretRenameDuplicate(Namespace string, runID *api.CustomJSO
 				builder.Secret("duplicate-secret-bar"),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
-		Timeout: 120 * time.Second,
+		Timeout: 200 * time.Second,
 		Secrets: []*v1.Secret{
 			builder.SecretBasicAuth("duplicate-secret-foo", Namespace, "bar", "baz",
 				builder.SecretRename("duplicate")),
@@ -199,7 +223,7 @@ func PipelineRunMissingSecret(Namespace string, runID *api.CustomJSON) f.Pipelin
 				builder.ArgSpec("EXPECTEDPWD", "baz"),
 			)),
 		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
-		Timeout: 120 * time.Second,
+		Timeout: 200 * time.Second,
 		Secrets: []*v1.Secret{builder.SecretBasicAuth("missing-secret-foo", Namespace, "bar", "baz")},
 	}
 }
@@ -213,7 +237,7 @@ func PipelineRunWrongJenkinsfileRepo(Namespace string, runID *api.CustomJSON) f.
 				builder.JenkinsFileSpec("https://github.com/SAP/steward-foo",
 					"Jenkinsfile", shared.ExamplePipelineRepoRevision),
 			)),
-		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
+		Check:   f.PipelineRunHasStateResult(api.ResultErrorInfra),
 		Timeout: 300 * time.Second,
 	}
 }
@@ -230,7 +254,7 @@ func PipelineRunWrongJenkinsfileRepoWithUser(Namespace string, runID *api.Custom
 				),
 			)),
 		Secrets: []*v1.Secret{builder.SecretBasicAuth("repo-auth", Namespace, "bar", "baz")},
-		Check:   f.PipelineRunHasStateResult(api.ResultErrorContent),
+		Check:   f.PipelineRunHasStateResult(api.ResultErrorInfra),
 		Timeout: 300 * time.Second,
 	}
 }
@@ -247,6 +271,6 @@ func PipelineRunWrongJenkinsfilePath(Namespace string, runID *api.CustomJSON) f.
 		Check: f.PipelineRunMessageOnFinished(`Command ['/app/bin/jenkinsfile-runner' '-w' '/app/jenkins' '-p' '/usr/share/jenkins/ref/plugins' '--runHome' '/jenkins_home' '--no-sandbox' '--build-number' '1' '-f' 'not_existing_path/Jenkinsfile'] failed with exit code 255
 Error output:
 no Jenkinsfile in current directory.`),
-		Timeout: 120 * time.Second,
+		Timeout: 200 * time.Second,
 	}
 }

@@ -11,7 +11,6 @@ Files:
  pkg/featureflag/types_test.go
  pkg/featureflag/types.go
  pkg/runctl/controller.go
- pkg/tenantctl/controller.go
 Copyright: The Kubernetes Authors.
  Modifications Copyright SAP SE 2020. All rights reserved.
 License: Apache-2.0

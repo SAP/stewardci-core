@@ -35,7 +35,6 @@ import (
 type StewardV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	PipelineRunsGetter
-	TenantsGetter
 }
 
 // StewardV1alpha1Client is used to interact with features provided by the steward.sap.com group.
@@ -45,10 +44,6 @@ type StewardV1alpha1Client struct {
 
 func (c *StewardV1alpha1Client) PipelineRuns(namespace string) PipelineRunInterface {
 	return newPipelineRuns(c, namespace)
-}
-
-func (c *StewardV1alpha1Client) Tenants(namespace string) TenantInterface {
-	return newTenants(c, namespace)
 }
 
 // NewForConfig creates a new StewardV1alpha1Client for the given config.

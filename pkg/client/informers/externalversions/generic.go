@@ -61,8 +61,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=steward.sap.com, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("pipelineruns"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Steward().V1alpha1().PipelineRuns().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("tenants"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Steward().V1alpha1().Tenants().Informer()}, nil
 
 	}
 
