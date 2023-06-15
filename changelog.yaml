@@ -51,14 +51,14 @@
 - version: NEXT
   date: TBD
   changes:
-    - title: Make OpenSearch/ElasticSearch index URL configured per pipeline run usable
+    - title: Make OpenSearch/ElasticSearch index URL in pipeline runs usable
       type: enhancement
       impact: minor
       description: >-
         The OpenSearch/ElasticSearch index URL introduced with version 0.6.2 was not
         considered so far.
 
-        With this change it is used to be able to define log destinations per
+        With this change it is used to define log destinations per
         pipeline run.
       pullRequestNumber: 389
       jiraIssueNumber: 990
