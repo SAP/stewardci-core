@@ -1302,6 +1302,15 @@ func Test__runManager_addTektonTaskRunParamsForLoggingElasticsearch(t *testing.T
 			},
 		},
 		{
+			name: "empty logging configured will set url to empty string",
+			spec: &stewardv1alpha1.PipelineSpec{
+				Logging: &stewardv1alpha1.Logging{},
+			},
+			expectedParams: []tektonv1beta1.Param{
+				tektonStringParam(TaskRunParamNameIndexURL, ""),
+			},
+		},
+		{
 			name: "wrong url returns error",
 			spec: &stewardv1alpha1.PipelineSpec{
 				Logging: &stewardv1alpha1.Logging{
