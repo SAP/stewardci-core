@@ -90,11 +90,12 @@ type ControllerOpts struct {
 
 // NewController creates new Controller
 func NewController(factory k8s.ClientFactory, opts ControllerOpts) *Controller {
+	const logVerbosity = 3
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1beta1().TaskRuns()
 	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(klog.V(3).Infof)
+	eventBroadcaster.StartStructuredLogging(logVerbosity)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
 	eventRecorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
 
@@ -253,11 +254,7 @@ func (c *Controller) changeState(ctx context.Context, pipelineRun k8s.PipelineRu
 	logger.V(3).Info("Update state", "updatedState", state)
 	err := pipelineRun.UpdateState(state, ts)
 	if err != nil {
-		logger.V(3).Error(
-			err,
-			"Failed to update the state",
-			"state", state,
-		)
+		logger.V(3).Error(err, "Failed to update the state", "updatedState", state)
 		return err
 	}
 
@@ -804,7 +801,7 @@ func (c *Controller) addToWorkqueue(obj interface{}) {
 		utilruntime.HandleError(err)
 		return
 	}
-	klog.V(4).Infof("Add to workqueue '%s'", key)
+	klog.V(4).InfoS("Add resource to workqueue", "item", key)
 	c.workqueue.Add(key)
 }
 
@@ -826,13 +823,14 @@ func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 			utilruntime.HandleError(fmt.Errorf("error decoding object tombstone, invalid type"))
 			return
 		}
-		klog.V(3).Infof("Recovered deleted object '%s' from tombstone", object.GetName())
+		klog.V(3).InfoS("Recovered deleted object from unknown state",
+			"recoveredObject", object.GetNamespace()+"/"+object.GetName())
 	}
-	klog.V(4).Infof("Processing object: %s", object.GetSelfLink())
+	klog.V(4).InfoS("Processing the object", "object", object.GetNamespace()+"/"+object.GetName())
 
 	runKey := runmgr.GetPipelineRunKeyAnnotation(object)
 	if runKey != "" {
-		klog.V(4).Infof("Add to workqueue '%s'", runKey)
+		klog.V(4).InfoS("Add to workqueue", "runKey", runKey)
 		c.workqueue.Add(runKey)
 	}
 }
