@@ -51,6 +51,10 @@
 - version: NEXT
   date: TBD
   changes:
+
+- version: "0.31.0"
+  date: 2023-06-19
+  changes:
     - title: Make OpenSearch/Elasticsearch index URL in pipeline runs usable
       type: enhancement
       impact: minor
