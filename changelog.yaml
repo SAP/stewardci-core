@@ -51,6 +51,17 @@
 - version: NEXT
   date: TBD
   changes:
+    - title: Make OpenSearch/Elasticsearch index URL in pipeline runs usable
+      type: enhancement
+      impact: minor
+      description: >-
+        The OpenSearch/Elasticsearch index URL introduced with version 0.6.2 was not
+        considered so far.
+
+        With this change it is used to define log destinations per
+        pipeline run.
+      pullRequestNumber: 389
+      jiraIssueNumber: 990
 
 - version: "0.30.0"
   date: 2023-06-12
@@ -131,7 +142,7 @@
       impact: minor
       title: Enable log forwarding
       description: |-
-        We want to add support for log-forwarders (i.e. fluentd) instead of sending logs directly to OpenSearch/ElasticSearch.
+        We want to add support for log-forwarders (i.e. fluentd) instead of sending logs directly to OpenSearch/Elasticsearch.
         For this purpose, two configuration extension are prepared:
 
         * Set environment variables to configure the elasticsearch-log-plugin to forward data to fluentd
