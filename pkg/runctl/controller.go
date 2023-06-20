@@ -252,9 +252,9 @@ func (c *Controller) changeState(ctx context.Context, pipelineRun k8s.PipelineRu
 	logger := klog.FromContext(ctx)
 
 	logger.V(3).Info("Update state", "updatedState", state)
-	err := pipelineRun.UpdateState(state, ts)
+	err := pipelineRun.UpdateState(ctx, state, ts)
 	if err != nil {
-		logger.V(3).Error(err, "Failed to update the state", "updatedState", state)
+		logger.V(3).Error(err, "failed to update the state", "updatedState", state)
 		return err
 	}
 
@@ -458,7 +458,7 @@ func (c *Controller) handlePipelineRunNew(
 	ctx = k8s.UpdateLoggerContext(ctx, "new")
 
 	if pipelineRun.GetStatus().State == api.StateUndefined {
-		if err := pipelineRun.InitState(); err != nil {
+		if err := pipelineRun.InitState(ctx); err != nil {
 			panic(err)
 		}
 	}
@@ -658,7 +658,7 @@ func (c *Controller) handlePipelineRunRunning(
 		}
 
 		containerInfo := run.GetContainerInfo()
-		pipelineRun.UpdateContainer(containerInfo)
+		pipelineRun.UpdateContainer(ctx, containerInfo)
 		if finished, result := run.IsFinished(); finished {
 			pipelineRun.UpdateMessage(run.GetMessage())
 			return true, c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, *run.GetCompletionTime())
@@ -716,7 +716,7 @@ func (c *Controller) handleResultError(ctx context.Context, pipelineRun k8s.Pipe
 
 	pipelineRun.UpdateMessage(err.Error())
 	logger.V(3).Info("Follows error message")
-	pipelineRun.StoreErrorAsMessage(err, message)
+	pipelineRun.StoreErrorAsMessage(ctx, err, message)
 	return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, metav1.Now())
 }
 
@@ -738,7 +738,7 @@ func (c *Controller) onGetRunError(
 		return err
 	}
 	logger.V(3).Info("Follows error message")
-	pipelineRun.StoreErrorAsMessage(err, message)
+	pipelineRun.StoreErrorAsMessage(ctx, err, message)
 	return c.updateStateAndResult(ctx, pipelineRun, targetState, result, metav1.Now())
 }
 
@@ -750,7 +750,7 @@ func (c *Controller) changeAndCommitStateAndMeter(ctx context.Context, pipelineR
 }
 
 func (c *Controller) updateStateAndResult(ctx context.Context, pipelineRun k8s.PipelineRun, state api.State, result api.Result, ts metav1.Time) error {
-	pipelineRun.UpdateResult(result, ts)
+	pipelineRun.UpdateResult(ctx, result, ts)
 	if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, state, ts); err != nil {
 		return err
 	}

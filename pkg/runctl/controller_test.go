@@ -306,7 +306,10 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 				}
 				result, err := getAPIPipelineRun(cf, "foo", "ns1")
 				assert.NilError(t, err)
-				klog.Infof("%+v", result.Status)
+				klog.InfoS(
+					"Pipeline run result",
+					"status", fmt.Sprintf("%+v", result.Status),
+				)
 
 				assert.Equal(t, test.expectedResult, result.Status.Result)
 				assert.Equal(t, test.expectedState, result.Status.State)
@@ -357,7 +360,10 @@ func Test_Controller_syncHandler_delete_on_finished_keeps_result_unchanged(t *te
 				assert.NilError(t, err)
 				result, err := getAPIPipelineRun(cf, "foo", "ns1")
 				assert.NilError(t, err)
-				klog.Infof("%+v", result.Status)
+				klog.InfoS(
+					"Pipeline run result",
+					"status", fmt.Sprintf("%+v", result.Status),
+				)
 
 				assert.Equal(t, currentResult, result.Status.Result)
 				assert.Equal(t, api.StateFinished, result.Status.State)
@@ -1057,7 +1063,7 @@ func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 }
 
 func stopController(t *testing.T, stopCh chan struct{}) {
-	klog.Infof("Trigger controller stop")
+	klog.Info("Trigger controller stop")
 	stopCh <- struct{}{}
 }
 

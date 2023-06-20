@@ -117,23 +117,23 @@ type PipelineRun interface {
 	// before.
 	// The state's start time will be set to the object's creation time.
 	// Fails if a state is set already.
-	InitState() error
+	InitState(ctx context.Context) error
 
 	// UpdateState sets timestamp as end time of current (defined) state (A) and
 	// stores it in the history. If no current state is defined a new state (A)
 	// with creation time of the pipeline run as start time is created. It also
 	// creates a new current state (B) with timestamp as start time.
-	UpdateState(state api.State, timestamp metav1.Time) error
+	UpdateState(ctx context.Context, state api.State, timestamp metav1.Time) error
 
 	// UpdateResult updates the result and finish timestamp.
-	UpdateResult(result api.Result, finishedAt metav1.Time)
+	UpdateResult(ctx context.Context, result api.Result, finishedAt metav1.Time)
 
 	// UpdateContainer updates the container info in the status.
-	UpdateContainer(newContainerState *corev1.ContainerState)
+	UpdateContainer(ctx context.Context, newContainerState *corev1.ContainerState)
 
 	// StoreErrorAsMessage stores err with prefix as message in the status.
 	// If err is nil, the message is NOT updated.
-	StoreErrorAsMessage(err error, prefix string) error
+	StoreErrorAsMessage(ctx context.Context, err error, prefix string) error
 
 	// UpdateRunNamespace sets namespace as the run namespace in the status.
 	UpdateRunNamespace(namespace string)
@@ -264,9 +264,9 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 }
 
 // InitState implements part of interface `PipelineRun`.
-func (r *pipelineRun) InitState() error {
+func (r *pipelineRun) InitState(ctx context.Context) error {
 	r.ensureCopy()
-	klog.V(3).Infof("Set State to New [%s]", r.String())
+	klog.V(3).Info("Set state to 'new'")
 	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 
 		if s.State != api.StateUndefined {
@@ -284,9 +284,9 @@ func (r *pipelineRun) InitState() error {
 }
 
 // UpdateState implements part of interface `PipelineRun`.
-func (r *pipelineRun) UpdateState(state api.State, timestamp metav1.Time) error {
+func (r *pipelineRun) UpdateState(ctx context.Context, state api.State, timestamp metav1.Time) error {
 	if r.apiObj.Status.State == api.StateUndefined {
-		if err := r.InitState(); err != nil {
+		if err := r.InitState(ctx); err != nil {
 			return err
 		}
 	}
@@ -326,7 +326,7 @@ func (r *pipelineRun) String() string {
 }
 
 // UpdateResult implements part of interface `PipelineRun`.
-func (r *pipelineRun) UpdateResult(result api.Result, finishedAT metav1.Time) {
+func (r *pipelineRun) UpdateResult(ctx context.Context, result api.Result, finishedAT metav1.Time) {
 	r.ensureCopy()
 	r.mustChangeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 		s.Result = result
@@ -336,7 +336,7 @@ func (r *pipelineRun) UpdateResult(result api.Result, finishedAT metav1.Time) {
 }
 
 // UpdateContainer implements part of interface `PipelineRun`.
-func (r *pipelineRun) UpdateContainer(newContainerState *corev1.ContainerState) {
+func (r *pipelineRun) UpdateContainer(ctx context.Context, newContainerState *corev1.ContainerState) {
 	if newContainerState == nil {
 		return
 	}
@@ -348,7 +348,7 @@ func (r *pipelineRun) UpdateContainer(newContainerState *corev1.ContainerState) 
 }
 
 // StoreErrorAsMessage implements part of interface `PipelineRun`.
-func (r *pipelineRun) StoreErrorAsMessage(err error, prefix string) error {
+func (r *pipelineRun) StoreErrorAsMessage(ctx context.Context, err error, prefix string) error {
 	if err != nil {
 		text := fmt.Sprintf("ERROR: %s [%s]: %s", utils.Trim(prefix), r.String(), err.Error())
 		klog.V(3).Info(text)
@@ -474,7 +474,7 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 
 	logger.V(5).Info("Committing pipeline run state")
 	if len(r.changes) == 0 {
-		klog.V(5).Infof("No pipeline run state change found for committing")
+		logger.V(5).Info("No pipeline run state change found for committing")
 		return nil, nil
 	}
 
@@ -506,7 +506,7 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 			}
 
 			logger.V(5).Info("Apply pipeline run state commit", "changes", len(r.changes))
-			changeError = r.redoChanges(fetchedAPIObj)
+			changeError = r.redoChanges(ctx, fetchedAPIObj)
 			if changeError != nil {
 				return nil
 			}
@@ -538,14 +538,16 @@ func (r *pipelineRun) getNonEmptyStateItems() []*api.StateItem {
 	return result
 }
 
-func (r *pipelineRun) redoChanges(fetchedAPIObj *api.PipelineRun) error {
+func (r *pipelineRun) redoChanges(ctx context.Context, fetchedAPIObj *api.PipelineRun) error {
+	logger := klog.FromContext(ctx)
+
 	r.apiObj = fetchedAPIObj
 	r.copied = true
 	r.commitRecorders = []commitRecorderFunc{}
-	for i, change := range r.changes {
+	for _, change := range r.changes {
 		commitRecorder, err := change(r.GetStatus())
 		if err != nil {
-			klog.V(5).Infof("applying change %d failed with error: %s", i, err.Error())
+			logger.V(5).Error(err, "failed to apply the change")
 			return err
 		}
 		r.commitRecorders = append(r.commitRecorders, commitRecorder)
