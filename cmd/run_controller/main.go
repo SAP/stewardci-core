@@ -23,10 +23,6 @@ const (
 	// metricsPort is the TCP port number to be used by the metrics
 	// HTTP server.
 	metricsPort = 9090
-
-	// errorExitCode is the exit code sent if an error occurs during
-	// startup.
-	errorExitCode = 1
 )
 
 var (
@@ -97,6 +93,8 @@ func init() {
 }
 
 func main() {
+	defer klog.Flush()
+
 	system.Namespace() // ensure that namespace is set in environment
 
 	var config *rest.Config
@@ -107,14 +105,14 @@ func main() {
 		config, err = rest.InClusterConfig()
 		if err != nil {
 			klog.ErrorS(err, "Failed to load kubeconfig. Hint: You can use parameter '-kubeconfig' for local testing")
-			timeoutAndExit(errorExitCode)
+			flushLogsAndExit()
 		}
 	} else {
 		klog.InfoS("Outside cluster")
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
 			klog.ErrorS(err, "Failed to create kubeconfig from command line flag", "flag", "-kubeconfig", "path", kubeconfig)
-			timeoutAndExit(errorExitCode)
+			flushLogsAndExit()
 		}
 	}
 
@@ -137,15 +135,15 @@ func main() {
 			"burst", burst,
 			"kubeAPIRequestTimeout", k8sAPIRequestTimeout.String(),
 		)
-		timeoutAndExit(errorExitCode)
+		flushLogsAndExit()
 	}
 
 	klog.V(2).InfoS("Start metrics server",
-		"endpoint", fmt.Sprintf("http://0.0.0.0:%d/metrics", metricsPort),
+		"metricsEndpoint", fmt.Sprintf("http://0.0.0.0:%d/metrics", metricsPort),
 	)
 	metrics.StartServer(metricsPort)
 
-	klog.V(3).InfoS("Create Controller")
+	klog.V(3).InfoS("Create controller")
 	controllerOpts := runctl.ControllerOpts{
 		HeartbeatInterval: heartbeatInterval,
 	}
@@ -155,7 +153,7 @@ func main() {
 	}
 	controller := runctl.NewController(factory, controllerOpts)
 
-	klog.V(3).InfoS("Create Signal Handlers")
+	klog.V(3).InfoS("Create signal handlers")
 	stopCh := signals.SetupShutdownSignalHandler()
 	signals.SetupThreadDumpSignalHandler()
 
@@ -166,10 +164,10 @@ func main() {
 	klog.V(2).InfoS("Run pipeline run controller", "threadiness", threadiness)
 	if err = controller.Run(threadiness, stopCh); err != nil {
 		klog.ErrorS(err, "Failed to run controller")
-		timeoutAndExit(errorExitCode)
+		flushLogsAndExit()
 	}
 }
 
-func timeoutAndExit(exitCode int) {
-	klog.FlushAndExit(klog.ExitFlushTimeout, exitCode)
+func flushLogsAndExit() {
+	klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 }
