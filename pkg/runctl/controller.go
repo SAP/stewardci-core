@@ -469,7 +469,7 @@ func (c *Controller) handlePipelineRunNew(
 			return true, err
 		}
 		if maintenanceMode {
-			err := fmt.Errorf("pipeline run execution is paused while the system is in maintenance mode")
+			err := fmt.Errorf("pipeline execution is paused while the system is in maintenance mode")
 			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeNormal, api.EventReasonMaintenanceMode, err.Error())
 			// Return error that the pipeline stays in the queue and will be processed after switching back to normal mode.
 			return true, err
