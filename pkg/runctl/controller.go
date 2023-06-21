@@ -251,7 +251,7 @@ func (c *Controller) heartbeat() {
 func (c *Controller) changeState(ctx context.Context, pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
 	logger := klog.FromContext(ctx)
 
-	logger.V(3).Info("Update state", "updatedState", state)
+	logger.V(3).Info("Update state", "pipelineRunState", state)
 	err := pipelineRun.UpdateState(ctx, state, ts)
 	if err != nil {
 		logger.V(3).Error(err, "failed to update the state", "updatedState", state)
@@ -455,7 +455,7 @@ func (c *Controller) handlePipelineRunNew(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
-	ctx = k8s.UpdateLoggerContext(ctx, "new")
+	ctx = k8s.UpdateLoggerContext(ctx, "new", getPipelineRunStatusForLogging(pipelineRun)...)
 
 	if pipelineRun.GetStatus().State == api.StateUndefined {
 		if err := pipelineRun.InitState(ctx); err != nil {
@@ -485,7 +485,7 @@ func (c *Controller) handlePipelineRunNew(
 func (c *Controller) ensurePipelineRunsConfig(ctx context.Context, pipelineRun k8s.PipelineRun) (*cfg.PipelineRunsConfigStruct, bool, error) {
 	var pipelineRunsConfig *cfg.PipelineRunsConfigStruct
 	state := pipelineRun.GetStatus().State
-	ctx = k8s.UpdateLoggerContext(ctx, "config-check", "state", state)
+	ctx = k8s.UpdateLoggerContext(ctx, "config-check", "pipelineRunState", state)
 	logger := klog.FromContext(ctx)
 	// TODO do not assume in which phase the config is (not) needed
 	if state == api.StatePreparing || state == api.StateWaiting {
@@ -509,7 +509,7 @@ func (c *Controller) ensurePipelineRunsConfig(ctx context.Context, pipelineRun k
 			return nil, true, err
 		}
 	}
-	logger.V(3).Info("Loaded pipeline run config", getPipelineRunConfigForLogging(*pipelineRunsConfig)...)
+	logger.V(3).Info("Loaded pipeline run config")
 	return pipelineRunsConfig, false, nil
 }
 
@@ -519,7 +519,7 @@ func (c *Controller) handlePipelineRunPrepare(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
-	ctx = k8s.UpdateLoggerContext(ctx, "preparing", getPipelineRunConfigForLogging(*pipelineRunsConfig)...)
+	ctx = k8s.UpdateLoggerContext(ctx, "preparing", getPipelineRunStatusForLogging(pipelineRun)...)
 
 	if pipelineRun.GetStatus().State == api.StatePreparing {
 		namespace, auxNamespace, err := runManager.Prepare(ctx, pipelineRun, pipelineRunsConfig)
@@ -560,11 +560,7 @@ func (c *Controller) handlePipelineRunWaiting(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
-	runDetailsForLogging := append(
-		getPipelineRunConfigForLogging(*pipelineRunsConfig),
-		getPipelineRunStatusForLogging(pipelineRun)...,
-	)
-	ctx = k8s.UpdateLoggerContext(ctx, "waiting", runDetailsForLogging...)
+	ctx = k8s.UpdateLoggerContext(ctx, "waiting", getPipelineRunStatusForLogging(pipelineRun)...)
 
 	if pipelineRun.GetStatus().State == api.StateWaiting {
 
@@ -640,11 +636,7 @@ func (c *Controller) handlePipelineRunRunning(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
-	runDetailsForLogging := append(
-		getPipelineRunConfigForLogging(*pipelineRunsConfig),
-		getPipelineRunStatusForLogging(pipelineRun)...,
-	)
-	ctx = k8s.UpdateLoggerContext(ctx, "running", runDetailsForLogging...)
+	ctx = k8s.UpdateLoggerContext(ctx, "running", getPipelineRunStatusForLogging(pipelineRun)...)
 
 	if pipelineRun.GetStatus().State == api.StateRunning {
 
@@ -731,13 +723,10 @@ func (c *Controller) onGetRunError(
 	result api.Result,
 	message string,
 ) error {
-	logger := klog.FromContext(ctx)
-
 	c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
 	if serrors.IsRecoverable(err) {
 		return err
 	}
-	logger.V(3).Info("Follows error message")
 	pipelineRun.StoreErrorAsMessage(ctx, err, message)
 	return c.updateStateAndResult(ctx, pipelineRun, targetState, result, metav1.Now())
 }
@@ -835,23 +824,18 @@ func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 	}
 }
 
-func getPipelineRunConfigForLogging(runConfig cfg.PipelineRunsConfigStruct) []interface{} {
-	return []interface{}{
-		"timeout", runConfig.Timeout.Duration,
-		"timeoutWaiting", runConfig.TimeoutWait.Duration,
-		"limitRange", runConfig.LimitRange,
-		"resourceQuota", runConfig.ResourceQuota,
-		"jfrImage", runConfig.JenkinsfileRunnerImage,
-		"defaultNetworkProfile", runConfig.DefaultNetworkProfile,
-		"tektonTask", runConfig.TektonTaskName,
-		"tektonTaskNamespace", runConfig.TektonTaskNamespace,
-	}
-}
-
 func getPipelineRunStatusForLogging(run k8s.PipelineRun) []interface{} {
 	runStatus := run.GetStatus()
-	return []interface{}{
-		"state", runStatus.State,
-		"namespace", runStatus.Namespace,
+
+	runStatusForLogging := []interface{}{
+		"pipelineRunState", runStatus.State,
+		"pipelineRunExecutionNamespace", runStatus.Namespace,
 	}
+
+	if runStatus.AuxiliaryNamespace != "" {
+		runStatusForLogging = append(runStatusForLogging,
+			"pipelineRunExecutionAuxiliaryNamespace", runStatus.AuxiliaryNamespace)
+	}
+	return runStatusForLogging
+
 }

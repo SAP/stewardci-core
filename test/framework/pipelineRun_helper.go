@@ -99,7 +99,7 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 			klog.InfoS("Test - deleting pipeline run", "testName", run.name, "pipelineRun", pr.GetName())
 			err := DeletePipelineRun(ctx, pr)
 			if err != nil {
-				klog.Errorf("error happened while cleaning up the pipelineRun %q: %q", run.name, err)
+				klog.ErrorS(err, "Failed to clean up pipeline run", "pipelineRunName", run.name)
 			}
 		}
 		waitWG.Done()

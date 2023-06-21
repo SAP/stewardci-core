@@ -42,7 +42,7 @@ func NewSecretHelper(provider SecretProvider, namespace string, client corev1.Se
 // transformers can be defined to transform the secrets before they are stored
 // returns a list of the secret names (after transformation) which were stored
 // In case of an error the copying is stopped. The result list contains the secrets already copied
-// before the error occured. There is no rollback done by this function.
+// before the error occurred. There is no rollback done by this function.
 func (h *secretHelper) CopySecrets(ctx context.Context, secretNames []string, filter SecretFilter, transformers ...SecretTransformer) ([]string, error) {
 	var storedSecretNames []string
 	for _, secretName := range secretNames {

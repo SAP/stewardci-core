@@ -349,9 +349,10 @@ func (r *pipelineRun) UpdateContainer(ctx context.Context, newContainerState *co
 
 // StoreErrorAsMessage implements part of interface `PipelineRun`.
 func (r *pipelineRun) StoreErrorAsMessage(ctx context.Context, err error, prefix string) error {
+	logger := klog.FromContext(ctx)
 	if err != nil {
 		text := fmt.Sprintf("ERROR: %s [%s]: %s", utils.Trim(prefix), r.String(), err.Error())
-		klog.V(3).Info(text)
+		logger.Error(err, text)
 		r.UpdateMessage(text)
 	}
 	return nil
@@ -434,7 +435,7 @@ func (r *pipelineRun) commitFinalizerListExclusively(ctx context.Context, finali
 	result, err := r.client.Update(ctx, r.apiObj, metav1.UpdateOptions{})
 	end := time.Now()
 	elapsed := end.Sub(start)
-	logger.V(4).Info("Finished updating finalizer", "duration", elapsed, "finalizers", finalizerList)
+	logger.V(4).Info("Finished updating finalizer", "duration", elapsed)
 	if err != nil {
 		return errors.Wrap(err,
 			fmt.Sprintf("failed to update finalizers [%s]", r.String()))
@@ -585,27 +586,13 @@ func NewPipelineRunLoggingContext(ctx context.Context, loggerName string, pipeli
 		loggerName = "run"
 	}
 
-	// pipeline run namespace/run-name
-	run := fmt.Sprintf("%s/%s", pipelineRun.GetNamespace(), pipelineRun.GetName())
-
-	// labels
-	labels := pipelineRun.GetAPIObject().GetLabels()
-
-	jobID := labels["com.sap.cloudci.data/jobId"]
-	buildID := labels["com.sap.cloudci.data/buildId"]
-	subaccountID := labels["com.sap.cloudci.data/subaccountId"]
-
 	logger := klog.LoggerWithValues(
 		klog.LoggerWithName(klog.Background(), loggerName),
-		"pipelineRun", run,
-		"jobID", jobID,
-		"buildID", buildID,
-		"subaccountID", subaccountID,
+		"pipelineRunObject", klog.KObj(pipelineRun),
+		"pipelineRunUID", pipelineRun.GetReference().UID,
 	)
-	pipelineRun.GetAPIObject().GetLabels()
 
-	ctx = klog.NewContext(ctx, logger)
-	return ctx
+	return klog.NewContext(ctx, logger)
 }
 
 // UpdateLoggerContext adds new logging parameters (key-value pairs) to enable
@@ -630,7 +617,7 @@ func UpdateLoggerContext(ctx context.Context, loggerExtendedName string, kvs ...
 		logger = klog.LoggerWithName(klog.FromContext(ctx), loggerExtendedName)
 	}
 
-	if kvs != nil && len(kvs)%2 == 0 {
+	if kvs != nil {
 		logger = klog.LoggerWithValues(logger, kvs...)
 	}
 
