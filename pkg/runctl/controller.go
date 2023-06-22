@@ -163,7 +163,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 		klog.V(2).InfoS("Starting controller heartbeat stimulator", "heartbeatInterval", c.heartbeatInterval)
 		go wait.Until(c.heartbeatStimulus, c.heartbeatInterval, stopCh)
 	} else {
-		klog.V(2).Info("Controller heartbeat is disabled")
+		klog.V(2).InfoS("Controller heartbeat is disabled")
 	}
 
 	klog.V(2).InfoS("Start workers", "threadiness", threadiness)
@@ -173,7 +173,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	klog.V(2).InfoS("Workers running", "threadiness", threadiness)
 
 	<-stopCh
-	klog.V(2).Info("Workers stopped")
+	klog.V(2).InfoS("Workers stopped")
 	return nil
 }
 

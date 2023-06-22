@@ -1063,7 +1063,7 @@ func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 }
 
 func stopController(t *testing.T, stopCh chan struct{}) {
-	klog.Info("Trigger controller stop")
+	klog.InfoS("Trigger controller stop")
 	stopCh <- struct{}{}
 }
 
