@@ -584,7 +584,7 @@ func NewPipelineRunLoggingContext(ctx context.Context, loggerName string, pipeli
 	}
 
 	if loggerName == "" {
-		loggerName = "run"
+		loggerName = PipelineRunLoggerName
 	}
 
 	logger := klog.LoggerWithValues(
