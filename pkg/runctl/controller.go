@@ -539,7 +539,7 @@ func (c *Controller) handlePipelineRunPrepare(
 		)
 
 		logger := klog.FromContext(ctx)
-		logger.V(3).Info("Created namespace(s) to execute pipeline run builds")
+		logger.V(3).Info("Created namespace(s) to execute pipeline")
 
 		pipelineRun.UpdateRunNamespace(namespace)
 		pipelineRun.UpdateAuxNamespace(auxNamespace)
