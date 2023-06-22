@@ -104,15 +104,17 @@ func main() {
 		klog.InfoS("In cluster")
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			klog.ErrorS(err, "Failed to load kubeconfig. Hint: You can use parameter '-kubeconfig' for local testing")
-			flushLogsAndExit()
+			logErrorAndExit(err, "Failed to load kubeconfig. Hint: You can use parameter '-kubeconfig' for local testing")
 		}
 	} else {
 		klog.InfoS("Outside cluster")
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
-			klog.ErrorS(err, "Failed to create kubeconfig from command line flag", "flag", "-kubeconfig", "path", kubeconfig)
-			flushLogsAndExit()
+			logErrorAndExit(
+				err, "Failed to create kubeconfig from command line flag",
+				"flag", "-kubeconfig",
+				"path", kubeconfig,
+			)
 		}
 	}
 
@@ -129,13 +131,13 @@ func main() {
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
 	if factory == nil {
-		klog.ErrorS(nil, "Failed to create Kubernetes clients",
+		logErrorAndExit(
+			nil, "Failed to create Kubernetes clients",
 			"resyncPeriod", resyncPeriod.String(),
 			"QPS", qps,
 			"burst", burst,
 			"kubeAPIRequestTimeout", k8sAPIRequestTimeout.String(),
 		)
-		flushLogsAndExit()
 	}
 
 	klog.V(2).InfoS("Start metrics server",
@@ -163,11 +165,11 @@ func main() {
 
 	klog.V(2).InfoS("Run pipeline run controller", "threadiness", threadiness)
 	if err = controller.Run(threadiness, stopCh); err != nil {
-		klog.ErrorS(err, "Failed to run controller")
-		flushLogsAndExit()
+		logErrorAndExit(err, "Failed to run controller")
 	}
 }
 
-func flushLogsAndExit() {
-	klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+func logErrorAndExit(err error, msg string, args ...interface{}) {
+	defer klog.FlushAndExit(klog.ExitFlushTimeout, 1)
+	klog.ErrorS(err, msg, args...)
 }
