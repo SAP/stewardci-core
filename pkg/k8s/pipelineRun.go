@@ -587,11 +587,15 @@ func NewPipelineRunLoggingContext(ctx context.Context, loggerName string, pipeli
 		loggerName = PipelineRunLoggerName
 	}
 
-	logger := klog.LoggerWithValues(
-		klog.LoggerWithName(klog.Background(), loggerName),
-		"pipelineRunObject", klog.KObj(pipelineRun),
-		"pipelineRunUID", pipelineRun.GetReference().UID,
-	)
+	logger := klog.LoggerWithName(klog.Background(), loggerName)
+
+	if pipelineRun != nil {
+		logger = klog.LoggerWithValues(
+			logger,
+			"pipelineRunObject", klog.KObj(pipelineRun),
+			"pipelineRunUID", pipelineRun.GetReference().UID,
+		)
+	}
 
 	return klog.NewContext(ctx, logger)
 }
@@ -612,10 +616,13 @@ func NewPipelineRunLoggingContext(ctx context.Context, loggerName string, pipeli
 //
 // Returns new context object with the updated values.
 func UpdateLoggerContext(ctx context.Context, loggerExtendedName string, kvs ...interface{}) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	logger := klog.FromContext(ctx)
 	if loggerExtendedName != "" {
-		logger = klog.LoggerWithName(klog.FromContext(ctx), loggerExtendedName)
+		logger = klog.LoggerWithName(logger, loggerExtendedName)
 	}
 
 	if kvs != nil {
