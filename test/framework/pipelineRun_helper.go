@@ -152,7 +152,7 @@ func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
 	klog.InfoS(
 		"Test - pipeline run created",
 		"testName", run.name,
-		"pipelineRun", fmt.Sprintf("%s/%s", pr.GetNamespace(), pr.GetName()),
+		"pipelineRunObject", klog.KObj(pr),
 	)
 	ctx = SetPipelineRun(ctx, pr)
 	run.ctx = ctx

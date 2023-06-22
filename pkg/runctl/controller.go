@@ -810,9 +810,9 @@ func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 			return
 		}
 		klog.V(3).InfoS("Recovered deleted object from unknown state",
-			"recoveredObject", object.GetNamespace()+"/"+object.GetName())
+			"recoveredObject", klog.KObj(object))
 	}
-	klog.V(4).InfoS("Processing the object", "object", object.GetNamespace()+"/"+object.GetName())
+	klog.V(4).InfoS("Processing the object", "object", klog.KObj(object))
 
 	runKey := runmgr.GetPipelineRunKeyAnnotation(object)
 	if runKey != "" {
