@@ -787,7 +787,7 @@ func (c *Controller) addToWorkqueue(obj interface{}) {
 		utilruntime.HandleError(err)
 		return
 	}
-	klog.V(4).InfoS("Add resource to workqueue", "item", key)
+	klog.V(4).InfoS("Add resource to workqueue", "queuedObject", key)
 	c.workqueue.Add(key)
 }
 
@@ -816,7 +816,7 @@ func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 
 	runKey := runmgr.GetPipelineRunKeyAnnotation(object)
 	if runKey != "" {
-		klog.V(4).InfoS("Add to workqueue", "runKey", runKey)
+		klog.V(4).InfoS("Add to workqueue", "queuedPipelineRunObject", runKey)
 		c.workqueue.Add(runKey)
 	}
 }
