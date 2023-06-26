@@ -128,7 +128,7 @@ func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
 		klog.InfoS(
 			"Test - setup",
 			"testName", run.name,
-			"setupPeriod", fmt.Sprintf("%.2f", duration.Seconds()),
+			"setupDuration", fmt.Sprintf("%.2f", duration.Seconds()),
 		)
 	}()
 	PipelineRun := pipelineTest.PipelineRun
