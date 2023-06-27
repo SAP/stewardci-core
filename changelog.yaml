@@ -52,6 +52,18 @@
   date: TBD
   changes:
 
+    - title: Update Jenkinsfile Runner image
+      type: enhancement
+      impact: minor
+      description: |-
+        Noteworthy changes:
+        - Build logs are no longer written to the container output if
+          log forwarding to Elasticsearch is enabled via PipelineRun spec.
+        
+        For the details see stewardci-jenkinsfilerunner-image [PR #106](https://github.com/SAP/stewardci-jenkinsfilerunner-image/pull/106) and [PR #108](https://github.com/SAP/stewardci-jenkinsfilerunner-image/pull/108).
+      pullRequestNumber: 391
+      jiraIssueNumber: 1169
+
 - version: "0.31.0"
   date: 2023-06-19
   changes:
