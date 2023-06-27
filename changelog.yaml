@@ -52,11 +52,15 @@
   date: TBD
   changes:
 
-    - title: Use JFR image that includes --no-build-logs option
+    - title: Update Jenkinsfile Runner image
       type: enhancement
       impact: minor
       description: |-
-        For the details see [PR 106](https://github.com/SAP/stewardci-jenkinsfilerunner-image/pull/106) and [PR 108](https://github.com/SAP/stewardci-jenkinsfilerunner-image/pull/108).
+        Noteworthy changes:
+        - Build logs are no longer written to the container output if
+          log forwarding to Elasticsearch is enabled via PipelineRun spec.
+        
+        For the details see stewardci-jenkinsfilerunner-image [PR #106](https://github.com/SAP/stewardci-jenkinsfilerunner-image/pull/106) and [PR #108](https://github.com/SAP/stewardci-jenkinsfilerunner-image/pull/108).
       pullRequestNumber: 391
       jiraIssueNumber: 1169
 
