@@ -117,10 +117,10 @@ func main() {
 	}
 
 	klog.V(3).InfoS("Create client factory",
-		"resyncPeriod", resyncPeriod.String(),
+		"resyncPeriod", resyncPeriod,
 		"QPS", qps,
 		"burst", burst,
-		"kubeAPIRequestTimeout", k8sAPIRequestTimeout.String(),
+		"kubeAPIRequestTimeout", k8sAPIRequestTimeout,
 	)
 
 	config.QPS = float32(qps)
@@ -130,10 +130,10 @@ func main() {
 
 	if factory == nil {
 		klog.ErrorS(nil, "Failed to create Kubernetes clients",
-			"resyncPeriod", resyncPeriod.String(),
+			"resyncPeriod", resyncPeriod,
 			"QPS", qps,
 			"burst", burst,
-			"kubeAPIRequestTimeout", k8sAPIRequestTimeout.String(),
+			"kubeAPIRequestTimeout", k8sAPIRequestTimeout,
 		)
 		flushLogsAndExit()
 	}
