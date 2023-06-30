@@ -16,7 +16,9 @@ func ObjectKey(name string, namespace string) string {
 	meta := ObjectMeta(name, namespace)
 	result, err := cache.MetaNamespaceKeyFunc(&meta)
 	if err != nil {
-		klog.ErrorS(err, "Failed to create key")
+		klog.ErrorS(err, "Failed to extract object metadata",
+			"object", klog.KObj(&meta),
+		)
 	}
 	return result
 }

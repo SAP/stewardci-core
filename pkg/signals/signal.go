@@ -58,8 +58,8 @@ func SetupThreadDumpSignalHandler() {
 		for {
 			sig := <-sigs
 			stacklen := runtime.Stack(buf, true)
-			klog.InfoS("received SIGQUIT", "signal", sig)
-			klog.InfoS("goroutine dump", "dump", buf[:stacklen])
+			klog.InfoS("Received signal", "signal", sig)
+			klog.InfoS("Goroutine dump", "dump", buf[:stacklen])
 		}
 	}()
 }

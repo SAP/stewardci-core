@@ -24,7 +24,7 @@ import (
 
 // PipelineRunLoggerName is a meaningful root name for pipeline run logger
 // and it is used in the contextual logging.
-const PipelineRunLoggerName = "run"
+const PipelineRunLoggerName = "runController"
 
 // PipelineRun is a set of utility functions working on an underlying
 // api.PipelineRun API object.
@@ -350,10 +350,8 @@ func (r *pipelineRun) UpdateContainer(ctx context.Context, newContainerState *co
 
 // StoreErrorAsMessage implements part of interface `PipelineRun`.
 func (r *pipelineRun) StoreErrorAsMessage(ctx context.Context, err error, prefix string) error {
-	logger := klog.FromContext(ctx)
 	if err != nil {
 		text := fmt.Sprintf("ERROR: %s [%s]: %s", utils.Trim(prefix), r.String(), err.Error())
-		logger.Error(err, text)
 		r.UpdateMessage(text)
 	}
 	return nil
@@ -434,9 +432,8 @@ func (r *pipelineRun) commitFinalizerListExclusively(ctx context.Context, finali
 	start := time.Now()
 	r.apiObj.ObjectMeta.Finalizers = finalizerList
 	result, err := r.client.Update(ctx, r.apiObj, metav1.UpdateOptions{})
-	end := time.Now()
-	elapsed := end.Sub(start)
-	logger.V(4).Info("Finished updating finalizer", "duration", elapsed)
+	elapsed := time.Since(start)
+	logger.V(4).Info("Updated finalizers", "finalizersUpdateDuration", elapsed)
 	if err != nil {
 		return errors.Wrap(err,
 			fmt.Sprintf("failed to update finalizers [%s]", r.String()))
@@ -474,9 +471,9 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 
 	r.mustBeChangeable()
 
-	logger.V(5).Info("Committing pipeline run state")
+	logger.V(5).Info("Committing pipeline run status")
 	if len(r.changes) == 0 {
-		logger.V(5).Info("No pipeline run state change found for committing")
+		logger.V(5).Info("There is no status change to commit")
 		return nil, nil
 	}
 
@@ -500,14 +497,14 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 		var err error
 
 		if retryCount > 0 {
-			logger.V(5).Info("Reload pipeline run for committing its state")
+			logger.V(5).Info("Reloading pipeline run after status commit failed due to conflict")
 			fetchedAPIObj, err := r.client.Get(ctx, r.apiObj.GetName(), metav1.GetOptions{})
 			if err != nil {
 				return errors.Wrap(err,
 					"failed to fetch pipeline after update conflict")
 			}
 
-			logger.V(5).Info("Apply pipeline run state commit", "changes", len(r.changes))
+			logger.V(5).Info("Applying status changes again", "count", len(r.changes))
 			changeError = r.redoChanges(ctx, fetchedAPIObj)
 			if changeError != nil {
 				return nil
@@ -549,7 +546,7 @@ func (r *pipelineRun) redoChanges(ctx context.Context, fetchedAPIObj *api.Pipeli
 	for _, change := range r.changes {
 		commitRecorder, err := change(r.GetStatus())
 		if err != nil {
-			logger.V(5).Error(err, "failed to apply the change")
+			logger.V(5).Error(err, "Failed to apply pipeline run status change")
 			return err
 		}
 		r.commitRecorders = append(r.commitRecorders, commitRecorder)

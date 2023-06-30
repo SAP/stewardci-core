@@ -116,7 +116,7 @@ func main() {
 		}
 	}
 
-	klog.V(3).InfoS("Create client factory",
+	klog.V(3).InfoS("Creating client factory",
 		"resyncPeriod", resyncPeriod,
 		"QPS", qps,
 		"burst", burst,
@@ -138,12 +138,12 @@ func main() {
 		flushLogsAndExit()
 	}
 
-	klog.V(2).InfoS("Start metrics server",
+	klog.V(2).InfoS("Starting metrics server",
 		"metricsEndpoint", fmt.Sprintf("http://0.0.0.0:%d/metrics", metricsPort),
 	)
 	metrics.StartServer(metricsPort)
 
-	klog.V(3).InfoS("Create controller")
+	klog.V(3).InfoS("Creating controller")
 	controllerOpts := runctl.ControllerOpts{
 		HeartbeatInterval: heartbeatInterval,
 	}
@@ -153,15 +153,15 @@ func main() {
 	}
 	controller := runctl.NewController(factory, controllerOpts)
 
-	klog.V(3).InfoS("Create signal handlers")
+	klog.V(3).InfoS("Creating signal handlers")
 	stopCh := signals.SetupShutdownSignalHandler()
 	signals.SetupThreadDumpSignalHandler()
 
-	klog.V(2).InfoS("Start Informer")
+	klog.V(2).InfoS("Starting Informers")
 	factory.StewardInformerFactory().Start(stopCh)
 	factory.TektonInformerFactory().Start(stopCh)
 
-	klog.V(2).InfoS("Run pipeline run controller", "threadiness", threadiness)
+	klog.V(2).InfoS("Running pipeline run controller", "threadiness", threadiness)
 	if err = controller.Run(threadiness, stopCh); err != nil {
 		klog.ErrorS(err, "Failed to run controller")
 		flushLogsAndExit()
