@@ -52,6 +52,17 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: major
+      title: Upgrade Go modules and dependencies
+      description: |-
+        - "k8s.io/*" (v0.25.7)
+        - "knative.dev/pkg"  release-1.9 (v0.0.0-20230221145627-8efb3485adcf)
+        - "github.com/benbjohnson/clock" (v1.3.5)
+        - "github.com/tektoncd/pipeline" (v0.46.0)
+      pullRequestNumber: 393
+      jiraIssueNumber: 1313
+
 - version: "0.32.0"
   date: 2023-06-27
   changes:
@@ -63,7 +74,7 @@
         Noteworthy changes:
         - Build logs are no longer written to the container output if
           log forwarding to Elasticsearch is enabled via PipelineRun spec.
-        
+
         For the details see stewardci-jenkinsfilerunner-image [PR #106](https://github.com/SAP/stewardci-jenkinsfilerunner-image/pull/106) and [PR #108](https://github.com/SAP/stewardci-jenkinsfilerunner-image/pull/108).
       pullRequestNumber: 391
       jiraIssueNumber: 1169
@@ -97,21 +108,21 @@
         `PipelineRun` objects on their own.
       upgradeNotes: |-
         Replace the usage of client namespaces and tenants by plain K8s namespaces.
-        
+
         The Helm upgrade does _not_ remove the tenant CRD. This must be done manually:
-        
+
         - For all client namespaces where all tenants can be deleted together with all their
           data in the respective tenant namespaces:
-        
+
             - ___Before___ the upgrade of Steward, delete the respective client namespaces.
               This implicitly deletes the contained tenant object, which in turn lets
               Steward delete the corresponding tenant namespaces with all their contents,
               especially PipelineRun objects.
 
         - ___After___ the upgrade of Steward:
-        
+
             - Remove finalizers from all Tenant objects:
-            
+
                 ```
                 for item in $(kubectl get tenants.steward.sap.com -A -o name); do
                     kubectl patch "$item" --type='json' -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
@@ -123,7 +134,7 @@
                 ```
                 kubectl delete crd tenants.steward.sap.com
                 ```
-                
+
                 This implicitly deletes all Tenant objects. But as the Tenant controller of Steward
                 has been removed, the corresponding tenant namespaces are kept.
       pullRequestNumber: 383
@@ -146,12 +157,12 @@
   changes:
     - type: enhancement
       impact: minor
-      title: Introduce switch for usage of tenants and clients 
+      title: Introduce switch for usage of tenants and clients
       description: |-
         Steward is providing a client/tenant concept which can be used.
         It is also possible to use Steward without client namespaces and tenants and use plain k8s namespaces instead.
         This change provides a possibility to disable the usage of tenants and client namespaces in the helm chart.
-        This results in less resource consumption on the k8s cluster by saving one controller. 
+        This results in less resource consumption on the k8s cluster by saving one controller.
       pullRequestNumber: 381
       jiraIssueNumber: 1126
 
