@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
-	klog "k8s.io/klog/v2"
+	"k8s.io/klog/v2/ktesting"
 	knativetest "knative.dev/pkg/test"
 )
 
@@ -18,9 +18,10 @@ const resyncPeriod = 5 * time.Minute
 // Setup prepares the test environment
 func Setup(t *testing.T) context.Context {
 	t.Helper()
+	logger := ktesting.NewLogger(t, ktesting.NewConfig())
 	kubeconfig := knativetest.Flags.Kubeconfig
 	clusterName := knativetest.Flags.Cluster
-	klog.V(3).InfoS("Create Factory", "kubeconfig", kubeconfig, "resyncPeriod", resyncPeriod.String())
+	logger.V(3).Info("Create Factory", "kubeconfig", kubeconfig, "resyncPeriod", resyncPeriod.String())
 	config, err := knativetest.BuildClientConfig(kubeconfig, clusterName)
 	if err != nil {
 		panic(err.Error())
@@ -37,6 +38,6 @@ func Setup(t *testing.T) context.Context {
 	ctx = SetNamespace(ctx, namespace)
 	ctx = SetClientFactory(ctx, factory)
 	ctx = SetRealmUUID(ctx)
-	klog.V(3).InfoS("RealmUUID", "realmUUID", GetRealmUUID(ctx))
+	logger.V(3).Info("RealmUUID", "realmUUID", GetRealmUUID(ctx))
 	return ctx
 }

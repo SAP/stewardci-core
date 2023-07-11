@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/SAP/stewardci-core/pkg/runctl"
 	"github.com/SAP/stewardci-core/pkg/signals"
+	utils "github.com/SAP/stewardci-core/pkg/utils"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	klog "k8s.io/klog/v2"
@@ -95,28 +97,31 @@ func init() {
 func main() {
 	defer klog.Flush()
 
+	ctx := context.Background()
+	logger := utils.LoggerFromContext(ctx)
+
 	system.Namespace() // ensure that namespace is set in environment
 
 	var config *rest.Config
 	var err error
 
 	if kubeconfig == "" {
-		klog.InfoS("In cluster")
+		logger.Info("In cluster")
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			klog.ErrorS(err, "Failed to load kubeconfig. Hint: You can use parameter '-kubeconfig' for local testing")
+			logger.Error(err, "Failed to load kubeconfig. Hint: You can use parameter '-kubeconfig' for local testing")
 			flushLogsAndExit()
 		}
 	} else {
-		klog.InfoS("Outside cluster")
+		logger.Info("Outside cluster")
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
-			klog.ErrorS(err, "Failed to create kubeconfig from command line flag", "flag", "-kubeconfig", "path", kubeconfig)
+			logger.Error(err, "Failed to create kubeconfig from command line flag", "flag", "-kubeconfig", "path", kubeconfig)
 			flushLogsAndExit()
 		}
 	}
 
-	klog.V(3).InfoS("Creating client factory",
+	logger.V(3).Info("Creating client factory",
 		"resyncPeriod", resyncPeriod,
 		"QPS", qps,
 		"burst", burst,
@@ -129,7 +134,7 @@ func main() {
 	factory := k8s.NewClientFactory(config, resyncPeriod)
 
 	if factory == nil {
-		klog.ErrorS(nil, "Failed to create Kubernetes clients",
+		logger.Error(nil, "Failed to create Kubernetes clients",
 			"resyncPeriod", resyncPeriod,
 			"QPS", qps,
 			"burst", burst,
@@ -138,12 +143,12 @@ func main() {
 		flushLogsAndExit()
 	}
 
-	klog.V(2).InfoS("Starting metrics server",
+	logger.V(2).Info("Starting metrics server",
 		"metricsEndpoint", fmt.Sprintf("http://0.0.0.0:%d/metrics", metricsPort),
 	)
-	metrics.StartServer(metricsPort)
+	metrics.StartServer(logger, metricsPort)
 
-	klog.V(3).InfoS("Creating controller")
+	logger.V(3).Info("Creating controller")
 	controllerOpts := runctl.ControllerOpts{
 		HeartbeatInterval: heartbeatInterval,
 	}
@@ -151,19 +156,25 @@ func main() {
 		tmp := klog.Level(heartbeatLogLevel)
 		controllerOpts.HeartbeatLogLevel = &tmp
 	}
-	controller := runctl.NewController(factory, controllerOpts)
 
-	klog.V(3).InfoS("Creating signal handlers")
-	stopCh := signals.SetupShutdownSignalHandler()
-	signals.SetupThreadDumpSignalHandler()
+	runCtlLogger := utils.LoggerWithName(
+		utils.LoggerFromContext(ctx),
+		runctl.RunControllerLoggerName,
+	)
+	runCtlCtx := klog.NewContext(ctx, runCtlLogger)
+	controller := runctl.NewController(runCtlCtx, factory, controllerOpts)
 
-	klog.V(2).InfoS("Starting Informers")
+	logger.V(3).Info("Creating signal handlers")
+	stopCh := signals.SetupShutdownSignalHandler(logger)
+	signals.SetupThreadDumpSignalHandler(logger)
+
+	logger.V(2).Info("Starting Informers")
 	factory.StewardInformerFactory().Start(stopCh)
 	factory.TektonInformerFactory().Start(stopCh)
 
-	klog.V(2).InfoS("Running pipeline run controller", "threadiness", threadiness)
+	logger.V(2).Info("Running pipeline run controller", "threadiness", threadiness)
 	if err = controller.Run(threadiness, stopCh); err != nil {
-		klog.ErrorS(err, "Failed to run controller")
+		logger.Error(err, "Failed to run controller")
 		flushLogsAndExit()
 	}
 }

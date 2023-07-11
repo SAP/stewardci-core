@@ -20,6 +20,7 @@ import (
 	runmocks "github.com/SAP/stewardci-core/pkg/runctl/run/mocks"
 	"github.com/SAP/stewardci-core/pkg/runctl/runmgr"
 	runctltesting "github.com/SAP/stewardci-core/pkg/runctl/testing"
+	utils "github.com/SAP/stewardci-core/pkg/utils"
 	gomock "github.com/golang/mock/gomock"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	assert "gotest.tools/v3/assert"
@@ -29,7 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
-	klog "k8s.io/klog/v2"
+	"k8s.io/klog/v2/ktesting"
 	"knative.dev/pkg/apis"
 )
 
@@ -47,7 +48,7 @@ func Test_meterAllPipelineRunsPeriodic(t *testing.T) {
 		runctltesting.FakeClusterRole(),
 	)
 
-	c := NewController(cf, ControllerOpts{})
+	c := NewController(context.Background(), cf, ControllerOpts{})
 
 	run := fake.PipelineRun("r1", "ns1", api.PipelineSpec{})
 	c.pipelineRunStore.Add(run)
@@ -190,11 +191,14 @@ func Test_Controller_syncHandler_givesUp_onPipelineRunNotFound(t *testing.T) {
 	mockPipelineRunFetcher.EXPECT().
 		ByKey(ctx, gomock.Any()).
 		Return(nil, nil)
-	examinee := NewController(cf, ControllerOpts{})
+	examinee := NewController(context.Background(), cf, ControllerOpts{})
 	examinee.pipelineRunFetcher = mockPipelineRunFetcher
 
 	// EXERCISE
-	err := examinee.syncHandler("foo/bar")
+	err := examinee.syncHandler(
+		utils.LoggerWithName(examinee.logger, "reconciler"),
+		"foo/bar",
+	)
 
 	// VERIFY
 	assert.NilError(t, err)
@@ -208,7 +212,7 @@ func newController(t *testing.T, runs ...*api.PipelineRun) (*Controller, *fake.C
 	for _, run := range runs {
 		client.PipelineRuns(run.GetNamespace()).Create(ctx, run, metav1.CreateOptions{})
 	}
-	controller := NewController(cf, ControllerOpts{})
+	controller := NewController(context.Background(), cf, ControllerOpts{})
 	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(client)
 	controller.eventRecorder = record.NewFakeRecorder(20)
 	return controller, cf
@@ -276,6 +280,7 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 			t.Run(fmt.Sprintf("%s current state %s", test.name, currentState), func(t *testing.T) {
 				currentState := currentState
 				test := test
+				logger := ktesting.NewLogger(t, ktesting.NewConfig())
 				t.Parallel()
 
 				// SETUP
@@ -296,7 +301,10 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 					loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				}
 				// EXERCISE
-				err := controller.syncHandler("ns1/foo")
+				err := controller.syncHandler(
+					utils.LoggerWithName(controller.logger, "reconciler"),
+					"ns1/foo",
+				)
 
 				// VERIFY
 				if test.expectedError {
@@ -306,7 +314,7 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 				}
 				result, err := getAPIPipelineRun(cf, "foo", "ns1")
 				assert.NilError(t, err)
-				klog.InfoS(
+				logger.Info(
 					"Pipeline run result",
 					"status", fmt.Sprintf("%+v", result.Status),
 				)
@@ -335,7 +343,9 @@ func Test_Controller_syncHandler_delete_on_finished_keeps_result_unchanged(t *te
 			t.Run(fmt.Sprintf("finalizer %t current result %s", hasFinalizer, currentResult), func(t *testing.T) {
 				currentResult := currentResult
 				hasFinalizer := hasFinalizer
+				logger := ktesting.NewLogger(t, ktesting.NewConfig())
 				t.Parallel()
+
 				// SETUP
 				run := fake.PipelineRun("foo", "ns1", api.PipelineSpec{})
 				if hasFinalizer {
@@ -354,13 +364,16 @@ func Test_Controller_syncHandler_delete_on_finished_keeps_result_unchanged(t *te
 					loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				}
 				// EXERCISE
-				err := controller.syncHandler("ns1/foo")
+				err := controller.syncHandler(
+					utils.LoggerWithName(controller.logger, "reconciler"),
+					"ns1/foo",
+				)
 
 				// VERIFY
 				assert.NilError(t, err)
 				result, err := getAPIPipelineRun(cf, "foo", "ns1")
 				assert.NilError(t, err)
-				klog.InfoS(
+				logger.Info(
 					"Pipeline run result",
 					"status", fmt.Sprintf("%+v", result.Status),
 				)
@@ -481,7 +494,10 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				}
 
 				// EXERCISE
-				resultErr := controller.syncHandler("ns1/foo")
+				resultErr := controller.syncHandler(
+					utils.LoggerWithName(controller.logger, "reconciler"),
+					"ns1/foo",
+				)
 
 				// VERIFY
 				if test.expectedError != nil {
@@ -907,7 +923,10 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				}
 
 				// EXERCISE
-				err := controller.syncHandler("ns1/foo")
+				err := controller.syncHandler(
+					utils.LoggerWithName(controller.logger, "reconciler"),
+					"ns1/foo",
+				)
 
 				// VERIFY
 				if test.expectedError != nil {
@@ -951,11 +970,14 @@ func Test_Controller_syncHandler_initiatesRetrying_on500DuringPipelineRunFetch(t
 		ByKey(ctx, gomock.Any()).
 		Return(nil, k8serrors.NewInternalError(fmt.Errorf(message)))
 
-	examinee := NewController(cf, ControllerOpts{})
+	examinee := NewController(context.Background(), cf, ControllerOpts{})
 	examinee.pipelineRunFetcher = mockPipelineRunFetcher
 
 	// EXERCISE
-	err := examinee.syncHandler("foo/bar")
+	err := examinee.syncHandler(
+		utils.LoggerWithName(examinee.logger, "reconciler"),
+		"foo/bar",
+	)
 
 	// VERIFY
 	assert.ErrorContains(t, err, message)
@@ -1047,7 +1069,7 @@ func newTestRunManager(workFactory k8s.ClientFactory, secretProvider secrets.Sec
 
 func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 	stopCh := make(chan struct{})
-	controller := NewController(cf, ControllerOpts{})
+	controller := NewController(context.Background(), cf, ControllerOpts{})
 	controller.testing = &controllerTesting{
 		newRunManagerStub:          newTestRunManager,
 		loadPipelineRunsConfigStub: newEmptyRunsConfig,
@@ -1063,14 +1085,16 @@ func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 }
 
 func stopController(t *testing.T, stopCh chan struct{}) {
-	klog.InfoS("Trigger controller stop")
+	logger := ktesting.NewLogger(t, ktesting.NewConfig())
+	logger.Info("Trigger controller stop")
 	stopCh <- struct{}{}
 }
 
 func start(t *testing.T, controller *Controller, stopCh chan struct{}) {
 	t.Helper()
+	logger := ktesting.NewLogger(t, ktesting.NewConfig())
 	if err := controller.Run(1, stopCh); err != nil {
-		t.Logf("Error running controller %s", err.Error())
+		logger.Error(err, "Error running controller")
 	}
 }
 

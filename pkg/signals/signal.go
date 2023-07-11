@@ -24,7 +24,7 @@ import (
 	"runtime"
 	"syscall"
 
-	klog "k8s.io/klog/v2"
+	"github.com/go-logr/logr"
 )
 
 var onlyOneShutdownSignalHandler = make(chan struct{})
@@ -33,7 +33,7 @@ var onlyOneThreaddumpSignalHandler = make(chan struct{})
 // SetupShutdownSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned
 // which is closed on one of these signals. If a second signal is caught, the program
 // is terminated with exit code 1.
-func SetupShutdownSignalHandler() (stopCh <-chan struct{}) {
+func SetupShutdownSignalHandler(logger logr.Logger) (stopCh <-chan struct{}) {
 	close(onlyOneShutdownSignalHandler) // panics when called twice
 	stop := make(chan struct{})
 	c := make(chan os.Signal, 2)
@@ -49,7 +49,7 @@ func SetupShutdownSignalHandler() (stopCh <-chan struct{}) {
 
 // SetupThreadDumpSignalHandler registers a handler for SIGQUIT.
 // In case a SIGQUIT is received a thread dump is written.
-func SetupThreadDumpSignalHandler() {
+func SetupThreadDumpSignalHandler(logger logr.Logger) {
 	close(onlyOneThreaddumpSignalHandler) // panics when called twice
 	go func() {
 		sigs := make(chan os.Signal, 1)
@@ -58,8 +58,8 @@ func SetupThreadDumpSignalHandler() {
 		for {
 			sig := <-sigs
 			stacklen := runtime.Stack(buf, true)
-			klog.InfoS("Received signal", "signal", sig)
-			klog.InfoS("Goroutine dump", "dump", buf[:stacklen])
+			logger.Info("Received signal", "signal", sig)
+			logger.Info("Goroutine dump", "dump", buf[:stacklen])
 		}
 	}()
 }

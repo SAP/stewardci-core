@@ -1,6 +1,7 @@
 package fake
 
 import (
+	"context"
 	"time"
 
 	stewardapis "github.com/SAP/stewardci-core/pkg/apis/steward"
@@ -10,6 +11,8 @@ import (
 	tektonclientfake "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/fake"
 	tektonv1beta1client "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/typed/pipeline/v1beta1"
 	tektoninformers "github.com/SAP/stewardci-core/pkg/tektonclient/informers/externalversions"
+	"github.com/SAP/stewardci-core/pkg/utils"
+	"github.com/go-logr/logr"
 	tektonapis "github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -19,7 +22,6 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	networkingv1client "k8s.io/client-go/kubernetes/typed/networking/v1"
 	rbacv1client "k8s.io/client-go/kubernetes/typed/rbac/v1"
-	klog "k8s.io/klog/v2"
 )
 
 // ClientFactory is a factory for fake clients.
@@ -31,6 +33,10 @@ type ClientFactory struct {
 	tektonClientset        *tektonclientfake.Clientset
 	tektonInformerFactory  tektoninformers.SharedInformerFactory
 	sleepDuration          time.Duration
+
+	// logger *must* be initialized when creating a ClientFactory instance,
+	// otherwise logging functions will access a nil sink and panic.
+	logger logr.Logger
 }
 
 // NewClientFactory creates a new ClientFactory
@@ -40,6 +46,7 @@ func NewClientFactory(objects ...runtime.Object) *ClientFactory {
 	stewardInformerFactory := stewardinformer.NewSharedInformerFactory(stewardClientset, 10*time.Minute)
 	tektonClientset := tektonclientfake.NewSimpleClientset(tektonObjects...)
 	tektonInformerFactory := tektoninformers.NewSharedInformerFactory(tektonClientset, 10*time.Minute)
+	logger := utils.LoggerFromContext(context.Background())
 
 	return &ClientFactory{
 		kubernetesClientset:    k8sclientfake.NewSimpleClientset(kubernetesObjects...),
@@ -49,6 +56,7 @@ func NewClientFactory(objects ...runtime.Object) *ClientFactory {
 		tektonClientset:        tektonClientset,
 		tektonInformerFactory:  tektonInformerFactory,
 		sleepDuration:          300 * time.Millisecond,
+		logger:                 logger,
 	}
 }
 
@@ -135,9 +143,9 @@ func (f *ClientFactory) TektonV1beta1() tektonv1beta1client.TektonV1beta1Interfa
 
 // Sleep sleeps and logs the start and the end of the sleep.
 func (f *ClientFactory) Sleep(message string) {
-	klog.InfoS("Sleep start", "message", message)
+	f.logger.Info("Sleep start", "message", message)
 	time.Sleep(f.sleepDuration)
-	klog.InfoS("Sleep end", "message", message)
+	f.logger.Info("Sleep end", "message", message)
 }
 
 // CheckTimeOrder checks if the duration between start and end is at least one sleep duration long.

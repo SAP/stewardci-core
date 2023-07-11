@@ -11,6 +11,7 @@ import (
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
+	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -21,10 +22,6 @@ import (
 	"k8s.io/client-go/util/retry"
 	klog "k8s.io/klog/v2"
 )
-
-// PipelineRunLoggerName is a meaningful root name for pipeline run logger
-// and it is used in the contextual logging.
-const PipelineRunLoggerName = "runController"
 
 // PipelineRun is a set of utility functions working on an underlying
 // api.PipelineRun API object.
@@ -265,7 +262,7 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 
 // InitState implements part of interface `PipelineRun`.
 func (r *pipelineRun) InitState(ctx context.Context) error {
-	logger := klog.FromContext(ctx)
+	logger := utils.LoggerFromContext(ctx)
 	r.ensureCopy()
 	logger.V(3).Info("Set state to 'new'")
 	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
@@ -423,7 +420,7 @@ func (r *pipelineRun) DeleteFinalizerAndCommitIfExists(ctx context.Context) erro
 }
 
 func (r *pipelineRun) commitFinalizerListExclusively(ctx context.Context, finalizerList []string) error {
-	logger := klog.FromContext(ctx)
+	logger := utils.LoggerFromContext(ctx)
 
 	r.mustBeChangeable()
 	r.mustNotHavePendingChanges()
@@ -467,7 +464,7 @@ func (r *pipelineRun) changeStatusAndStoreForRetry(change changeFunc) error {
 
 // CommitStatus implements part of interface `PipelineRun`.
 func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error) {
-	logger := klog.FromContext(ctx)
+	logger := utils.LoggerFromContext(ctx)
 
 	r.mustBeChangeable()
 
@@ -538,7 +535,7 @@ func (r *pipelineRun) getNonEmptyStateItems() []*api.StateItem {
 }
 
 func (r *pipelineRun) redoChanges(ctx context.Context, fetchedAPIObj *api.PipelineRun) error {
-	logger := klog.FromContext(ctx)
+	logger := utils.LoggerFromContext(ctx)
 
 	r.apiObj = fetchedAPIObj
 	r.copied = true
@@ -573,58 +570,26 @@ func (r *pipelineRun) mustNotHavePendingChanges() {
 	}
 }
 
-// NewPipelineRunLoggingContext will return new pipeline run logging context for
-// contextual logging
-func NewPipelineRunLoggingContext(ctx context.Context, loggerName string, pipelineRun PipelineRun) context.Context {
-	if ctx == nil {
-		ctx = context.Background()
-	}
+// NewPipelineRunLoggingContext returns new context with
+// pipeline run's information for logging.
+func NewPipelineRunLoggingContext(
+	logger *logr.Logger,
+	pipelineRun PipelineRun,
+) context.Context {
 
-	if loggerName == "" {
-		loggerName = PipelineRunLoggerName
-	}
+	ctx := context.Background()
 
-	logger := klog.LoggerWithName(klog.Background(), loggerName)
+	if logger == nil {
+		l := utils.LoggerFromContext(ctx)
+		logger = &l
+	}
 
 	if pipelineRun != nil {
-		logger = klog.LoggerWithValues(
-			logger,
+		*logger = utils.LoggerWithValues(*logger,
 			"pipelineRunObject", klog.KObj(pipelineRun),
 			"pipelineRunUID", pipelineRun.GetReference().UID,
 		)
 	}
 
-	return klog.NewContext(ctx, logger)
-}
-
-// UpdateLoggerContext adds new logging parameters (key-value pairs) to enable
-// contextual logging. Conditionally it will append the logger name describing
-// the scope or specific action or state of system in the log messages.
-//
-// ctx is the existing context.Context object.
-//
-// loggerExtendedName is an optional parameter. If you want to append the root logger
-// (from the ctx) then provide appropriate string. The log message will then start with
-// 'root-logger/extended-logger-name ...'. In case of empty string (""),
-// only the logging parameters (kvs) will be updated to the context object.
-//
-// kvs is a slice with the elements as key-value pairs to enable structured logging.
-// For example - ["key1", "value1", "key2", "value2"]
-//
-// Returns new context object with the updated values.
-func UpdateLoggerContext(ctx context.Context, loggerExtendedName string, kvs ...interface{}) context.Context {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	logger := klog.FromContext(ctx)
-	if loggerExtendedName != "" {
-		logger = klog.LoggerWithName(logger, loggerExtendedName)
-	}
-
-	if kvs != nil {
-		logger = klog.LoggerWithValues(logger, kvs...)
-	}
-
-	return klog.NewContext(ctx, logger)
+	return klog.NewContext(ctx, *logger)
 }

@@ -13,6 +13,7 @@ import (
 	"gotest.tools/v3/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2/ktesting"
 )
 
 func setupTestContext() context.Context {
@@ -167,13 +168,14 @@ func Test_CreatePipelineRunTest(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
+			logger := ktesting.NewLogger(t, ktesting.NewConfig())
 			test := test
 			t.Parallel()
 			//SETUP
 			ctx := setupTestContext()
 			run := testRun{ctx: ctx}
 			// EXERCISE
-			testRun := createPipelineRunTest(test.test, run)
+			testRun := createPipelineRunTest(logger, test.test, run)
 			//VERIFY
 			if test.expectedResult != "" {
 				assert.Assert(t, testRun.result != nil)

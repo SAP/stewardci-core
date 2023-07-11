@@ -33,11 +33,12 @@ Without prefix the flag gets enabled.
 package featureflag
 
 import (
+	"context"
 	"os"
 	"regexp"
 	"sync"
 
-	"k8s.io/klog/v2"
+	utils "github.com/SAP/stewardci-core/pkg/utils"
 )
 
 const (
@@ -99,6 +100,7 @@ func Bool(b bool) *bool {
 
 // ParseFlags is responsible for parse out the feature flag usage.
 func ParseFlags(f string) {
+	logger := utils.LoggerFromContext(context.Background())
 	if f == "" {
 		return
 	}
@@ -116,7 +118,7 @@ func ParseFlags(f string) {
 		} else {
 			ff = New(s, nil)
 		}
-		klog.InfoS("feature flag", "key", ff.Key, "enabled", enabled)
+		logger.Info("feature flag", "key", ff.Key, "enabled", enabled)
 		ff.enabled = &enabled
 	}
 }
