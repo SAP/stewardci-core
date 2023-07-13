@@ -6,6 +6,7 @@ require (
 	github.com/benbjohnson/clock v1.3.5
 	github.com/davecgh/go-spew v1.1.1
 	github.com/ghodss/yaml v1.0.0
+	github.com/go-logr/logr v1.2.3
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.3.0
 	github.com/lithammer/dedent v1.1.0
@@ -19,11 +20,9 @@ require (
 	k8s.io/api v0.25.7
 	k8s.io/apimachinery v0.25.7
 	k8s.io/client-go v0.25.7
-	k8s.io/klog/v2 v2.80.2-0.20221028030830-9ae4992afb54
+	k8s.io/klog/v2 v2.90.1
 	knative.dev/pkg v0.0.0-20230221145627-8efb3485adcf
 )
-
-require github.com/go-logr/logr v1.2.3
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.7.1-0.20200907061046-05415f1de66d // indirect
