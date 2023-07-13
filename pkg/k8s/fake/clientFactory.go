@@ -11,7 +11,6 @@ import (
 	tektonclientfake "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/fake"
 	tektonv1beta1client "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/typed/pipeline/v1beta1"
 	tektoninformers "github.com/SAP/stewardci-core/pkg/tektonclient/informers/externalversions"
-	"github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/go-logr/logr"
 	tektonapis "github.com/tektoncd/pipeline/pkg/apis/pipeline"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +21,7 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	networkingv1client "k8s.io/client-go/kubernetes/typed/networking/v1"
 	rbacv1client "k8s.io/client-go/kubernetes/typed/rbac/v1"
+	klog "k8s.io/klog/v2"
 )
 
 // ClientFactory is a factory for fake clients.
@@ -46,7 +46,7 @@ func NewClientFactory(objects ...runtime.Object) *ClientFactory {
 	stewardInformerFactory := stewardinformer.NewSharedInformerFactory(stewardClientset, 10*time.Minute)
 	tektonClientset := tektonclientfake.NewSimpleClientset(tektonObjects...)
 	tektonInformerFactory := tektoninformers.NewSharedInformerFactory(tektonClientset, 10*time.Minute)
-	logger := utils.LoggerFromContext(context.Background())
+	logger := klog.FromContext(context.Background())
 
 	return &ClientFactory{
 		kubernetesClientset:    k8sclientfake.NewSimpleClientset(kubernetesObjects...),

@@ -10,7 +10,6 @@ import (
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/SAP/stewardci-core/pkg/runctl"
 	"github.com/SAP/stewardci-core/pkg/signals"
-	utils "github.com/SAP/stewardci-core/pkg/utils"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	klog "k8s.io/klog/v2"
@@ -98,7 +97,7 @@ func main() {
 	defer klog.Flush()
 
 	ctx := context.Background()
-	logger := utils.LoggerFromContext(ctx)
+	logger := klog.FromContext(ctx)
 
 	system.Namespace() // ensure that namespace is set in environment
 
@@ -157,8 +156,8 @@ func main() {
 		controllerOpts.HeartbeatLogLevel = &tmp
 	}
 
-	runCtlLogger := utils.LoggerWithName(
-		utils.LoggerFromContext(ctx),
+	runCtlLogger := klog.LoggerWithName(
+		klog.FromContext(ctx),
 		runctl.RunControllerLoggerName,
 	)
 	runCtlCtx := klog.NewContext(ctx, runCtlLogger)

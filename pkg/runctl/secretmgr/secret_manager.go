@@ -7,9 +7,9 @@ import (
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
-	utils "github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -92,7 +92,7 @@ func (s SecretManager) copyPipelineSecretsToRunNamespace(ctx context.Context, pi
 }
 
 func (s SecretManager) copySecrets(ctx context.Context, pipelineRun k8s.PipelineRun, secretNames []string, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
-	logger := utils.LoggerFromContext(ctx)
+	logger := klog.FromContext(ctx)
 	storedSecretNames, err := s.secretHelper.CopySecrets(ctx, secretNames, filter, transformers...)
 	if err != nil {
 		logger.Error(err, "Cannot copy secrets", "secrets", secretNames)

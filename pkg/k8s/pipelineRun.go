@@ -262,7 +262,7 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 
 // InitState implements part of interface `PipelineRun`.
 func (r *pipelineRun) InitState(ctx context.Context) error {
-	logger := utils.LoggerFromContext(ctx)
+	logger := klog.FromContext(ctx)
 	r.ensureCopy()
 	logger.V(3).Info("Set state to 'new'")
 	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
@@ -420,7 +420,7 @@ func (r *pipelineRun) DeleteFinalizerAndCommitIfExists(ctx context.Context) erro
 }
 
 func (r *pipelineRun) commitFinalizerListExclusively(ctx context.Context, finalizerList []string) error {
-	logger := utils.LoggerFromContext(ctx)
+	logger := klog.FromContext(ctx)
 
 	r.mustBeChangeable()
 	r.mustNotHavePendingChanges()
@@ -464,7 +464,7 @@ func (r *pipelineRun) changeStatusAndStoreForRetry(change changeFunc) error {
 
 // CommitStatus implements part of interface `PipelineRun`.
 func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error) {
-	logger := utils.LoggerFromContext(ctx)
+	logger := klog.FromContext(ctx)
 
 	r.mustBeChangeable()
 
@@ -535,7 +535,7 @@ func (r *pipelineRun) getNonEmptyStateItems() []*api.StateItem {
 }
 
 func (r *pipelineRun) redoChanges(ctx context.Context, fetchedAPIObj *api.PipelineRun) error {
-	logger := utils.LoggerFromContext(ctx)
+	logger := klog.FromContext(ctx)
 
 	r.apiObj = fetchedAPIObj
 	r.copied = true
@@ -580,12 +580,12 @@ func NewPipelineRunLoggingContext(
 	ctx := context.Background()
 
 	if logger == nil {
-		l := utils.LoggerFromContext(ctx)
+		l := klog.FromContext(ctx)
 		logger = &l
 	}
 
 	if pipelineRun != nil {
-		*logger = utils.LoggerWithValues(*logger,
+		*logger = klog.LoggerWithValues(*logger,
 			"pipelineRunObject", klog.KObj(pipelineRun),
 			"pipelineRunUID", pipelineRun.GetReference().UID,
 		)

@@ -20,7 +20,6 @@ import (
 	runmocks "github.com/SAP/stewardci-core/pkg/runctl/run/mocks"
 	"github.com/SAP/stewardci-core/pkg/runctl/runmgr"
 	runctltesting "github.com/SAP/stewardci-core/pkg/runctl/testing"
-	utils "github.com/SAP/stewardci-core/pkg/utils"
 	gomock "github.com/golang/mock/gomock"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	assert "gotest.tools/v3/assert"
@@ -30,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	klog "k8s.io/klog/v2"
 	"k8s.io/klog/v2/ktesting"
 	"knative.dev/pkg/apis"
 )
@@ -196,7 +196,7 @@ func Test_Controller_syncHandler_givesUp_onPipelineRunNotFound(t *testing.T) {
 
 	// EXERCISE
 	err := examinee.syncHandler(
-		utils.LoggerWithName(examinee.logger, "reconciler"),
+		klog.LoggerWithName(examinee.logger, "reconciler"),
 		"foo/bar",
 	)
 
@@ -302,7 +302,7 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 				}
 				// EXERCISE
 				err := controller.syncHandler(
-					utils.LoggerWithName(controller.logger, "reconciler"),
+					klog.LoggerWithName(controller.logger, "reconciler"),
 					"ns1/foo",
 				)
 
@@ -365,7 +365,7 @@ func Test_Controller_syncHandler_delete_on_finished_keeps_result_unchanged(t *te
 				}
 				// EXERCISE
 				err := controller.syncHandler(
-					utils.LoggerWithName(controller.logger, "reconciler"),
+					klog.LoggerWithName(controller.logger, "reconciler"),
 					"ns1/foo",
 				)
 
@@ -495,7 +495,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 
 				// EXERCISE
 				resultErr := controller.syncHandler(
-					utils.LoggerWithName(controller.logger, "reconciler"),
+					klog.LoggerWithName(controller.logger, "reconciler"),
 					"ns1/foo",
 				)
 
@@ -924,7 +924,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 
 				// EXERCISE
 				err := controller.syncHandler(
-					utils.LoggerWithName(controller.logger, "reconciler"),
+					klog.LoggerWithName(controller.logger, "reconciler"),
 					"ns1/foo",
 				)
 
@@ -975,7 +975,7 @@ func Test_Controller_syncHandler_initiatesRetrying_on500DuringPipelineRunFetch(t
 
 	// EXERCISE
 	err := examinee.syncHandler(
-		utils.LoggerWithName(examinee.logger, "reconciler"),
+		klog.LoggerWithName(examinee.logger, "reconciler"),
 		"foo/bar",
 	)
 

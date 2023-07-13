@@ -38,7 +38,7 @@ import (
 	"regexp"
 	"sync"
 
-	utils "github.com/SAP/stewardci-core/pkg/utils"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -100,7 +100,7 @@ func Bool(b bool) *bool {
 
 // ParseFlags is responsible for parse out the feature flag usage.
 func ParseFlags(f string) {
-	logger := utils.LoggerFromContext(context.Background())
+	logger := klog.FromContext(context.Background())
 	if f == "" {
 		return
 	}
