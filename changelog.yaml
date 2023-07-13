@@ -52,6 +52,14 @@
   date: TBD
   changes:
 
+    - type: internal
+      impact: patch
+      title: Upgrade Go dependencies
+      description: |-
+        - "google.golang.org/protobuf" (v1.29.1)
+      pullRequestNumber: 394
+      jiraIssueNumber: 1313
+
     - type: enhancement
       impact: minor
       title: Upgrade Go modules and dependencies
