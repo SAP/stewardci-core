@@ -105,14 +105,14 @@ func main() {
 	var err error
 
 	if kubeconfig == "" {
-		logger.Info("In cluster")
+		logger.Info("Loading in-cluster kube config")
 		config, err = rest.InClusterConfig()
 		if err != nil {
 			logger.Error(err, "Failed to load kubeconfig. Hint: You can use parameter '-kubeconfig' for local testing")
 			flushLogsAndExit()
 		}
 	} else {
-		logger.Info("Outside cluster")
+		logger.Info("Loading kube config given via command line flag")
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
 			logger.Error(err, "Failed to create kubeconfig from command line flag", "flag", "-kubeconfig", "path", kubeconfig)
@@ -171,7 +171,7 @@ func main() {
 	factory.StewardInformerFactory().Start(stopCh)
 	factory.TektonInformerFactory().Start(stopCh)
 
-	logger.V(2).Info("Running pipeline run controller", "threadiness", threadiness)
+	logger.V(2).Info("Running controller", "threadiness", threadiness)
 	if err = controller.Run(threadiness, stopCh); err != nil {
 		logger.Error(err, "Failed to run controller")
 		flushLogsAndExit()

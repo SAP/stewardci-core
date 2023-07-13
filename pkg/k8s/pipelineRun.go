@@ -481,7 +481,7 @@ func (r *pipelineRun) CommitStatus(ctx context.Context) ([]*api.StateItem, error
 			codeLocation := metrics.CodeLocation(codeLocationSkipFrames)
 			latency := time.Since(start)
 			metrics.Retries.Observe(codeLocation, retryCount, latency)
-			logger.V(5).Info("retry required",
+			logger.V(5).Info("Retry was required",
 				"location", codeLocation,
 				"count", retryCount,
 				"latency", latency,
