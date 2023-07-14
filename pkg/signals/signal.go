@@ -31,18 +31,31 @@ var onlyOneShutdownSignalHandler = make(chan struct{})
 var onlyOneThreaddumpSignalHandler = make(chan struct{})
 
 // SetupShutdownSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned
-// which is closed on one of these signals. If a second signal is caught, the program
-// is terminated with exit code 1.
-func SetupShutdownSignalHandler(logger logr.Logger) (stopCh <-chan struct{}) {
+// which is closed on one of these signals. If a second signal is caught, the provided killFunc
+// is called.
+//
+// killFunc is supposed to shutdown the process immediately.
+func SetupShutdownSignalHandler(logger logr.Logger, killFunc func()) (stopCh <-chan struct{}) {
 	close(onlyOneShutdownSignalHandler) // panics when called twice
 	stop := make(chan struct{})
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, shutdownSignals...)
+	sigs := make(chan os.Signal, 3)
+	signal.Notify(sigs, shutdownSignals...)
 	go func() {
-		<-c
+		sig := <-sigs
+
+		logger.Info("Received signal", "signal", sig)
+		logger.Info("Initiating graceful shutdown")
 		close(stop)
-		<-c
-		os.Exit(1) // second signal. Exit directly.
+
+		sig = <-sigs
+		logger.Info("Received signal", "signal", sig)
+		logger.Info("Invoking kill function after second shutdown signal")
+		killFunc()
+
+		sig = <-sigs
+		logger.Info("Received signal", "signal", sig)
+		logger.Info("Exiting immediately after third shutdown signal")
+		os.Exit(1)
 	}()
 	return stop
 }

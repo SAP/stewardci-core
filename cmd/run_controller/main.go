@@ -164,7 +164,7 @@ func main() {
 	controller := runctl.NewController(runCtlCtx, factory, controllerOpts)
 
 	logger.V(3).Info("Creating signal handlers")
-	stopCh := signals.SetupShutdownSignalHandler(logger)
+	stopCh := signals.SetupShutdownSignalHandler(logger, flushLogsAndExit)
 	signals.SetupThreadDumpSignalHandler(logger)
 
 	logger.V(2).Info("Starting Informers")
