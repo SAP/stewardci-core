@@ -11,7 +11,6 @@ import (
 	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/clientset/versioned/typed/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	utils "github.com/SAP/stewardci-core/pkg/utils"
-	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -568,28 +567,4 @@ func (r *pipelineRun) mustNotHavePendingChanges() {
 	if len(r.changes) > 0 {
 		panic(fmt.Errorf("there are pending changes"))
 	}
-}
-
-// NewPipelineRunLoggingContext returns new context with
-// pipeline run's information for logging.
-func NewPipelineRunLoggingContext(
-	logger *logr.Logger,
-	pipelineRun PipelineRun,
-) context.Context {
-
-	ctx := context.Background()
-
-	if logger == nil {
-		l := klog.FromContext(ctx)
-		logger = &l
-	}
-
-	if pipelineRun != nil {
-		*logger = klog.LoggerWithValues(*logger,
-			"pipelineRunObject", klog.KObj(pipelineRun),
-			"pipelineRunUID", pipelineRun.GetReference().UID,
-		)
-	}
-
-	return klog.NewContext(ctx, *logger)
 }
