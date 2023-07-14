@@ -168,22 +168,22 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
 
-	c.logger.V(2).Info("Sync cache")
+	c.logger.V(2).Info("Waiting for informer caches to sync")
 	if ok := cache.WaitForCacheSync(stopCh, c.pipelineRunsSynced, c.tektonTaskRunsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	c.logger.V(2).Info("Start metering of pipeline runs", "interval", meteringInterval)
+	c.logger.V(2).Info("Starting periodic metering of pipeline runs", "interval", meteringInterval)
 	go wait.Until(c.meterAllPipelineRunsPeriodic, meteringInterval, stopCh)
 
 	if c.heartbeatInterval > 0 {
-		c.logger.V(2).Info("Starting controller heartbeat stimulator", "heartbeatInterval", c.heartbeatInterval)
+		c.logger.V(2).Info("Starting controller heartbeat stimulator", "interval", c.heartbeatInterval)
 		go wait.Until(c.heartbeatStimulus, c.heartbeatInterval, stopCh)
 	} else {
 		c.logger.V(2).Info("Controller heartbeat is disabled")
 	}
 
-	c.logger.V(2).Info("Start workers", "threadiness", threadiness)
+	c.logger.V(2).Info("Starting workers", "threadiness", threadiness)
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
@@ -270,7 +270,7 @@ func (c *Controller) heartbeat() {
 func (c *Controller) changeState(ctx context.Context, pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
 	logger := klog.FromContext(ctx)
 
-	logger.V(3).Info("Update state", "pipelineRunState", state)
+	logger.V(3).Info("Changing pipeline run state", "targetState", state)
 	err := pipelineRun.UpdateState(ctx, state, ts)
 	if err != nil {
 		logger.V(3).Error(err, "Failed to change pipeline run state", "targetState", state)

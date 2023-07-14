@@ -238,7 +238,7 @@ func (c *runManager) attachAllSecrets(ctx context.Context, runCtx *runContext, a
 		if k8serrors.IsConflict(err) {
 			// resource version conflict -> retry update with latest version
 			logger.V(4).Info("Retrying service account update",
-				"object", klog.KRef(runCtx.runNamespace, serviceAccountName),
+				"serviceAccount", klog.KRef(runCtx.runNamespace, serviceAccountName),
 				"reason", "resource version conflict",
 			)
 		} else {
