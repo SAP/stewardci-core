@@ -21,7 +21,7 @@ func Setup(t *testing.T) context.Context {
 	logger := ktesting.NewLogger(t, ktesting.NewConfig())
 	kubeconfig := knativetest.Flags.Kubeconfig
 	clusterName := knativetest.Flags.Cluster
-	logger.V(3).Info("Create Factory", "kubeconfig", kubeconfig, "resyncPeriod", resyncPeriod.String())
+	t.Logf("Create Factory (config: %s,resync period: %s)", kubeconfig, resyncPeriod.String())
 	config, err := knativetest.BuildClientConfig(kubeconfig, clusterName)
 	if err != nil {
 		panic(err.Error())

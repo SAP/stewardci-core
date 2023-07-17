@@ -1092,9 +1092,8 @@ func stopController(t *testing.T, stopCh chan struct{}) {
 
 func start(t *testing.T, controller *Controller, stopCh chan struct{}) {
 	t.Helper()
-	logger := ktesting.NewLogger(t, ktesting.NewConfig())
 	if err := controller.Run(1, stopCh); err != nil {
-		logger.Error(err, "Error running controller")
+		t.Logf("Error running controller %s", err.Error())
 	}
 }
 
