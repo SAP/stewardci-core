@@ -185,7 +185,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
-	c.logger.V(2).Info("Workers running", "threadiness", threadiness)
+	c.logger.V(2).Info("Workers running")
 
 	<-stopCh
 	c.logger.V(2).Info("Workers stopped")
