@@ -121,7 +121,7 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 	logger.Info(
 		"Test - wait",
 		"testName", run.name,
-		"waitPeriod", fmt.Sprintf("%.2f", duration.Seconds()),
+		"duration", fmt.Sprintf("%.2f", duration.Seconds()),
 	)
 	run.result = err
 	assert.NilError(t, checkResult(run), "Test: %q", run.name)
@@ -134,7 +134,7 @@ func createPipelineRunTest(logger logr.Logger, pipelineTest PipelineRunTest, run
 		logger.Info(
 			"Test - setup",
 			"testName", run.name,
-			"setupDuration", fmt.Sprintf("%.2f", duration.Seconds()),
+			"duration", fmt.Sprintf("%.2f", duration.Seconds()),
 		)
 	}()
 	PipelineRun := pipelineTest.PipelineRun

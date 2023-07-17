@@ -429,7 +429,7 @@ func (r *pipelineRun) commitFinalizerListExclusively(ctx context.Context, finali
 	r.apiObj.ObjectMeta.Finalizers = finalizerList
 	result, err := r.client.Update(ctx, r.apiObj, metav1.UpdateOptions{})
 	elapsed := time.Since(start)
-	logger.V(4).Info("Updated finalizers", "finalizersUpdateDuration", elapsed)
+	logger.V(4).Info("Updated finalizers", "duration", elapsed)
 	if err != nil {
 		return errors.Wrap(err,
 			fmt.Sprintf("failed to update finalizers [%s]", r.String()))
