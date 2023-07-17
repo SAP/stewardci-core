@@ -10,6 +10,10 @@ import (
 
 func extendContextLoggerWithPipelineRunInfo(ctx context.Context, pipelineRun k8s.PipelineRun) (context.Context, logr.Logger) {
 
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	logger := extendLoggerWithPipelineRunInfo(klog.FromContext(ctx), pipelineRun)
 
 	return klog.NewContext(ctx, logger), logger
@@ -19,10 +23,14 @@ func extendLoggerWithPipelineRunInfo(logger logr.Logger, pipelineRun k8s.Pipelin
 
 	kvs := getPipelineRunInfoForLogging(pipelineRun)
 
-	return logger.WithValues(kvs...)
+	return klog.LoggerWithValues(logger, kvs...)
 }
 
 func getPipelineRunInfoForLogging(run k8s.PipelineRun) []interface{} {
+	if run == nil {
+		return nil
+	}
+
 	runStatus := run.GetStatus()
 
 	kvs := []interface{}{
