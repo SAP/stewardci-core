@@ -95,7 +95,7 @@ func (s SecretManager) copySecrets(ctx context.Context, pipelineRun k8s.Pipeline
 	logger := klog.FromContext(ctx)
 	storedSecretNames, err := s.secretHelper.CopySecrets(ctx, secretNames, filter, transformers...)
 	if err != nil {
-		logger.Error(err, "Cannot copy secrets", "secrets", secretNames)
+		logger.Error(err, "Could not copy secrets", "secrets", secretNames)
 		if s.secretHelper.IsNotFound(err) || k8serrors.IsInvalid(err) || k8serrors.IsAlreadyExists(err) {
 			err = serrors.Classify(err, v1alpha1.ResultErrorContent)
 		} else {

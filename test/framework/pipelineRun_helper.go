@@ -100,12 +100,19 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 	pr := GetPipelineRun(ctx)
 	defer func() {
 		if run.cleanup {
-			logger.Info("Test - deleting pipeline run", "testName", run.name, "pipelineRun", pr.GetName())
+			logger.Info(
+				"Test - deleting pipeline run",
+				"testName", run.name,
+				"pipelineRun", klog.KObj(pr),
+			)
 			err := DeletePipelineRun(ctx, pr)
 			if err != nil {
-				logger.Error(err, "Failed to clean up pipeline run",
+				logger.Error(
+					err,
+					"Failed to clean up pipeline run",
+					"testName", run.name,
 					"pipelineRun", klog.KObj(pr),
-					"testName", run.name)
+				)
 			}
 		}
 		waitWG.Done()
@@ -121,6 +128,7 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 	logger.Info(
 		"Test - wait",
 		"testName", run.name,
+		"pipelineRun", klog.KObj(pr),
 		"duration", fmt.Sprintf("%.2f", duration.Seconds()),
 	)
 	run.result = err
@@ -158,7 +166,7 @@ func createPipelineRunTest(logger logr.Logger, pipelineTest PipelineRunTest, run
 	logger.Info(
 		"Test - pipeline run created",
 		"testName", run.name,
-		"pipelineRunObject", klog.KObj(pr),
+		"pipelineRun", klog.KObj(pr),
 	)
 	ctx = SetPipelineRun(ctx, pr)
 	run.ctx = ctx

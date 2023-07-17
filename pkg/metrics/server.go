@@ -21,7 +21,7 @@ func StartServer(logger logr.Logger, port uint16) {
 				break
 			}
 			if err != nil {
-				logger.Error(err, "metrics server terminated unexpectedly and will be restarted")
+				logger.Error(err, "Metrics server terminated unexpectedly and will be restarted")
 			}
 		}
 	}()

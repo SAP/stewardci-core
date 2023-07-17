@@ -178,17 +178,17 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 		c.logger.V(2).Info("Starting controller heartbeat stimulator", "interval", c.heartbeatInterval)
 		go wait.Until(c.heartbeatStimulus, c.heartbeatInterval, stopCh)
 	} else {
-		c.logger.V(2).Info("Controller heartbeat is disabled")
+		c.logger.V(2).Info("Controller heartbeat stimulus is disabled")
 	}
 
 	c.logger.V(2).Info("Starting workers", "threadiness", threadiness)
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
-	c.logger.V(2).Info("Workers running")
+	c.logger.V(2).Info("Workers are running")
 
 	<-stopCh
-	c.logger.V(2).Info("Workers stopped")
+	c.logger.V(2).Info("Workers are stopped")
 	return nil
 }
 
@@ -809,8 +809,8 @@ func (c *Controller) addToWorkqueue(obj interface{}) {
 		utilruntime.HandleError(err)
 		return
 	}
-	c.logger.V(4).Info("Added item to workqueue", "key", key)
 	c.workqueue.Add(key)
+	c.logger.V(4).Info("Added item to workqueue", "key", key)
 }
 
 // addToWorkqueueFromAssociated takes any resource implementing metav1.Object and attempts
@@ -838,7 +838,7 @@ func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 
 	runKey := runmgr.GetPipelineRunKeyAnnotation(object)
 	if runKey != "" {
-		c.logger.V(4).Info("Added item to workqueue", "key", runKey)
 		c.workqueue.Add(runKey)
+		c.logger.V(4).Info("Added item to workqueue", "key", runKey)
 	}
 }

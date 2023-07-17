@@ -143,9 +143,9 @@ func (f *ClientFactory) TektonV1beta1() tektonv1beta1client.TektonV1beta1Interfa
 
 // Sleep sleeps and logs the start and the end of the sleep.
 func (f *ClientFactory) Sleep(message string) {
-	f.logger.Info("Sleep start", "message", message)
+	f.logger.Info("Sleep starts", "message", message)
 	time.Sleep(f.sleepDuration)
-	f.logger.Info("Sleep end", "message", message)
+	f.logger.Info("Sleep ends", "message", message)
 }
 
 // CheckTimeOrder checks if the duration between start and end is at least one sleep duration long.

@@ -263,7 +263,7 @@ func (r *pipelineRun) GetSpec() *api.PipelineSpec {
 func (r *pipelineRun) InitState(ctx context.Context) error {
 	logger := klog.FromContext(ctx)
 	r.ensureCopy()
-	logger.V(3).Info("Set state to 'new'")
+	logger.V(3).Info("Setting state to 'new'")
 	return r.changeStatusAndStoreForRetry(func(s *api.PipelineStatus) (commitRecorderFunc, error) {
 
 		if s.State != api.StateUndefined {
