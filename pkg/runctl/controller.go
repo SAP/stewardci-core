@@ -102,7 +102,7 @@ type ControllerOpts struct {
 }
 
 // NewController creates new Controller
-func NewController(ctx context.Context, factory k8s.ClientFactory, opts ControllerOpts) *Controller {
+func NewController(logger logr.Logger, factory k8s.ClientFactory, opts ControllerOpts) *Controller {
 	const logVerbosity = 3
 
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
@@ -112,8 +112,6 @@ func NewController(ctx context.Context, factory k8s.ClientFactory, opts Controll
 	eventBroadcaster.StartStructuredLogging(logVerbosity)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
 	eventRecorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
-
-	logger := klog.FromContext(ctx)
 
 	controller := &Controller{
 		factory:            factory,

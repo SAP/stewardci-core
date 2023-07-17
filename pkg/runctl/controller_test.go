@@ -48,7 +48,11 @@ func Test_meterAllPipelineRunsPeriodic(t *testing.T) {
 		runctltesting.FakeClusterRole(),
 	)
 
-	c := NewController(context.Background(), cf, ControllerOpts{})
+	c := NewController(
+		klog.FromContext(context.Background()),
+		cf,
+		ControllerOpts{},
+	)
 
 	run := fake.PipelineRun("r1", "ns1", api.PipelineSpec{})
 	c.pipelineRunStore.Add(run)
@@ -191,7 +195,12 @@ func Test_Controller_syncHandler_givesUp_onPipelineRunNotFound(t *testing.T) {
 	mockPipelineRunFetcher.EXPECT().
 		ByKey(ctx, gomock.Any()).
 		Return(nil, nil)
-	examinee := NewController(context.Background(), cf, ControllerOpts{})
+	examinee := NewController(
+		klog.FromContext(context.Background()),
+		cf,
+		ControllerOpts{},
+	)
+
 	examinee.pipelineRunFetcher = mockPipelineRunFetcher
 
 	// EXERCISE
@@ -212,7 +221,12 @@ func newController(t *testing.T, runs ...*api.PipelineRun) (*Controller, *fake.C
 	for _, run := range runs {
 		client.PipelineRuns(run.GetNamespace()).Create(ctx, run, metav1.CreateOptions{})
 	}
-	controller := NewController(context.Background(), cf, ControllerOpts{})
+	controller := NewController(
+		klog.FromContext(context.Background()),
+		cf,
+		ControllerOpts{},
+	)
+
 	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(client)
 	controller.eventRecorder = record.NewFakeRecorder(20)
 	return controller, cf
@@ -970,7 +984,11 @@ func Test_Controller_syncHandler_initiatesRetrying_on500DuringPipelineRunFetch(t
 		ByKey(ctx, gomock.Any()).
 		Return(nil, k8serrors.NewInternalError(fmt.Errorf(message)))
 
-	examinee := NewController(context.Background(), cf, ControllerOpts{})
+	examinee := NewController(
+		klog.FromContext(context.Background()),
+		cf,
+		ControllerOpts{},
+	)
 	examinee.pipelineRunFetcher = mockPipelineRunFetcher
 
 	// EXERCISE
@@ -1069,7 +1087,11 @@ func newTestRunManager(workFactory k8s.ClientFactory, secretProvider secrets.Sec
 
 func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 	stopCh := make(chan struct{})
-	controller := NewController(context.Background(), cf, ControllerOpts{})
+	controller := NewController(klog.FromContext(
+		context.Background()),
+		cf,
+		ControllerOpts{},
+	)
 	controller.testing = &controllerTesting{
 		newRunManagerStub:          newTestRunManager,
 		loadPipelineRunsConfigStub: newEmptyRunsConfig,

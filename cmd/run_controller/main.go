@@ -160,8 +160,7 @@ func main() {
 		klog.FromContext(ctx),
 		runctl.RunControllerLoggerName,
 	)
-	runCtlCtx := klog.NewContext(ctx, runCtlLogger)
-	controller := runctl.NewController(runCtlCtx, factory, controllerOpts)
+	controller := runctl.NewController(runCtlLogger, factory, controllerOpts)
 
 	logger.V(3).Info("Creating signal handlers")
 	stopCh := signals.SetupShutdownSignalHandler(logger, flushLogsAndExit)
