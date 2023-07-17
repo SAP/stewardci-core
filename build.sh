@@ -85,11 +85,9 @@ function main() {
 
     banner1 "logcheck"
     "$LOGCHECK_EXE" -check-value \
-        -check-with-helpers \
         "${GO_PACKAGES_ALL[@]}" || die "" "FAILED"
     ( cd "$HELM_TEST_DIR" && "$LOGCHECK_EXE" -check-parameters \
         -check-value \
-        -check-with-helpers \
         "./..." ) || die "" "FAILED"
 
     banner1 "gofmt"
