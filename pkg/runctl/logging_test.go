@@ -156,10 +156,10 @@ func Test_logging_extendContextLoggerWithPipelineRunInfo(t *testing.T) {
 				),
 			)
 
-			logger = klog.LoggerWithValues(logger, test.additionalKVs...)
+			logger = logger.WithValues(test.additionalKVs...)
 
 			if test.loggerName != "" {
-				logger = klog.LoggerWithName(logger, test.loggerName)
+				logger = logger.WithName(test.loggerName)
 			}
 
 			ctx := klog.NewContext(test.ctx, logger)

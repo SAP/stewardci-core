@@ -23,7 +23,7 @@ func extendLoggerWithPipelineRunInfo(logger logr.Logger, pipelineRun k8s.Pipelin
 
 	kvs := getPipelineRunInfoForLogging(pipelineRun)
 
-	return klog.LoggerWithValues(logger, kvs...)
+	return logger.WithValues(kvs...)
 }
 
 func getPipelineRunInfoForLogging(run k8s.PipelineRun) []interface{} {

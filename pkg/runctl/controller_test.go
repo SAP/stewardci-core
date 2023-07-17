@@ -205,7 +205,7 @@ func Test_Controller_syncHandler_givesUp_onPipelineRunNotFound(t *testing.T) {
 
 	// EXERCISE
 	err := examinee.syncHandler(
-		klog.LoggerWithName(examinee.logger, "reconciler"),
+		examinee.logger.WithName("reconciler"),
 		"foo/bar",
 	)
 
@@ -316,7 +316,7 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 				}
 				// EXERCISE
 				err := controller.syncHandler(
-					klog.LoggerWithName(controller.logger, "reconciler"),
+					controller.logger.WithName("reconciler"),
 					"ns1/foo",
 				)
 
@@ -379,7 +379,7 @@ func Test_Controller_syncHandler_delete_on_finished_keeps_result_unchanged(t *te
 				}
 				// EXERCISE
 				err := controller.syncHandler(
-					klog.LoggerWithName(controller.logger, "reconciler"),
+					controller.logger.WithName("reconciler"),
 					"ns1/foo",
 				)
 
@@ -509,7 +509,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 
 				// EXERCISE
 				resultErr := controller.syncHandler(
-					klog.LoggerWithName(controller.logger, "reconciler"),
+					controller.logger.WithName("reconciler"),
 					"ns1/foo",
 				)
 
@@ -938,7 +938,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 
 				// EXERCISE
 				err := controller.syncHandler(
-					klog.LoggerWithName(controller.logger, "reconciler"),
+					controller.logger.WithName("reconciler"),
 					"ns1/foo",
 				)
 
@@ -993,7 +993,7 @@ func Test_Controller_syncHandler_initiatesRetrying_on500DuringPipelineRunFetch(t
 
 	// EXERCISE
 	err := examinee.syncHandler(
-		klog.LoggerWithName(examinee.logger, "reconciler"),
+		examinee.logger.WithName("reconciler"),
 		"foo/bar",
 	)
 

@@ -230,7 +230,7 @@ func (c *Controller) processNextWorkItem() bool {
 			return nil
 		}
 
-		logger := klog.LoggerWithName(c.logger, ReconcilerLoggerName)
+		logger := c.logger.WithName(ReconcilerLoggerName)
 
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
