@@ -37,7 +37,12 @@ func getPipelineRunInfoForLogging(run k8s.PipelineRun) []interface{} {
 		"pipelineRun", klog.KObj(run),
 		"pipelineRunUID", run.GetAPIObject().ObjectMeta.UID,
 		"pipelineRunState", runStatus.State,
-		"pipelineRunExecutionNamespace", runStatus.Namespace,
+	}
+
+	if runStatus.Namespace == "" {
+		kvs = append(kvs,
+			"pipelineRunExecutionNamespace", runStatus.Namespace,
+		)
 	}
 
 	if runStatus.AuxiliaryNamespace != "" {
