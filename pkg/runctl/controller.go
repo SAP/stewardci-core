@@ -329,7 +329,6 @@ func (c *Controller) syncHandler(logger logr.Logger, key string) error {
 		return err
 	}
 
-	logger = extendLoggerWithPipelineRunInfo(logger, pipelineRun)
 	ctx = klog.NewContext(ctx, logger)
 
 	doReturn, err := c.handlePipelineRunFinalizerAndDeletion(ctx, pipelineRun)
@@ -536,7 +535,8 @@ func (c *Controller) handlePipelineRunPrepare(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun)
+	origCtx := ctx
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun)
 
 	if pipelineRun.GetStatus().State == api.StatePreparing {
 		logger.V(3).Info("Preparing pipeline execution")
@@ -555,7 +555,7 @@ func (c *Controller) handlePipelineRunPrepare(
 		pipelineRun.UpdateRunNamespace(namespace)
 		pipelineRun.UpdateAuxNamespace(auxNamespace)
 
-		ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun)
+		ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun)
 		logger.V(3).Info("Prepared pipeline execution")
 
 		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
