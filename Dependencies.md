@@ -102,7 +102,7 @@ Using another version may lead to different and possibly wrong results.
 
             ./build.sh
 
-    4.  If successfull, add the changes to the Git index and proceed with the next
+    4.  If successful, add the changes to the Git index and proceed with the next
         dependency.
 
 2.  Update the _indirect_ dependencies:
