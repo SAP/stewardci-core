@@ -18,11 +18,11 @@ limitations under the License.
 Package featureflag implements simple feature-flagging.
 Feature flags can become an anti-pattern if abused.
 We should try to use them for two use-cases:
-- `Preview` feature flags enable a piece of functionality we haven't yet fully baked.  The user needs to 'opt-in'.
-  We expect these flags to be removed at some time.  Normally these will default to false.
-- Escape-hatch feature flags turn off a default that we consider risky (e.g. pre-creating DNS records).
-  This lets us ship a behaviour, and if we encounter unusual circumstances in the field, we can
-  allow the user to turn the behaviour off.  Normally these will default to true.
+  - `Preview` feature flags enable a piece of functionality we haven't yet fully baked.  The user needs to 'opt-in'.
+    We expect these flags to be removed at some time.  Normally these will default to false.
+  - Escape-hatch feature flags turn off a default that we consider risky (e.g. pre-creating DNS records).
+    This lets us ship a behaviour, and if we encounter unusual circumstances in the field, we can
+    allow the user to turn the behaviour off.  Normally these will default to true.
 
 Feature flags are set via a single environment variable.
 The value is a string of feature flag keys separated by sequences of
@@ -33,7 +33,6 @@ Without prefix the flag gets enabled.
 package featureflag
 
 import (
-	"context"
 	"os"
 	"regexp"
 	"sync"
@@ -100,7 +99,6 @@ func Bool(b bool) *bool {
 
 // ParseFlags is responsible for parse out the feature flag usage.
 func ParseFlags(f string) {
-	logger := klog.FromContext(context.Background())
 	if f == "" {
 		return
 	}
@@ -118,7 +116,12 @@ func ParseFlags(f string) {
 		} else {
 			ff = New(s, nil)
 		}
-		logger.Info("feature flag", "key", ff.Key, "enabled", enabled)
 		ff.enabled = &enabled
+	}
+}
+
+func Log(logger klog.Logger) {
+	for _, ff := range flags {
+		logger.Info("Feature flag", "key", ff.Key, "enabled", ff.enabled)
 	}
 }

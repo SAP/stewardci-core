@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/SAP/stewardci-core/pkg/featureflag"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/SAP/stewardci-core/pkg/metrics"
 	"github.com/SAP/stewardci-core/pkg/runctl"
@@ -100,6 +101,7 @@ func main() {
 	logger := klog.FromContext(ctx)
 
 	system.Namespace() // ensure that namespace is set in environment
+	featureflag.Log(logger)
 
 	var config *rest.Config
 	var err error
