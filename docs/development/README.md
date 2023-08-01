@@ -126,11 +126,14 @@ Those are interpreted as (wrong) escape chars which fails the generation.
 
 ```go
 import (
-  stewardv1alpha1 "github.com/SAP/stewardci-core\..."
+	stewardv1alpha1 "github.com/SAP/stewardci-core\..."
 )
 ```
 
 Solution: Linux or Ubuntu sub system on Windows. Cygwin does not help.
 See also [issue #68](https://github.com/kubernetes/code-generator/issues/68)
+
+
+
 
 [sample-controller]: https://github.com/kubernetes/sample-controller/blob/master/docs/controller-client-go.md
