@@ -204,10 +204,7 @@ func Test_Controller_syncHandler_givesUp_onPipelineRunNotFound(t *testing.T) {
 	examinee.pipelineRunFetcher = mockPipelineRunFetcher
 
 	// EXERCISE
-	err := examinee.syncHandler(
-		examinee.logger.WithName("reconciler"),
-		"foo/bar",
-	)
+	err := examinee.syncHandler("foo/bar")
 
 	// VERIFY
 	assert.NilError(t, err)
@@ -315,10 +312,7 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 					loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				}
 				// EXERCISE
-				err := controller.syncHandler(
-					controller.logger.WithName("reconciler"),
-					"ns1/foo",
-				)
+				err := controller.syncHandler("ns1/foo")
 
 				// VERIFY
 				if test.expectedError {
@@ -374,10 +368,7 @@ func Test_Controller_syncHandler_delete_on_finished_keeps_result_unchanged(t *te
 					loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				}
 				// EXERCISE
-				err := controller.syncHandler(
-					controller.logger.WithName("reconciler"),
-					"ns1/foo",
-				)
+				err := controller.syncHandler("ns1/foo")
 
 				// VERIFY
 				assert.NilError(t, err)
@@ -501,10 +492,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				}
 
 				// EXERCISE
-				resultErr := controller.syncHandler(
-					controller.logger.WithName("reconciler"),
-					"ns1/foo",
-				)
+				resultErr := controller.syncHandler("ns1/foo")
 
 				// VERIFY
 				if test.expectedError != nil {
@@ -930,10 +918,7 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				}
 
 				// EXERCISE
-				err := controller.syncHandler(
-					controller.logger.WithName("reconciler"),
-					"ns1/foo",
-				)
+				err := controller.syncHandler("ns1/foo")
 
 				// VERIFY
 				if test.expectedError != nil {
@@ -985,10 +970,7 @@ func Test_Controller_syncHandler_initiatesRetrying_on500DuringPipelineRunFetch(t
 	examinee.pipelineRunFetcher = mockPipelineRunFetcher
 
 	// EXERCISE
-	err := examinee.syncHandler(
-		examinee.logger.WithName("reconciler"),
-		"foo/bar",
-	)
+	err := examinee.syncHandler("foo/bar")
 
 	// VERIFY
 	assert.ErrorContains(t, err, message)

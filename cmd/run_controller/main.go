@@ -156,11 +156,7 @@ func main() {
 		controllerOpts.HeartbeatLogLevel = &tmp
 	}
 
-	runCtlLogger := klog.LoggerWithName(
-		klog.FromContext(ctx),
-		runctl.RunControllerLoggerName,
-	)
-	controller := runctl.NewController(runCtlLogger, factory, controllerOpts)
+	controller := runctl.NewController(logger, factory, controllerOpts)
 
 	logger.V(3).Info("Creating signal handlers")
 	stopCh := signals.SetupShutdownSignalHandler(logger, flushLogsAndExit)

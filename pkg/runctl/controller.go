@@ -35,12 +35,12 @@ import (
 )
 
 const (
-	// RunControllerLoggerName is a name of run controller logger.
-	RunControllerLoggerName = "runController"
+	// loggerName is the name of the run controller logger.
+	loggerName = "runController"
 
-	// ReconcilerLoggerName is a name of logger used in run controller's
+	// reconcilerLoggerName is the name of the logger used in run controller's
 	// reconciliation loop.
-	ReconcilerLoggerName = "reconciler"
+	reconcilerLoggerName = "reconciler"
 
 	// heartbeatStimulusKey is a special key inserted into the controller
 	// work queue as heartbeat stimulus.
@@ -104,6 +104,8 @@ type ControllerOpts struct {
 // NewController creates new Controller
 func NewController(logger logr.Logger, factory k8s.ClientFactory, opts ControllerOpts) *Controller {
 	const logVerbosity = 3
+
+	logger = logger.WithName(loggerName)
 
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
@@ -230,11 +232,9 @@ func (c *Controller) processNextWorkItem() bool {
 			return nil
 		}
 
-		logger := c.logger.WithName(ReconcilerLoggerName)
-
 		// Run the syncHandler, passing it the namespace/name string of the
 		// Foo resource to be synced.
-		if err := c.syncHandler(logger, key); err != nil {
+		if err := c.syncHandler(key); err != nil {
 			// Put the item back on the workqueue to handle any transient errors.
 			c.workqueue.AddRateLimited(key)
 			return fmt.Errorf("error syncing '%s': %s, requeuing", key, err.Error())
@@ -313,8 +313,8 @@ func (c *Controller) isMaintenanceMode(ctx context.Context) (bool, error) {
 // syncHandler compares the actual state with the desired, and attempts to
 // converge the two. It then updates the Status block of the Foo resource
 // with the current status of the resource.
-//
-func (c *Controller) syncHandler(logger logr.Logger, key string) error {
+func (c *Controller) syncHandler(key string) error {
+	logger := c.logger.WithName(reconcilerLoggerName)
 
 	if key == heartbeatStimulusKey {
 		c.heartbeat()
