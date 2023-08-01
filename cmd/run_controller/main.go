@@ -132,7 +132,7 @@ func main() {
 	config.QPS = float32(qps)
 	config.Burst = burst
 	config.Timeout = k8sAPIRequestTimeout
-	factory := k8s.NewClientFactory(config, resyncPeriod)
+	factory := k8s.NewClientFactory(logger, config, resyncPeriod)
 
 	if factory == nil {
 		logger.Error(nil, "Failed to create Kubernetes clients",

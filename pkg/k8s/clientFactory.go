@@ -1,7 +1,6 @@
 package k8s
 
 import (
-	"context"
 	"time"
 
 	stewardclients "github.com/SAP/stewardci-core/pkg/client/clientset/versioned"
@@ -10,13 +9,13 @@ import (
 	tektonclients "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned"
 	tektonv1beta1client "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/typed/pipeline/v1beta1"
 	tektoninformers "github.com/SAP/stewardci-core/pkg/tektonclient/informers/externalversions"
+	"github.com/go-logr/logr"
 	dynamic "k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	networkingv1client "k8s.io/client-go/kubernetes/typed/networking/v1"
 	rbacv1client "k8s.io/client-go/kubernetes/typed/rbac/v1"
 	"k8s.io/client-go/rest"
-	klog "k8s.io/klog/v2"
 )
 
 // ClientFactory is the interface for Kubernetes client factories.
@@ -56,9 +55,7 @@ type clientFactory struct {
 }
 
 // NewClientFactory creates new client factory based on rest config
-func NewClientFactory(config *rest.Config, resyncPeriod time.Duration) ClientFactory {
-	logger := klog.FromContext(context.Background())
-
+func NewClientFactory(logger logr.Logger, config *rest.Config, resyncPeriod time.Duration) ClientFactory {
 	stewardClientset, err := stewardclients.NewForConfig(config)
 	if err != nil {
 		logger.Error(err, "Failed to create Steward clientset")

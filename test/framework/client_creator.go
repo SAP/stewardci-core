@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/SAP/stewardci-core/pkg/k8s"
+	"k8s.io/klog/v2/ktesting"
 	knativetest "knative.dev/pkg/test"
 )
 
@@ -17,6 +18,7 @@ const resyncPeriod = 5 * time.Minute
 // Setup prepares the test environment
 func Setup(t *testing.T) context.Context {
 	t.Helper()
+	logger := ktesting.NewLogger(t, ktesting.DefaultConfig)
 	kubeconfig := knativetest.Flags.Kubeconfig
 	clusterName := knativetest.Flags.Cluster
 	t.Logf("Creating client factory (config: %s,resync period: %s)", kubeconfig, resyncPeriod.String())
@@ -24,7 +26,7 @@ func Setup(t *testing.T) context.Context {
 	if err != nil {
 		panic(err.Error())
 	}
-	factory := k8s.NewClientFactory(config, resyncPeriod)
+	factory := k8s.NewClientFactory(logger, config, resyncPeriod)
 	if factory == nil {
 		t.Fatalf("failed to create client factory for config file '%s'.", kubeconfig)
 	}
