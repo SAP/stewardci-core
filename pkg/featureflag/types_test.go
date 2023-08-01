@@ -19,8 +19,6 @@ package featureflag
 import (
 	"os"
 	"testing"
-
-	"k8s.io/klog/v2"
 )
 
 func TestFlagToFalse(t *testing.T) {
@@ -28,9 +26,6 @@ func TestFlagToFalse(t *testing.T) {
 	if !f.Enabled() {
 		t.Fatalf("Flag did not default true")
 	}
-
-	// Really just to force a dependency on glog, so that we can pass -v and -logtostderr to go test
-	klog.InfoS("Created flag Unittest1")
 
 	ParseFlags("-UnitTest1")
 	if f.Enabled() {
