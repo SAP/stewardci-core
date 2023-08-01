@@ -84,8 +84,7 @@ function main() {
     ( cd "$HELM_TEST_DIR" && "$GOLINT_EXE" -set_exit_status "./..." ) || die "" "FAILED"
 
     banner1 "logcheck"
-    "$LOGCHECK_EXE" -check-value \
-        "${GO_PACKAGES_ALL[@]}" || die "" "FAILED"
+    "$LOGCHECK_EXE" -check-value "${GO_PACKAGES_ALL[@]}" || die "" "FAILED"
 
     banner1 "gofmt"
     gofmt -l -d "${GO_PACKAGES_ALL[@]%/...}" | tee fmt_diff.txt || die "" "FAILED"
@@ -182,36 +181,38 @@ function check_go() {
 }
 
 function check_golint_or_install() {
-    local golint_install_pkg='golang.org/x/lint/golint'
-    check_tool_or_install "golint" "${golint_install_pkg}"
-    GOLINT_EXE=$(cd "$GOPATH_1" && GO111MODULE=auto go list -f '{{.Target}}' "${golint_install_pkg}" 2>/dev/null)
+    check_tool_or_install \
+        golint \
+        golang.org/x/lint/golint \
+        GOLINT_EXE
 }
 
 function check_logcheck_or_install() {
-    local logcheck_install_pkg='sigs.k8s.io/logtools/logcheck'
-    check_tool_or_install "logcheck" "${logcheck_install_pkg}"
-    LOGCHECK_EXE=$(cd "$GOPATH_1" && GO111MODULE=auto go list -f '{{.Target}}' "${logcheck_install_pkg}" 2>/dev/null)
+    check_tool_or_install \
+        logcheck \
+        sigs.k8s.io/logtools/logcheck \
+        LOGCHECK_EXE
 }
 
 function check_tool_or_install(){
     local TOOL_NAME=$1
-    local PACKAGE=$2
+    local TOOL_PACKAGE=$2
+    local -n TOOL_EXE=$3
+    #---
 
-    local rc=0
-    local TOOL_EXE=$(which ${TOOL_NAME}) || rc=$?
-    (( rc > 1 )) && die
+    local rc
+    rc=0; TOOL_EXE=$(which "$TOOL_NAME") || rc=$?
+    (( rc <= 1 )) || die
     if [[ $rc == 1 || ! $TOOL_EXE ]]; then
         # don't run go list from current directory, because it would modify our go.mod file
-        rc=0
-        TOOL_EXE=$(cd "$GOPATH_1" && GO111MODULE=auto go list -f '{{.Target}}' "${PACKAGE}" 2>/dev/null) || rc=$?
+        rc=0; TOOL_EXE=$(cd "$GOPATH_1" && GO111MODULE=auto go list -f '{{.Target}}' "$TOOL_PACKAGE" 2>/dev/null) || rc=$?
         if [[ $rc != 0 || ! $TOOL_EXE || ! -f $TOOL_EXE ]]; then
-            echo "${TOOL_NAME} not found. Installing ${TOOL_NAME} into current GOPATH ..."
+            echo "$TOOL_NAME not found. Installing $TOOL_NAME into current GOPATH ..."
             # don't run go get/list from current directory, because it would modify our go.mod file
-            ( cd "$GOPATH_1" && GO111MODULE=auto go get -u ${PACKAGE} ) || die
-            rc=0
-            TOOL_EXE=$(cd "$GOPATH_1" && GO111MODULE=auto go list -f '{{.Target}}' ${PACKAGE} 2>/dev/null) || rc=$?
+            ( cd "$GOPATH_1" && GO111MODULE=auto go get -u "$TOOL_PACKAGE" ) || die
+            rc=0; TOOL_EXE=$(cd "$GOPATH_1" && GO111MODULE=auto go list -f '{{.Target}}' "$TOOL_PACKAGE" 2>/dev/null) || rc=$?
             if [[ $rc != 0 || ! $TOOL_EXE || ! -f $TOOL_EXE ]]; then
-                die "error: could not install ${TOOL_NAME}"
+                die "error: could not install $TOOL_NAME"
             fi
         fi
     fi
