@@ -13,7 +13,6 @@ import (
 	"gotest.tools/v3/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2/ktesting"
 )
 
 func setupTestContext() context.Context {
@@ -37,17 +36,23 @@ func pipelineWithStatusSuccess(namespace string, buildID *api.CustomJSON) Pipeli
 func Test_ExecutePipelineRunTests(t *testing.T) {
 	// SETUP
 	test := []TestPlan{
-		TestPlan{Name: "parallel5delay10mili",
+		{
+			Name: "parallel5delay10mili",
+
 			TestBuilder:   pipelineWithStatusSuccess,
 			Count:         5,
 			CreationDelay: time.Millisecond * 10,
 		},
-		TestPlan{Name: "parallel5parallelcreation",
+		{
+			Name: "parallel5parallelcreation",
+
 			TestBuilder:      pipelineWithStatusSuccess,
 			Count:            5,
 			ParallelCreation: true,
 		},
-		TestPlan{Name: "parallel5nodelay",
+		{
+			Name: "parallel5nodelay",
+
 			TestBuilder: pipelineWithStatusSuccess,
 			Count:       5,
 		},
@@ -68,15 +73,19 @@ func Test_ExecutePipelineRunTests(t *testing.T) {
 func Test_ExecutePipelineRunTestAndCleanupAfterwards(t *testing.T) {
 	// SETUP
 	test := []TestPlan{
-		TestPlan{Name: "parallelcreation",
+		{
+			Name: "parallelcreation",
+
 			TestBuilder: pipelineWithStatusSuccess,
 			Count:       1,
 			Cleanup:     true,
 		},
 	}
 	ctx := setupTestContext()
+
 	//EXERCISE
 	executePipelineRunTests(ctx, t, test...)
+
 	//VERIFY
 	assert.NilError(t, ctx.Err())
 	pipelineRunInterface := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
@@ -88,19 +97,25 @@ func Test_ExecutePipelineRunTestAndCleanupAfterwards(t *testing.T) {
 func Test_ExecutePipelineRunTestAndDoNotCleanupAfterwards(t *testing.T) {
 	// SETUP
 	test := []TestPlan{
-		TestPlan{Name: "parallelcreationWithCleanupSetToFalse",
+		{
+			Name: "parallelcreationWithCleanupSetToFalse",
+
 			TestBuilder: pipelineWithStatusSuccess,
 			Count:       1,
 			Cleanup:     false,
 		},
-		TestPlan{Name: "parallelcreationWithoutCleanup",
+		{
+			Name: "parallelcreationWithoutCleanup",
+
 			TestBuilder: pipelineWithStatusSuccess,
 			Count:       1,
 		},
 	}
 	ctx := setupTestContext()
+
 	//EXERCISE
 	executePipelineRunTests(ctx, t, test...)
+
 	//VERIFY
 	assert.NilError(t, ctx.Err())
 	pipelineRunInterface := GetClientFactory(ctx).StewardV1alpha1().PipelineRuns(GetNamespace(ctx))
@@ -111,83 +126,114 @@ func Test_ExecutePipelineRunTestAndDoNotCleanupAfterwards(t *testing.T) {
 
 func Test_CheckResult(t *testing.T) {
 	t.Parallel()
+
 	for _, test := range []struct {
-		run      testRun
-		expected error
+		Run      testRun
+		Expected error
 	}{
-		{testRun{expected: "", result: nil}, nil},
-		{testRun{expected: "", result: fmt.Errorf("foo")}, fmt.Errorf(`unexpected error "foo"`)},
-		{testRun{expected: "foo", result: fmt.Errorf("foo")}, nil},
-		{testRun{expected: "foo", result: fmt.Errorf("bar")},
-			fmt.Errorf(`unexpected error, got "bar" expected "foo"`)},
-		{testRun{expected: "bad(", result: fmt.Errorf("bar")},
-			fmt.Errorf(`cannot compile expected "bad("`)},
+		{
+			Run:      testRun{expected: "", result: nil},
+			Expected: nil,
+		},
+		{
+			Run:      testRun{expected: "", result: fmt.Errorf("foo")},
+			Expected: fmt.Errorf(`unexpected error "foo"`),
+		},
+		{
+			Run:      testRun{expected: "foo", result: fmt.Errorf("foo")},
+			Expected: nil,
+		},
+		{
+			Run:      testRun{expected: "foo", result: fmt.Errorf("bar")},
+			Expected: fmt.Errorf(`unexpected error, got "bar" expected "foo"`),
+		},
+		{
+			Run:      testRun{expected: "bad(", result: fmt.Errorf("bar")},
+			Expected: fmt.Errorf(`cannot compile expected "bad("`),
+		},
 	} {
 		// EXERCISE
-		error := checkResult(test.run)
+		error := checkResult(test.Run)
+
 		// VERIFY
-		if test.expected == nil {
+		if test.Expected == nil {
 			assert.NilError(t, error)
 		} else {
 			assert.Assert(t, error != nil)
-			assert.Equal(t, test.expected.Error(), error.Error())
+			assert.Equal(t, test.Expected.Error(), error.Error())
 		}
 	}
 }
 
 func Test_CreatePipelineRunTest(t *testing.T) {
 	t.Parallel()
+
 	for _, test := range []struct {
-		name                  string
-		test                  PipelineRunTest
-		expectedResult        string
-		expectedSecretsByName []string
+		Name                  string
+		Test                  PipelineRunTest
+		ExpectedResult        string
+		ExpectedSecretsByName []string
 	}{
 		{
-			name:                  "success",
-			test:                  PipelineRunTest{PipelineRun: pipelineRun("name1", "ns1")},
-			expectedResult:        "",
-			expectedSecretsByName: []string{},
-		}, {
+			Name: "success",
 
-			name: "secrets",
-			test: PipelineRunTest{PipelineRun: pipelineRun("name1", "ns1"),
-				Secrets: []*v1.Secret{builder.SecretBasicAuth("foo", "ns1", "bar", "baz"),
-					builder.SecretBasicAuth("bar", "ns1", "bar", "baz")},
+			Test: PipelineRunTest{
+				PipelineRun: pipelineRun("name1", "ns1"),
 			},
-			expectedResult:        "",
-			expectedSecretsByName: []string{"foo", "bar"},
-		}, {
-			name: "duplicate secrets name",
-			test: PipelineRunTest{PipelineRun: pipelineRun("name1", "ns1"),
-				Secrets: []*v1.Secret{builder.SecretBasicAuth("foo", "ns1", "bar", "baz"),
-					builder.SecretBasicAuth("foo", "ns1", "bar", "baz")},
+			ExpectedResult:        "",
+			ExpectedSecretsByName: []string{},
+		},
+		{
+			Name: "secrets",
+
+			Test: PipelineRunTest{
+				PipelineRun: pipelineRun("name1", "ns1"),
+				Secrets: []*v1.Secret{
+					builder.SecretBasicAuth("foo", "ns1", "bar", "baz"),
+					builder.SecretBasicAuth("bar", "ns1", "bar", "baz"),
+				},
 			},
-			expectedResult:        `secret creation failed: "secrets \"foo\" already exists"`,
-			expectedSecretsByName: []string{"foo"},
+			ExpectedResult:        "",
+			ExpectedSecretsByName: []string{"foo", "bar"},
+		},
+		{
+			Name: "duplicate secrets name",
+
+			Test: PipelineRunTest{
+				PipelineRun: pipelineRun("name1", "ns1"),
+				Secrets: []*v1.Secret{
+					builder.SecretBasicAuth("foo", "ns1", "bar", "baz"),
+					builder.SecretBasicAuth("foo", "ns1", "bar", "baz"),
+				},
+			},
+			ExpectedResult:        `secret creation failed: "secrets \"foo\" already exists"`,
+			ExpectedSecretsByName: []string{"foo"},
 		},
 	} {
-		t.Run(test.name, func(t *testing.T) {
-			logger := ktesting.NewLogger(t, ktesting.NewConfig())
+		t.Run(test.Name, func(t *testing.T) {
 			test := test
 			t.Parallel()
+
 			//SETUP
 			ctx := setupTestContext()
 			run := testRun{ctx: ctx}
+			dummyT := &testing.T{}
+
 			// EXERCISE
-			testRun := createPipelineRunTest(logger, test.test, run)
+			testRun := createPipelineRunTest(dummyT, test.Test, run)
+
 			//VERIFY
-			if test.expectedResult != "" {
+			if test.ExpectedResult != "" {
 				assert.Assert(t, testRun.result != nil)
-				assert.Equal(t, testRun.result.Error(), test.expectedResult)
+				assert.Equal(t, testRun.result.Error(), test.ExpectedResult)
 			} else {
 				assert.NilError(t, testRun.result)
 				secretInterface := GetClientFactory(ctx).CoreV1().Secrets(GetNamespace(ctx))
 				secretList, err := secretInterface.List(ctx, metav1.ListOptions{})
 				assert.NilError(t, err)
 
-				assert.Equal(t, len(test.expectedSecretsByName), len(secretList.Items))
-				for _, secretName := range test.expectedSecretsByName {
+				assert.Equal(t, len(test.ExpectedSecretsByName), len(secretList.Items))
+				for _, secretName := range test.ExpectedSecretsByName {
 					secret, err := secretInterface.Get(ctx, secretName, metav1.GetOptions{})
 					assert.NilError(t, err)
 					assert.Equal(t, secret.GetName(), secretName)
