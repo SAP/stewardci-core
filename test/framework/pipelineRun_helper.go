@@ -9,12 +9,9 @@ import (
 	"time"
 
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"gotest.tools/v3/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	klog "k8s.io/klog/v2"
-	"k8s.io/klog/v2/ktesting"
 )
 
 type testRun struct {
@@ -32,27 +29,26 @@ func ExecutePipelineRunTests(t *testing.T, testPlans ...TestPlan) {
 }
 
 func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...TestPlan) {
-	logger := ktesting.NewLogger(t, ktesting.NewConfig())
 	tnn := GetNamespace(ctx)
 	var waitWG sync.WaitGroup
 	for _, testPlan := range testPlans {
 		waitWG.Add(testPlan.Count)
 		for i := 1; i <= testPlan.Count; i++ {
-			name :=
-				fmt.Sprintf("%s_%d", getTestPlanName(testPlan), i)
+			name := fmt.Sprintf("%s_%d", getTestPlanName(testPlan), i)
 			ctx = SetTestName(ctx, name)
 			runID := &api.CustomJSON{
 				Value: map[string]string{
 					"jobId":   name,
 					"buildId": uuid.New().String(),
 					"realmId": GetRealmUUID(ctx),
-				}}
+				},
+			}
 
 			pipelineTest := testPlan.TestBuilder(tnn, runID)
 
 			ctx, cancel := context.WithTimeout(ctx, pipelineTest.Timeout)
 			defer cancel()
-			logger.Info("Test - start", "testName", name)
+			t.Logf("Test %q: Started", name)
 			myTestRun := testRun{
 				name:     name,
 				ctx:      ctx,
@@ -62,11 +58,11 @@ func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...Tes
 			}
 			if testPlan.ParallelCreation {
 				go func(waitWG *sync.WaitGroup) {
-					myTestRun := createPipelineRunTest(logger, pipelineTest, myTestRun)
+					myTestRun := createPipelineRunTest(t, pipelineTest, myTestRun)
 					startWait(t, myTestRun, waitWG)
 				}(&waitWG)
 			} else {
-				myTestRun := createPipelineRunTest(logger, pipelineTest, myTestRun)
+				myTestRun := createPipelineRunTest(t, pipelineTest, myTestRun)
 				go func(waitWG *sync.WaitGroup) {
 					startWait(t, myTestRun, waitWG)
 				}(&waitWG)
@@ -95,24 +91,14 @@ func checkResult(run testRun) error {
 }
 
 func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
-	logger := ktesting.NewLogger(t, ktesting.NewConfig())
 	ctx := run.ctx
 	pr := GetPipelineRun(ctx)
 	defer func() {
 		if run.cleanup {
-			logger.Info(
-				"Test - deleting pipeline run",
-				"testName", run.name,
-				"pipelineRun", klog.KObj(pr),
-			)
+			t.Logf("Test %q: Deleting pipeline run '%s/%s'", run.name, pr.GetNamespace(), pr.GetName())
 			err := DeletePipelineRun(ctx, pr)
 			if err != nil {
-				logger.Error(
-					err,
-					"Failed to clean up pipeline run",
-					"testName", run.name,
-					"pipelineRun", klog.KObj(pr),
-				)
+				t.Logf("Test %q: Failed to clean up pipeline run '%s/%s': %s", run.name, pr.GetNamespace(), pr.GetName(), err)
 			}
 		}
 		waitWG.Done()
@@ -125,25 +111,16 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 	assert.NilError(t, ctx.Err(), "Test: %q", run.name)
 	PipelineRunCheck := CreatePipelineRunCondition(pr, run.check)
 	duration, err := WaitFor(ctx, PipelineRunCheck)
-	logger.Info(
-		"Test - wait",
-		"testName", run.name,
-		"pipelineRun", klog.KObj(pr),
-		"duration", fmt.Sprintf("%.2f", duration.Seconds()),
-	)
+	t.Logf("Test %q: Waited for %.2fs", run.name, duration.Seconds())
 	run.result = err
 	assert.NilError(t, checkResult(run), "Test: %q", run.name)
 }
 
-func createPipelineRunTest(logger logr.Logger, pipelineTest PipelineRunTest, run testRun) testRun {
+func createPipelineRunTest(t *testing.T, pipelineTest PipelineRunTest, run testRun) testRun {
 	startTime := time.Now()
 	defer func() {
 		duration := time.Since(startTime)
-		logger.Info(
-			"Test - setup",
-			"testName", run.name,
-			"duration", fmt.Sprintf("%.2f", duration.Seconds()),
-		)
+		t.Logf("Test %q: Setup completed (took %.2fs)", run.name, duration.Seconds())
 	}()
 	PipelineRun := pipelineTest.PipelineRun
 	ctx := run.ctx
@@ -163,11 +140,7 @@ func createPipelineRunTest(logger logr.Logger, pipelineTest PipelineRunTest, run
 		run.result = fmt.Errorf("pipeline run creation failed: %q", err.Error())
 		return run
 	}
-	logger.Info(
-		"Test - pipeline run created",
-		"testName", run.name,
-		"pipelineRun", klog.KObj(pr),
-	)
+	t.Logf("Test %q: Created pipeline run '%s/%s'", run.name, pr.GetNamespace(), pr.GetName())
 	ctx = SetPipelineRun(ctx, pr)
 	run.ctx = ctx
 	return run
