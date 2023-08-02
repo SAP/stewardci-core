@@ -103,17 +103,11 @@ type ControllerOpts struct {
 
 // NewController creates new Controller
 func NewController(logger logr.Logger, factory k8s.ClientFactory, opts ControllerOpts) *Controller {
-	const logVerbosity = 3
-
 	logger = logger.WithName(loggerName)
 
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1beta1().TaskRuns()
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartStructuredLogging(logVerbosity)
-	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
-	eventRecorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
 
 	controller := &Controller{
 		factory:            factory,
@@ -122,10 +116,27 @@ func NewController(logger logr.Logger, factory k8s.ClientFactory, opts Controlle
 
 		tektonTaskRunsSynced: tektonTaskRunInformer.Informer().HasSynced,
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), metrics.WorkqueueName),
-		eventRecorder:        eventRecorder,
 		pipelineRunStore:     pipelineRunInformer.Informer().GetStore(),
 		logger:               logger,
 	}
+
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
+	eventBroadcaster.StartEventWatcher(
+		func(e *corev1.Event) {
+			controller.logger.V(3).Info(
+				"Event occurred",
+				"object", klog.KRef(e.InvolvedObject.Namespace, e.InvolvedObject.Name),
+				"fieldPath", e.InvolvedObject.FieldPath,
+				"kind", e.InvolvedObject.Kind,
+				"apiVersion", e.InvolvedObject.APIVersion,
+				"type", e.Type,
+				"reason", e.Reason,
+				"message", e.Message,
+			)
+		},
+	)
+	controller.eventRecorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
 
 	controller.heartbeatInterval = opts.HeartbeatInterval
 	if opts.HeartbeatLogLevel != nil {
