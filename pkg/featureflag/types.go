@@ -35,6 +35,7 @@ package featureflag
 import (
 	"os"
 	"regexp"
+	"sort"
 	"sync"
 
 	"k8s.io/klog/v2"
@@ -122,7 +123,18 @@ func ParseFlags(f string) {
 
 // Log logs all feature flags using the given logger.
 func Log(logger klog.Logger) {
-	for _, ff := range flags {
-		logger.Info("Feature flag", "key", ff.Key, "enabled", ff.enabled)
+	keys := make([]string, 0, len(flags))
+	for key := range flags {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		ff := flags[key]
+		logger.Info(
+			"Feature flag",
+			"key", ff.Key,
+			"enabled", ff.Enabled(),
+		)
 	}
 }
