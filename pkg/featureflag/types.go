@@ -120,6 +120,7 @@ func ParseFlags(f string) {
 	}
 }
 
+// Log logs all feature flags using the given logger.
 func Log(logger klog.Logger) {
 	for _, ff := range flags {
 		logger.Info("Feature flag", "key", ff.Key, "enabled", ff.enabled)
