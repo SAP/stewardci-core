@@ -151,11 +151,9 @@ func main() {
 
 	logger.V(3).Info("Creating controller")
 	controllerOpts := runctl.ControllerOpts{
-		HeartbeatInterval: heartbeatInterval,
-	}
-	if heartbeatLogging {
-		tmp := klog.Level(heartbeatLogLevel)
-		controllerOpts.HeartbeatLogLevel = &tmp
+		HeartbeatInterval:       heartbeatInterval,
+		HeartbeatLoggingEnabled: heartbeatLogging,
+		HeartbeatLogLevel:       heartbeatLogLevel,
 	}
 
 	controller := runctl.NewController(logger, factory, controllerOpts)

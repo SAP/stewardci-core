@@ -71,8 +71,9 @@ type Controller struct {
 	eventRecorder        record.EventRecorder
 	pipelineRunStore     cache.Store
 
-	heartbeatInterval time.Duration
-	heartbeatLogLevel *klog.Level
+	heartbeatInterval       time.Duration
+	heartbeatLoggingEnabled bool
+	heartbeatLogLevel       int
 
 	// logger *must* be initialized when creating Controller,
 	// otherwise logging functions will access a nil sink and
@@ -94,11 +95,12 @@ type ControllerOpts struct {
 	// If zero or negative, heartbeats are disabled.
 	HeartbeatInterval time.Duration
 
-	// HeartbeatLogLevel is a pointer to a klog log level to be used for
-	// logging heartbeats.
-	// If nil, heartbeat logging is disabled and heartbeats are only
-	// exposed via metric.
-	HeartbeatLogLevel *klog.Level
+	// HeartbeatLoggingEnabled controls whether heartbeats are logged.
+	// If false, heartbeats are only exposed via metric.
+	HeartbeatLoggingEnabled bool
+
+	// HeartbeatLogLevel is the log level to be used for logging heartbeats.
+	HeartbeatLogLevel int
 }
 
 // NewController creates new Controller
@@ -139,10 +141,8 @@ func NewController(logger logr.Logger, factory k8s.ClientFactory, opts Controlle
 	controller.eventRecorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
 
 	controller.heartbeatInterval = opts.HeartbeatInterval
-	if opts.HeartbeatLogLevel != nil {
-		copyOfValue := *opts.HeartbeatLogLevel
-		controller.heartbeatLogLevel = &copyOfValue
-	}
+	controller.heartbeatLoggingEnabled = opts.HeartbeatLoggingEnabled
+	controller.heartbeatLogLevel = opts.HeartbeatLogLevel
 
 	pipelineRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.addToWorkqueue,
@@ -162,7 +162,7 @@ func NewController(logger logr.Logger, factory k8s.ClientFactory, opts Controlle
 
 // meterAllPipelineRunsPeriodic observes certain metrics of all existing pipeline runs (in the informer cache).
 func (c *Controller) meterAllPipelineRunsPeriodic() {
-	c.logger.V(4).Info("Metering all the pipeline runs")
+	c.logger.V(4).Info("Metering all pipeline runs")
 	objs := c.pipelineRunStore.List()
 	for _, obj := range objs {
 		pipelineRun := obj.(*api.PipelineRun)
@@ -270,8 +270,8 @@ func (c *Controller) heartbeatStimulus() {
 }
 
 func (c *Controller) heartbeat() {
-	if c.heartbeatLogLevel != nil {
-		c.logger.V(int(*c.heartbeatLogLevel)).Info("heartbeat")
+	if c.heartbeatLoggingEnabled {
+		c.logger.V(c.heartbeatLogLevel).Info("heartbeat")
 	}
 	metrics.ControllerHeartbeats.Inc()
 }
