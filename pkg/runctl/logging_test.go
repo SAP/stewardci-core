@@ -4,262 +4,327 @@ import (
 	"context"
 	"testing"
 
+	logrtesting "github.com/SAP/stewardci-core/internal/logr/testing"
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/go-logr/logr"
-	"gotest.tools/v3/assert"
+	"github.com/golang/mock/gomock"
+	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8sapitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
-	"k8s.io/klog/v2/ktesting"
 )
 
-type runStatus struct {
-	auxiliaryNamespace string
-	namespace          string
-	state              api.State
-}
-
-type runMeta struct {
-	name      string
-	namespace string
-	UID       types.UID
-}
-
-func Test_logging_extendContextLoggerWithPipelineRunInfo(t *testing.T) {
-	const logText = "This is a test"
-
+func Test_extendLoggerWithPipelineRunInfo(t *testing.T) {
 	tests := []struct {
-		name               string
-		ctx                context.Context
-		loggerName         string
-		pipelineRun        k8s.PipelineRun
-		additionalKVs      []interface{}
-		expectedLoggerName string
-		expectedLogKVs     []interface{}
+		name            string
+		pipelineRun     *api.PipelineRun
+		expectedWithKVs []interface{}
 	}{
 		{
-			name: "Background Context is provided",
-			ctx:  context.Background(),
-			pipelineRun: mockPipelineRun(
-				runMeta{
-					name:      "run1",
-					namespace: "run-ns1",
-					UID:       types.UID("123-abc"),
-				},
-				runStatus{
-					namespace: "foo",
-					state:     api.StateNew,
-				},
-			),
-			additionalKVs:      nil,
-			expectedLoggerName: "",
-			expectedLogKVs: []interface{}{
-				"pipelineRun", klog.ObjectRef{Name: "run1", Namespace: "run-ns1"},
-				"pipelineRunUID", types.UID("123-abc"),
-				"pipelineRunState", api.StateNew,
-				"pipelineRunExecutionNamespace", "foo",
+			name: "empty pipeline run object",
+
+			pipelineRun: &api.PipelineRun{},
+			expectedWithKVs: []interface{}{
+				"pipelineRun", klog.ObjectRef{},
+				"pipelineRunUID", k8sapitypes.UID(""),
+				"pipelineRunState", api.StateUndefined,
 			},
 		},
 		{
-			name:       "Logger name as a non-empty string",
-			ctx:        context.Background(),
-			loggerName: "tester",
-			pipelineRun: mockPipelineRun(
-				runMeta{
-					name:      "run1",
-					namespace: "run-ns1",
-					UID:       types.UID("123-abc"),
+			name: "metadata.name",
+
+			pipelineRun: &api.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "run-1",
 				},
-				runStatus{
-					namespace: "foo",
-					state:     api.StateNew,
-				},
-			),
-			additionalKVs:      nil,
-			expectedLoggerName: "tester",
-			expectedLogKVs: []interface{}{
-				"pipelineRun", klog.ObjectRef{Name: "run1", Namespace: "run-ns1"},
-				"pipelineRunUID", types.UID("123-abc"),
-				"pipelineRunState", api.StateNew,
-				"pipelineRunExecutionNamespace", "foo",
+			},
+			expectedWithKVs: []interface{}{
+				"pipelineRun", klog.ObjectRef{Name: "run-1"},
+				"pipelineRunUID", k8sapitypes.UID(""),
+				"pipelineRunState", api.StateUndefined,
 			},
 		},
 		{
-			name: "Additional logging key-values are provided in Context",
-			ctx:  context.Background(),
-			pipelineRun: mockPipelineRun(
-				runMeta{
-					name:      "run1",
-					namespace: "run-ns1",
-					UID:       types.UID("123-abc"),
+			name: "metadata.namespace",
+
+			pipelineRun: &api.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "run-namespace-1",
 				},
-				runStatus{
-					namespace: "foo",
-					state:     api.StateNew,
-				},
-			),
-			additionalKVs:      []interface{}{"pi", 3.14},
-			expectedLoggerName: "",
-			expectedLogKVs: []interface{}{
-				"pi", 3.14,
-				"pipelineRun", klog.ObjectRef{Name: "run1", Namespace: "run-ns1"},
-				"pipelineRunUID", types.UID("123-abc"),
-				"pipelineRunState", api.StateNew,
-				"pipelineRunExecutionNamespace", "foo",
+			},
+			expectedWithKVs: []interface{}{
+				"pipelineRun", klog.ObjectRef{Namespace: "run-namespace-1"},
+				"pipelineRunUID", k8sapitypes.UID(""),
+				"pipelineRunState", api.StateUndefined,
 			},
 		},
 		{
-			name: "Pipeline run with auxiliary namespace in the status",
-			ctx:  context.Background(),
-			pipelineRun: mockPipelineRun(
-				runMeta{
-					name:      "run1",
-					namespace: "run-ns1",
-					UID:       types.UID("123-abc"),
+			name: "metadata.uid",
+
+			pipelineRun: &api.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					UID: k8sapitypes.UID("uid-1"),
 				},
-				runStatus{
-					auxiliaryNamespace: "foo-additional",
-					namespace:          "foo",
-					state:              api.StateNew,
-				},
-			),
-			additionalKVs:      nil,
-			expectedLoggerName: "",
-			expectedLogKVs: []interface{}{
-				"pipelineRun", klog.ObjectRef{Name: "run1", Namespace: "run-ns1"},
-				"pipelineRunUID", types.UID("123-abc"),
-				"pipelineRunState", api.StateNew,
-				"pipelineRunExecutionNamespace", "foo",
-				"pipelineRunExecutionAuxiliaryNamespace", "foo-additional",
+			},
+			expectedWithKVs: []interface{}{
+				"pipelineRun", klog.ObjectRef{},
+				"pipelineRunUID", k8sapitypes.UID("uid-1"),
+				"pipelineRunState", api.StateUndefined,
 			},
 		},
 		{
-			name:               "Pipeline run as a nil object",
-			ctx:                context.Background(),
-			pipelineRun:        nil,
-			additionalKVs:      []interface{}{"pi", 3.14},
-			expectedLoggerName: "",
-			expectedLogKVs: []interface{}{
-				"pi", 3.14,
+			name: "status.state",
+
+			pipelineRun: &api.PipelineRun{
+				Status: api.PipelineStatus{
+					State: api.StateCleaning,
+				},
+			},
+			expectedWithKVs: []interface{}{
+				"pipelineRun", klog.ObjectRef{},
+				"pipelineRunUID", k8sapitypes.UID(""),
+				"pipelineRunState", api.StateCleaning,
+			},
+		},
+		{
+			name: "status.namespace",
+
+			pipelineRun: &api.PipelineRun{
+				Status: api.PipelineStatus{
+					Namespace: "exec-namespace-1",
+				},
+			},
+			expectedWithKVs: []interface{}{
+				"pipelineRun", klog.ObjectRef{},
+				"pipelineRunUID", k8sapitypes.UID(""),
+				"pipelineRunState", api.StateUndefined,
+				"pipelineRunExecNamespace", "exec-namespace-1",
+			},
+		},
+		{
+			name: "status.auxiliaryNamespace",
+
+			pipelineRun: &api.PipelineRun{
+				Status: api.PipelineStatus{
+					AuxiliaryNamespace: "exec-aux-namespace-1",
+				},
+			},
+			expectedWithKVs: []interface{}{
+				"pipelineRun", klog.ObjectRef{},
+				"pipelineRunUID", k8sapitypes.UID(""),
+				"pipelineRunState", api.StateUndefined,
+				"pipelineRunExecAuxNamespace", "exec-aux-namespace-1",
+			},
+		},
+		{
+			name: "all together",
+
+			pipelineRun: &api.PipelineRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "run-2",
+					Namespace: "run-namespace-2",
+					UID:       k8sapitypes.UID("uid-2"),
+				},
+				Status: api.PipelineStatus{
+					State:              api.StatePreparing,
+					Namespace:          "exec-namespace-2",
+					AuxiliaryNamespace: "exec-aux-namespace-2",
+				},
+			},
+			expectedWithKVs: []interface{}{
+				"pipelineRun", klog.ObjectRef{Name: "run-2", Namespace: "run-namespace-2"},
+				"pipelineRunUID", k8sapitypes.UID("uid-2"),
+				"pipelineRunState", api.StatePreparing,
+				"pipelineRunExecNamespace", "exec-namespace-2",
+				"pipelineRunExecAuxNamespace", "exec-aux-namespace-2",
 			},
 		},
 	}
 	for _, test := range tests {
-
 		t.Run(test.name, func(t *testing.T) {
 			// SETUP
-			logger := ktesting.NewLogger(
-				t,
-				ktesting.NewConfig(
-					ktesting.BufferLogs(true),
+			g := NewGomegaWithT(t)
+			mockCtrl := gomock.NewController(t)
+
+			origSink := logrtesting.NewMockLogSink(mockCtrl)
+			newSink := logrtesting.NewMockLogSink(mockCtrl)
+
+			gomock.InOrder(
+				origSink.EXPECT().Init(gomock.Any()),
+				origSink.EXPECT().WithValues(gomock.Any()).DoAndReturn(
+					func(args ...interface{}) logr.LogSink {
+						g.Expect(args).To(HaveExactElements(test.expectedWithKVs...))
+						return newSink
+					},
 				),
 			)
 
-			logger = logger.WithValues(test.additionalKVs...)
-
-			if test.loggerName != "" {
-				logger = logger.WithName(test.loggerName)
-			}
-
-			ctx := klog.NewContext(test.ctx, logger)
+			logger := logr.New(origSink)
 
 			// EXERCISE
-			ctx, logger = extendContextLoggerWithPipelineRunInfo(
-				ctx,
+			resultLogger := extendLoggerWithPipelineRunInfo(
+				logger,
 				test.pipelineRun,
 			)
 
-			// VERIFY logger
-			logger.Info(logText)
-
-			logsFromLogger := getLogEntries(t, logger)
-
-			assert.Assert(t, logsFromLogger[0].Prefix == test.expectedLoggerName)
-			assert.Assert(t, logsFromLogger[0].Message == logText)
-			assert.DeepEqual(t, logsFromLogger[0].WithKVList, test.expectedLogKVs)
-
-			// VERIFY ctx
-			loggerFromCtx := klog.FromContext(ctx)
-			loggerFromCtx.Info(logText)
-
-			logsFromCtxLogger := getLogEntries(t, loggerFromCtx)
-
-			assert.Assert(t, logsFromCtxLogger[0].Prefix == test.expectedLoggerName)
-			assert.Assert(t, logsFromCtxLogger[0].Message == logText)
-			assert.DeepEqual(t, logsFromCtxLogger[0].WithKVList, test.expectedLogKVs)
+			// VERIFY
+			g.Expect(resultLogger).NotTo(BeIdenticalTo(logger))
+			g.Expect(resultLogger.GetSink()).To(BeIdenticalTo(newSink))
 		})
 	}
 }
 
-func Test_logging_extendContextLoggerWithPipelineRunInfo_with_nil_context(t *testing.T) {
-	//SETUP
-	pipelineRun := mockPipelineRun(
-		runMeta{
-			name:      "run1",
-			namespace: "run-ns1",
-			UID:       types.UID("123-abc"),
+func Test_extendLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) {
+	// SETUP
+	g := NewGomegaWithT(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockSink := logrtesting.NewMockLogSink(mockCtrl)
+	mockSink.EXPECT().Init(gomock.Any())
+	// no other calls expected
+
+	logger := logr.New(mockSink)
+
+	// EXERCISE + VERIFY
+	g.Expect(func() {
+		extendLoggerWithPipelineRunInfo(logger, nil)
+	}).To(
+		Panic(),
+	)
+}
+
+func Test_extendContextLoggerWithPipelineRunInfo(t *testing.T) {
+	// SETUP
+	pipelineRun := &api.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "run-2",
+			Namespace: "run-namespace-2",
+			UID:       k8sapitypes.UID("uid-2"),
 		},
-		runStatus{
-			auxiliaryNamespace: "foo-additional",
-			namespace:          "foo",
-			state:              api.StateNew,
+		Status: api.PipelineStatus{
+			State:              api.StatePreparing,
+			Namespace:          "exec-namespace-2",
+			AuxiliaryNamespace: "exec-aux-namespace-2",
 		},
+	}
+
+	expectedWithKVs := []interface{}{
+		"pipelineRun", klog.ObjectRef{Name: "run-2", Namespace: "run-namespace-2"},
+		"pipelineRunUID", k8sapitypes.UID("uid-2"),
+		"pipelineRunState", api.StatePreparing,
+		"pipelineRunExecNamespace", "exec-namespace-2",
+		"pipelineRunExecAuxNamespace", "exec-aux-namespace-2",
+	}
+
+	g := NewGomegaWithT(t)
+	mockCtrl := gomock.NewController(t)
+
+	origSink := logrtesting.NewMockLogSink(mockCtrl)
+	newSink := logrtesting.NewMockLogSink(mockCtrl)
+
+	gomock.InOrder(
+		origSink.EXPECT().Init(gomock.Any()),
+		origSink.EXPECT().WithValues(gomock.Any()).DoAndReturn(
+			func(args ...interface{}) logr.LogSink {
+				g.Expect(args).To(HaveExactElements(expectedWithKVs...))
+				return newSink
+			},
+		),
 	)
 
-	//EXERCISE
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(nil, pipelineRun)
+	logger := logr.New(origSink)
 
-	//VERIFY
-	assert.Assert(t, ctx != nil)
-	assert.Assert(t, logger != klog.Logger{})
+	type baseCtxKey struct{}
+	baseCtxValue := 94586724935743
+	baseCtx := context.WithValue(context.Background(), baseCtxKey{}, baseCtxValue)
+	ctx := logr.NewContext(baseCtx, logger)
 
-	// for logger
-	func(t *testing.T, logger logr.Logger) {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Fatal("Logging should not panic")
-			}
-		}()
+	// EXERCISE
+	resultCtx, resultLogger := extendContextLoggerWithPipelineRunInfo(
+		ctx, pipelineRun,
+	)
 
-		logger.Info("this is a test")
-	}(t, logger)
+	// VERIFY
+	g.Expect(resultCtx).NotTo(BeIdenticalTo(ctx))
+	g.Expect(logr.FromContext(resultCtx)).To(BeIdenticalTo(resultLogger))
+	g.Expect(resultCtx.Value(baseCtxKey{})).To(BeIdenticalTo(baseCtxValue))
 
-	// for logger from Context
-	func(t *testing.T, logger logr.Logger) {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Fatal("Logging should not panic")
-			}
-		}()
-
-		logger.Info("this is a test")
-	}(t, klog.FromContext(ctx))
+	g.Expect(resultLogger).NotTo(BeIdenticalTo(logger))
+	g.Expect(resultLogger.GetSink()).To(BeIdenticalTo(newSink))
 }
 
-func getLogEntries(t *testing.T, logger logr.Logger) ktesting.Log {
-	t.Helper()
+func Test_extendContextLoggerWithPipelineRunInfo_ContextIsNil(t *testing.T) {
+	// SETUP
+	g := NewGomegaWithT(t)
 
-	underlyingLogger, ok := logger.GetSink().(ktesting.Underlier)
-	if !ok {
-		t.Fatalf("should have had ktesting LogSink, got %T", logger.GetSink())
-	}
-	return underlyingLogger.GetBuffer().Data()
-}
-
-func mockPipelineRun(runMeta runMeta, runStatus runStatus) k8s.PipelineRun {
-	run := &api.PipelineRun{
-		Status: api.PipelineStatus{
-			AuxiliaryNamespace: runStatus.auxiliaryNamespace,
-			Namespace:          runStatus.namespace,
-			State:              api.State(runStatus.state),
-		},
+	pipelineRun := &api.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      runMeta.name,
-			Namespace: runMeta.namespace,
-			UID:       runMeta.UID,
+			Name:      "run-2",
+			Namespace: "run-namespace-2",
+			UID:       k8sapitypes.UID("uid-2"),
+		},
+		Status: api.PipelineStatus{
+			State:              api.StatePreparing,
+			Namespace:          "exec-namespace-2",
+			AuxiliaryNamespace: "exec-aux-namespace-2",
 		},
 	}
-	pr, _ := k8s.NewPipelineRun(context.Background(), run, nil)
-	return pr
+
+	nilCtx := (context.Context)(nil)
+
+	// EXERCISE + VERIFY
+	g.Expect(func() {
+		extendContextLoggerWithPipelineRunInfo(nilCtx, pipelineRun)
+	}).To(
+		Panic(),
+	)
+}
+
+func Test_extendContextLoggerWithPipelineRunInfo_ContextHasNoLogger(t *testing.T) {
+	// SETUP
+	g := NewGomegaWithT(t)
+
+	pipelineRun := &api.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "run-2",
+			Namespace: "run-namespace-2",
+			UID:       k8sapitypes.UID("uid-2"),
+		},
+		Status: api.PipelineStatus{
+			State:              api.StatePreparing,
+			Namespace:          "exec-namespace-2",
+			AuxiliaryNamespace: "exec-aux-namespace-2",
+		},
+	}
+
+	ctxWithoutLogger := context.Background()
+
+	// EXERCISE + VERIFY
+	g.Expect(func() {
+		extendContextLoggerWithPipelineRunInfo(ctxWithoutLogger, pipelineRun)
+	}).To(
+		Panic(),
+	)
+}
+
+func Test_extendContextLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) {
+	// SETUP
+	g := NewGomegaWithT(t)
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockSink := logrtesting.NewMockLogSink(mockCtrl)
+	mockSink.EXPECT().Init(gomock.Any())
+	// no other calls expected
+
+	logger := logr.New(mockSink)
+	ctx := logr.NewContext(context.Background(), logger)
+
+	// EXERCISE + VERIFY
+	g.Expect(func() {
+		extendContextLoggerWithPipelineRunInfo(ctx, nil)
+	}).To(
+		Panic(),
+	)
 }

@@ -449,7 +449,7 @@ func (c *Controller) handlePipelineRunResultExistsButNotCleaned(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) error {
-	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun)
+	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
 
 	result := pipelineRun.GetStatus().Result
 	state := pipelineRun.GetStatus().State
@@ -470,7 +470,7 @@ func (c *Controller) handlePipelineRunNew(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
-	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun)
+	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
 
 	if pipelineRun.GetStatus().State == api.StateUndefined {
 		if err := pipelineRun.InitState(ctx); err != nil {
@@ -500,7 +500,7 @@ func (c *Controller) handlePipelineRunNew(
 func (c *Controller) ensurePipelineRunsConfig(ctx context.Context, pipelineRun k8s.PipelineRun) (*cfg.PipelineRunsConfigStruct, bool, error) {
 	var pipelineRunsConfig *cfg.PipelineRunsConfigStruct
 
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun)
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
 
 	state := pipelineRun.GetStatus().State
 	// TODO do not assume in which phase the config is (not) needed
@@ -536,7 +536,7 @@ func (c *Controller) handlePipelineRunPrepare(
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
 	origCtx := ctx
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun)
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
 
 	if pipelineRun.GetStatus().State == api.StatePreparing {
 		logger.V(3).Info("Preparing pipeline execution")
@@ -555,7 +555,7 @@ func (c *Controller) handlePipelineRunPrepare(
 		pipelineRun.UpdateRunNamespace(namespace)
 		pipelineRun.UpdateAuxNamespace(auxNamespace)
 
-		ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun)
+		ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
 		logger.V(3).Info("Prepared pipeline execution")
 
 		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
@@ -574,7 +574,7 @@ func (c *Controller) handlePipelineRunWaiting(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun)
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
 
 	if pipelineRun.GetStatus().State == api.StateWaiting {
 		logger.V(3).Info("Waiting for pipeline execution")
@@ -651,7 +651,7 @@ func (c *Controller) handlePipelineRunRunning(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun)
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
 
 	if pipelineRun.GetStatus().State == api.StateRunning {
 		logger.V(3).Info("Examining running pipeline")
@@ -688,7 +688,7 @@ func (c *Controller) handlePipelineRunCleaning(
 	runManager run.Manager,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun)
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
 
 	if pipelineRun.GetStatus().State == api.StateCleaning {
 		logger.V(3).Info("Cleaning up pipeline execution")
@@ -791,7 +791,7 @@ func (c *Controller) commitStatusAndMeter(ctx context.Context, pipelineRun k8s.P
 // If the user requested abortion it updates message, result and state
 // to trigger a cleanup.
 func (c *Controller) handlePipelineRunAbort(ctx context.Context, pipelineRun k8s.PipelineRun) error {
-	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun)
+	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
 
 	intent := pipelineRun.GetSpec().Intent
 	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {

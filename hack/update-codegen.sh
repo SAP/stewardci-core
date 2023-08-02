@@ -293,6 +293,10 @@ if is_generate_mocks; then
         "github.com/SAP/stewardci-core/pkg/runctl/metrics" \
         "CounterMetric,PipelineRunsMetric,StateItemsMetric,ResultsMetric" \
         "pkg/runctl/metrics/testing/mocks.go"
+    generate_mocks \
+        "github.com/go-logr/logr" \
+        "LogSink" \
+        "internal/logr/testing/mocks.go"
 fi
 
 echo "${ACTION} successful"
