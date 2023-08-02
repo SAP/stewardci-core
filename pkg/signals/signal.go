@@ -30,10 +30,10 @@ import (
 var onlyOneShutdownSignalHandler = make(chan struct{})
 var onlyOneThreaddumpSignalHandler = make(chan struct{})
 
-// SetupShutdownSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned
-// which is closed on one of these signals. If a second signal is caught, the provided killFunc
-// is called in a new gorouting. If a third signal is caught, the process gets terminated via
-// os.Exit(1).
+// SetupShutdownSignalHandler registeres a handler for SIGTERM and SIGINT. A
+// stop channel is returned which is closed on the first receipt of one of these
+// signals. On a second receipt the provided killFunc is called in a new
+// gorouting. Upon a third receipt the process gets terminated via os.Exit(1).
 //
 // killFunc is supposed to shutdown the process without further significant delay.
 func SetupShutdownSignalHandler(logger logr.Logger, killFunc func()) (stopCh <-chan struct{}) {
@@ -43,7 +43,6 @@ func SetupShutdownSignalHandler(logger logr.Logger, killFunc func()) (stopCh <-c
 	signal.Notify(sigs, shutdownSignals...)
 	go func() {
 		sig := <-sigs
-
 		logger.Info("Received signal", "signal", sig)
 		logger.Info("Initiating graceful shutdown")
 		close(stop)
@@ -61,8 +60,8 @@ func SetupShutdownSignalHandler(logger logr.Logger, killFunc func()) (stopCh <-c
 	return stop
 }
 
-// SetupThreadDumpSignalHandler registers a handler for SIGQUIT.
-// In case a SIGQUIT is received a thread dump is written.
+// SetupThreadDumpSignalHandler registers a handler for SIGQUIT. Each time the
+// signal is received, a thread dump is logged.
 func SetupThreadDumpSignalHandler(logger logr.Logger) {
 	close(onlyOneThreaddumpSignalHandler) // panics when called twice
 	go func() {
