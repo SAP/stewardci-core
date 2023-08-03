@@ -847,16 +847,15 @@ func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 	if runKey != "" {
 		c.workqueue.Add(runKey)
 
-		logValues := []interface{}{
-			"key", runKey,
-			"triggerObject", klog.KObj(object),
-		}
+		triggerObjectType := (interface{})("unknown")
 		if typeMeta := k8s.TryExtractTypeInfo(obj); typeMeta != nil {
-			logValues = append(logValues, "triggerObjectType", typeMeta.GroupVersionKind())
+			triggerObjectType = typeMeta.GroupVersionKind()
 		}
 		c.logger.V(4).Info(
 			"Added item to workqueue triggered by associated object",
-			logValues...,
+			"key", runKey,
+			"triggerObject", klog.KObj(object),
+			"triggerObjectType", triggerObjectType,
 		)
 	}
 }
