@@ -325,13 +325,13 @@ func (c *Controller) isMaintenanceMode(ctx context.Context) (bool, error) {
 // converge the two. It then updates the Status block of the Foo resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key string) error {
-	logger := c.logger.WithName(reconcilerLoggerName)
 
 	if key == heartbeatStimulusKey {
 		c.heartbeat()
 		return nil
 	}
 
+	logger := c.logger.WithName(reconcilerLoggerName)
 	ctx := context.Background()
 
 	pipelineRun, err := c.getPipelineRunToProcess(ctx, key)
@@ -841,14 +841,22 @@ func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 			utilruntime.HandleError(fmt.Errorf("error decoding object tombstone, invalid type"))
 			return
 		}
-		c.logger.V(3).Info("Recovered deleted object from unknown state",
-			"object", klog.KObj(object))
 	}
-	c.logger.V(4).Info("Deriving workqueue item from associated object", "object", klog.KObj(object))
 
 	runKey := runmgr.GetPipelineRunKeyAnnotation(object)
 	if runKey != "" {
 		c.workqueue.Add(runKey)
-		c.logger.V(4).Info("Added item to workqueue", "key", runKey)
+
+		logValues := []interface{}{
+			"key", runKey,
+			"triggerObject", klog.KObj(object),
+		}
+		if typeMeta := k8s.TryExtractTypeInfo(obj); typeMeta != nil {
+			logValues = append(logValues, "triggerObjectType", typeMeta.GroupVersionKind())
+		}
+		c.logger.V(4).Info(
+			"Added item to workqueue triggered by associated object",
+			logValues...,
+		)
 	}
 }
