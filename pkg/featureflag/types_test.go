@@ -20,7 +20,9 @@ import (
 	"os"
 	"testing"
 
-	"k8s.io/klog/v2"
+	"github.com/go-logr/logr"
+	. "github.com/onsi/gomega"
+	"k8s.io/klog/v2/ktesting"
 )
 
 func TestFlagToFalse(t *testing.T) {
@@ -28,9 +30,6 @@ func TestFlagToFalse(t *testing.T) {
 	if !f.Enabled() {
 		t.Fatalf("Flag did not default true")
 	}
-
-	// Really just to force a dependency on glog, so that we can pass -v and -logtostderr to go test
-	klog.Info("Created flag Unittest1")
 
 	ParseFlags("-UnitTest1")
 	if f.Enabled() {
@@ -58,4 +57,81 @@ func TestSetenv(t *testing.T) {
 	if f.Enabled() {
 		t.Fatalf("Flag was not updated by ParseFlags")
 	}
+}
+
+func Test_Log(t *testing.T) {
+	// SETUP
+	g := NewGomegaWithT(t)
+
+	origFlags := flags
+	t.Cleanup(func() { flags = origFlags })
+	flags = make(map[string]*FeatureFlag)
+
+	// defined in non-lexical order
+	New("a567943574457334", Bool(false))
+	New("d896063233040385", Bool(true))
+	New("b498572340593827", Bool(true))
+	New("c094757438762023", Bool(false))
+
+	logger := ktesting.NewLogger(t, ktesting.NewConfig(ktesting.BufferLogs(true)))
+
+	// EXERCISE
+	Log(logger)
+
+	// VERIFY
+	logEntries := getTestLoggerEntries(t, logger)
+	g.Expect(logEntries).To(HaveLen(4))
+
+	for _, logEntry := range logEntries {
+		g.Expect(logEntry.Prefix).To(BeZero())
+		g.Expect(logEntry.Type).To(Equal(ktesting.LogInfo))
+		g.Expect(logEntry.Verbosity).To(Equal(0))
+		g.Expect(logEntry.Message).To(Equal("Feature flag"))
+		g.Expect(logEntry.Err).To(BeNil())
+		g.Expect(logEntry.WithKVList).To(BeEmpty())
+	}
+	g.Expect(logEntries[0].ParameterKVList).To(HaveExactElements(
+		"key", "a567943574457334",
+		"enabled", false,
+	))
+	g.Expect(logEntries[1].ParameterKVList).To(HaveExactElements(
+		"key", "b498572340593827",
+		"enabled", true,
+	))
+	g.Expect(logEntries[2].ParameterKVList).To(HaveExactElements(
+		"key", "c094757438762023",
+		"enabled", false,
+	))
+	g.Expect(logEntries[3].ParameterKVList).To(HaveExactElements(
+		"key", "d896063233040385",
+		"enabled", true,
+	))
+}
+
+func Test_Log_NoFlags(t *testing.T) {
+	// SETUP
+	g := NewGomegaWithT(t)
+
+	origFlags := flags
+	t.Cleanup(func() { flags = origFlags })
+	flags = make(map[string]*FeatureFlag)
+
+	logger := ktesting.NewLogger(t, ktesting.NewConfig(ktesting.BufferLogs(true)))
+
+	// EXERCISE
+	Log(logger)
+
+	// VERIFY
+	logEntries := getTestLoggerEntries(t, logger)
+	g.Expect(logEntries).To(HaveLen(0))
+}
+
+func getTestLoggerEntries(t *testing.T, logger logr.Logger) ktesting.Log {
+	t.Helper()
+
+	underlyingLogger, ok := logger.GetSink().(ktesting.Underlier)
+	if !ok {
+		t.Fatalf("should have had ktesting LogSink, got %T", logger.GetSink())
+	}
+	return underlyingLogger.GetBuffer().Data()
 }

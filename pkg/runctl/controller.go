@@ -22,6 +22,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/runctl/runmgr"
 	"github.com/SAP/stewardci-core/pkg/stewardlabels"
 	"github.com/SAP/stewardci-core/pkg/utils"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -34,6 +35,13 @@ import (
 )
 
 const (
+	// loggerName is the name of the run controller logger.
+	loggerName = "runController"
+
+	// reconcilerLoggerName is the name of the logger used in run controller's
+	// reconciliation loop.
+	reconcilerLoggerName = "reconciler"
+
 	// heartbeatStimulusKey is a special key inserted into the controller
 	// work queue as heartbeat stimulus.
 	// It is an invalid Kubernetes name to avoid conflicts with real
@@ -63,8 +71,14 @@ type Controller struct {
 	eventRecorder        record.EventRecorder
 	pipelineRunStore     cache.Store
 
-	heartbeatInterval time.Duration
-	heartbeatLogLevel *klog.Level
+	heartbeatInterval       time.Duration
+	heartbeatLoggingEnabled bool
+	heartbeatLogLevel       int
+
+	// logger *must* be initialized when creating Controller,
+	// otherwise logging functions will access a nil sink and
+	// panic.
+	logger logr.Logger
 }
 
 type controllerTesting struct {
@@ -81,22 +95,21 @@ type ControllerOpts struct {
 	// If zero or negative, heartbeats are disabled.
 	HeartbeatInterval time.Duration
 
-	// HeartbeatLogLevel is a pointer to a klog log level to be used for
-	// logging heartbeats.
-	// If nil, heartbeat logging is disabled and heartbeats are only
-	// exposed via metric.
-	HeartbeatLogLevel *klog.Level
+	// HeartbeatLoggingEnabled controls whether heartbeats are logged.
+	// If false, heartbeats are only exposed via metric.
+	HeartbeatLoggingEnabled bool
+
+	// HeartbeatLogLevel is the log level to be used for logging heartbeats.
+	HeartbeatLogLevel int
 }
 
 // NewController creates new Controller
-func NewController(factory k8s.ClientFactory, opts ControllerOpts) *Controller {
+func NewController(logger logr.Logger, factory k8s.ClientFactory, opts ControllerOpts) *Controller {
+	logger = logger.WithName(loggerName)
+
 	pipelineRunInformer := factory.StewardInformerFactory().Steward().V1alpha1().PipelineRuns()
 	pipelineRunFetcher := k8s.NewListerBasedPipelineRunFetcher(pipelineRunInformer.Lister())
 	tektonTaskRunInformer := factory.TektonInformerFactory().Tekton().V1beta1().TaskRuns()
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(klog.V(3).Infof)
-	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
-	eventRecorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
 
 	controller := &Controller{
 		factory:            factory,
@@ -105,15 +118,31 @@ func NewController(factory k8s.ClientFactory, opts ControllerOpts) *Controller {
 
 		tektonTaskRunsSynced: tektonTaskRunInformer.Informer().HasSynced,
 		workqueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), metrics.WorkqueueName),
-		eventRecorder:        eventRecorder,
 		pipelineRunStore:     pipelineRunInformer.Informer().GetStore(),
+		logger:               logger,
 	}
 
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: factory.CoreV1().Events("")})
+	eventBroadcaster.StartEventWatcher(
+		func(e *corev1.Event) {
+			controller.logger.V(3).Info(
+				"Event occurred",
+				"object", klog.KRef(e.InvolvedObject.Namespace, e.InvolvedObject.Name),
+				"fieldPath", e.InvolvedObject.FieldPath,
+				"kind", e.InvolvedObject.Kind,
+				"apiVersion", e.InvolvedObject.APIVersion,
+				"type", e.Type,
+				"reason", e.Reason,
+				"message", e.Message,
+			)
+		},
+	)
+	controller.eventRecorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "runController"})
+
 	controller.heartbeatInterval = opts.HeartbeatInterval
-	if opts.HeartbeatLogLevel != nil {
-		copyOfValue := *opts.HeartbeatLogLevel
-		controller.heartbeatLogLevel = &copyOfValue
-	}
+	controller.heartbeatLoggingEnabled = opts.HeartbeatLoggingEnabled
+	controller.heartbeatLogLevel = opts.HeartbeatLogLevel
 
 	pipelineRunInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.addToWorkqueue,
@@ -133,7 +162,7 @@ func NewController(factory k8s.ClientFactory, opts ControllerOpts) *Controller {
 
 // meterAllPipelineRunsPeriodic observes certain metrics of all existing pipeline runs (in the informer cache).
 func (c *Controller) meterAllPipelineRunsPeriodic() {
-	klog.V(4).Infof("metering all pipeline runs")
+	c.logger.V(4).Info("Metering all pipeline runs")
 	objs := c.pipelineRunStore.List()
 	for _, obj := range objs {
 		pipelineRun := obj.(*api.PipelineRun)
@@ -150,29 +179,29 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
 
-	klog.V(2).Infof("Sync cache")
+	c.logger.V(2).Info("Waiting for informer caches to sync")
 	if ok := cache.WaitForCacheSync(stopCh, c.pipelineRunsSynced, c.tektonTaskRunsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	klog.V(2).Infof("Starting metering of pipeline runs with interval %v", meteringInterval)
+	c.logger.V(2).Info("Starting periodic metering of pipeline runs", "interval", meteringInterval)
 	go wait.Until(c.meterAllPipelineRunsPeriodic, meteringInterval, stopCh)
 
 	if c.heartbeatInterval > 0 {
-		klog.V(2).Infof("Starting controller heartbeat stimulator with interval %s", c.heartbeatInterval)
+		c.logger.V(2).Info("Starting controller heartbeat stimulator", "interval", c.heartbeatInterval)
 		go wait.Until(c.heartbeatStimulus, c.heartbeatInterval, stopCh)
 	} else {
-		klog.V(2).Info("Controller heartbeat is disabled")
+		c.logger.V(2).Info("Controller heartbeat stimulus is disabled")
 	}
 
-	klog.V(2).Infof("Start workers")
+	c.logger.V(2).Info("Starting workers", "threadiness", threadiness)
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
-	klog.V(2).Infof("Workers running")
+	c.logger.V(2).Info("Workers are running")
 
 	<-stopCh
-	klog.V(2).Infof("Workers stopped")
+	c.logger.V(2).Info("Workers are stopped")
 	return nil
 }
 
@@ -224,7 +253,7 @@ func (c *Controller) processNextWorkItem() bool {
 		// Finally, if no error occurs we Forget this item so it does not
 		// get queued again until another change happens.
 		c.workqueue.Forget(obj)
-		klog.V(5).Infof("Finished syncing '%s'", key)
+		c.logger.V(5).Info("Finished syncing", "key", key)
 		return nil
 	}(obj)
 
@@ -241,16 +270,19 @@ func (c *Controller) heartbeatStimulus() {
 }
 
 func (c *Controller) heartbeat() {
-	if c.heartbeatLogLevel != nil {
-		klog.V(*c.heartbeatLogLevel).InfoS("heartbeat")
+	if c.heartbeatLoggingEnabled {
+		c.logger.V(c.heartbeatLogLevel).Info("heartbeat")
 	}
 	metrics.ControllerHeartbeats.Inc()
 }
 
-func (c *Controller) changeState(pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
-	err := pipelineRun.UpdateState(state, ts)
+func (c *Controller) changeState(ctx context.Context, pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
+	logger := klog.FromContext(ctx)
+
+	logger.V(3).Info("Changing pipeline run state", "targetState", state)
+	err := pipelineRun.UpdateState(ctx, state, ts)
 	if err != nil {
-		klog.V(3).Infof("Failed to UpdateState of [%s] to %q: %q", pipelineRun.String(), state, err.Error())
+		logger.V(3).Error(err, "Failed to change pipeline run state", "targetState", state)
 		return err
 	}
 
@@ -299,6 +331,7 @@ func (c *Controller) syncHandler(key string) error {
 		return nil
 	}
 
+	logger := c.logger.WithName(reconcilerLoggerName)
 	ctx := context.Background()
 
 	pipelineRun, err := c.getPipelineRunToProcess(ctx, key)
@@ -306,6 +339,8 @@ func (c *Controller) syncHandler(key string) error {
 		// If pipelineRun is not found there is nothing to sync
 		return err
 	}
+
+	ctx = klog.NewContext(ctx, logger)
 
 	doReturn, err := c.handlePipelineRunFinalizerAndDeletion(ctx, pipelineRun)
 	if doReturn || err != nil {
@@ -403,12 +438,15 @@ func (c *Controller) handlePipelineRunFinalizerAndDeletion(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+
 	if pipelineRun.GetStatus().State == api.StateFinished {
 		err := pipelineRun.DeleteFinalizerAndCommitIfExists(ctx)
 		return true, err
 	}
 
 	if pipelineRun.HasDeletionTimestamp() {
+		logger.V(3).Info("Unfinished pipeline run was deleted")
 		runManager := c.createRunManager(pipelineRun)
 		err := runManager.Cleanup(ctx, pipelineRun)
 		if err != nil {
@@ -425,6 +463,8 @@ func (c *Controller) handlePipelineRunResultExistsButNotCleaned(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) error {
+	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+
 	result := pipelineRun.GetStatus().Result
 	state := pipelineRun.GetStatus().State
 
@@ -432,7 +472,7 @@ func (c *Controller) handlePipelineRunResultExistsButNotCleaned(
 		state != api.StateCleaning &&
 		state != api.StateFinished {
 
-		err := c.changeState(pipelineRun, api.StateCleaning, metav1.Now())
+		err := c.changeState(ctx, pipelineRun, api.StateCleaning, metav1.Now())
 		if err != nil {
 			panic(err)
 		}
@@ -444,10 +484,14 @@ func (c *Controller) handlePipelineRunNew(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
+	origCtx := ctx
+	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+
 	if pipelineRun.GetStatus().State == api.StateUndefined {
-		if err := pipelineRun.InitState(); err != nil {
+		if err := pipelineRun.InitState(ctx); err != nil {
 			panic(err)
 		}
+		ctx, _ = extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
 	}
 
 	if pipelineRun.GetStatus().State == api.StateNew {
@@ -471,6 +515,9 @@ func (c *Controller) handlePipelineRunNew(
 
 func (c *Controller) ensurePipelineRunsConfig(ctx context.Context, pipelineRun k8s.PipelineRun) (*cfg.PipelineRunsConfigStruct, bool, error) {
 	var pipelineRunsConfig *cfg.PipelineRunsConfigStruct
+
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+
 	state := pipelineRun.GetStatus().State
 	// TODO do not assume in which phase the config is (not) needed
 	if state == api.StatePreparing || state == api.StateWaiting {
@@ -493,6 +540,7 @@ func (c *Controller) ensurePipelineRunsConfig(ctx context.Context, pipelineRun k
 			)
 			return nil, true, err
 		}
+		logger.V(4).Info("Loaded config for pipeline runs")
 	}
 	return pipelineRunsConfig, false, nil
 }
@@ -503,7 +551,12 @@ func (c *Controller) handlePipelineRunPrepare(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
+	origCtx := ctx
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
+
 	if pipelineRun.GetStatus().State == api.StatePreparing {
+		logger.V(3).Info("Preparing pipeline execution")
+
 		namespace, auxNamespace, err := runManager.Prepare(ctx, pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
@@ -517,6 +570,9 @@ func (c *Controller) handlePipelineRunPrepare(
 
 		pipelineRun.UpdateRunNamespace(namespace)
 		pipelineRun.UpdateAuxNamespace(auxNamespace)
+
+		ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
+		logger.V(3).Info("Prepared pipeline execution")
 
 		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
 			return true, err
@@ -534,7 +590,10 @@ func (c *Controller) handlePipelineRunWaiting(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+
 	if pipelineRun.GetStatus().State == api.StateWaiting {
+		logger.V(3).Info("Waiting for pipeline execution")
 
 		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
@@ -608,7 +667,10 @@ func (c *Controller) handlePipelineRunRunning(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+
 	if pipelineRun.GetStatus().State == api.StateRunning {
+		logger.V(3).Info("Examining running pipeline")
 
 		run, err := runManager.GetRun(ctx, pipelineRun)
 		if err != nil {
@@ -620,7 +682,7 @@ func (c *Controller) handlePipelineRunRunning(
 		}
 
 		containerInfo := run.GetContainerInfo()
-		pipelineRun.UpdateContainer(containerInfo)
+		pipelineRun.UpdateContainer(ctx, containerInfo)
 		if finished, result := run.IsFinished(); finished {
 			pipelineRun.UpdateMessage(run.GetMessage())
 			return true, c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, *run.GetCompletionTime())
@@ -642,7 +704,11 @@ func (c *Controller) handlePipelineRunCleaning(
 	runManager run.Manager,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+
 	if pipelineRun.GetStatus().State == api.StateCleaning {
+		logger.V(3).Info("Cleaning up pipeline execution")
+
 		err := runManager.Cleanup(ctx, pipelineRun)
 		if err != nil {
 			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
@@ -668,8 +734,12 @@ func (c *Controller) getWaitTimeout(pipelineRunsConfig *cfg.PipelineRunsConfigSt
 
 // TODO find better name
 func (c *Controller) handleResultError(ctx context.Context, pipelineRun k8s.PipelineRun, result api.Result, message string, err error) error {
-	pipelineRun.UpdateMessage(err.Error())
-	pipelineRun.StoreErrorAsMessage(err, message)
+	logger := klog.FromContext(ctx)
+	logger.Info("Updating error message to pipeline run",
+		"message", utils.Trim(message),
+		"errorMessage", err,
+	)
+	pipelineRun.StoreErrorAsMessage(ctx, err, message)
 	return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, result, metav1.Now())
 }
 
@@ -684,23 +754,26 @@ func (c *Controller) onGetRunError(
 	result api.Result,
 	message string,
 ) error {
+	logger := klog.FromContext(ctx)
+	logger.Error(err, message)
+
 	c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonRunningFailed, err.Error())
 	if serrors.IsRecoverable(err) {
 		return err
 	}
-	pipelineRun.StoreErrorAsMessage(err, message)
+	pipelineRun.StoreErrorAsMessage(ctx, err, message)
 	return c.updateStateAndResult(ctx, pipelineRun, targetState, result, metav1.Now())
 }
 
 func (c *Controller) changeAndCommitStateAndMeter(ctx context.Context, pipelineRun k8s.PipelineRun, state api.State, ts metav1.Time) error {
-	if err := c.changeState(pipelineRun, state, ts); err != nil {
+	if err := c.changeState(ctx, pipelineRun, state, ts); err != nil {
 		return err
 	}
 	return c.commitStatusAndMeter(ctx, pipelineRun)
 }
 
 func (c *Controller) updateStateAndResult(ctx context.Context, pipelineRun k8s.PipelineRun, state api.State, result api.Result, ts metav1.Time) error {
-	pipelineRun.UpdateResult(result, ts)
+	pipelineRun.UpdateResult(ctx, result, ts)
 	if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, state, ts); err != nil {
 		return err
 	}
@@ -712,15 +785,17 @@ func (c *Controller) updateStateAndResult(ctx context.Context, pipelineRun k8s.P
 }
 
 func (c *Controller) commitStatusAndMeter(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+	logger := klog.FromContext(ctx)
+
 	start := time.Now()
 	finishedStates, err := pipelineRun.CommitStatus(ctx)
 	if err != nil {
-		klog.V(6).Infof("commitStatus failed with error %s", err.Error())
+		logger.V(6).Info("Failed to commit pipeline run status", "err", err.Error())
 		return err
 	}
 	end := time.Now()
 	elapsed := end.Sub(start)
-	klog.V(6).Infof("commit of %q took %v", pipelineRun.String(), elapsed)
+	logger.V(6).Info("Completed committing pipeline run status", "duration", elapsed)
 	metrics.UpdatesLatency.Observe("UpdateState", elapsed)
 	for _, finishedState := range finishedStates {
 		metrics.PipelineRunsStateFinished.Observe(finishedState)
@@ -732,8 +807,11 @@ func (c *Controller) commitStatusAndMeter(ctx context.Context, pipelineRun k8s.P
 // If the user requested abortion it updates message, result and state
 // to trigger a cleanup.
 func (c *Controller) handlePipelineRunAbort(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+
 	intent := pipelineRun.GetSpec().Intent
 	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {
+		logger.V(3).Info("Pipeline run was aborted")
 		pipelineRun.UpdateMessage("Aborted")
 		return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, api.ResultAborted, metav1.Now())
 	}
@@ -747,8 +825,8 @@ func (c *Controller) addToWorkqueue(obj interface{}) {
 		utilruntime.HandleError(err)
 		return
 	}
-	klog.V(4).Infof("Add to workqueue '%s'", key)
 	c.workqueue.Add(key)
+	c.logger.V(4).Info("Added item to workqueue", "key", key)
 }
 
 // addToWorkqueueFromAssociated takes any resource implementing metav1.Object and attempts
@@ -769,13 +847,24 @@ func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 			utilruntime.HandleError(fmt.Errorf("error decoding object tombstone, invalid type"))
 			return
 		}
-		klog.V(3).Infof("Recovered deleted object '%s' from tombstone", object.GetName())
 	}
-	klog.V(4).Infof("Processing object: %s", object.GetSelfLink())
 
 	runKey := runmgr.GetPipelineRunKeyAnnotation(object)
 	if runKey != "" {
-		klog.V(4).Infof("Add to workqueue '%s'", runKey)
 		c.workqueue.Add(runKey)
+
+		triggerObjectType := (interface{})("unknown")
+		if typeMeta := k8s.TryExtractTypeInfo(obj); typeMeta != nil {
+			empty := metav1.TypeMeta{}
+			if *typeMeta != empty {
+				triggerObjectType = typeMeta.GroupVersionKind()
+			}
+		}
+		c.logger.V(4).Info(
+			"Added item to workqueue triggered by associated object",
+			"key", runKey,
+			"triggerObject", klog.KObj(object),
+			"triggerObjectType", triggerObjectType,
+		)
 	}
 }

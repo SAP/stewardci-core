@@ -24,32 +24,45 @@ import (
 	"runtime"
 	"syscall"
 
-	klog "k8s.io/klog/v2"
+	"github.com/go-logr/logr"
 )
 
 var onlyOneShutdownSignalHandler = make(chan struct{})
 var onlyOneThreaddumpSignalHandler = make(chan struct{})
 
-// SetupShutdownSignalHandler registered for SIGTERM and SIGINT. A stop channel is returned
-// which is closed on one of these signals. If a second signal is caught, the program
-// is terminated with exit code 1.
-func SetupShutdownSignalHandler() (stopCh <-chan struct{}) {
+// SetupShutdownSignalHandler registeres a handler for SIGTERM and SIGINT. A
+// stop channel is returned which is closed on the first receipt of one of these
+// signals. On a second receipt the provided killFunc is called in a new
+// gorouting. Upon a third receipt the process gets terminated via os.Exit(1).
+//
+// killFunc is supposed to shutdown the process without further significant delay.
+func SetupShutdownSignalHandler(logger logr.Logger, killFunc func()) (stopCh <-chan struct{}) {
 	close(onlyOneShutdownSignalHandler) // panics when called twice
 	stop := make(chan struct{})
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, shutdownSignals...)
+	sigs := make(chan os.Signal, 3)
+	signal.Notify(sigs, shutdownSignals...)
 	go func() {
-		<-c
+		sig := <-sigs
+		logger.Info("Received signal", "signal", sig)
+		logger.Info("Initiating graceful shutdown")
 		close(stop)
-		<-c
-		os.Exit(1) // second signal. Exit directly.
+
+		sig = <-sigs
+		logger.Info("Received signal", "signal", sig)
+		logger.Info("Invoking kill function after second shutdown signal")
+		go killFunc()
+
+		sig = <-sigs
+		logger.Info("Received signal", "signal", sig)
+		logger.Info("Exiting immediately after third shutdown signal")
+		os.Exit(1)
 	}()
 	return stop
 }
 
-// SetupThreadDumpSignalHandler registers a handler for SIGQUIT.
-// In case a SIGQUIT is received a thread dump is written.
-func SetupThreadDumpSignalHandler() {
+// SetupThreadDumpSignalHandler registers a handler for SIGQUIT. Each time the
+// signal is received, a thread dump is logged.
+func SetupThreadDumpSignalHandler(logger logr.Logger) {
 	close(onlyOneThreaddumpSignalHandler) // panics when called twice
 	go func() {
 		sigs := make(chan os.Signal, 1)
@@ -58,7 +71,8 @@ func SetupThreadDumpSignalHandler() {
 		for {
 			sig := <-sigs
 			stacklen := runtime.Stack(buf, true)
-			klog.Infof("=== received SIGQUIT (%s) ===\n*** goroutine dump...\n%s\n*** end\n", sig, buf[:stacklen])
+			logger.Info("Received signal", "signal", sig)
+			logger.Info("Goroutine dump", "dump", buf[:stacklen])
 		}
 	}()
 }

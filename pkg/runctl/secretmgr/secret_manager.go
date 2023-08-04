@@ -9,7 +9,7 @@ import (
 	secrets "github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	klog "k8s.io/klog/v2"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -92,9 +92,10 @@ func (s SecretManager) copyPipelineSecretsToRunNamespace(ctx context.Context, pi
 }
 
 func (s SecretManager) copySecrets(ctx context.Context, pipelineRun k8s.PipelineRun, secretNames []string, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
+	logger := klog.FromContext(ctx)
 	storedSecretNames, err := s.secretHelper.CopySecrets(ctx, secretNames, filter, transformers...)
 	if err != nil {
-		klog.Errorf("Cannot copy secrets %s for [%s]. Error: %s", secretNames, pipelineRun.String(), err)
+		logger.Error(err, "Could not copy secrets", "secrets", secretNames)
 		if s.secretHelper.IsNotFound(err) || k8serrors.IsInvalid(err) || k8serrors.IsAlreadyExists(err) {
 			err = serrors.Classify(err, v1alpha1.ResultErrorContent)
 		} else {

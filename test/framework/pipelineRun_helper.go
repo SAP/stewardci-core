@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"gotest.tools/v3/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	klog "k8s.io/klog/v2"
 )
 
 type testRun struct {
@@ -35,21 +34,21 @@ func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...Tes
 	for _, testPlan := range testPlans {
 		waitWG.Add(testPlan.Count)
 		for i := 1; i <= testPlan.Count; i++ {
-			name :=
-				fmt.Sprintf("%s_%d", getTestPlanName(testPlan), i)
+			name := fmt.Sprintf("%s_%d", getTestPlanName(testPlan), i)
 			ctx = SetTestName(ctx, name)
 			runID := &api.CustomJSON{
 				Value: map[string]string{
 					"jobId":   name,
 					"buildId": uuid.New().String(),
 					"realmId": GetRealmUUID(ctx),
-				}}
+				},
+			}
 
 			pipelineTest := testPlan.TestBuilder(tnn, runID)
 
 			ctx, cancel := context.WithTimeout(ctx, pipelineTest.Timeout)
 			defer cancel()
-			klog.Infof("Test: %q start", name)
+			t.Logf("Test %q: Started", name)
 			myTestRun := testRun{
 				name:     name,
 				ctx:      ctx,
@@ -59,11 +58,11 @@ func executePipelineRunTests(ctx context.Context, t *testing.T, testPlans ...Tes
 			}
 			if testPlan.ParallelCreation {
 				go func(waitWG *sync.WaitGroup) {
-					myTestRun := createPipelineRunTest(pipelineTest, myTestRun)
+					myTestRun := createPipelineRunTest(t, pipelineTest, myTestRun)
 					startWait(t, myTestRun, waitWG)
 				}(&waitWG)
 			} else {
-				myTestRun := createPipelineRunTest(pipelineTest, myTestRun)
+				myTestRun := createPipelineRunTest(t, pipelineTest, myTestRun)
 				go func(waitWG *sync.WaitGroup) {
 					startWait(t, myTestRun, waitWG)
 				}(&waitWG)
@@ -96,10 +95,10 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 	pr := GetPipelineRun(ctx)
 	defer func() {
 		if run.cleanup {
-			klog.Infof("Test: %q deleting pipelineRun %q", run.name, pr.GetName())
+			t.Logf("Test %q: Deleting pipeline run '%s/%s'", run.name, pr.GetNamespace(), pr.GetName())
 			err := DeletePipelineRun(ctx, pr)
 			if err != nil {
-				klog.Errorf("error happened while cleaning up the pipelineRun %q: %q", run.name, err)
+				t.Logf("Test %q: Failed to clean up pipeline run '%s/%s': %s", run.name, pr.GetNamespace(), pr.GetName(), err)
 			}
 		}
 		waitWG.Done()
@@ -112,16 +111,16 @@ func startWait(t *testing.T, run testRun, waitWG *sync.WaitGroup) {
 	assert.NilError(t, ctx.Err(), "Test: %q", run.name)
 	PipelineRunCheck := CreatePipelineRunCondition(pr, run.check)
 	duration, err := WaitFor(ctx, PipelineRunCheck)
-	klog.Infof("Test: %q waited for %.2f s", run.name, duration.Seconds())
+	t.Logf("Test %q: Waited for %.2fs", run.name, duration.Seconds())
 	run.result = err
 	assert.NilError(t, checkResult(run), "Test: %q", run.name)
 }
 
-func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
+func createPipelineRunTest(t *testing.T, pipelineTest PipelineRunTest, run testRun) testRun {
 	startTime := time.Now()
 	defer func() {
-		duration := time.Now().Sub(startTime)
-		klog.Infof("Test: %q setup took %.2f s", run.name, duration.Seconds())
+		duration := time.Since(startTime)
+		t.Logf("Test %q: Setup completed (took %.2fs)", run.name, duration.Seconds())
 	}()
 	PipelineRun := pipelineTest.PipelineRun
 	ctx := run.ctx
@@ -141,7 +140,7 @@ func createPipelineRunTest(pipelineTest PipelineRunTest, run testRun) testRun {
 		run.result = fmt.Errorf("pipeline run creation failed: %q", err.Error())
 		return run
 	}
-	klog.Infof("Test: %q pipeline run created '%s/%s'", run.name, pr.GetNamespace(), pr.GetName())
+	t.Logf("Test %q: Created pipeline run '%s/%s'", run.name, pr.GetNamespace(), pr.GetName())
 	ctx = SetPipelineRun(ctx, pr)
 	run.ctx = ctx
 	return run

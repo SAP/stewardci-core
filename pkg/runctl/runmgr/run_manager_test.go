@@ -1578,7 +1578,7 @@ func Test__runManager_Prepare__DoesNotSetPipelineRunStatus(t *testing.T) {
 
 	// VERIFY
 	// UpdateState should never be called
-	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
 func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
@@ -1601,7 +1601,7 @@ func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
 
 	// VERIFY
 	// UpdateState should never be called
-	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
 func Test__runManager_copySecretsToRunNamespace__DoesCopySecret(t *testing.T) {
@@ -2077,7 +2077,7 @@ func Test__runManager_GetRun_Missing(t *testing.T) {
 	assert.NilError(t, resultError)
 	assert.Assert(t, run != nil)
 
-	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
 func Test__runManager_GetRun_Existing(t *testing.T) {
@@ -2098,7 +2098,7 @@ func Test__runManager_GetRun_Existing(t *testing.T) {
 	assert.NilError(t, resultError)
 	assert.Assert(t, run == nil)
 
-	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
 func Test__runManager_DeleteRun_Success(t *testing.T) {
@@ -2119,7 +2119,7 @@ func Test__runManager_DeleteRun_Success(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, resultError)
 
-	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
 func Test__runManager_DeleteRun_Missing(t *testing.T) {
@@ -2138,7 +2138,7 @@ func Test__runManager_DeleteRun_Missing(t *testing.T) {
 
 	// VERIFY
 	assert.NilError(t, resultError)
-	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
 func Test__runManager_DeleteRun_MissingRunNamespace(t *testing.T) {
@@ -2161,7 +2161,7 @@ func Test__runManager_DeleteRun_MissingRunNamespace(t *testing.T) {
 	// VERIFY
 	assert.Error(t, resultError, `cannot delete taskrun, runnamespace not set in "foo"`)
 
-	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
 func Test__runManager_DeleteRun_Recoverable(t *testing.T) {
@@ -2202,7 +2202,7 @@ func Test__runManager_DeleteRun_Recoverable(t *testing.T) {
 			// VERIFY
 			assert.Assert(t, serrors.IsRecoverable(resultError), fmt.Sprintf("%+v", resultError))
 
-			mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any()).Times(0)
+			mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 		})
 	}
 }

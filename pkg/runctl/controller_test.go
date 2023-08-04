@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
-	klog "k8s.io/klog/v2"
+	"k8s.io/klog/v2/ktesting"
 	"knative.dev/pkg/apis"
 )
 
@@ -47,7 +47,11 @@ func Test_meterAllPipelineRunsPeriodic(t *testing.T) {
 		runctltesting.FakeClusterRole(),
 	)
 
-	c := NewController(cf, ControllerOpts{})
+	c := NewController(
+		ktesting.NewLogger(t, ktesting.DefaultConfig),
+		cf,
+		ControllerOpts{},
+	)
 
 	run := fake.PipelineRun("r1", "ns1", api.PipelineSpec{})
 	c.pipelineRunStore.Add(run)
@@ -190,7 +194,13 @@ func Test_Controller_syncHandler_givesUp_onPipelineRunNotFound(t *testing.T) {
 	mockPipelineRunFetcher.EXPECT().
 		ByKey(ctx, gomock.Any()).
 		Return(nil, nil)
-	examinee := NewController(cf, ControllerOpts{})
+
+	examinee := NewController(
+		ktesting.NewLogger(t, ktesting.DefaultConfig),
+		cf,
+		ControllerOpts{},
+	)
+
 	examinee.pipelineRunFetcher = mockPipelineRunFetcher
 
 	// EXERCISE
@@ -208,7 +218,13 @@ func newController(t *testing.T, runs ...*api.PipelineRun) (*Controller, *fake.C
 	for _, run := range runs {
 		client.PipelineRuns(run.GetNamespace()).Create(ctx, run, metav1.CreateOptions{})
 	}
-	controller := NewController(cf, ControllerOpts{})
+
+	controller := NewController(
+		ktesting.NewLogger(t, ktesting.DefaultConfig),
+		cf,
+		ControllerOpts{},
+	)
+
 	controller.pipelineRunFetcher = k8s.NewClientBasedPipelineRunFetcher(client)
 	controller.eventRecorder = record.NewFakeRecorder(20)
 	return controller, cf
@@ -306,7 +322,7 @@ func Test_Controller_syncHandler_delete(t *testing.T) {
 				}
 				result, err := getAPIPipelineRun(cf, "foo", "ns1")
 				assert.NilError(t, err)
-				klog.Infof("%+v", result.Status)
+				t.Logf("Pipeline run result: status: %+v", result.Status)
 
 				assert.Equal(t, test.expectedResult, result.Status.Result)
 				assert.Equal(t, test.expectedState, result.Status.State)
@@ -333,6 +349,7 @@ func Test_Controller_syncHandler_delete_on_finished_keeps_result_unchanged(t *te
 				currentResult := currentResult
 				hasFinalizer := hasFinalizer
 				t.Parallel()
+
 				// SETUP
 				run := fake.PipelineRun("foo", "ns1", api.PipelineSpec{})
 				if hasFinalizer {
@@ -357,7 +374,7 @@ func Test_Controller_syncHandler_delete_on_finished_keeps_result_unchanged(t *te
 				assert.NilError(t, err)
 				result, err := getAPIPipelineRun(cf, "foo", "ns1")
 				assert.NilError(t, err)
-				klog.Infof("%+v", result.Status)
+				t.Logf("Pipeline run result: status: %+v", result.Status)
 
 				assert.Equal(t, currentResult, result.Status.Result)
 				assert.Equal(t, api.StateFinished, result.Status.State)
@@ -945,7 +962,11 @@ func Test_Controller_syncHandler_initiatesRetrying_on500DuringPipelineRunFetch(t
 		ByKey(ctx, gomock.Any()).
 		Return(nil, k8serrors.NewInternalError(fmt.Errorf(message)))
 
-	examinee := NewController(cf, ControllerOpts{})
+	examinee := NewController(
+		ktesting.NewLogger(t, ktesting.DefaultConfig),
+		cf,
+		ControllerOpts{},
+	)
 	examinee.pipelineRunFetcher = mockPipelineRunFetcher
 
 	// EXERCISE
@@ -1041,7 +1062,12 @@ func newTestRunManager(workFactory k8s.ClientFactory, secretProvider secrets.Sec
 
 func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 	stopCh := make(chan struct{})
-	controller := NewController(cf, ControllerOpts{})
+
+	controller := NewController(
+		ktesting.NewLogger(t, ktesting.DefaultConfig),
+		cf,
+		ControllerOpts{},
+	)
 	controller.testing = &controllerTesting{
 		newRunManagerStub:          newTestRunManager,
 		loadPipelineRunsConfigStub: newEmptyRunsConfig,
@@ -1057,7 +1083,7 @@ func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
 }
 
 func stopController(t *testing.T, stopCh chan struct{}) {
-	klog.Infof("Trigger controller stop")
+	t.Log("Trigger controller stop")
 	stopCh <- struct{}{}
 }
 

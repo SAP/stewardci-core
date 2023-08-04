@@ -102,7 +102,7 @@ func Test_NewPipelineRun_IsCopy(t *testing.T) {
 
 	// VERIFY
 	assert.NilError(t, err)
-	examinee.UpdateResult(api.ResultSuccess, metav1.Now())
+	examinee.UpdateResult(ctx, api.ResultSuccess, metav1.Now())
 	assert.Equal(t, api.ResultUndefined, run.Status.Result)
 	assert.Equal(t, api.ResultSuccess, examinee.GetStatus().Result)
 }
@@ -155,7 +155,7 @@ func Test_pipelineRun_StoreErrorAsMessage(t *testing.T) {
 	message := "message1"
 
 	// EXERCISE
-	examinee.StoreErrorAsMessage(errorToStore, message)
+	examinee.StoreErrorAsMessage(ctx, errorToStore, message)
 	examinee.CommitStatus(ctx)
 
 	// VERIFY
@@ -229,7 +229,7 @@ func Test_pipelineRun_InitState(t *testing.T) {
 	assert.NilError(t, err)
 
 	// EXERCISE
-	resultErr := examinee.InitState()
+	resultErr := examinee.InitState(ctx)
 
 	// VERIFY
 	assert.NilError(t, resultErr)
@@ -265,14 +265,14 @@ func Test_pipelineRun_InitState_ReturnsErrorIfCalledMultipleTimes(t *testing.T) 
 
 			examinee, err := NewPipelineRun(ctx, pipelineRun, factory)
 			assert.NilError(t, err)
-			resultErr := examinee.InitState()
+			resultErr := examinee.InitState(ctx)
 			assert.NilError(t, resultErr)
 
-			resultErr = examinee.UpdateState(oldState, metav1.Now())
+			resultErr = examinee.UpdateState(ctx, oldState, metav1.Now())
 			assert.NilError(t, resultErr)
 
 			// EXERCISE
-			resultErr = examinee.InitState()
+			resultErr = examinee.InitState(ctx)
 
 			// VERIFY
 			assert.Error(t, resultErr, "cannot initialize multiple times")
@@ -292,7 +292,7 @@ func Test_pipelineRun_UpdateState_HasAutomaticInitialization(t *testing.T) {
 	assert.NilError(t, err)
 
 	// EXERCISE
-	resultErr := examinee.UpdateState(api.StatePreparing, metav1.Now())
+	resultErr := examinee.UpdateState(ctx, api.StatePreparing, metav1.Now())
 	assert.NilError(t, resultErr)
 	results, resultErr := examinee.CommitStatus(ctx)
 
@@ -320,11 +320,11 @@ func Test_pipelineRun_UpdateState_AfterFirstCall(t *testing.T) {
 	factory := fake.NewClientFactory(pipelineRun)
 	examinee, err := NewPipelineRun(ctx, pipelineRun, factory)
 	assert.NilError(t, err)
-	err = examinee.InitState()
+	err = examinee.InitState(ctx)
 	assert.NilError(t, err)
 
 	// EXERCISE
-	resultErr := examinee.UpdateState(api.StatePreparing, metav1.Now())
+	resultErr := examinee.UpdateState(ctx, api.StatePreparing, metav1.Now())
 	assert.NilError(t, resultErr)
 	results, resultErr := examinee.CommitStatus(ctx)
 
@@ -353,14 +353,14 @@ func Test_pipelineRun_UpdateState_AfterSecondCall(t *testing.T) {
 	factory := fake.NewClientFactory(pipelineRun)
 	examinee, err := NewPipelineRun(ctx, pipelineRun, factory)
 	assert.NilError(t, err)
-	err = examinee.InitState()
+	err = examinee.InitState(ctx)
 	assert.NilError(t, err)
-	err = examinee.UpdateState(api.StatePreparing, metav1.Now()) // first call
+	err = examinee.UpdateState(ctx, api.StatePreparing, metav1.Now()) // first call
 	assert.NilError(t, err)
 	factory.Sleep("let time elapse to check timestamps afterwards")
 
 	// EXERCISE
-	resultErr := examinee.UpdateState(api.StateRunning, metav1.Now()) // second call
+	resultErr := examinee.UpdateState(ctx, api.StateRunning, metav1.Now()) // second call
 	assert.NilError(t, resultErr)
 	results, resultErr := examinee.CommitStatus(ctx)
 
@@ -394,14 +394,14 @@ func Test_pipelineRun_UpdateStateToFinished_HistoryIfUpdateStateCalledBefore(t *
 	factory := fake.NewClientFactory(pipelineRun)
 	examinee, err := NewPipelineRun(ctx, pipelineRun, factory)
 	assert.NilError(t, err)
-	err = examinee.InitState()
+	err = examinee.InitState(ctx)
 	assert.NilError(t, err)
-	err = examinee.UpdateState(api.StatePreparing, metav1.Now()) // called before
+	err = examinee.UpdateState(ctx, api.StatePreparing, metav1.Now()) // called before
 	assert.NilError(t, err)
 	factory.Sleep("let time elapse to check timestamps afterwards")
 
 	// EXERCISE
-	examinee.UpdateState(api.StateFinished, metav1.Now())
+	examinee.UpdateState(ctx, api.StateFinished, metav1.Now())
 	_, err = examinee.CommitStatus(ctx)
 	assert.NilError(t, err)
 
@@ -430,7 +430,7 @@ func Test_pipelineRun_UpdateResult(t *testing.T) {
 	assert.Assert(t, examinee.GetStatus().FinishedAt.IsZero())
 
 	// EXERCISE
-	examinee.UpdateResult(api.ResultSuccess, metav1.Now())
+	examinee.UpdateResult(ctx, api.ResultSuccess, metav1.Now())
 
 	// VERIFY
 	status := examinee.GetStatus()
@@ -504,13 +504,13 @@ func Test_pipelineRun_UpdateState_PropagatesError(t *testing.T) {
 
 	examinee, err := NewPipelineRun(ctx, run, factory)
 	assert.NilError(t, err)
-	err = examinee.InitState()
+	err = examinee.InitState(ctx)
 	assert.NilError(t, err)
 	expectedError := fmt.Errorf("expected")
 	factory.StewardClientset().PrependReactor("update", "*", fake.NewErrorReactor(expectedError))
 
 	// EXCERCISE
-	examinee.UpdateState(api.StateWaiting, metav1.Now())
+	examinee.UpdateState(ctx, api.StateWaiting, metav1.Now())
 	_, err = examinee.CommitStatus(ctx)
 
 	// VERIFY
@@ -539,9 +539,9 @@ func Test_pipelineRun_CommitStatus_RetriesOnConflict(t *testing.T) {
 
 	examinee, err := NewPipelineRun(ctx, run, factory)
 	assert.NilError(t, err)
-	err = examinee.InitState()
+	err = examinee.InitState(ctx)
 	assert.NilError(t, err)
-	resultErr := examinee.UpdateState(api.StateWaiting, metav1.Now())
+	resultErr := examinee.UpdateState(ctx, api.StateWaiting, metav1.Now())
 	assert.NilError(t, resultErr)
 
 	// EXCERCISE

@@ -9,16 +9,16 @@ import (
 	tektonclients "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned"
 	tektonv1beta1client "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/typed/pipeline/v1beta1"
 	tektoninformers "github.com/SAP/stewardci-core/pkg/tektonclient/informers/externalversions"
+	"github.com/go-logr/logr"
 	dynamic "k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	networkingv1client "k8s.io/client-go/kubernetes/typed/networking/v1"
 	rbacv1client "k8s.io/client-go/kubernetes/typed/rbac/v1"
 	"k8s.io/client-go/rest"
-	klog "k8s.io/klog/v2"
 )
 
-// ClientFactory is the interface for Kubernet client factories.
+// ClientFactory is the interface for Kubernetes client factories.
 type ClientFactory interface {
 	// CoreV1 returns the core/v1 Kubernetes client
 	CoreV1() corev1client.CoreV1Interface
@@ -55,29 +55,29 @@ type clientFactory struct {
 }
 
 // NewClientFactory creates new client factory based on rest config
-func NewClientFactory(config *rest.Config, resyncPeriod time.Duration) ClientFactory {
+func NewClientFactory(logger logr.Logger, config *rest.Config, resyncPeriod time.Duration) ClientFactory {
 	stewardClientset, err := stewardclients.NewForConfig(config)
 	if err != nil {
-		klog.ErrorS(err, "could not create Steward clientset: %s")
+		logger.Error(err, "Failed to create Steward clientset")
 		return nil
 	}
 	stewardInformerFactory := stewardinformers.NewSharedInformerFactory(stewardClientset, resyncPeriod)
 
 	kubernetesClientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		klog.ErrorS(err, "could not create Kubernetes clientset: %s")
+		logger.Error(err, "Failed to create Kubernetes clientset")
 		return nil
 	}
 
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
-		klog.ErrorS(err, "could not create dynamic Kubernetes clientset: %s")
+		logger.Error(err, "Failed to create dynamic Kubernetes clientset")
 		return nil
 	}
 
 	tektonClientset, err := tektonclients.NewForConfig(config)
 	if err != nil {
-		klog.ErrorS(err, "could not create Tekton clientset: %s")
+		logger.Error(err, "Failed to create Tekton clientset")
 		return nil
 	}
 	tektonInformerFactory := tektoninformers.NewSharedInformerFactory(tektonClientset, resyncPeriod)

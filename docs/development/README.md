@@ -61,7 +61,6 @@ The pipeline will now create a hotfix release.
 
 You are welcome to contribute to this project via Pull Requests.
 
-
 ## Development
 
 ### Prerequisites
@@ -107,6 +106,9 @@ The generated clients and mocks have been committed into the project sources. Ge
 hack/update-codegen.sh
 ```
 
+### Logging
+
+Refer to [our message logging conventions](./logging.md) used in the project.
 
 ### Test
 
@@ -115,13 +117,13 @@ go test -coverprofile coverage.txt ./...
 go tool cover -html=coverage.txt -o coverage.html
 ```
 
-
 ## Known Issues
 
 ### 'unknown escape sequence' during generation
 
 For some reason `\` characters are generated into imports on Windows.
 Those are interpreted as (wrong) escape chars which fails the generation.
+
 ```go
 import (
 	stewardv1alpha1 "github.com/SAP/stewardci-core\..."
