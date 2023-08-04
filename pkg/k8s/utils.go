@@ -11,14 +11,16 @@ import (
 //   - obj type T is "k8s.io/apimachinery/pkg/apis/meta/v1".TypeMeta or
 //     *"k8s.io/apimachinery/pkg/apis/meta/v1".TypeMeta.
 //   - The type T of obj or *T has the following methods:
-//     GetAPIVersion() string
-//     GetKind() string
+//     GetAPIVersion() string, GetKind() string
 //   - obj is a struct or a pointer to a struct. The struct has a field
 //     named "TypeMeta" of type "k8s.io/apimachinery/pkg/apis/meta/v1".TypeMeta
 //
-// If type information is found, it is provides a pointer to a metav1.TypeMeta
-// struct. It may point to the original object or to a newly created instance.
-// Therefore, modifying the returned instance may change the original object.
+// If type information is found, it is provided as a pointer to a
+// metav1.TypeMeta struct. It may point to the original object or to a newly
+// created instance. Therefore, modifying the returned instance may change the
+// original object.
+//
+// Note that the provided struct instance may be (partially) empty.
 //
 // If obj is nil or no type information has been found, nil is returned.
 func TryExtractTypeInfo(obj interface{}) *metav1.TypeMeta {

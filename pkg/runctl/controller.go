@@ -855,7 +855,10 @@ func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 
 		triggerObjectType := (interface{})("unknown")
 		if typeMeta := k8s.TryExtractTypeInfo(obj); typeMeta != nil {
-			triggerObjectType = typeMeta.GroupVersionKind()
+			empty := metav1.TypeMeta{}
+			if *typeMeta != empty {
+				triggerObjectType = typeMeta.GroupVersionKind()
+			}
 		}
 		c.logger.V(4).Info(
 			"Added item to workqueue triggered by associated object",
