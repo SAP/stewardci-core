@@ -438,6 +438,8 @@ func (c *Controller) handlePipelineRunFinalizerAndDeletion(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
+	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+
 	if pipelineRun.GetStatus().State == api.StateFinished {
 		err := pipelineRun.DeleteFinalizerAndCommitIfExists(ctx)
 		return true, err
@@ -481,12 +483,14 @@ func (c *Controller) handlePipelineRunNew(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
+	origCtx := ctx
 	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
 
 	if pipelineRun.GetStatus().State == api.StateUndefined {
 		if err := pipelineRun.InitState(ctx); err != nil {
 			panic(err)
 		}
+		ctx, _ = extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
 	}
 
 	if pipelineRun.GetStatus().State == api.StateNew {
@@ -535,7 +539,7 @@ func (c *Controller) ensurePipelineRunsConfig(ctx context.Context, pipelineRun k
 			)
 			return nil, true, err
 		}
-		logger.V(3).Info("Loaded pipeline run config")
+		logger.V(4).Info("Loaded config for pipeline runs")
 	}
 	return pipelineRunsConfig, false, nil
 }
