@@ -438,7 +438,7 @@ func (c *Controller) handlePipelineRunFinalizerAndDeletion(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
-	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
 
 	if pipelineRun.GetStatus().State == api.StateFinished {
 		err := pipelineRun.DeleteFinalizerAndCommitIfExists(ctx)
@@ -446,6 +446,7 @@ func (c *Controller) handlePipelineRunFinalizerAndDeletion(
 	}
 
 	if pipelineRun.HasDeletionTimestamp() {
+		logger.V(3).Info("Unfinished pipeline run was deleted")
 		runManager := c.createRunManager(pipelineRun)
 		err := runManager.Cleanup(ctx, pipelineRun)
 		if err != nil {
@@ -806,10 +807,11 @@ func (c *Controller) commitStatusAndMeter(ctx context.Context, pipelineRun k8s.P
 // If the user requested abortion it updates message, result and state
 // to trigger a cleanup.
 func (c *Controller) handlePipelineRunAbort(ctx context.Context, pipelineRun k8s.PipelineRun) error {
-	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
 
 	intent := pipelineRun.GetSpec().Intent
 	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {
+		logger.V(3).Info("Pipeline run was aborted")
 		pipelineRun.UpdateMessage("Aborted")
 		return c.updateStateAndResult(ctx, pipelineRun, api.StateCleaning, api.ResultAborted, metav1.Now())
 	}
