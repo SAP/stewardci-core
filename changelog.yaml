@@ -58,7 +58,7 @@
       description: |-
         Convert existing logging to structural and contextual logging as per
         [Kubernetes guidelines](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/migration-to-structured-logging.md).
-      pullRequestNumber: 79
+      pullRequestNumber: 387
       jiraIssueNumber: 1157
 
 - version: "0.33.0"
