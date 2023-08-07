@@ -43,17 +43,17 @@ func SetupShutdownSignalHandler(logger logr.Logger, killFunc func()) (stopCh <-c
 	signal.Notify(sigs, shutdownSignals...)
 	go func() {
 		sig := <-sigs
-		logger.Info("Received signal", "signal", sig)
+		logSignalReceived(logger, sig)
 		logger.Info("Initiating graceful shutdown")
 		close(stop)
 
 		sig = <-sigs
-		logger.Info("Received signal", "signal", sig)
+		logSignalReceived(logger, sig)
 		logger.Info("Invoking kill function after second shutdown signal")
 		go killFunc()
 
 		sig = <-sigs
-		logger.Info("Received signal", "signal", sig)
+		logSignalReceived(logger, sig)
 		logger.Info("Exiting immediately after third shutdown signal")
 		os.Exit(1)
 	}()
@@ -70,9 +70,13 @@ func SetupThreadDumpSignalHandler(logger logr.Logger) {
 		buf := make([]byte, 1*1024*1024)
 		for {
 			sig := <-sigs
+			logSignalReceived(logger, sig)
 			stacklen := runtime.Stack(buf, true)
-			logger.Info("Received signal", "signal", sig)
 			logger.Info("Goroutine dump", "dump", buf[:stacklen])
 		}
 	}()
+}
+
+func logSignalReceived(logger logr.Logger, sig os.Signal) {
+	logger.Info("Received signal", "signal", sig)
 }
