@@ -53,7 +53,7 @@
   changes:
 
     - type: enhancement
-      impact: patch
+      impact: minor
       title: Update stewardci-jenkinsfile-runner image to version 230810_ab62215
       description: |-
         The new image contains updates for Jenkins core (to 2.375.4), all plugins and the base image.
