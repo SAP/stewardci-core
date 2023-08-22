@@ -52,6 +52,15 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: minor
+      title: Update stewardci-jenkinsfile-runner image to version 230822_3c378b2
+      description: |-
+        The new image contains updates for Jenkins core (to 2.387.3) and all plugins.
+
+        See release note for [version 230822_3c378b2](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/230822_3c378b2)
+      pullRequestNumber: 404
+
 - version: "0.35.0"
   date: 2023-08-10
   changes:

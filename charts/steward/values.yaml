@@ -55,7 +55,7 @@ pipelineRuns:
       port: '24224'
       tag: BUILD_LOGS
   jenkinsfileRunner:
-    image: "stewardci/stewardci-jenkinsfile-runner:230810_ab62215"
+    image: "stewardci/stewardci-jenkinsfile-runner:230822_3c378b2"
     imagePullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0
