@@ -54,8 +54,23 @@ pipelineRuns:
       useSidecar: true
       port: '24224'
       tag: BUILD_LOGS
+      senderBaseRetryIntervalMillis: 1000
+      senderMaxRetryIntervalMillis: 1000
+      senderMaxRetryCount: 3600
+      connectionTimeoutMillis: 3000
+      readTimeoutMillis: 3600000
+    ## optional parameters
+    #  splitMessagesLongerThan: 2000
+    #  bufferChunkInitialSize: 1048576 # 1 MB
+    #  bufferChunkRetentionSize: 3145728 # 3 MB
+    #  maxBufferSize: 10485760 # 10 MB
+    #  bufferChunkRetentionTimeMillis: 1000
+    #  maxWaitSecondsUntilBufferFlushed: 30
+    #  maxWaitSecondsUntilFlusherTerminated: 30
+    #  flushAttemptIntervalMillis: 500
+    #  emitMaxRetriesIfBufferFull: -1 # forever
   jenkinsfileRunner:
-    image: "stewardci/stewardci-jenkinsfile-runner:230822_3c378b2"
+    image: "stewardci/stewardci-jenkinsfile-runner:TODO" # TODO
     imagePullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0

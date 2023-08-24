@@ -52,6 +52,16 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: minor
+      title: Update stewardci-jenkinsfile-runner image to version TODO
+      description: |-
+        The new image contains new version "0.12.0" of elasticsearch-logs-plugin
+        which enables configuring more parameters.
+
+        See release note for [version TODO](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/TODO)
+      pullRequestNumber:
+
 - version: "0.36.0"
   date: 2023-08-22
   changes:
