@@ -123,20 +123,39 @@ spec:
       value: '$(params.RUN_CAUSE)'
     - name: TERMINATION_LOG_PATH
       value: /tekton/results/jfr-termination-log
-    {{ with .Values.pipelineRuns.logging.forwarding }}{{ if .enabled }}
+    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_SPLIT_MESSAGES_LONGER_THAN" "dictValue" .Values.pipelineRuns.logging.elasticsearch.splitMessagesLongerThan) | nindent 4 }}
+    {{- with .Values.pipelineRuns.logging.forwarding }}{{- if .enabled }}
     - name: PIPELINE_LOG_FLUENTD_HOST
-      {{ if .useSidecar }}
+      {{- if .useSidecar }}
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
-      {{ else }}
+      {{- else }}
       value: {{ required "the host name of the log-forwarder" .host  }}
-      {{ end }}
+      {{- end }}
     - name: PIPELINE_LOG_FLUENTD_PORT
       value: {{ .port | quote }}
     - name: PIPELINE_LOG_FLUENTD_TAG
       value: {{ .tag }}
-    {{ end }}{{ end}}
+    - name: PIPELINE_LOGS_PLUGIN_SENDER_BASE_RETRY_INTERVAL_MILLIS
+      value: {{ required "the senderBaseRetryIntervalMillis parameter in the 'elasticsearch-logs-plugin'" .senderBaseRetryIntervalMillis | int | squote }}
+    - name: PIPELINE_LOGS_PLUGIN_SENDER_MAX_RETRY_INTERVAL_MILLIS
+      value: {{ required "the senderMaxRetryIntervalMillis parameter in the 'elasticsearch-logs-plugin'" .senderMaxRetryIntervalMillis | int | squote }}
+    - name: PIPELINE_LOGS_PLUGIN_SENDER_MAX_RETRY_COUNT
+      value: {{ required "the senderMaxRetryCount parameter in the 'elasticsearch-logs-plugin'" .senderMaxRetryCount | int | squote }}
+    - name: PIPELINE_LOGS_PLUGIN_CONNECTION_TIMEOUT_MILLIS
+      value: {{ required "the connectionTimeoutMillis parameter in the 'elasticsearch-logs-plugin'" .connectionTimeoutMillis | int | squote }}
+    - name: PIPELINE_LOGS_PLUGIN_READ_TIMEOUT_MILLIS
+      value: {{ required "the readTimeoutMillis parameter in the 'elasticsearch-logs-plugin'" .readTimeoutMillis | int | squote }}
+    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_BUFFER_CHUNK_INITIAL_SIZE" "dictValue" .bufferChunkInitialSize) | nindent 4 }}
+    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_BUFFER_CHUNK_RETENTION_SIZE" "dictValue" .bufferChunkRetentionSize) | nindent 4 }}
+    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_MAX_BUFFER_SIZE" "dictValue" .maxBufferSize) | nindent 4 }}
+    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_BUFFER_CHUNK_RETENTION_TIME_MILLIS" "dictValue" .bufferChunkRetentionTimeMillis) | nindent 4 }}
+    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_MAX_WAIT_SECONDS_UNTIL_BUFFER_FLUSHED" "dictValue" .maxWaitSecondsUntilBufferFlushed) | nindent 4 }}
+    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_MAX_WAIT_SECONDS_UNTIL_FLUSHER_TERMINATED" "dictValue" .maxWaitSecondsUntilFlusherTerminated) | nindent 4 }}
+    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_FLUSH_ATTEMPT_INTERVAL_MILLIS" "dictValue" .flushAttemptIntervalMillis) | nindent 4 }}
+    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_EMIT_MAX_RETRIES_IF_BUFFER_FULL" "dictValue" .emitMaxRetriesIfBufferFull) | nindent 4 }}
+    {{- end }}{{- end}}
     resources:
       {{- toYaml .Values.pipelineRuns.jenkinsfileRunner.resources | nindent 6 }}
     terminationMessagePath: /tekton/results/jfr-termination-log

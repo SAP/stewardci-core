@@ -48,14 +48,30 @@ pipelineRuns:
   logging:
     elasticsearch:
       indexURL: ""
+      splitMessagesLongerThan: 1048576
     forwarding:
       enabled: false
       host: ""
       useSidecar: true
       port: '24224'
       tag: BUILD_LOGS
+      ## mandatory parameters of the elasticsearch-logs-plugin
+      senderBaseRetryIntervalMillis: 1000
+      senderMaxRetryIntervalMillis: 1000
+      senderMaxRetryCount: 30
+      connectionTimeoutMillis: 3000
+      readTimeoutMillis: 3000
+      ## optional parameters of the elasticsearch-logs-plugin
+      #  flushAttemptIntervalMillis: 100
+      #  bufferChunkInitialSize: 1048576 # 1 MB
+      #  bufferChunkRetentionSize: 3145728 # 3 MB
+      #  maxBufferSize: 10485760 # 10 MB
+      #  bufferChunkRetentionTimeMillis: 1000
+      #  maxWaitSecondsUntilBufferFlushed: 30
+      #  maxWaitSecondsUntilFlusherTerminated: 30
+      #  emitMaxRetriesIfBufferFull: -1 # forever
   jenkinsfileRunner:
-    image: "stewardci/stewardci-jenkinsfile-runner:230822_3c378b2"
+    image: "stewardci/stewardci-jenkinsfile-runner:230825_1c09345"
     imagePullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0
