@@ -62,7 +62,7 @@ pipelineRuns:
       connectionTimeoutMillis: 3000
       readTimeoutMillis: 3000
       ## optional parameters of the elasticsearch-logs-plugin
-      flushAttemptIntervalMillis: 100
+      #  flushAttemptIntervalMillis: 100
       #  bufferChunkInitialSize: 1048576 # 1 MB
       #  bufferChunkRetentionSize: 3145728 # 3 MB
       #  maxBufferSize: 10485760 # 10 MB
