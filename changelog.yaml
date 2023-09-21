@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.37.0"
+  date: 2023-09-01
+  changes:
+
     - type: enhancement
       impact: minor
       title: Update stewardci-jenkinsfile-runner image to version '230825_1c09345'
