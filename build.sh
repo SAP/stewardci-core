@@ -9,6 +9,7 @@ declare -r -a GO_PACKAGES_TEST=(
 declare -r -a GO_PACKAGES_ALL=(
     "./cmd/..."
     "./pkg/..."
+    "./internal/..."
     "${GO_PACKAGES_TEST[@]}"
 )
 
