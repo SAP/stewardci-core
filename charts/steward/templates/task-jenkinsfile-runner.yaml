@@ -101,6 +101,8 @@ spec:
       value: '$(params.PIPELINE_FILE)'
     - name: PIPELINE_PARAMS_JSON
       value: '$(params.PIPELINE_PARAMS_JSON)'
+
+    # log streaming
     - name: PIPELINE_LOG_ELASTICSEARCH_INDEX_URL
       value: '$(params.PIPELINE_LOG_ELASTICSEARCH_INDEX_URL)'
     - name: PIPELINE_LOG_ELASTICSEARCH_AUTH_SECRET
@@ -109,6 +111,93 @@ spec:
       value: '$(params.PIPELINE_LOG_ELASTICSEARCH_TRUSTEDCERTS_SECRET)'
     - name: PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON
       value: '$(params.PIPELINE_LOG_ELASTICSEARCH_RUN_ID_JSON)'
+    {{- with .Values.pipelineRuns.logging.elasticsearch }}
+    {{- with .connectTimeoutMillis }}
+    - name: PIPELINE_LOG_ELASTICSEARCH_CONNECT_TIMEOUT_MILLIS
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .requestTimeoutMillis }}
+    - name: PIPELINE_LOG_ELASTICSEARCH_REQUEST_TIMEOUT_MILLIS
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .socketTimeoutMillis }}
+    - name: PIPELINE_LOG_ELASTICSEARCH_SOCKET_TIMEOUT_MILLIS
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .splitMessagesLongerThan }}
+    - name: PIPELINE_LOG_ELASTICSEARCH_SPLIT_MESSAGES_LONGER_THAN
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- end }}
+    {{- with .Values.pipelineRuns.logging.forwarder }}
+    {{- if .enabled }}
+    - name: PIPELINE_LOG_FLUENTD_HOST
+      {{- if .useSidecar }}
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+      {{- else }}
+      value: {{ required "value 'pipelineRuns.logging.forwarder.host' must be set" .host | squote }}
+      {{- end }}
+    - name: PIPELINE_LOG_FLUENTD_PORT
+      value: {{ required "value 'pipelineRuns.logging.forwarder.port' must be set" .port | int | squote }}
+    - name: PIPELINE_LOG_FLUENTD_TAG
+      value: {{ required "value 'pipelineRuns.logging.forwarder.tag' must be set" .tag | squote }}
+    {{- with .senderBaseRetryIntervalMillis }}
+    - name: PIPELINE_LOG_FLUENTD_SENDER_BASE_RETRY_INTERVAL_MILLIS
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .senderMaxRetryIntervalMillis }}
+    - name: PIPELINE_LOG_FLUENTD_SENDER_MAX_RETRY_INTERVAL_MILLIS
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .senderMaxRetryCount }}
+    - name: PIPELINE_LOG_FLUENTD_SENDER_MAX_RETRY_COUNT
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .connectionTimeoutMillis }}
+    - name: PIPELINE_LOG_FLUENTD_CONNECTION_TIMEOUT_MILLIS
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .readTimeoutMillis }}
+    - name: PIPELINE_LOG_FLUENTD_READ_TIMEOUT_MILLIS
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .maxWaitSecondsUntilBufferFlushed }}
+    - name: PIPELINE_LOG_FLUENTD_MAX_WAIT_SECONDS_UNTIL_BUFFER_FLUSHED
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .maxWaitSecondsUntilFlusherTerminated }}
+    - name: PIPELINE_LOG_FLUENTD_MAX_WAIT_SECONDS_UNTIL_FLUSHER_TERMINATED
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .bufferChunkInitialSize }}
+    - name: PIPELINE_LOG_FLUENTD_BUFFER_CHUNK_INITIAL_SIZE
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .bufferChunkRetentionSize }}
+    - name: PIPELINE_LOG_FLUENTD_BUFFER_CHUNK_RETENTION_SIZE
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .bufferChunkRetentionTimeMillis }}
+    - name: PIPELINE_LOG_FLUENTD_BUFFER_CHUNK_RETENTION_TIME_MILLIS
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .flushAttemptIntervalMillis }}
+    - name: PIPELINE_LOG_FLUENTD_FLUSH_ATTEMPT_INTERVAL_MILLIS
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .maxBufferSize }}
+    - name: PIPELINE_LOG_FLUENTD_MAX_BUFFER_SIZE
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- with .emitTimeoutMillis }}
+    - name: PIPELINE_LOG_FLUENTD_EMIT_TIMEOUT_MILLIS
+      value: {{ . | int | squote }}
+    {{- end }}
+    {{- end }}
+    {{- end }}
+
     - name: PIPELINE_CLONE_RETRY_INTERVAL_SEC
       value: {{ default "" .Values.pipelineRuns.jenkinsfileRunner.pipelineCloneRetryIntervalSec | squote }}
     - name: PIPELINE_CLONE_RETRY_TIMEOUT_SEC
@@ -123,47 +212,13 @@ spec:
       value: '$(params.RUN_CAUSE)'
     - name: TERMINATION_LOG_PATH
       value: /tekton/results/jfr-termination-log
-    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_SPLIT_MESSAGES_LONGER_THAN" "dictValue" .Values.pipelineRuns.logging.elasticsearch.splitMessagesLongerThan) | nindent 4 }}
-    {{- with .Values.pipelineRuns.logging.forwarding }}{{- if .enabled }}
-    - name: PIPELINE_LOG_FLUENTD_HOST
-      {{- if .useSidecar }}
-      valueFrom:
-        fieldRef:
-          fieldPath: status.podIP
-      {{- else }}
-      value: {{ required "the host name of the log-forwarder" .host  }}
-      {{- end }}
-    - name: PIPELINE_LOG_FLUENTD_PORT
-      value: {{ .port | quote }}
-    - name: PIPELINE_LOG_FLUENTD_TAG
-      value: {{ .tag }}
-    - name: PIPELINE_LOGS_PLUGIN_SENDER_BASE_RETRY_INTERVAL_MILLIS
-      value: {{ required "the senderBaseRetryIntervalMillis parameter in the 'elasticsearch-logs-plugin'" .senderBaseRetryIntervalMillis | int | squote }}
-    - name: PIPELINE_LOGS_PLUGIN_SENDER_MAX_RETRY_INTERVAL_MILLIS
-      value: {{ required "the senderMaxRetryIntervalMillis parameter in the 'elasticsearch-logs-plugin'" .senderMaxRetryIntervalMillis | int | squote }}
-    - name: PIPELINE_LOGS_PLUGIN_SENDER_MAX_RETRY_COUNT
-      value: {{ required "the senderMaxRetryCount parameter in the 'elasticsearch-logs-plugin'" .senderMaxRetryCount | int | squote }}
-    - name: PIPELINE_LOGS_PLUGIN_CONNECTION_TIMEOUT_MILLIS
-      value: {{ required "the connectionTimeoutMillis parameter in the 'elasticsearch-logs-plugin'" .connectionTimeoutMillis | int | squote }}
-    - name: PIPELINE_LOGS_PLUGIN_READ_TIMEOUT_MILLIS
-      value: {{ required "the readTimeoutMillis parameter in the 'elasticsearch-logs-plugin'" .readTimeoutMillis | int | squote }}
-    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_BUFFER_CHUNK_INITIAL_SIZE" "dictValue" .bufferChunkInitialSize) | nindent 4 }}
-    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_BUFFER_CHUNK_RETENTION_SIZE" "dictValue" .bufferChunkRetentionSize) | nindent 4 }}
-    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_MAX_BUFFER_SIZE" "dictValue" .maxBufferSize) | nindent 4 }}
-    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_BUFFER_CHUNK_RETENTION_TIME_MILLIS" "dictValue" .bufferChunkRetentionTimeMillis) | nindent 4 }}
-    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_MAX_WAIT_SECONDS_UNTIL_BUFFER_FLUSHED" "dictValue" .maxWaitSecondsUntilBufferFlushed) | nindent 4 }}
-    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_MAX_WAIT_SECONDS_UNTIL_FLUSHER_TERMINATED" "dictValue" .maxWaitSecondsUntilFlusherTerminated) | nindent 4 }}
-    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_FLUSH_ATTEMPT_INTERVAL_MILLIS" "dictValue" .flushAttemptIntervalMillis) | nindent 4 }}
-    {{- include "steward.provideAsKeyValueEnv" (dict "dictKey" "PIPELINE_LOGS_PLUGIN_EMIT_MAX_RETRIES_IF_BUFFER_FULL" "dictValue" .emitMaxRetriesIfBufferFull) | nindent 4 }}
-    {{- end }}{{- end}}
     resources:
       {{- toYaml .Values.pipelineRuns.jenkinsfileRunner.resources | nindent 6 }}
     terminationMessagePath: /tekton/results/jfr-termination-log
   results:
   - name: jfr-termination-log
     description: The termination log message from the Jenkinsfile Runner
-  {{ with .Values.pipelineRuns.sidecars }}
+  {{ with .Values.pipelineRuns.jenkinsfileRunner.sidecars }}
   sidecars:
     {{ toYaml . | nindent 4 }}
   {{ end }}
-

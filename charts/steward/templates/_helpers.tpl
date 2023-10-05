@@ -108,10 +108,3 @@ to the empty string.
 true
 {{- end -}}
 {{- end -}}
-
-{{- define "steward.provideAsKeyValueEnv" -}}
-{{- if .dictValue -}}
-- name: {{ .dictKey }}
-  value: {{ .dictValue | int | squote }}
-{{- end -}}
-{{- end -}}

@@ -52,6 +52,28 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: incompatible
+      title: Update Jenkinsfile Runner image to tag ???
+      description: |-
+        Update the Jenkinsfile Runner image to tag ???.
+        It contains elasticsearch-logs-plugin [v0.13.1](https://github.com/SAP/elasticsearch-logs-plugin/releases/tag/0.13.1).
+      warning: |-
+        Helm chart parameters changed incompatibly. See the upgrade notes for instructions.
+      upgradeNotes: |-
+        Adapt Helm chart parameters:
+
+        - Rename `pipelineRuns.sidecars` to `pipelineRuns.jenkinsfileRunner.sidecars`
+        - Remove `pipelineRuns.logging.forwarding.emitMaxRetriesIfBufferFull` (use `emitTimeoutMillis` instead; see below)
+        - Rename `pipelineRuns.logging.forwarding.*` to `pipelineRuns.logging.forwarder.*`
+        - If needed, set `pipelineRuns.logging.forwarder.emitTimeoutMillis` (`emitMaxRetriesIfBufferFull` was removed)
+        - If needed, set `pipelineRuns.logging.forwarder.useSidecar` to `true` (default value changed to `false`)
+        - If needed, set `pipelineRuns.logging.forwarder.tag` (default value changed to `logs`)
+
+        See the chart README for details on chart parameters.
+      pullRequestNumber: 408
+      jiraIssueNumber: 1258
+
 - version: "0.37.0"
   date: 2023-09-01
   changes:
@@ -725,8 +747,6 @@
       description: |-
         Updated Jenkinsfile Runner image to [211220_cf0ea4a](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/211220_cf0ea4a)
         with latest Jenkins Core and plugins.
-      upgradeNotes: |-
-        If you mirror the image don't forget to add this new version.
       pullRequestNumber: 303
 
 - version: "0.17.0"
