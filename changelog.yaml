@@ -73,7 +73,7 @@
       impact: incompatible
       title: Change Helm chart parameters
       description: |-
-
+        See the upgrade notes for necessary adaptations.
       warning: |-
         Helm chart parameters changed incompatibly. See the upgrade notes for instructions.
       upgradeNotes: |-
