@@ -62,10 +62,25 @@
       upgradeNotes: |-
         Adapt Helm chart parameters:
 
-        - Rename `pipelineRuns.sidecars` to `pipelineRuns.jenkinsfileRunner.sidecars`
         - Remove `pipelineRuns.logging.forwarding.emitMaxRetriesIfBufferFull` (use `emitTimeoutMillis` instead; see below)
-        - Rename `pipelineRuns.logging.forwarding.*` to `pipelineRuns.logging.forwarder.*`
         - If needed, set `pipelineRuns.logging.forwarder.emitTimeoutMillis` (`emitMaxRetriesIfBufferFull` was removed)
+
+        See the chart README for details on chart parameters.
+      pullRequestNumber: 409
+      jiraIssueNumber: 1258
+
+    - type: enhancement
+      impact: incompatible
+      title: Change Helm chart parameters
+      description: |-
+
+      warning: |-
+        Helm chart parameters changed incompatibly. See the upgrade notes for instructions.
+      upgradeNotes: |-
+        Adapt Helm chart parameters:
+
+        - Rename `pipelineRuns.sidecars` to `pipelineRuns.jenkinsfileRunner.sidecars`
+        - Rename `pipelineRuns.logging.forwarding.*` to `pipelineRuns.logging.forwarder.*`
         - If needed, set `pipelineRuns.logging.forwarder.useSidecar` to `true` (default value changed to `false`)
         - If needed, set `pipelineRuns.logging.forwarder.tag` (default value changed to `logs`)
 
