@@ -43,6 +43,9 @@ metrics:
   serviceMonitors:
     enabled: false
     extraLabels: {}
+  podMonitors:
+    enabled: false
+    extraLabels: {}
 
 pipelineRuns:
   logging:

@@ -53,6 +53,19 @@
   changes:
 
     - type: enhancement
+      impact: minor
+      title: Introduce a new PodMonitor to the Prometheus operator
+      description: |-
+        Make scraped metrics visible to the Prometheus operator through
+        this newly introduced PodMonitor object.
+
+        Using this PodMonitor the Prometheus operator will scrape the
+        configured endpoints every 5 seconds interval. 5 second interval
+        is chosen due to short-lived Jenkinsfile-runner pods.
+      pullRequestNumber: 410
+      jiraIssueNumber: 1429
+
+    - type: enhancement
       impact: incompatible
       title: Update Jenkinsfile Runner image to tag 231006_5085985
       description: |-

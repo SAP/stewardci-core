@@ -50,6 +50,15 @@ The additional labels for the service monitors.
 {{- end -}}
 
 {{/*
+The additional labels for the pod monitors.
+*/}}
+{{- define "steward.podMonitors.extraLabels" -}}
+{{- if .Values.metrics.podMonitors.extraLabels -}}
+{{- toYaml .Values.metrics.podMonitors.extraLabels -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 The name of the pod security policy for the run controller.
 */}}
 {{- define "steward.runController.podSecurityPolicyName" -}}
@@ -107,4 +116,12 @@ to the empty string.
 {{- if not .Values.pipelineRuns.podSecurityPolicyName -}}
 true
 {{- end -}}
+{{- end -}}
+
+{{/*
+Selector labels for the jenkinsfile-runner pods
+*/}}
+{{- define "steward.jenkinsfileRunner.selectorLabels" -}}
+tekton.dev/task: steward-jenkinsfile-runner
+tekton.dev/taskRun: steward-jenkinsfile-runner
 {{- end -}}

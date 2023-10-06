@@ -28,6 +28,9 @@
       - [`steward_pipelineruns_workqueue_unfinished_workduration_seconds`](#steward_pipelineruns_workqueue_unfinished_workduration_seconds)
       - [`steward_pipelineruns_workqueue_longest_running_processor_seconds`](#steward_pipelineruns_workqueue_longest_running_processor_seconds)
       - [`steward_pipelineruns_workqueue_retry_count_total`](#steward_pipelineruns_workqueue_retry_count_total)
+  - [Jenkinsfile-runner Log Forwarder](#jenkinsfile-runner-log-forwarder)
+    - [fluentd_quota_when_exhausted](#fluentd_quota_when_exhausted)
+    - [fluentd_runtime_seconds_when_exhausted](#fluentd_runtime_seconds_when_exhausted)
 
 ## General
 
@@ -242,3 +245,23 @@ Type: Gauge
 The total number of retries needed to process queue items.
 
 Type: Counter
+
+### Jenkinsfile-runner Log Forwarder
+
+Elasticsearch Logs plug-in in the Jenkinsfile Runner has the ability to forward
+pipeline logs to the Elasticsearch using Fluentd Forward Protocol via
+log forwarder side-car container. See [logging](../../charts/steward/README.md#logging) for more details.
+
+Below metrics will be provided if the log forwarder is enabled.
+
+#### `fluentd_quota_when_exhausted`
+
+The current quota in bytes when it got exhausted.
+
+Type: Gauge
+
+#### `fluentd_runtime_seconds_when_exhausted`
+
+The runtime in seconds when the quota got exhausted.
+
+Type: Gauge

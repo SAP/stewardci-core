@@ -131,6 +131,8 @@ Common parameters:
 |---|---|---|
 | <code>metrics.<wbr/><b>serviceMonitors.<wbr/>enabled</b></code><br/><i>bool</i> |  Whether to generate ServiceMonitor resource for [Prometheus Operator][prometheus-operator]. | `false` |
 | <code>metrics.<wbr/><b>serviceMonitors.<wbr/>extraLabels</b></code><br/><i>object of string</i> |  Labels to be attached to the ServiceMonitor resources for [Prometheus Operator][prometheus-operator]. | `{}` |
+| <code>metrics.<wbr/><b>podMonitors.<wbr/>enabled</b></code><br/><i>bool</i> |  Whether to generate PodMonitor resource for [Prometheus Operator][prometheus-operator]. | `false` |
+| <code>metrics.<wbr/><b>podMonitors.<wbr/>extraLabels</b></code><br/><i>object of string</i> |  Labels to be attached to the PodMonitor resources for [Prometheus Operator][prometheus-operator]. | `{}` |
 
 ### Pipeline Runs
 

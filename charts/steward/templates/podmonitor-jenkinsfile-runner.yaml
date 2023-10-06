@@ -1,0 +1,20 @@
+{{- if .Values.metrics.podMonitors.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: log-forwarder
+  namespace: {{ .Values.targetNamespace.name | quote }}
+  labels:
+    {{- include "steward.labels" . | nindent 4 }}
+    {{- include "steward.runController.componentLabel" . | nindent 4 }}
+    {{- include "steward.podMonitors.extraLabels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "steward.jenkinsfileRunner.selectorLabels" . | nindent 6 }}
+  namespaceSelector:
+    any: true
+  podMetricsEndpoints:
+  - port: prometheus
+    interval: 5s
+{{- end -}}
