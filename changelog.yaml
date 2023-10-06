@@ -52,8 +52,47 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: incompatible
+      title: Update Jenkinsfile Runner image to tag 231006_5085985
+      description: |-
+        The new image contains elasticsearch-logs-plugin [v0.13.1](https://github.com/SAP/elasticsearch-logs-plugin/releases/tag/0.13.1).
+      warning: |-
+        Helm chart parameters changed incompatibly. See the upgrade notes for instructions.
+      upgradeNotes: |-
+        Adapt Helm chart parameters:
+
+        - Remove `pipelineRuns.logging.forwarding.emitMaxRetriesIfBufferFull` (use `emitTimeoutMillis` instead; see below)
+        - If needed, set `pipelineRuns.logging.forwarder.emitTimeoutMillis` (`emitMaxRetriesIfBufferFull` was removed)
+
+        See the chart README for details on chart parameters.
+      pullRequestNumber: 409
+      jiraIssueNumber: 1258
+
+    - type: enhancement
+      impact: incompatible
+      title: Change Helm chart parameters
+      description: |-
+        See the upgrade notes for necessary adaptations.
+      warning: |-
+        Helm chart parameters changed incompatibly. See the upgrade notes for instructions.
+      upgradeNotes: |-
+        Adapt Helm chart parameters:
+
+        - Rename `pipelineRuns.sidecars` to `pipelineRuns.jenkinsfileRunner.sidecars`
+        - Rename `pipelineRuns.logging.forwarding.*` to `pipelineRuns.logging.forwarder.*`
+        - If needed, set `pipelineRuns.logging.forwarder.useSidecar` to `true` (default value changed to `false`)
+        - If needed, set `pipelineRuns.logging.forwarder.tag` (default value changed to `logs`)
+
+        See the chart README for details on chart parameters.
+      pullRequestNumber: 409
+      jiraIssueNumber: 1258
+
 - version: "0.37.0"
   date: 2023-09-01
+  recall:
+    message: |-
+      elasticsearch-logs-plugin in this version contained some bugs which are fixed in the next patch version. Please use version 0.37.1 instead.
   changes:
 
     - type: enhancement
@@ -725,8 +764,6 @@
       description: |-
         Updated Jenkinsfile Runner image to [211220_cf0ea4a](https://github.com/SAP/stewardci-jenkinsfilerunner-image/releases/tag/211220_cf0ea4a)
         with latest Jenkins Core and plugins.
-      upgradeNotes: |-
-        If you mirror the image don't forget to add this new version.
       pullRequestNumber: 303
 
 - version: "0.17.0"

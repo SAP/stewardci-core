@@ -56,7 +56,7 @@ Use the `helm upgrade` command to upgrade Steward releases:
 helm upgrade RELEASE_NAME CHECKOUT_DIR/charts/steward/ ...
 ```
 
-To reuse values from the current release revision, __do _NOT_ use the `--reuse-values` option__ of the `helm upgrade` command.
+To reuse values from the current release revision, **do _NOT_ use the `--reuse-values` option** of the `helm upgrade` command.
 This option will not only reuse overridden values, but also the built-in values of the current release's chart version.
 The result might be unexpected. Instead:
 
@@ -136,33 +136,73 @@ Common parameters:
 
 | Parameter | Description | Default |
 |---|---|---|
-| <code>pipelineRuns.<wbr/><b>logging.<wbr/>elasticsearch.<wbr/>indexURL</b></code><br/><i>string</i> |  The URL of the Elasticsearch index to send logs to. If null or empty, logging to Elasticsearch is disabled. Example: `http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc` | empty |
-| <code>pipelineRuns.<wbr/><b>logging.<wbr/>forwarding.<wbr/>enabled</b></code><br/><i>boolean</i> |  If "true" a forwarder will be used instead of sending logs directly to the destination. | <code>false</code> |
-| <code>pipelineRuns.<wbr/><b>logging.<wbr/>forwarding.<wbr/>host</b></code><br/><i>string</i> | The hostname of the forwarder. | empty |
-| <code>pipelineRuns.<wbr/><b>logging.<wbr/>forwarding.<wbr/>useSidecar</b></code><br/><i>boolean</i> | If "true", the fowarder is expected to run as a sidecare of the jenkinsfileRunner pod. In that case "host" will be ignored. | <code>false</code> |
-| <code>pipelineRuns.<wbr/><b>logging.<wbr/>forwarding.<wbr/>port</b></code><br/><i>string</i> | The port the forwarder is listening to. | empty |
-| <code>pipelineRuns.<wbr/><b>logging.<wbr/>forwarding.<wbr/>tag</b></code><br/><i>string</i> | The tag to use when sending data to the forwarder. | empty |
-| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>image.<wbr/>repository</b></code><br/><i>string</i> |  <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</b></code> instead. | |
-| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>image.<wbr/>tag</b></code><br/><i>string</i> |  <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>image</b></code> instead.  | |
-| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>image.<wbr/>pullPolicy</b></code><br/><i>string</i> |  <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/>imagePullPolicy</b></code> instead. | |
-| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>image</b></code><br/><i>string</i> |  The Jenkinsfile Runner image. | `stewardci/stewardci-jenkinsfile-runner:<versionTag>` |
-| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>imagePullPolicy</b></code><br/><i>string</i> |  The image pull policy for the Jenkinsfile Runner image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation. | `IfNotPresent` |
-| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>javaOpts</b></code><br/><i>string</i> |  The JAVA_OPTS environment variable for the Jenkinsfile Runner process.  | (see `values.yaml`) |
-| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>resources</b></code><br/><i>object of [`RecourceRequirements`][k8s-resourcerequirements]</i> |  The resource requirements of Jenkinsfile Runner containers. When overriding, override the complete value, not just subvalues, because the default value might change in future versions and a partial override might not make sense anymore. | Limits and requests set (see `values.yaml`) |
-| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>podSecurityContext.<wbr/>runAsUser</b></code><br/><i>integer</i> |  The user ID (UID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of [1,65535]. Corresponds to field `runAsUser` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
-| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>podSecurityContext.<wbr/>runAsGroup</b></code><br/><i>integer</i> |  The group ID (GID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of [1,65535]. Corresponds to field `runAsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
-| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>podSecurityContext.<wbr/>fsGroup</b></code><br/><i>integer</i> |  A special supplemental group ID of the container processes of the Jenkinsfile Runner pod, that defines the ownership of some volume types. The value must be an integer in the range of [1,65535]. Corresponds to field `fsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
-| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>pipelineCloneRetryIntervalSec</b></code><br/><i>string</i> |  The retry interval for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
-| <code>pipelineRuns.<wbr/><b>jenkinsfileRunner.<wbr/>pipelineCloneRetryTimeoutSec</b></code><br/><i>string</i> |  The retry timeout for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
 | <code>pipelineRuns.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by pipeline run pods. If empty, a default pod security policy will be created. | empty |
-| <code>pipelineRuns.<wbr/><b>sidecars</b></code><br/><i>list</i> | A list of sidecar containers for the task, as specified by [Tekton documentation](https://tekton.dev/vault/pipelines-main/tasks/#specifying-sidecars). | empty |
-| <code>pipelineRuns.<wbr/><b></b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by pipeline run pods. If empty, a default pod security policy will be created. | empty |
 | <code>pipelineRuns.<wbr/><b>timeout</b></code><br/><i>[duration][type-duration]</i> |  The maximum execution time of pipelines. | `60m` |
 | <code>pipelineRuns.<wbr/><b>networkPolicy</b></code><br/><i>string</i> | <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>networkPolicies</code> instead. | |
 | <code>pipelineRuns.<wbr/><b>defaultNetworkPolicyName</b></code> | The name of the network policy which is used when no network profile is selected by a pipeline run spec. | `default` if <code>pipelineRuns.<wbr/>networkPolicies</code> is not set or empty. |
-| <code>pipelineRuns.<wbr/><b>networkPolicies</b></code><br/><i>map[string]string</i> |  The network policies selectable as network profiles in pipeline run specs. The key can be any valid YAML key not starting with underscore (`_`). The value must be a string containing a complete `networkpolicy.networking.k8s.io` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of network policies][k8s-networkpolicies] for details about Kubernetes network policies.<br/><br/> Note that Steward ensures that all pods in pipeline run namespaces are _isolated_ in terms of network policies. The policy defined here _adds_ egress and/or ingress rules. | A single entry named `default` whose value is a network policy defining rules that allow ingress traffic from all pods in the same namespace and egress traffic to the internet, the cluster DNS resolver. |
+| <code>pipelineRuns.<wbr/><b>networkPolicies</b></code><br/><i>map\[string]string</i> |  The network policies selectable as network profiles in pipeline run specs. The key can be any valid YAML key not starting with underscore (`_`). The value must be a string containing a complete `networkpolicy.networking.k8s.io` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of network policies][k8s-networkpolicies] for details about Kubernetes network policies.<br/><br/> Note that Steward ensures that all pods in pipeline run namespaces are _isolated_ in terms of network policies. The policy defined here _adds_ egress and/or ingress rules. | A single entry named `default` whose value is a network policy defining rules that allow ingress traffic from all pods in the same namespace and egress traffic to the internet, the cluster DNS resolver. |
 | <code>pipelineRuns.<wbr/><b>limitRange</b></code><br/><i>string</i> |  The limit range to be created in every pipeline run namespace. The value must be a string containing a complete `limitrange` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of limit ranges][k8s-limitranges] for details about Kubernetes limit ranges. | A limit range defining a default CPU request of 0.5 CPUs, a default CPU limit of 3 CPUs, a default memory request of 0.5 GiB and a default memory limit of 3 GiB.<br/><br/>This default limit range might change with newer releases of Steward. It is recommended to set an own limit range to avoid unexpected changes with Steward upgrades. |
 | <code>pipelineRuns.<wbr/><b>resourceQuota</b></code><br/><i>string</i> |  The resource quota to be created in every pipeline run namespace. The value must be a string containing a complete `resourcequotas` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of resource quotas][k8s-resourcequotas] for details about Kubernetes resource quotas.| none |
+
+#### Jenkinsfile Runner
+
+| Parameter | Description | Default |
+|---|---|---|
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>image.<wbr/>repository</b></code><br/><i>string</i> |  <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>image</b></code> instead. | |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>image.<wbr/>tag</b></code><br/><i>string</i> |  <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>image</b></code> instead.  | |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>image.<wbr/>pullPolicy</b></code><br/><i>string</i> |  <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>imagePullPolicy</b></code> instead. | |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>image</b></code><br/><i>string</i> |  The Jenkinsfile Runner image. | `stewardci/stewardci-jenkinsfile-runner:<versionTag>` |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>imagePullPolicy</b></code><br/><i>string</i> |  The image pull policy for the Jenkinsfile Runner image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation. | `IfNotPresent` |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>javaOpts</b></code><br/><i>string</i> |  The JAVA_OPTS environment variable for the Jenkinsfile Runner process.  | (see `values.yaml`) |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>resources</b></code><br/><i>object of [`RecourceRequirements`][k8s-resourcerequirements]</i> |  The resource requirements of Jenkinsfile Runner containers. When overriding, override the complete value, not just subvalues, because the default value might change in future versions and a partial override might not make sense anymore. | Limits and requests set (see `values.yaml`) |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>podSecurityContext.<wbr/>runAsUser</b></code><br/><i>integer</i> |  The user ID (UID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of \[1,65535]. Corresponds to field `runAsUser` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>podSecurityContext.<wbr/>runAsGroup</b></code><br/><i>integer</i> |  The group ID (GID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of \[1,65535]. Corresponds to field `runAsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>podSecurityContext.<wbr/>fsGroup</b></code><br/><i>integer</i> |  A special supplemental group ID of the container processes of the Jenkinsfile Runner pod, that defines the ownership of some volume types. The value must be an integer in the range of \[1,65535]. Corresponds to field `fsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>pipelineCloneRetryIntervalSec</b></code><br/><i>string</i> |  The retry interval for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>pipelineCloneRetryTimeoutSec</b></code><br/><i>string</i> |  The retry timeout for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>sidecars</b></code><br/><i>list</i> | A list of sidecar containers for the task, as specified by the [Tekton documentation](https://tekton.dev/vault/pipelines-main/tasks/#specifying-sidecars). | empty |
+
+#### Logging
+
+The parameters in this section configure the [Elasticsearch Logs
+Plug-in][jenkins-elasticsearch-logs-plugin] of the Jenkinsfile Runner.
+
+This plug-in supports two ways of sending log events:
+
+- _Via Elasticsearch Index API:_ For each log event an HTTP request is send to
+  Elasticsearch.
+
+- _Via Fluentd Forward Protocol:_ This implementation is based on
+  [Fluency][fluency]. Log events are first buffered in-memory. Chunks of log
+  events are sent to a log forwarder via Fluentd Forward Protocol. The log
+  forwarder is responsible to forward all log events to Elasticsearch (or any
+  other type of destination). It may even apply further processing of log
+  events.
+
+| Parameter | Description | Default |
+|---|---|---|
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>elasticsearch.<wbr/>indexURL</b></code><br/><i>string</i> |  The URL of the Elasticsearch index to send logs to. If null or empty, logging to Elasticsearch is disabled. Example: `http://elasticsearch-primary.elasticsearch.svc.cluster.local:9200/jenkins-logs/_doc` | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>elasticsearch.<wbr/>connectTimeoutMillis</b></code><br/><i>integer</i> | For Elasticsearch API calls, the timeout in milliseconds for establishing a connection. Zero is interpreted as infinite timeout. If not set or set to a negative value, the system default is used. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>elasticsearch.<wbr/>requestTimeoutMillis</b></code><br/><i>integer</i> | For Elasticsearch API calls, the timeout in milliseconds used when requesting a connection from the connection manager. Zero is interpreted as infinite timeout. If not set or set to a negative value, the system default is used. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>elasticsearch.<wbr/>socketTimeoutMillis</b></code><br/><i>integer</i> | For Elasticsearch API calls, the socket timeout (`SO_TIMEOUT`) in milliseconds. The socket timeout is the maximum period between two consecutive data packets. Zero is interpreted as infinite timeout. If not set or set to a negative value, the system default is used. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>enabled</b></code><br/><i>boolean</i> | Whether log events should be sent to a log forwarder via Fluentd Forward Protocol instead of sending them directly to Elasticsearch. | <code>false</code> |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>useSidecar</b></code><br/><i>boolean</i> | Whether the log forwarder is running as a sidecar container of the Jenkinsfile Runner pod. If `true`, the pod's IP address will be used as forwarder host. | <code>false</code> |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>host</b></code><br/><i>string</i> | **mandatory** if `forwarder.enabled` is `true` and `forwarder.useSidecar` is `false`<br/> The host name of the log forwarder. Ignored if `useSidecar` is `true`. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>port</b></code><br/><i>string</i> | **mandatory** if `forwarder.enabled` is `true`<br/> The port the log forwarder is listening to. | `24224`|
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>tag</b></code><br/><i>string</i> | **mandatory** if `forwarder.enabled` is `true`<br/> The tag to use when sending data to the log forwarder. | `logs` |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>senderBaseRetryIntervalMillis</b></code><br/><i>integer</i> | The base retry interval in milliseconds used to calculate the exponential back-off when the Fluency sender retries failed operations. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>senderMaxRetryIntervalMillis</b></code><br/><i>integer</i> | The maximum retry interval in milliseconds when the Fluency sender retries failed operations.| |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>senderMaxRetryCount</b></code><br/><i>integer</i> | The maximum number of retries used by the Fluency sender for failed operations. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>connectionTimeoutMillis</b></code><br/><i>integer</i> | The timeout in milliseconds for establishing a connection to the log forwarder. Must be greater than 10. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>readTimeoutMillis</b></code><br/><i>integer</i> | The timeout in milliseconds for retrieving a response (acknowledgement) from the log forwarder. Must be greater than 10. Note that the value must be sufficient to process a whole chunk of log events in the log forwarder. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>maxWaitSecondsUntilBufferFlushed</b></code><br/><i>integer</i> | The timeout in seconds for shutting down the Fluency flusher service. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>maxWaitSecondsUntilFlusherTerminated</b></code><br/><i>integer</i> | The timeout in seconds for closing the Fluency buffer and ingester. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>bufferChunkInitialSize</b></code><br/><i>integer</i> | The initial size of a Fluency buffer chunk. A buffer chunks get expanded if the remaining capacity is too small for new data to be added. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>bufferChunkRetentionSize</b></code><br/><i>integer</i> | The maximum size of a single buffer chunk. Once this size would be exceeded when new data is added, the chunk gets ready to be flushed to the log forwarder and a new chunk is created. Must be greater than `bufferChunkInitialSize`. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>bufferChunkRetentionTimeMillis</b></code><br/><i>integer</i> | The time in seconds after which a buffer chunk will be flushed although it's not yet "full". | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>flushAttemptIntervalMillis</b></code><br/><i>integer</i> | The interval in milliseconds at which the Fluency flusher service periodically checks for buffer chunks ready to be flushed. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>maxBufferSize</b></code><br/><i>integer</i> | The maximum total size in bytes of all buffer chunks. Must be greater than `bufferChunkRetentionSize`. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>emitTimeoutMillis</b></code><br/><i>integer</i> | The timeout in milliseconds for inserting a single log event into the local in-memory buffer and retrying in case of errors, e.g. when the buffer is full. | |
 
 ### Feature Flags
 
@@ -247,3 +287,6 @@ By doing so, all resource objects of those types will be removed by Kubernetes, 
 [prometheus-operator]: https://github.com/coreos/prometheus-operator
 
 [type-duration]: #duration-value-syntax
+
+[jenkins-elasticsearch-logs-plugin]: https://github.com/SAP/elasticsearch-logs-plugin
+[fluency]: https://github.com/komamitsu/fluency
