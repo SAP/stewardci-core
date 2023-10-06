@@ -76,6 +76,9 @@
 
 - version: "0.37.0"
   date: 2023-09-01
+  recall:
+    message: |-
+      elasticsearch-logs-plugin in this version contained some bugs which are fixed in the next patch version. Please use version 0.37.1 instead.
   changes:
 
     - type: enhancement
