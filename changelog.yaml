@@ -54,10 +54,9 @@
 
     - type: enhancement
       impact: incompatible
-      title: Update Jenkinsfile Runner image to tag ???
+      title: Update Jenkinsfile Runner image to tag 231006_5085985
       description: |-
-        Update the Jenkinsfile Runner image to tag ???.
-        It contains elasticsearch-logs-plugin [v0.13.1](https://github.com/SAP/elasticsearch-logs-plugin/releases/tag/0.13.1).
+        The new image contains elasticsearch-logs-plugin [v0.13.1](https://github.com/SAP/elasticsearch-logs-plugin/releases/tag/0.13.1).
       warning: |-
         Helm chart parameters changed incompatibly. See the upgrade notes for instructions.
       upgradeNotes: |-
@@ -71,7 +70,7 @@
         - If needed, set `pipelineRuns.logging.forwarder.tag` (default value changed to `logs`)
 
         See the chart README for details on chart parameters.
-      pullRequestNumber: 408
+      pullRequestNumber: 409
       jiraIssueNumber: 1258
 
 - version: "0.37.0"
