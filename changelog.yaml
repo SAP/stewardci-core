@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.38.0"
+  date: 2023-10-06
+  changes:
+
     - type: enhancement
       impact: incompatible
       title: Update Jenkinsfile Runner image to tag 231006_5085985
