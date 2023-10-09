@@ -40,12 +40,14 @@ runController:
 imagePullSecrets: []
 
 metrics:
-  serviceMonitors:
-    enabled: false
-    extraLabels: {}
-  podMonitors:
-    enabled: false
-    extraLabels: {}
+  runController:
+    serviceMonitors:
+      enabled: false
+      extraLabels: {}
+  jenkinsfileRunnerLogForwarder:
+    podMonitors:
+      enabled: false
+      extraLabels: {}
 
 pipelineRuns:
   logging:

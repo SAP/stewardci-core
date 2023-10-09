@@ -41,20 +41,20 @@ app.kubernetes.io/component: run-controller
 
 
 {{/*
-The additional labels for the service monitors.
+The additional labels for the service monitors for the steward-run-controller.
 */}}
-{{- define "steward.serviceMonitors.extraLabels" -}}
-{{- if .Values.metrics.serviceMonitors.extraLabels -}}
-{{- toYaml .Values.metrics.serviceMonitors.extraLabels -}}
+{{- define "steward.runController.serviceMonitors.extraLabels" -}}
+{{- if .Values.metrics.runController.serviceMonitors.extraLabels -}}
+{{- toYaml .Values.metrics.runController.serviceMonitors.extraLabels -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
 The additional labels for the pod monitors.
 */}}
-{{- define "steward.podMonitors.extraLabels" -}}
-{{- if .Values.metrics.podMonitors.extraLabels -}}
-{{- toYaml .Values.metrics.podMonitors.extraLabels -}}
+{{- define "steward.jenkinsfileRunnerLogForwarder.podMonitors.extraLabels" -}}
+{{- if .Values.metrics.jenkinsfileRunnerLogForwarder.podMonitors.extraLabels -}}
+{{- toYaml .Values.metrics.jenkinsfileRunnerLogForwarder.podMonitors.extraLabels -}}
 {{- end -}}
 {{- end -}}
 

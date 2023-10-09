@@ -29,8 +29,8 @@ See the [chart documentation][prometheus-operator-chart] for installation detail
 ### Install Steward service monitor resources for Prometheus Operator
 
 The [Steward Helm chart](../../charts/steward/README.md) can create service monitor resources for Prometheus Operator.
-By default this is disabled and can be enabled by parameter `metrics.serviceMonitors.enabled=true`.
-See the [documentation of chart parameters `metrics.serviceMonitors.*`](../../charts/steward/README.md#monitoring) for details.
+By default this is disabled and can be enabled by parameter `metrics.runController.serviceMonitors.enabled=true`.
+See the [documentation of chart parameters `metrics.runController.serviceMonitors.*`](../../charts/steward/README.md#monitoring) for details.
 
 Service monitors can be enabled both for new installations and upgrades.
 An upgrade can also be used if the installed Steward version should be kept.

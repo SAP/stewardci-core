@@ -1,4 +1,4 @@
-{{- if .Values.metrics.serviceMonitors.enabled }}
+{{- if .Values.metrics.runController.serviceMonitors.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -7,7 +7,7 @@ metadata:
   labels:
     {{- include "steward.labels" . | nindent 4 }}
     {{- include "steward.runController.componentLabel" . | nindent 4 }}
-    {{- include "steward.serviceMonitors.extraLabels" . | nindent 4 }}
+    {{- include "steward.runController.serviceMonitors.extraLabels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
