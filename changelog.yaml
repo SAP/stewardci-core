@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.38.0"
+  date: 2023-10-06
+  changes:
+
     - type: enhancement
       impact: minor
       title: Introduce a new PodMonitor to the Prometheus operator
