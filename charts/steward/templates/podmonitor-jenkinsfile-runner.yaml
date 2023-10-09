@@ -15,6 +15,6 @@ spec:
   namespaceSelector:
     any: true
   podMetricsEndpoints:
-  - port:  http-metrics
+  - port: http-metrics
     interval: 5s
 {{- end -}}
