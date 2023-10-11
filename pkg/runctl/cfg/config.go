@@ -11,6 +11,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/featureflag"
 	"github.com/SAP/stewardci-core/pkg/k8s"
 	"github.com/pkg/errors"
+	yaml "gopkg.in/yaml.v3"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/system"
@@ -22,6 +23,7 @@ const (
 	mainConfigKeyTimeoutWait         = "waitTimeout"
 	mainConfigKeyLimitRange          = "limitRange"
 	mainConfigKeyResourceQuota       = "resourceQuota"
+	mainConfigKeyLabelsToLog         = "labelsToLog"
 	mainConfigKeyImage               = "jenkinsfileRunner.image"
 	mainConfigKeyImagePullPolicy     = "jenkinsfileRunner.imagePullPolicy"
 	mainConfigKeyPSCRunAsUser        = "jenkinsfileRunner.podSecurityContext.runAsUser"
@@ -54,6 +56,10 @@ type PipelineRunsConfigStruct struct {
 	// applied to each pipeline run sandbox namespace.
 	// If empty, no resource quota will be defined.
 	ResourceQuota string
+
+	// LabelsToLog contains a map specifying the values of which labels should be logged
+	// in the structured logging under which key.
+	LabelsToLog map[string]string
 
 	// JenkinsfileRunnerImage is the Jenkinsfile Runner container image to be
 	// used for pipeline runs.
@@ -118,6 +124,15 @@ func (cd configDataMap) parseDuration(key string) (*metav1.Duration, error) {
 		return &metav1.Duration{Duration: d}, nil
 	}
 	return nil, nil
+}
+
+func (cd configDataMap) parseMap(key string) (map[string]string, error) {
+	result := map[string]string{}
+	var err error
+	if strVal, ok := cd[key]; ok && strVal != "" {
+		err = yaml.Unmarshal([]byte(strVal), &result)
+	}
+	return result, err
 }
 
 // LoadPipelineRunsConfig loads the pipeline run's configuration and returns it.
@@ -220,6 +235,11 @@ func processMainConfig(configData configDataMap, dest *PipelineRunsConfigStruct)
 	dest.TektonTaskNamespace = configData[mainConfigKeyTektonTaskNamespace]
 
 	var err error
+
+	if dest.LabelsToLog, err =
+		configData.parseMap(mainConfigKeyLabelsToLog); err != nil {
+		return err
+	}
 
 	if dest.Timeout, err =
 		configData.parseDuration(mainConfigKeyTimeout); err != nil {

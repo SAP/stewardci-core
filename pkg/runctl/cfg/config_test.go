@@ -75,6 +75,7 @@ func Test_loadPipelineRunsConfig_EmptyMainConfig(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, resultErr)
 	expectedConfig := &PipelineRunsConfigStruct{
+		LabelsToLog:           map[string]string{},
 		DefaultNetworkProfile: "key1",
 		NetworkPolicies: map[string]string{
 			"key1": "policy1",
@@ -201,6 +202,7 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 				mainConfigKeyImagePullPolicy:     "jfrImagePullPolicy1",
 				mainConfigKeyTektonTaskName:      "taskName1",
 				mainConfigKeyTektonTaskNamespace: "taskNamespace1",
+				mainConfigKeyLabelsToLog:         "label1: key1\nlabel2: key2",
 				"someKeyThatShouldBeIgnored":     "34957349",
 			},
 		),
@@ -223,6 +225,7 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 		TimeoutWait:                      utils.Metav1Duration(time.Minute * 555),
 		LimitRange:                       "limitRange1",
 		ResourceQuota:                    "resourceQuota1",
+		LabelsToLog:                      map[string]string{"label1": "key1", "label2": "key2"},
 		JenkinsfileRunnerImage:           "jfrImage1",
 		JenkinsfileRunnerImagePullPolicy: "jfrImagePullPolicy1",
 		JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(1111),
@@ -344,6 +347,7 @@ func Test_processMainConfig(t *testing.T) {
 				TimeoutWait:   utils.Metav1Duration(time.Minute * 555),
 				LimitRange:    "limitRange1",
 				ResourceQuota: "resourceQuota1",
+				LabelsToLog:   map[string]string{},
 
 				JenkinsfileRunnerImage:                        "jfrImage1",
 				JenkinsfileRunnerImagePullPolicy:              "jfrImagePullPolicy1",
@@ -366,7 +370,9 @@ func Test_processMainConfig(t *testing.T) {
 				mainConfigKeyPSCRunAsGroup:   "",
 				mainConfigKeyPSCFSGroup:      "",
 			},
-			&PipelineRunsConfigStruct{},
+			&PipelineRunsConfigStruct{
+				LabelsToLog: map[string]string{},
+			},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

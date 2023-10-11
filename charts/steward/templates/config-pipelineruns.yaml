@@ -50,6 +50,12 @@ data:
           limits.cpu: 10
           limits.memory: 20Gi
 
+    # define a map of labels (key) which should be added to the log output
+    # in the structured logging under the key specified by the corresponding value.
+    labelsToLog: |
+      foo.bar.lableName1: shortName1
+      foo.bar.labelName2: shortName2
+
     # jenkinsfileRunner.podSecurityContext.* allow configuring selected fields
     # of the pod security context of the Jenkinsfile Runner pod.
     #
@@ -75,10 +81,10 @@ data:
 {{- if kindIs "string" .image }}
   jenkinsfileRunner.image: {{ .image | quote }}
   jenkinsfileRunner.imagePullPolicy: {{ .imagePullPolicy | quote }}
-{{- else }} 
+{{- else }}
 {{ fail "This syntax is not allowed anymore. Use 'jenkinsfileRunner.image' and 'jenkinsfileRunner.imagePullPolicy' instead."}}
 {{- end -}}
- 
+
 {{- with .podSecurityContext }}
 {{- if and ( ge ( .runAsUser | int64 ) 1 ) ( le ( .runAsUser | int64 ) 65535 ) }}
   jenkinsfileRunner.podSecurityContext.runAsUser: {{ .runAsUser | int64 | quote }}
