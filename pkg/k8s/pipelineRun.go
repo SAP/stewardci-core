@@ -73,6 +73,10 @@ type PipelineRun interface {
 	// object has a deletion timestamp set.
 	HasDeletionTimestamp() bool
 
+	// HasFinalizer returns whether the underlying PipelineRun API
+	// object has the Steward finalizer.
+	HasFinalizer() bool
+
 	// AddFinalizerAndCommitIfNotPresent adds the Steward finalizer to the list
 	// of finalizers of the underlying PipelineRun API object if it is not
 	// present already. The change is immediately committed.
@@ -391,6 +395,11 @@ func (r *pipelineRun) UpdateAuxNamespace(ns string) {
 // HasDeletionTimestamp implements part of interface `PipelineRun`.
 func (r *pipelineRun) HasDeletionTimestamp() bool {
 	return !r.apiObj.ObjectMeta.DeletionTimestamp.IsZero()
+}
+
+// HasFinalizer implements part of interface `PipelineRun`.
+func (r *pipelineRun) HasFinalizer() bool {
+	return utils.StringSliceContains(r.apiObj.ObjectMeta.Finalizers, FinalizerName)
 }
 
 // AddFinalizerAndCommitIfNotPresent implements part of interface `PipelineRun`.

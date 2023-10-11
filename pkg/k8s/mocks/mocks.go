@@ -401,6 +401,20 @@ func (mr *MockPipelineRunMockRecorder) HasDeletionTimestamp() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasDeletionTimestamp", reflect.TypeOf((*MockPipelineRun)(nil).HasDeletionTimestamp))
 }
 
+// HasFinalizer mocks base method.
+func (m *MockPipelineRun) HasFinalizer() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasFinalizer")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasFinalizer indicates an expected call of HasFinalizer.
+func (mr *MockPipelineRunMockRecorder) HasFinalizer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasFinalizer", reflect.TypeOf((*MockPipelineRun)(nil).HasFinalizer))
+}
+
 // InitState mocks base method.
 func (m *MockPipelineRun) InitState(arg0 context.Context) error {
 	m.ctrl.T.Helper()
