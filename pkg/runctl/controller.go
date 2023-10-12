@@ -441,7 +441,7 @@ func (c *Controller) handlePipelineRunFinalizerAndDeletion(
 	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
 
 	if pipelineRun.GetStatus().State == api.StateFinished {
-		err := c.logFinalStateAndDeleteFinalizer(ctx, pipelineRun)
+		err := c.finalizePipelineRun(ctx, pipelineRun)
 		return true, err
 	}
 
@@ -717,7 +717,7 @@ func (c *Controller) handlePipelineRunCleaning(
 		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateFinished, metav1.Now()); err != nil {
 			return true, err
 		}
-		if err = c.logFinalStateAndDeleteFinalizer(ctx, pipelineRun); err != nil {
+		if err = c.finalizePipelineRun(ctx, pipelineRun); err != nil {
 			return true, err
 		}
 	}
@@ -779,7 +779,7 @@ func (c *Controller) updateStateAndResult(ctx context.Context, pipelineRun k8s.P
 	}
 	metrics.PipelineRunsResult.Observe(pipelineRun.GetStatus().Result)
 	if state == api.StateFinished {
-		return c.logFinalStateAndDeleteFinalizer(ctx, pipelineRun)
+		return c.finalizePipelineRun(ctx, pipelineRun)
 	}
 	return nil
 }
@@ -869,11 +869,25 @@ func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 	}
 }
 
-func (c *Controller) logFinalStateAndDeleteFinalizer(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+func (c *Controller) finalizePipelineRun(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+    err := c.deleteFinalizer(ctx, pipelineRun)
+    if err != nil {
+        return err
+    }
+
+    c.logFinalState(pipelineRun)
+    return nil
+}
+
+func (c *Controller) deleteFinalizer(ctx context.Context, pipelineRun k8s.PipelineRun) error {
 	err := pipelineRun.DeleteFinalizerAndCommitIfExists(ctx)
 	if err != nil {
 		return err
 	}
+    return nil
+}
+
+func (c *Controller) logFinalState(pipelineRun k8s.PipelineRun) error {
 	status := pipelineRun.GetStatus()
 	spec := pipelineRun.GetSpec()
 	runID := "unknown"
