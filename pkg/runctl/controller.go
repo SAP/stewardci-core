@@ -342,34 +342,34 @@ func (c *Controller) syncHandler(key string) error {
 
 	ctx = klog.NewContext(ctx, logger)
 
-	doReturn, err := c.handlePipelineRunFinalizerAndDeletion(ctx, pipelineRun)
-	if doReturn || err != nil {
-		return err
-	}
-
-	err = c.handlePipelineRunAbort(ctx, pipelineRun)
-	if err != nil {
-		return err
-	}
-
-	err = c.handlePipelineRunResultExistsButNotCleaned(ctx, pipelineRun)
-	if err != nil {
-		return err
-	}
-
-	doReturn, err = c.handlePipelineRunNew(ctx, pipelineRun)
-	if doReturn || err != nil {
-		return err
-	}
-
-	runManager := c.createRunManager(pipelineRun)
-
 	// the configuration should be loaded once per sync to avoid inconsistencies
 	// in case of concurrent configuration changes
 	pipelineRunsConfig, doReturn, err := c.ensurePipelineRunsConfig(ctx, pipelineRun)
 	if doReturn || err != nil {
 		return err
 	}
+
+	doReturn, err = c.handlePipelineRunFinalizerAndDeletion(ctx, pipelineRun, pipelineRunsConfig)
+	if doReturn || err != nil {
+		return err
+	}
+
+	err = c.handlePipelineRunAbort(ctx, pipelineRun, pipelineRunsConfig)
+	if err != nil {
+		return err
+	}
+
+	err = c.handlePipelineRunResultExistsButNotCleaned(ctx, pipelineRun, pipelineRunsConfig)
+	if err != nil {
+		return err
+	}
+
+	doReturn, err = c.handlePipelineRunNew(ctx, pipelineRun, pipelineRunsConfig)
+	if doReturn || err != nil {
+		return err
+	}
+
+	runManager := c.createRunManager(pipelineRun)
 
 	doReturn, err = c.handlePipelineRunPrepare(ctx, runManager, pipelineRun, pipelineRunsConfig)
 	if doReturn || err != nil {
@@ -386,7 +386,7 @@ func (c *Controller) syncHandler(key string) error {
 		return err
 	}
 
-	doReturn, err = c.handlePipelineRunCleaning(ctx, runManager, pipelineRun)
+	doReturn, err = c.handlePipelineRunCleaning(ctx, runManager, pipelineRun, pipelineRunsConfig)
 	if doReturn || err != nil {
 		return err
 	}
@@ -437,8 +437,9 @@ func (c *Controller) isPipelineRunAPIObjThatNeedsProcessing(ctx context.Context,
 func (c *Controller) handlePipelineRunFinalizerAndDeletion(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
+	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject(), pipelineRunsConfig.LabelsToLog)
 
 	if pipelineRun.GetStatus().State == api.StateFinished {
 		err := pipelineRun.DeleteFinalizerAndCommitIfExists(ctx)
@@ -462,8 +463,9 @@ func (c *Controller) handlePipelineRunFinalizerAndDeletion(
 func (c *Controller) handlePipelineRunResultExistsButNotCleaned(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
+	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) error {
-	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject(), pipelineRunsConfig.LabelsToLog)
 
 	result := pipelineRun.GetStatus().Result
 	state := pipelineRun.GetStatus().State
@@ -483,15 +485,16 @@ func (c *Controller) handlePipelineRunResultExistsButNotCleaned(
 func (c *Controller) handlePipelineRunNew(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
+	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
 	origCtx := ctx
-	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+	ctx, _ = extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject(), pipelineRunsConfig.LabelsToLog)
 
 	if pipelineRun.GetStatus().State == api.StateUndefined {
 		if err := pipelineRun.InitState(ctx); err != nil {
 			panic(err)
 		}
-		ctx, _ = extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
+		ctx, _ = extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject(), pipelineRunsConfig.LabelsToLog)
 	}
 
 	if pipelineRun.GetStatus().State == api.StateNew {
@@ -513,35 +516,38 @@ func (c *Controller) handlePipelineRunNew(
 	return false, nil
 }
 
-func (c *Controller) ensurePipelineRunsConfig(ctx context.Context, pipelineRun k8s.PipelineRun) (*cfg.PipelineRunsConfigStruct, bool, error) {
+func (c *Controller) ensurePipelineRunsConfig(
+	ctx context.Context,
+	pipelineRun k8s.PipelineRun,
+) (*cfg.PipelineRunsConfigStruct, bool, error) {
 	var pipelineRunsConfig *cfg.PipelineRunsConfigStruct
 
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject(), map[string]string{})
 
 	state := pipelineRun.GetStatus().State
-	// TODO do not assume in which phase the config is (not) needed
-	if state == api.StatePreparing || state == api.StateWaiting {
-		var err error
-		pipelineRunsConfig, err = c.loadPipelineRunsConfig(ctx)
-		if err != nil {
-			var targetState api.State
-			if state == api.StatePreparing {
-				targetState = api.StateFinished
-			} else {
-				targetState = api.StateCleaning
-			}
-			err = c.onGetRunError(
-				ctx,
-				pipelineRun,
-				err,
-				targetState,
-				api.ResultErrorInfra,
-				"failed to load configuration for pipeline runs",
-			)
-			return nil, true, err
+
+	var err error
+	pipelineRunsConfig, err = c.loadPipelineRunsConfig(ctx)
+	if err != nil {
+		var targetState api.State
+
+		if state == api.StateUndefined || state == api.StateNew || state == api.StatePreparing {
+			targetState = api.StateFinished
+		} else {
+			targetState = api.StateCleaning
 		}
-		logger.V(4).Info("Loaded config for pipeline runs")
+		err = c.onGetRunError(
+			ctx,
+			pipelineRun,
+			err,
+			targetState,
+			api.ResultErrorInfra,
+			"failed to load configuration for pipeline runs",
+		)
+		return nil, true, err
 	}
+	logger.V(4).Info("Loaded config for pipeline runs")
+
 	return pipelineRunsConfig, false, nil
 }
 
@@ -552,7 +558,7 @@ func (c *Controller) handlePipelineRunPrepare(
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
 	origCtx := ctx
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject(), pipelineRunsConfig.LabelsToLog)
 
 	if pipelineRun.GetStatus().State == api.StatePreparing {
 		logger.V(3).Info("Preparing pipeline execution")
@@ -571,7 +577,7 @@ func (c *Controller) handlePipelineRunPrepare(
 		pipelineRun.UpdateRunNamespace(namespace)
 		pipelineRun.UpdateAuxNamespace(auxNamespace)
 
-		ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
+		ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject(), pipelineRunsConfig.LabelsToLog)
 		logger.V(3).Info("Prepared pipeline execution")
 
 		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateWaiting, metav1.Now()); err != nil {
@@ -590,7 +596,7 @@ func (c *Controller) handlePipelineRunWaiting(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject(), pipelineRunsConfig.LabelsToLog)
 
 	if pipelineRun.GetStatus().State == api.StateWaiting {
 		logger.V(3).Info("Waiting for pipeline execution")
@@ -667,7 +673,7 @@ func (c *Controller) handlePipelineRunRunning(
 	pipelineRun k8s.PipelineRun,
 	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject(), pipelineRunsConfig.LabelsToLog)
 
 	if pipelineRun.GetStatus().State == api.StateRunning {
 		logger.V(3).Info("Examining running pipeline")
@@ -703,8 +709,9 @@ func (c *Controller) handlePipelineRunCleaning(
 	ctx context.Context,
 	runManager run.Manager,
 	pipelineRun k8s.PipelineRun,
+	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
 ) (bool, error) {
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject(), pipelineRunsConfig.LabelsToLog)
 
 	if pipelineRun.GetStatus().State == api.StateCleaning {
 		logger.V(3).Info("Cleaning up pipeline execution")
@@ -806,8 +813,12 @@ func (c *Controller) commitStatusAndMeter(ctx context.Context, pipelineRun k8s.P
 // handlePipelineRunAbort checks if pipeline run should be aborted.
 // If the user requested abortion it updates message, result and state
 // to trigger a cleanup.
-func (c *Controller) handlePipelineRunAbort(ctx context.Context, pipelineRun k8s.PipelineRun) error {
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+func (c *Controller) handlePipelineRunAbort(
+	ctx context.Context,
+	pipelineRun k8s.PipelineRun,
+	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
+) error {
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject(), pipelineRunsConfig.LabelsToLog)
 
 	intent := pipelineRun.GetSpec().Intent
 	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {

@@ -404,6 +404,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 			expectedState          api.State
 			expectedMessage        string
 			expectedError          error
+			expectedFinalizer      bool
 		}{
 			{
 				name:         "new_ok",
@@ -415,6 +416,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				isMaintenanceModeStub:  newIsMaintenanceModeStub(false, nil),
 				expectedResult:         api.ResultUndefined,
 				expectedState:          api.StateWaiting,
+				expectedFinalizer:      true,
 			},
 			{
 				name:                   "new_maintenance_error_a",
@@ -425,6 +427,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				expectedResult:         api.ResultUndefined,
 				expectedState:          api.StateNew,
 				expectedError:          error1,
+				expectedFinalizer:      true,
 			},
 			{
 				name:                   "new_maintenance_error_b",
@@ -435,6 +438,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				expectedResult:         api.ResultUndefined,
 				expectedState:          api.StateNew,
 				expectedError:          error1,
+				expectedFinalizer:      true,
 			},
 			{
 				name:         "new_maintenance",
@@ -446,6 +450,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				expectedResult:         api.ResultUndefined,
 				expectedState:          api.StateNew,
 				expectedError:          fmt.Errorf("pipeline execution is paused while the system is in maintenance mode"),
+				expectedFinalizer:      true,
 			},
 			{
 				name:                  "new_get_cofig_fail_not_recoverable",
@@ -468,7 +473,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				},
 				isMaintenanceModeStub: newIsMaintenanceModeStub(false, nil),
 				expectedResult:        api.ResultUndefined,
-				expectedState:         api.StatePreparing,
+				expectedState:         api.StateNew,
 				expectedError:         errorRecover1,
 			},
 		} {
@@ -511,10 +516,10 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 					assert.Assert(t, is.Regexp(test.expectedMessage, result.Status.Message))
 				}
 
-				if test.expectedState == api.StateFinished {
-					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 0)
-				} else {
+				if test.expectedFinalizer {
 					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 1)
+				} else {
+					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 0)
 				}
 			})
 		}
