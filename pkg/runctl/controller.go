@@ -870,13 +870,13 @@ func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 }
 
 func (c *Controller) finalizePipelineRun(ctx context.Context, pipelineRun k8s.PipelineRun) error {
-    err := c.deleteFinalizer(ctx, pipelineRun)
-    if err != nil {
-        return err
-    }
+	err := c.deleteFinalizer(ctx, pipelineRun)
+	if err != nil {
+		return err
+	}
 
-    c.logFinalState(pipelineRun)
-    return nil
+	c.logFinalState(pipelineRun)
+	return nil
 }
 
 func (c *Controller) deleteFinalizer(ctx context.Context, pipelineRun k8s.PipelineRun) error {
@@ -884,7 +884,7 @@ func (c *Controller) deleteFinalizer(ctx context.Context, pipelineRun k8s.Pipeli
 	if err != nil {
 		return err
 	}
-    return nil
+	return nil
 }
 
 func (c *Controller) logFinalState(pipelineRun k8s.PipelineRun) error {
