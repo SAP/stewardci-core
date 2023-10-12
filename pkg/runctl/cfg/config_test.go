@@ -75,7 +75,7 @@ func Test_loadPipelineRunsConfig_EmptyMainConfig(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, resultErr)
 	expectedConfig := &PipelineRunsConfigStruct{
-		LabelsToLog:           map[string]string{},
+		CustomLoggingDetails:           map[string]PipelineRunAccessor{},
 		DefaultNetworkProfile: "key1",
 		NetworkPolicies: map[string]string{
 			"key1": "policy1",
@@ -202,7 +202,7 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 				mainConfigKeyImagePullPolicy:     "jfrImagePullPolicy1",
 				mainConfigKeyTektonTaskName:      "taskName1",
 				mainConfigKeyTektonTaskNamespace: "taskNamespace1",
-				mainConfigKeyLabelsToLog:         "label1: key1\nlabel2: key2",
+				mainConfigKeyCustomLoggingDetails:         "label1: {kind: label, name: key1}\nlabel2: {kind: annotation, name: key2}",
 				"someKeyThatShouldBeIgnored":     "34957349",
 			},
 		),
@@ -221,13 +221,16 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, resultErr)
 	expectedConfig := &PipelineRunsConfigStruct{
-		Timeout:                          utils.Metav1Duration(time.Minute * 4444),
-		TimeoutWait:                      utils.Metav1Duration(time.Minute * 555),
-		LimitRange:                       "limitRange1",
-		ResourceQuota:                    "resourceQuota1",
-		LabelsToLog:                      map[string]string{"label1": "key1", "label2": "key2"},
-		JenkinsfileRunnerImage:           "jfrImage1",
-		JenkinsfileRunnerImagePullPolicy: "jfrImagePullPolicy1",
+		Timeout:       utils.Metav1Duration(time.Minute * 4444),
+		TimeoutWait:   utils.Metav1Duration(time.Minute * 555),
+		LimitRange:    "limitRange1",
+		ResourceQuota: "resourceQuota1",
+		CustomLoggingDetails: map[string]PipelineRunAccessor{
+			"label1": PipelineRunAccessor{Kind: KindLabelAccessor, Name: "key1"},
+			"label2": PipelineRunAccessor{Kind: KindAnnotationAccessor, Name: "key2"},
+		},
+		JenkinsfileRunnerImage:                        "jfrImage1",
+		JenkinsfileRunnerImagePullPolicy:              "jfrImagePullPolicy1",
 		JenkinsfileRunnerPodSecurityContextRunAsUser:  int64Ptr(1111),
 		JenkinsfileRunnerPodSecurityContextRunAsGroup: int64Ptr(2222),
 		JenkinsfileRunnerPodSecurityContextFSGroup:    int64Ptr(3333),
@@ -347,7 +350,7 @@ func Test_processMainConfig(t *testing.T) {
 				TimeoutWait:   utils.Metav1Duration(time.Minute * 555),
 				LimitRange:    "limitRange1",
 				ResourceQuota: "resourceQuota1",
-				LabelsToLog:   map[string]string{},
+				CustomLoggingDetails:   map[string]PipelineRunAccessor{},
 
 				JenkinsfileRunnerImage:                        "jfrImage1",
 				JenkinsfileRunnerImagePullPolicy:              "jfrImagePullPolicy1",
@@ -371,7 +374,7 @@ func Test_processMainConfig(t *testing.T) {
 				mainConfigKeyPSCFSGroup:      "",
 			},
 			&PipelineRunsConfigStruct{
-				LabelsToLog: map[string]string{},
+				CustomLoggingDetails: map[string]PipelineRunAccessor{},
 			},
 		},
 	} {

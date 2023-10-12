@@ -165,7 +165,7 @@ func Test_extendLoggerWithPipelineRunInfo(t *testing.T) {
 			resultLogger := extendLoggerWithPipelineRunInfo(
 				logger,
 				test.pipelineRun,
-				map[string]string{},
+				emptyLoggingDetais,
 			)
 
 			// VERIFY
@@ -189,7 +189,7 @@ func Test_extendLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) {
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendLoggerWithPipelineRunInfo(logger, nil, map[string]string{})
+		extendLoggerWithPipelineRunInfo(logger, nil, emptyLoggingDetais)
 	}).To(
 		Panic(),
 	)
@@ -243,7 +243,7 @@ func Test_extendContextLoggerWithPipelineRunInfo(t *testing.T) {
 
 	// EXERCISE
 	resultCtx, resultLogger := extendContextLoggerWithPipelineRunInfo(
-		ctx, pipelineRun, map[string]string{},
+		ctx, pipelineRun, emptyLoggingDetais,
 	)
 
 	// VERIFY
@@ -276,7 +276,7 @@ func Test_extendContextLoggerWithPipelineRunInfo_ContextIsNil(t *testing.T) {
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendContextLoggerWithPipelineRunInfo(nilCtx, pipelineRun, map[string]string{})
+		extendContextLoggerWithPipelineRunInfo(nilCtx, pipelineRun, emptyLoggingDetais)
 	}).To(
 		Panic(),
 	)
@@ -303,7 +303,7 @@ func Test_extendContextLoggerWithPipelineRunInfo_ContextHasNoLogger(t *testing.T
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendContextLoggerWithPipelineRunInfo(ctxWithoutLogger, pipelineRun, map[string]string{})
+		extendContextLoggerWithPipelineRunInfo(ctxWithoutLogger, pipelineRun, emptyLoggingDetais)
 	}).To(
 		Panic(),
 	)
@@ -324,7 +324,7 @@ func Test_extendContextLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) 
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendContextLoggerWithPipelineRunInfo(ctx, nil, map[string]string{})
+		extendContextLoggerWithPipelineRunInfo(ctx, nil, emptyLoggingDetais)
 	}).To(
 		Panic(),
 	)
