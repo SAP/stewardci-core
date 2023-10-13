@@ -52,6 +52,14 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: minor
+      title: Add final logging for the completed Pipeline Run
+      description: |-
+        Log result, namespace, build-id, etc. for the completed Pipeline Run.
+      pullRequestNumber: 415
+      jiraIssueNumber: CPCCICD-1576
+
 - version: "0.38.0"
   date: 2023-10-06
   changes:
