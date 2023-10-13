@@ -51,6 +51,14 @@
 - version: NEXT
   date: TBD
   changes:
+    - type: enhancement
+      impact: minor
+      title: Improve logging capabilities
+      description: |-
+        With this change a new configuration is introduced to extend the logging capabilities.
+        You can specify additional keys for the structured logging related to pipeline-runs.
+        The configuration is done in 'customLoggingDetails'
+      pullRequestNumber: 406
 
 - version: "0.38.0"
   date: 2023-10-06

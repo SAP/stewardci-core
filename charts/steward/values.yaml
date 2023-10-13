@@ -71,6 +71,7 @@ pipelineRuns:
       flushAttemptIntervalMillis: ~
       maxBufferSize: ~
       emitTimeoutMillis: ~
+    customLoggingDetails: {}
   jenkinsfileRunner:
     image: "stewardci/stewardci-jenkinsfile-runner:231006_5085985"
     imagePullPolicy: IfNotPresent
