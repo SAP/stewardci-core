@@ -75,7 +75,7 @@ func Test_loadPipelineRunsConfig_EmptyMainConfig(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, resultErr)
 	expectedConfig := &PipelineRunsConfigStruct{
-		CustomLoggingDetails:           map[string]PipelineRunAccessor{},
+		CustomLoggingDetails:  map[string]PipelineRunAccessor{},
 		DefaultNetworkProfile: "key1",
 		NetworkPolicies: map[string]string{
 			"key1": "policy1",
@@ -190,20 +190,20 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 	cf := fake.NewClientFactory(
 		newMainConfigMap(
 			map[string]string{
-				"_example":                       "exampleString",
-				mainConfigKeyLimitRange:          "limitRange1",
-				mainConfigKeyResourceQuota:       "resourceQuota1",
-				mainConfigKeyPSCRunAsUser:        "1111",
-				mainConfigKeyPSCRunAsGroup:       "2222",
-				mainConfigKeyPSCFSGroup:          "3333",
-				mainConfigKeyTimeout:             "4444m",
-				mainConfigKeyTimeoutWait:         "555m",
-				mainConfigKeyImage:               "jfrImage1",
-				mainConfigKeyImagePullPolicy:     "jfrImagePullPolicy1",
-				mainConfigKeyTektonTaskName:      "taskName1",
-				mainConfigKeyTektonTaskNamespace: "taskNamespace1",
-				mainConfigKeyCustomLoggingDetails:         "label1: {kind: label, name: key1}\nlabel2: {kind: annotation, name: key2}",
-				"someKeyThatShouldBeIgnored":     "34957349",
+				"_example":                        "exampleString",
+				mainConfigKeyLimitRange:           "limitRange1",
+				mainConfigKeyResourceQuota:        "resourceQuota1",
+				mainConfigKeyPSCRunAsUser:         "1111",
+				mainConfigKeyPSCRunAsGroup:        "2222",
+				mainConfigKeyPSCFSGroup:           "3333",
+				mainConfigKeyTimeout:              "4444m",
+				mainConfigKeyTimeoutWait:          "555m",
+				mainConfigKeyImage:                "jfrImage1",
+				mainConfigKeyImagePullPolicy:      "jfrImagePullPolicy1",
+				mainConfigKeyTektonTaskName:       "taskName1",
+				mainConfigKeyTektonTaskNamespace:  "taskNamespace1",
+				mainConfigKeyCustomLoggingDetails: "label1: {kind: label, name: key1}\nlabel2: {kind: annotation, name: key2}",
+				"someKeyThatShouldBeIgnored":      "34957349",
 			},
 		),
 		newNetworkPolicyConfigMap(map[string]string{
@@ -346,11 +346,11 @@ func Test_processMainConfig(t *testing.T) {
 				"someKeyThatShouldBeIgnored": "34957349",
 			},
 			&PipelineRunsConfigStruct{
-				Timeout:       utils.Metav1Duration(time.Minute * 4444),
-				TimeoutWait:   utils.Metav1Duration(time.Minute * 555),
-				LimitRange:    "limitRange1",
-				ResourceQuota: "resourceQuota1",
-				CustomLoggingDetails:   map[string]PipelineRunAccessor{},
+				Timeout:              utils.Metav1Duration(time.Minute * 4444),
+				TimeoutWait:          utils.Metav1Duration(time.Minute * 555),
+				LimitRange:           "limitRange1",
+				ResourceQuota:        "resourceQuota1",
+				CustomLoggingDetails: map[string]PipelineRunAccessor{},
 
 				JenkinsfileRunnerImage:                        "jfrImage1",
 				JenkinsfileRunnerImagePullPolicy:              "jfrImagePullPolicy1",
