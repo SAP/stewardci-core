@@ -199,16 +199,35 @@ func Test_extendLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) {
 
 func Test_extendContextLoggerWithPipelineRunInfo(t *testing.T) {
 	// SETUP
+	const (
+		annotationKey = "annotationKey"
+		labelKey      = "labelKey"
+		logKey1       = "key1"
+		logKey2       = "key2"
+	)
 	pipelineRun := &api.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "run-2",
-			Namespace: "run-namespace-2",
-			UID:       k8sapitypes.UID("uid-2"),
+			Name:        "run-2",
+			Namespace:   "run-namespace-2",
+			UID:         k8sapitypes.UID("uid-2"),
+			Annotations: map[string]string{annotationKey: "annotationValue1"},
+			Labels:      map[string]string{labelKey: "labelValue1"},
 		},
 		Status: api.PipelineStatus{
 			State:              api.StatePreparing,
 			Namespace:          "exec-namespace-2",
 			AuxiliaryNamespace: "exec-aux-namespace-2",
+		},
+	}
+
+	loggingDetails := map[string]cfg.PipelineRunAccessor{
+		logKey1: cfg.PipelineRunAccessor{
+			Kind: cfg.KindAnnotationAccessor,
+			Name: annotationKey,
+		},
+		logKey2: cfg.PipelineRunAccessor{
+			Kind: cfg.KindLabelAccessor,
+			Name: labelKey,
 		},
 	}
 
@@ -218,6 +237,8 @@ func Test_extendContextLoggerWithPipelineRunInfo(t *testing.T) {
 		"pipelineRunState", api.StatePreparing,
 		"pipelineRunExecNamespace", "exec-namespace-2",
 		"pipelineRunExecAuxNamespace", "exec-aux-namespace-2",
+		logKey1, "annotationValue1",
+		logKey2, "labelValue1",
 	}
 
 	g := NewGomegaWithT(t)
@@ -245,7 +266,7 @@ func Test_extendContextLoggerWithPipelineRunInfo(t *testing.T) {
 
 	// EXERCISE
 	resultCtx, resultLogger := extendContextLoggerWithPipelineRunInfo(
-		ctx, pipelineRun, emptyLoggingDetais,
+		ctx, pipelineRun, loggingDetails,
 	)
 
 	// VERIFY
@@ -334,14 +355,16 @@ func Test_extendContextLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) 
 
 func Test_getValueByAccessor(t *testing.T) {
 	const (
-		annotationKey1   = "ak1"
-		annotationKey2   = "ak2"
-		annotationValue1 = "av1"
-		annotationValue2 = "av2"
-		labelKey1        = "lk1"
-		labelKey2        = "lk2"
-		labelValue1      = "lv1"
-		labelValue2      = "lv2"
+		annotationKey1       = "ak1"
+		annotationKey2       = "ak2"
+		annotationKeyUnknown = "ak3"
+		annotationValue1     = "av1"
+		annotationValue2     = "av2"
+		labelKey1            = "lk1"
+		labelKey2            = "lk2"
+		labelKeyUnknown      = "lk3"
+		labelValue1          = "lv1"
+		labelValue2          = "lv2"
 	)
 	run :=
 		&api.PipelineRun{
@@ -383,6 +406,20 @@ func Test_getValueByAccessor(t *testing.T) {
 			expectedResult: annotationValue2,
 		},
 		{
+			name: "annotation empyt",
+			accessor: cfg.PipelineRunAccessor{
+				Kind: cfg.KindAnnotationAccessor,
+				Name: "",
+			},
+		},
+		{
+			name: "annotation unknown",
+			accessor: cfg.PipelineRunAccessor{
+				Kind: cfg.KindAnnotationAccessor,
+				Name: annotationKeyUnknown,
+			},
+		},
+		{
 			name: "label 1",
 			accessor: cfg.PipelineRunAccessor{
 				Kind: cfg.KindLabelAccessor,
@@ -397,6 +434,20 @@ func Test_getValueByAccessor(t *testing.T) {
 				Name: labelKey2,
 			},
 			expectedResult: labelValue2,
+		},
+		{
+			name: "label empty",
+			accessor: cfg.PipelineRunAccessor{
+				Kind: cfg.KindLabelAccessor,
+				Name: "",
+			},
+		},
+		{
+			name: "label unknown",
+			accessor: cfg.PipelineRunAccessor{
+				Kind: cfg.KindLabelAccessor,
+				Name: labelKeyUnknown,
+			},
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
