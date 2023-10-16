@@ -4,6 +4,7 @@ import (
 	yaml "gopkg.in/yaml.v3"
 )
 
+// PipelineRunAccessor defines a way to access a value of a pipeline run
 type PipelineRunAccessor struct {
 	Kind Kind   `yaml:"kind,omitempty"`
 	Name string `yaml:"name,omitempty"`
@@ -13,10 +14,10 @@ type PipelineRunAccessor struct {
 type Kind string
 
 const (
-	// KindLabelAccessor
+	// KindLabelAccessor defines an accessor for labels
 	KindLabelAccessor Kind = "label"
 
-	// KindAnnotationAccessor
+	// KindAnnotationAccessor defines an accessor for annotations
 	KindAnnotationAccessor Kind = "annotation"
 )
 
