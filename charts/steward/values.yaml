@@ -71,7 +71,18 @@ pipelineRuns:
       flushAttemptIntervalMillis: ~
       maxBufferSize: ~
       emitTimeoutMillis: ~
+    # define a map of labels (key) which should be added to the log output
+    # in the structured logging. the value to be logged is defined by
+    # an pipelineAccessor containing a kind and a name
+    # possible kinds are 'annotation' and 'label'
+    # name is the name of the label or the annotation
     customLoggingDetails: {}
+      # customLogKey1:
+      #   kind: annotation
+      #   name: foo.bar.annotationKey1
+      # customLogKey2:
+      #   kind: label
+      #   name: foo.bar.labelKey1
   jenkinsfileRunner:
     image: "stewardci/stewardci-jenkinsfile-runner:231006_5085985"
     imagePullPolicy: IfNotPresent

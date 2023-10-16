@@ -83,7 +83,8 @@ data:
   resourceQuota: {{ .Values.pipelineRuns.resourceQuota | quote }}
   tektonTaskName: steward-jenkinsfile-runner
   tektonTaskNamespace: {{ .Values.targetNamespace.name | quote }}
-  customLoggingDetails: {{ .Values.pipelineRuns.logging.customLoggingDetails | quote }}
+  customLoggingDetails: |
+    {{- .Values.pipelineRuns.logging.customLoggingDetails | toYaml | nindent 4 }}
 
 {{- with .Values.pipelineRuns.jenkinsfileRunner }}
 {{- if kindIs "string" .image }}

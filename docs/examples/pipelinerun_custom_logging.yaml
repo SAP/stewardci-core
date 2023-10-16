@@ -1,0 +1,18 @@
+apiVersion: steward.sap.com/v1alpha1
+kind: PipelineRun
+metadata:
+  generateName: ok-
+  annotations:
+    foo.bar.annotationKey1: foo-anno
+  labels:
+    foo.bar.labelKey1: foo-label
+
+spec:
+  jenkinsFile:
+    repoUrl: https://github.com/SAP-samples/stewardci-example-pipelines
+    revision: main
+    relativePath: success/Jenkinsfile
+  logging:
+    elasticsearch:
+      runID: {"build": 1}
+
