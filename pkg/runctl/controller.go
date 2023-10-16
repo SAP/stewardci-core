@@ -896,7 +896,7 @@ func (c *Controller) logFinalState(pipelineRun k8s.PipelineRun) error {
 	}
 
 	c.logger.V(3).Info(
-		"Pipeline run processing completed",
+		"Completed processing of pipeline run",
 		"intent", spec.Intent,
 		"runId", runID,
 		"startedAt", status.StartedAt,
