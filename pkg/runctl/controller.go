@@ -903,7 +903,7 @@ func (c *Controller) logFinalState(pipelineRun k8s.PipelineRun) error {
 		"finishedAt", status.FinishedAt,
 		"result", status.Result,
 		"statusMessage", status.Message,
-		"history", status.StateHistory,
+		"stateHistory", status.StateHistory,
 	)
 	return nil
 }
