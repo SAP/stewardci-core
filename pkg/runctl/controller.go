@@ -875,7 +875,7 @@ func (c *Controller) finalizePipelineRun(ctx context.Context, pipelineRun k8s.Pi
 		return err
 	}
 
-	c.logFinalState(pipelineRun)
+	c.logFinalState(ctx, pipelineRun)
 	return nil
 }
 
@@ -887,7 +887,7 @@ func (c *Controller) deleteFinalizer(ctx context.Context, pipelineRun k8s.Pipeli
 	return nil
 }
 
-func (c *Controller) logFinalState(pipelineRun k8s.PipelineRun) error {
+func (c *Controller) logFinalState(ctx context.Context, pipelineRun k8s.PipelineRun) error {
 	status := pipelineRun.GetStatus()
 	spec := pipelineRun.GetSpec()
 	runID := "unknown"
@@ -895,7 +895,9 @@ func (c *Controller) logFinalState(pipelineRun k8s.PipelineRun) error {
 		runID = fmt.Sprintf("%v", spec.Logging.Elasticsearch.RunID)
 	}
 
-	c.logger.V(3).Info(
+	logger := klog.FromContext(ctx)
+
+	logger.V(3).Info(
 		"Completed processing of pipeline run",
 		"intent", spec.Intent,
 		"loggingRunId", runID,
