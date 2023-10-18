@@ -894,7 +894,7 @@ func (c *Controller) logFinalState(ctx context.Context, pipelineRun k8s.Pipeline
 	spec := pipelineRun.GetSpec()
 	runID := "unknown"
 	if spec != nil && spec.Logging != nil && spec.Logging.Elasticsearch != nil {
-		runID = fmt.Sprintf("%v", spec.Logging.Elasticsearch.RunID)
+		runID = spec.Logging.Elasticsearch.RunID
 	}
 
 	logger := klog.FromContext(ctx)
