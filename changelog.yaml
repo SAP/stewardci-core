@@ -60,6 +60,22 @@
         The configuration is done in 'customLoggingDetails'
       pullRequestNumber: 406
 
+- version: "0.38.1"
+  date: 2023-10-18
+  changes:
+
+    - type: enhancement
+      impact: patch
+      title: Update JFR image to tag 231018_94c7e9a
+      description: |-
+        Noteworthy changes:
+
+        - Updated Jenkins Core v2.414.2
+        - Updated all Jenkins Plug-ins
+        - Updated base image
+      pullRequestNumber: 416
+      jiraIssueNumber: 972
+
 - version: "0.38.0"
   date: 2023-10-06
   changes:
