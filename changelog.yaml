@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.38.1"
+  date: 2023-10-18
+  changes:
+
     - type: enhancement
       impact: patch
       title: Update JFR image to tag 231018_94c7e9a
