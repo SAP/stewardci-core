@@ -516,15 +516,13 @@ func (c *Controller) handlePipelineRunNew(
 	return false, nil
 }
 
-var emptyLoggingDetais = map[string]cfg.PipelineRunAccessor{}
-
 func (c *Controller) ensurePipelineRunsConfig(
 	ctx context.Context,
 	pipelineRun k8s.PipelineRun,
 ) (*cfg.PipelineRunsConfigStruct, bool, error) {
 	var pipelineRunsConfig *cfg.PipelineRunsConfigStruct
 
-	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject(), emptyLoggingDetais)
+	ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject(), nil)
 
 	state := pipelineRun.GetStatus().State
 

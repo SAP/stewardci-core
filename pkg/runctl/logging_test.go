@@ -10,7 +10,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
-	assert "gotest.tools/v3/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sapitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
@@ -167,7 +166,7 @@ func Test_extendLoggerWithPipelineRunInfo(t *testing.T) {
 			resultLogger := extendLoggerWithPipelineRunInfo(
 				logger,
 				test.pipelineRun,
-				emptyLoggingDetais,
+				nil,
 			)
 
 			// VERIFY
@@ -191,7 +190,7 @@ func Test_extendLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) {
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendLoggerWithPipelineRunInfo(logger, nil, emptyLoggingDetais)
+		extendLoggerWithPipelineRunInfo(logger, nil, nil)
 	}).To(
 		Panic(),
 	)
@@ -221,14 +220,8 @@ func Test_extendContextLoggerWithPipelineRunInfo(t *testing.T) {
 	}
 
 	loggingDetails := map[string]cfg.PipelineRunAccessor{
-		logKey1: cfg.PipelineRunAccessor{
-			Kind: cfg.KindAnnotationAccessor,
-			Name: annotationKey,
-		},
-		logKey2: cfg.PipelineRunAccessor{
-			Kind: cfg.KindLabelAccessor,
-			Name: labelKey,
-		},
+		logKey1: cfg.NewPipelineRunAnnotationAccessor(annotationKey),
+		logKey2: cfg.NewPipelineRunLabelAccessor(labelKey),
 	}
 
 	expectedWithKVs := []interface{}{
@@ -299,7 +292,7 @@ func Test_extendContextLoggerWithPipelineRunInfo_ContextIsNil(t *testing.T) {
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendContextLoggerWithPipelineRunInfo(nilCtx, pipelineRun, emptyLoggingDetais)
+		extendContextLoggerWithPipelineRunInfo(nilCtx, pipelineRun, nil)
 	}).To(
 		Panic(),
 	)
@@ -326,7 +319,7 @@ func Test_extendContextLoggerWithPipelineRunInfo_ContextHasNoLogger(t *testing.T
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendContextLoggerWithPipelineRunInfo(ctxWithoutLogger, pipelineRun, emptyLoggingDetais)
+		extendContextLoggerWithPipelineRunInfo(ctxWithoutLogger, pipelineRun, nil)
 	}).To(
 		Panic(),
 	)
@@ -347,118 +340,8 @@ func Test_extendContextLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) 
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendContextLoggerWithPipelineRunInfo(ctx, nil, emptyLoggingDetais)
+		extendContextLoggerWithPipelineRunInfo(ctx, nil, nil)
 	}).To(
 		Panic(),
 	)
-}
-
-func Test_getValueByAccessor(t *testing.T) {
-	const (
-		annotationKey1       = "ak1"
-		annotationKey2       = "ak2"
-		annotationKeyUnknown = "ak3"
-		annotationValue1     = "av1"
-		annotationValue2     = "av2"
-		labelKey1            = "lk1"
-		labelKey2            = "lk2"
-		labelKeyUnknown      = "lk3"
-		labelValue1          = "lv1"
-		labelValue2          = "lv2"
-	)
-	run :=
-		&api.PipelineRun{
-			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					annotationKey1: annotationValue1,
-					annotationKey2: annotationValue2,
-				},
-				Labels: map[string]string{
-					labelKey1: labelValue1,
-					labelKey2: labelValue2,
-				},
-			},
-		}
-
-	for _, test := range []struct {
-		name           string
-		accessor       cfg.PipelineRunAccessor
-		expectedResult string
-	}{
-		{
-			name:           "empty",
-			expectedResult: "",
-		},
-		{
-			name: "annotation 1",
-			accessor: cfg.PipelineRunAccessor{
-				Kind: cfg.KindAnnotationAccessor,
-				Name: annotationKey1,
-			},
-			expectedResult: annotationValue1,
-		},
-		{
-			name: "annotation 2",
-			accessor: cfg.PipelineRunAccessor{
-				Kind: cfg.KindAnnotationAccessor,
-				Name: annotationKey2,
-			},
-			expectedResult: annotationValue2,
-		},
-		{
-			name: "annotation empyt",
-			accessor: cfg.PipelineRunAccessor{
-				Kind: cfg.KindAnnotationAccessor,
-				Name: "",
-			},
-		},
-		{
-			name: "annotation unknown",
-			accessor: cfg.PipelineRunAccessor{
-				Kind: cfg.KindAnnotationAccessor,
-				Name: annotationKeyUnknown,
-			},
-		},
-		{
-			name: "label 1",
-			accessor: cfg.PipelineRunAccessor{
-				Kind: cfg.KindLabelAccessor,
-				Name: labelKey1,
-			},
-			expectedResult: labelValue1,
-		},
-		{
-			name: "label 2",
-			accessor: cfg.PipelineRunAccessor{
-				Kind: cfg.KindLabelAccessor,
-				Name: labelKey2,
-			},
-			expectedResult: labelValue2,
-		},
-		{
-			name: "label empty",
-			accessor: cfg.PipelineRunAccessor{
-				Kind: cfg.KindLabelAccessor,
-				Name: "",
-			},
-		},
-		{
-			name: "label unknown",
-			accessor: cfg.PipelineRunAccessor{
-				Kind: cfg.KindLabelAccessor,
-				Name: labelKeyUnknown,
-			},
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			test := test
-			t.Parallel()
-
-			// EXERCISE
-			result := getValueByAccessor(run, test.accessor)
-
-			// VERIFY
-			assert.Equal(t, test.expectedResult, result)
-		})
-	}
 }

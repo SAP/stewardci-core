@@ -49,31 +49,11 @@ func getPipelineRunInfoForLogging(run *v1alpha1.PipelineRun, customLoggingDetail
 		)
 	}
 	for loggingLabel, accessor := range customLoggingDetails {
-		value := getValueByAccessor(run, accessor)
+		value := accessor.Access(run)
 		if value != "" {
 			kvs = append(kvs, loggingLabel, value)
 		}
 	}
 
 	return kvs
-}
-
-func getValueByAccessor(run *v1alpha1.PipelineRun, accessor cfg.PipelineRunAccessor) string {
-	switch accessor.Kind {
-	case cfg.KindLabelAccessor:
-		labels := run.GetLabels()
-		if labels == nil || accessor.Name == "" {
-			return ""
-		}
-		return labels[accessor.Name]
-
-	case cfg.KindAnnotationAccessor:
-		annotations := run.GetAnnotations()
-		if annotations == nil || accessor.Name == "" {
-			return ""
-		}
-		return annotations[accessor.Name]
-	default:
-		return ""
-	}
 }

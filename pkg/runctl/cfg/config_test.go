@@ -75,7 +75,6 @@ func Test_loadPipelineRunsConfig_EmptyMainConfig(t *testing.T) {
 	// VERIFY
 	assert.NilError(t, resultErr)
 	expectedConfig := &PipelineRunsConfigStruct{
-		CustomLoggingDetails:  map[string]PipelineRunAccessor{},
 		DefaultNetworkProfile: "key1",
 		NetworkPolicies: map[string]string{
 			"key1": "policy1",
@@ -226,8 +225,8 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 		LimitRange:    "limitRange1",
 		ResourceQuota: "resourceQuota1",
 		CustomLoggingDetails: map[string]PipelineRunAccessor{
-			"label1": PipelineRunAccessor{Kind: KindLabelAccessor, Name: "key1"},
-			"label2": PipelineRunAccessor{Kind: KindAnnotationAccessor, Name: "key2"},
+			"label1": &pipelineRunLabelAccessor{Key: "key1"},
+			"label2": &pipelineRunAnnotationAccessor{Key: "key2"},
 		},
 		JenkinsfileRunnerImage:                        "jfrImage1",
 		JenkinsfileRunnerImagePullPolicy:              "jfrImagePullPolicy1",
@@ -295,6 +294,8 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 
 		{mainConfigKeyTimeoutWait, "a"},
 		{mainConfigKeyTimeoutWait, "1a"},
+
+		{mainConfigKeyCustomLoggingDetails, "a"},
 	} {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			tc := tc // capture current value before going parallel
@@ -346,11 +347,10 @@ func Test_processMainConfig(t *testing.T) {
 				"someKeyThatShouldBeIgnored": "34957349",
 			},
 			&PipelineRunsConfigStruct{
-				Timeout:              utils.Metav1Duration(time.Minute * 4444),
-				TimeoutWait:          utils.Metav1Duration(time.Minute * 555),
-				LimitRange:           "limitRange1",
-				ResourceQuota:        "resourceQuota1",
-				CustomLoggingDetails: map[string]PipelineRunAccessor{},
+				Timeout:       utils.Metav1Duration(time.Minute * 4444),
+				TimeoutWait:   utils.Metav1Duration(time.Minute * 555),
+				LimitRange:    "limitRange1",
+				ResourceQuota: "resourceQuota1",
 
 				JenkinsfileRunnerImage:                        "jfrImage1",
 				JenkinsfileRunnerImagePullPolicy:              "jfrImagePullPolicy1",
@@ -373,9 +373,7 @@ func Test_processMainConfig(t *testing.T) {
 				mainConfigKeyPSCRunAsGroup:   "",
 				mainConfigKeyPSCFSGroup:      "",
 			},
-			&PipelineRunsConfigStruct{
-				CustomLoggingDetails: map[string]PipelineRunAccessor{},
-			},
+			&PipelineRunsConfigStruct{},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
