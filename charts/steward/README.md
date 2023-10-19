@@ -203,6 +203,44 @@ This plug-in supports two ways of sending log events:
 | <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>flushAttemptIntervalMillis</b></code><br/><i>integer</i> | The interval in milliseconds at which the Fluency flusher service periodically checks for buffer chunks ready to be flushed. | |
 | <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>maxBufferSize</b></code><br/><i>integer</i> | The maximum total size in bytes of all buffer chunks. Must be greater than `bufferChunkRetentionSize`. | |
 | <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>emitTimeoutMillis</b></code><br/><i>integer</i> | The timeout in milliseconds for inserting a single log event into the local in-memory buffer and retrying in case of errors, e.g. when the buffer is full. | |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>customLoggingDetails</b></code><br/><i>map</i> | Define a map of labels (key) which should be added to the log output in the structured logging. See example below.| {} |
+
+##### Custom Logging Details
+
+The custom logging details can be defined at `pipelineRuns.logging.customLoggingDetails`.
+The content is a map, where the key is the one which should be used in the log output of the structured logging.
+The value is another map defining a pipeline run accessor. This consists of a map with keys 'kind' and 'name'.
+Currently there are accessors available for annotations and labels, which is expressed by 'kind: annotation' or 'kind: label'.
+In the 'name' filed the key of the annotation / label is stored. See example below:
+
+```yaml
+pipelineRuns:
+  logging:
+    customLoggingDetails:
+      customLogKey1:
+        kind: annotation
+        name: foo.bar.annotationKey1
+      customLogKey2:
+        kind: label
+        name: foo.bar.labelKey1
+```
+
+With a pipelineRuns metadata:
+
+```yaml
+metadata:
+  annotations:
+    foo.bar.annotationKey1: annotationValue
+  labels:
+    foo.bar.labelKey1: labelValue
+```
+
+This would result in the following additional log entries for a pipeline run related log:
+
+```yaml
+customLogKey1: annotationValue
+customLogKey2: labelValue
+```
 
 ### Feature Flags
 
