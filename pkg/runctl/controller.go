@@ -6,6 +6,7 @@ package runctl
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/SAP/stewardci-core/pkg/stewardlabels"
 	"github.com/SAP/stewardci-core/pkg/utils"
 	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -718,7 +720,7 @@ func (c *Controller) handlePipelineRunCleaning(
 		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateFinished, metav1.Now()); err != nil {
 			return true, err
 		}
-		ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
+		ctx, _ := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
 		if err = c.finalizePipelineRun(ctx, pipelineRun); err != nil {
 			return true, err
 		}
@@ -892,7 +894,13 @@ func (c *Controller) logFinalState(ctx context.Context, pipelineRun k8s.Pipeline
 	spec := pipelineRun.GetSpec()
 	runID := "unknown"
 	if spec != nil && spec.Logging != nil && spec.Logging.Elasticsearch != nil {
-		runID = spec.Logging.Elasticsearch.RunID
+		err := error(nil)
+		runID, err = toJSONString(&spec.Logging.Elasticsearch.RunID)
+		if err != nil {
+			return errors.WithMessage(err,
+				"could not serialize spec.logging.elasticsearch.runid to JSON",
+			)
+		}
 	}
 
 	logger := klog.FromContext(ctx)
@@ -908,4 +916,12 @@ func (c *Controller) logFinalState(ctx context.Context, pipelineRun k8s.Pipeline
 		"stateHistory", status.StateHistory,
 	)
 	return nil
+}
+
+func toJSONString(value interface{}) (string, error) {
+	bytes, err := json.Marshal(value)
+	if err != nil {
+		return "", errors.Wrapf(err, "error while serializing to JSON: %v", err)
+	}
+	return string(bytes), nil
 }
