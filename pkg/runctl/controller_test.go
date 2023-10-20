@@ -404,7 +404,6 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 			expectedState          api.State
 			expectedMessage        string
 			expectedError          error
-			expectedFinalizer      bool
 		}{
 			{
 				name:         "new_ok",
@@ -416,7 +415,6 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				isMaintenanceModeStub:  newIsMaintenanceModeStub(false, nil),
 				expectedResult:         api.ResultUndefined,
 				expectedState:          api.StateWaiting,
-				expectedFinalizer:      true,
 			},
 			{
 				name:                   "new_maintenance_error_a",
@@ -427,7 +425,6 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				expectedResult:         api.ResultUndefined,
 				expectedState:          api.StateNew,
 				expectedError:          error1,
-				expectedFinalizer:      true,
 			},
 			{
 				name:                   "new_maintenance_error_b",
@@ -438,7 +435,6 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				expectedResult:         api.ResultUndefined,
 				expectedState:          api.StateNew,
 				expectedError:          error1,
-				expectedFinalizer:      true,
 			},
 			{
 				name:         "new_maintenance",
@@ -450,7 +446,6 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				expectedResult:         api.ResultUndefined,
 				expectedState:          api.StateNew,
 				expectedError:          fmt.Errorf("pipeline execution is paused while the system is in maintenance mode"),
-				expectedFinalizer:      true,
 			},
 			{
 				name:                  "new_get_cofig_fail_not_recoverable",
@@ -473,7 +468,7 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 				},
 				isMaintenanceModeStub: newIsMaintenanceModeStub(false, nil),
 				expectedResult:        api.ResultUndefined,
-				expectedState:         api.StateNew,
+				expectedState:         api.StatePreparing,
 				expectedError:         errorRecover1,
 			},
 		} {
@@ -516,10 +511,10 @@ func Test_Controller_syncHandler_mock_start(t *testing.T) {
 					assert.Assert(t, is.Regexp(test.expectedMessage, result.Status.Message))
 				}
 
-				if test.expectedFinalizer {
-					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 1)
-				} else {
+				if test.expectedState == api.StateFinished {
 					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 0)
+				} else {
+					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 1)
 				}
 			})
 		}
@@ -544,7 +539,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 			expectedState              api.State
 			expectedMessage            string
 			expectedError              error
-			expectedFinalizer          bool
 		}{
 			{
 				name:         "preparing_ok",
@@ -558,7 +552,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             api.ResultUndefined,
 				expectedState:              api.StateWaiting,
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "preparing_fail",
@@ -574,7 +567,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedState:              api.StatePreparing,
 				expectedMessage:            "",
 				expectedError:              error1,
-				expectedFinalizer:          true,
 			},
 			{
 				name: "preparing_fail_on_content_error_during_start",
@@ -592,7 +584,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedResult:             api.ResultErrorContent,
 				expectedState:              api.StateCleaning,
 				expectedMessage:            "preparing failed .*error1",
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "waiting_fail",
@@ -606,7 +597,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             api.ResultErrorInfra,
 				expectedState:              api.StateCleaning,
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "waiting_recover",
@@ -621,7 +611,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedResult:             api.ResultUndefined,
 				expectedState:              api.StateWaiting,
 				expectedError:              errorRecover1,
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "waiting_start_success",
@@ -636,7 +625,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             "",
 				expectedState:              api.StateWaiting,
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "waiting_start_fail",
@@ -652,7 +640,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedResult:             api.ResultUndefined,
 				expectedState:              api.StateWaiting,
 				expectedError:              error1,
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "waiting_fail_on_load_pipeline_run_config",
@@ -680,7 +667,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             api.ResultErrorConfig,
 				expectedState:              api.StateCleaning,
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "waiting_not_started",
@@ -696,7 +682,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             "",
 				expectedState:              api.StateWaiting,
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "waiting_started",
@@ -713,7 +698,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             "",
 				expectedState:              api.StateRunning,
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "waiting_timeout",
@@ -729,7 +713,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedResult:             api.ResultErrorInfra,
 				expectedState:              api.StateCleaning,
 				expectedMessage:            `ERROR: waiting failed \[PipelineRun{name: foo, namespace: ns1, state: waiting}\]: main pod has not started after 10m0s`,
-				expectedFinalizer:          true,
 			},
 
 			{
@@ -747,7 +730,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             "",
 				expectedState:              api.StateWaiting,
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "waiting_restartable_delete_fails",
@@ -765,7 +747,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedResult:             api.ResultErrorInfra,
 				expectedState:              api.StateCleaning,
 				expectedMessage:            "restart failed",
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "running_not_finished",
@@ -781,7 +762,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             "",
 				expectedState:              api.StateRunning,
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "running_recover",
@@ -796,7 +776,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedResult:             "",
 				expectedState:              api.StateRunning,
 				expectedError:              errorRecover1,
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "running_get_error",
@@ -811,7 +790,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedResult:             "error_infra",
 				expectedState:              api.StateCleaning,
 				expectedMessage:            "running failed .*error1",
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "running_get_not_found",
@@ -826,7 +804,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				expectedResult:             "error_infra",
 				expectedState:              api.StateCleaning,
 				expectedMessage:            "running failed .* task run not found in namespace.*",
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "running_finished_timeout",
@@ -848,7 +825,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             api.ResultTimeout,
 				expectedState:              api.StateCleaning,
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "running_finished_terminated",
@@ -872,7 +848,6 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				loadPipelineRunsConfigStub: newEmptyRunsConfig,
 				expectedResult:             api.ResultSuccess,
 				expectedState:              api.StateCleaning,
-				expectedFinalizer:          true,
 			},
 			{
 				name:         "skip_finished",
@@ -962,10 +937,10 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 					assert.Assert(t, is.Regexp(test.expectedMessage, result.Status.Message))
 				}
 
-				if test.expectedFinalizer {
-					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 1)
-				} else {
+				if test.expectedState == api.StateFinished {
 					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 0)
+				} else {
+					assert.Assert(t, len(result.ObjectMeta.Finalizers) == 1)
 				}
 			})
 		}

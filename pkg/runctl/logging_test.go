@@ -13,6 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sapitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
+
+	_ "knative.dev/pkg/system/testing"
 )
 
 func Test_extendLoggerWithPipelineRunInfo(t *testing.T) {
@@ -256,10 +258,14 @@ func Test_extendContextLoggerWithPipelineRunInfo(t *testing.T) {
 	baseCtxValue := 94586724935743
 	baseCtx := context.WithValue(context.Background(), baseCtxKey{}, baseCtxValue)
 	ctx := logr.NewContext(baseCtx, logger)
+	config := &cfg.PipelineRunsConfigStruct{
+		CustomLoggingDetails: loggingDetails,
+	}
+	ctx = cfg.NewContextWithConfig(ctx, config)
 
 	// EXERCISE
 	resultCtx, resultLogger := extendContextLoggerWithPipelineRunInfo(
-		ctx, pipelineRun, loggingDetails,
+		ctx, pipelineRun,
 	)
 
 	// VERIFY
@@ -292,7 +298,7 @@ func Test_extendContextLoggerWithPipelineRunInfo_ContextIsNil(t *testing.T) {
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendContextLoggerWithPipelineRunInfo(nilCtx, pipelineRun, nil)
+		extendContextLoggerWithPipelineRunInfo(nilCtx, pipelineRun)
 	}).To(
 		Panic(),
 	)
@@ -319,7 +325,7 @@ func Test_extendContextLoggerWithPipelineRunInfo_ContextHasNoLogger(t *testing.T
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendContextLoggerWithPipelineRunInfo(ctxWithoutLogger, pipelineRun, nil)
+		extendContextLoggerWithPipelineRunInfo(ctxWithoutLogger, pipelineRun)
 	}).To(
 		Panic(),
 	)
@@ -340,7 +346,7 @@ func Test_extendContextLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) 
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendContextLoggerWithPipelineRunInfo(ctx, nil, nil)
+		extendContextLoggerWithPipelineRunInfo(ctx, nil)
 	}).To(
 		Panic(),
 	)

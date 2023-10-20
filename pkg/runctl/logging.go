@@ -15,11 +15,17 @@ import (
 // is nil.
 // Returns both a new context with the enhanced logger and the enhanced logger
 // so that callers can directly use what they need.
-func extendContextLoggerWithPipelineRunInfo(ctx context.Context, pipelineRun *v1alpha1.PipelineRun, customLoggingDetails map[string]cfg.PipelineRunAccessor) (context.Context, logr.Logger) {
+func extendContextLoggerWithPipelineRunInfo(ctx context.Context, pipelineRun *v1alpha1.PipelineRun) (context.Context, logr.Logger) {
 	logger, err := logr.FromContext(ctx)
 	if err != nil {
 		panic(err)
 	}
+	var customLoggingDetails map[string]cfg.PipelineRunAccessor
+	config, err := cfg.FromContext(ctx)
+	if err == nil && config != nil {
+		customLoggingDetails = config.CustomLoggingDetails
+	}
+
 	logger = extendLoggerWithPipelineRunInfo(logger, pipelineRun, customLoggingDetails)
 	return klog.NewContext(ctx, logger), logger
 }
@@ -48,6 +54,7 @@ func getPipelineRunInfoForLogging(run *v1alpha1.PipelineRun, customLoggingDetail
 			"pipelineRunExecAuxNamespace", run.Status.AuxiliaryNamespace,
 		)
 	}
+
 	for loggingLabel, accessor := range customLoggingDetails {
 		value := accessor.Access(run)
 		if value != "" {
