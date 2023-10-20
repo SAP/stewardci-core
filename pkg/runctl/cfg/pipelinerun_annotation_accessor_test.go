@@ -35,7 +35,11 @@ func Test_NewPipelineRunAnnotationAccessor(t *testing.T) {
 			result := NewPipelineRunAnnotationAccessor(tc.key)
 
 			// VERIFY
-			assert.DeepEqual(t, tc.expected, result)
+			if tc.expected == nil {
+				assert.Assert(t, result == nil)
+			} else {
+				assert.DeepEqual(t, tc.expected, result)
+			}
 		})
 	}
 }
@@ -48,9 +52,6 @@ func Test_PipelineRunAnnotationAccessor_access(t *testing.T) {
 		annotations map[string]string
 		expected    string
 	}{
-		{
-			name: "empty",
-		},
 		{
 			name:        "success",
 			key:         "key1",
@@ -72,12 +73,6 @@ func Test_PipelineRunAnnotationAccessor_access(t *testing.T) {
 		{
 			name:        "unknown key",
 			key:         "key_unknown",
-			annotations: map[string]string{"key1": "value1"},
-			expected:    "",
-		},
-		{
-			name:        "empty accessor",
-			key:         "",
 			annotations: map[string]string{"key1": "value1"},
 			expected:    "",
 		},

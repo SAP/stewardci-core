@@ -35,7 +35,11 @@ func Test_NewPipelineRunLabelAccessor(t *testing.T) {
 			result := NewPipelineRunLabelAccessor(tc.key)
 
 			// VERIFY
-			assert.DeepEqual(t, tc.expected, result)
+			if tc.expected == nil {
+				assert.Assert(t, result == nil)
+			} else {
+				assert.DeepEqual(t, tc.expected, result)
+			}
 		})
 	}
 }
@@ -48,9 +52,6 @@ func Test_PipelineRunLabelAccessor_access(t *testing.T) {
 		labels   map[string]string
 		expected string
 	}{
-		{
-			name: "empty",
-		},
 		{
 			name:     "success",
 			key:      "key1",
@@ -72,12 +73,6 @@ func Test_PipelineRunLabelAccessor_access(t *testing.T) {
 		{
 			name:     "unknown key",
 			key:      "key_unknown",
-			labels:   map[string]string{"key1": "value1"},
-			expected: "",
-		},
-		{
-			name:     "empty accessor",
-			key:      "",
 			labels:   map[string]string{"key1": "value1"},
 			expected: "",
 		},

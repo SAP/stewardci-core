@@ -10,7 +10,7 @@ type pipelineRunLabelAccessor struct {
 
 // NewPipelineRunLabelAccessor creates a new PipelineRunAccessor to access
 // the label with the provided key
-func NewPipelineRunLabelAccessor(key string) *pipelineRunLabelAccessor {
+func NewPipelineRunLabelAccessor(key string) PipelineRunAccessor {
 	if key == "" {
 		return nil
 	}
@@ -21,9 +21,6 @@ func NewPipelineRunLabelAccessor(key string) *pipelineRunLabelAccessor {
 
 // Access returns the desired label of the pipeline run
 func (a *pipelineRunLabelAccessor) Access(run *v1alpha1.PipelineRun) string {
-	if a == nil {
-		return ""
-	}
 	labels := run.GetLabels()
 	if labels == nil || a.Key == "" {
 		return ""

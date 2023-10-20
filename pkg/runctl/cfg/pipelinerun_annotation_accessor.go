@@ -10,7 +10,7 @@ type pipelineRunAnnotationAccessor struct {
 
 // NewPipelineRunAnnotationAccessor creates a new PipelineRunAccessor to access
 // the annotation with the provided key
-func NewPipelineRunAnnotationAccessor(key string) *pipelineRunAnnotationAccessor {
+func NewPipelineRunAnnotationAccessor(key string) PipelineRunAccessor {
 	if key == "" {
 		return nil
 	}
@@ -21,9 +21,6 @@ func NewPipelineRunAnnotationAccessor(key string) *pipelineRunAnnotationAccessor
 
 // Access returns the desired annotation of the pipeline run
 func (a *pipelineRunAnnotationAccessor) Access(run *v1alpha1.PipelineRun) string {
-	if a == nil {
-		return ""
-	}
 	annotations := run.GetAnnotations()
 	if annotations == nil || a.Key == "" {
 		return ""
