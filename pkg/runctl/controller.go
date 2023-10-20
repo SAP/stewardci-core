@@ -541,9 +541,9 @@ func (c *Controller) ensurePipelineRunsConfig(ctx context.Context, pipelineRun k
 			)
 			return nil, true, err
 		}
+		_, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+		logger.V(4).Info("Loaded config for pipeline runs")
 	}
-	_, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
-	logger.V(4).Info("Loaded config for pipeline runs")
 
 	return pipelineRunsConfig, false, nil
 }
@@ -809,10 +809,7 @@ func (c *Controller) commitStatusAndMeter(ctx context.Context, pipelineRun k8s.P
 // handlePipelineRunAbort checks if pipeline run should be aborted.
 // If the user requested abortion it updates message, result and state
 // to trigger a cleanup.
-func (c *Controller) handlePipelineRunAbort(
-	ctx context.Context,
-	pipelineRun k8s.PipelineRun,
-) error {
+func (c *Controller) handlePipelineRunAbort(ctx context.Context, pipelineRun k8s.PipelineRun) error {
 	intent := pipelineRun.GetSpec().Intent
 	if intent == api.IntentAbort && pipelineRun.GetStatus().Result == api.ResultUndefined {
 		ctx, logger := extendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
