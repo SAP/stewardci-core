@@ -1,4 +1,4 @@
-package cfg
+package custom
 
 import (
 	"testing"
@@ -10,69 +10,34 @@ import (
 
 func Test_NewPipelineRunLabelAccessor(t *testing.T) {
 	t.Parallel()
-
+	const logKey = "logKey1"
 	for _, tc := range []struct {
 		name     string
-		key      string
-		expected *pipelineRunLabelAccessor
-	}{
-		{
-			name: "empty",
-		},
-		{
-			name: "success",
-			key:  "key1",
-			expected: &pipelineRunLabelAccessor{
-				Key: "key1",
-			},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			tc := tc // capture current value before going parallel
-			t.Parallel()
-
-			// EXERCISE
-			result := NewPipelineRunLabelAccessor(tc.key)
-
-			// VERIFY
-			if tc.expected == nil {
-				assert.Assert(t, result == nil)
-			} else {
-				assert.DeepEqual(t, tc.expected, result)
-			}
-		})
-	}
-}
-
-func Test_PipelineRunLabelAccessor_access(t *testing.T) {
-	t.Parallel()
-	for _, tc := range []struct {
-		name     string
-		key      string
+		spec     Spec
 		labels   map[string]string
 		expected string
 	}{
 		{
 			name:     "success",
-			key:      "key1",
+			spec:     Spec{Key: "key1"},
 			labels:   map[string]string{"key1": "value1"},
 			expected: "value1",
 		},
 		{
 			name:     "no labels",
-			key:      "key1",
+			spec:     Spec{Key: "key1"},
 			labels:   nil,
 			expected: "",
 		},
 		{
 			name:     "empty labels",
-			key:      "key1",
+			spec:     Spec{Key: "key1"},
 			labels:   map[string]string{},
 			expected: "",
 		},
 		{
 			name:     "unknown key",
-			key:      "key_unknown",
+			spec:     Spec{Key: "key_unknown"},
 			labels:   map[string]string{"key1": "value1"},
 			expected: "",
 		},
@@ -87,13 +52,15 @@ func Test_PipelineRunLabelAccessor_access(t *testing.T) {
 				},
 			}
 
-			examinee := NewPipelineRunLabelAccessor(tc.key)
+			examinee, err := NewPipelineRunLabelAccessor(logKey, tc.spec)
+			assert.NilError(t, err)
 
 			// EXERCISE
-			result := examinee.Access(run)
+			result := examinee(run)
 
 			// VERIFY
-			assert.Equal(t, tc.expected, result)
+			assert.Equal(t, logKey, result[0])
+			assert.Equal(t, tc.expected, result[1])
 		})
 	}
 }

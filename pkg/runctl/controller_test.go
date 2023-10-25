@@ -31,6 +31,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2/ktesting"
 	"knative.dev/pkg/apis"
+
+	_ "knative.dev/pkg/system/testing"
 )
 
 func Test_meterAllPipelineRunsPeriodic(t *testing.T) {

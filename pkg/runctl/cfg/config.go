@@ -10,6 +10,7 @@ import (
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/featureflag"
 	"github.com/SAP/stewardci-core/pkg/k8s"
+	"github.com/SAP/stewardci-core/pkg/runctl/log/custom"
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,7 +59,7 @@ type PipelineRunsConfigStruct struct {
 
 	// CustomLoggingDetails contains a map specifying additional keys for the structured logging.
 	// The value of each key is a PipelineRunAccessor to get the data to be logged.
-	CustomLoggingDetails map[string]PipelineRunAccessor
+	CustomLoggingDetails []custom.LoggingDetailsProvider
 
 	// JenkinsfileRunnerImage is the Jenkinsfile Runner container image to be
 	// used for pipeline runs.
@@ -226,8 +227,9 @@ func processMainConfig(configData configDataMap, dest *PipelineRunsConfigStruct)
 
 	var err error
 
+	loggingDetailsString := configData[mainConfigKeyCustomLoggingDetails]
 	if dest.CustomLoggingDetails, err =
-		configData.parseAccessors(mainConfigKeyCustomLoggingDetails); err != nil {
+		custom.ParseLoggingDetailsProvider(loggingDetailsString); err != nil {
 		return err
 	}
 

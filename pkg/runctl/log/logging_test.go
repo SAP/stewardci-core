@@ -1,4 +1,4 @@
-package runctl
+package log
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	logrtesting "github.com/SAP/stewardci-core/internal/logr/testing"
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
+	"github.com/SAP/stewardci-core/pkg/runctl/log/custom"
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
@@ -198,7 +199,7 @@ func Test_extendLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) {
 	)
 }
 
-func Test_extendContextLoggerWithPipelineRunInfo(t *testing.T) {
+func Test_ExtendContextLoggerWithPipelineRunInfo(t *testing.T) {
 	// SETUP
 	const (
 		annotationKey = "annotationKey"
@@ -221,10 +222,9 @@ func Test_extendContextLoggerWithPipelineRunInfo(t *testing.T) {
 		},
 	}
 
-	loggingDetails := map[string]cfg.PipelineRunAccessor{
-		logKey1: cfg.NewPipelineRunAnnotationAccessor(annotationKey),
-		logKey2: cfg.NewPipelineRunLabelAccessor(labelKey),
-	}
+	ld1, _ := custom.NewPipelineRunAnnotationAccessor(logKey1, custom.Spec{Key: annotationKey})
+	ld2, _ := custom.NewPipelineRunLabelAccessor(logKey2, custom.Spec{Key: labelKey})
+	loggingDetails := []custom.LoggingDetailsProvider{ld1, ld2}
 
 	expectedWithKVs := []interface{}{
 		"pipelineRun", klog.ObjectRef{Name: "run-2", Namespace: "run-namespace-2"},
@@ -264,7 +264,7 @@ func Test_extendContextLoggerWithPipelineRunInfo(t *testing.T) {
 	ctx = cfg.NewContextWithConfig(ctx, config)
 
 	// EXERCISE
-	resultCtx, resultLogger := extendContextLoggerWithPipelineRunInfo(
+	resultCtx, resultLogger := ExtendContextLoggerWithPipelineRunInfo(
 		ctx, pipelineRun,
 	)
 
@@ -298,7 +298,7 @@ func Test_extendContextLoggerWithPipelineRunInfo_ContextIsNil(t *testing.T) {
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendContextLoggerWithPipelineRunInfo(nilCtx, pipelineRun)
+		ExtendContextLoggerWithPipelineRunInfo(nilCtx, pipelineRun)
 	}).To(
 		Panic(),
 	)
@@ -325,7 +325,7 @@ func Test_extendContextLoggerWithPipelineRunInfo_ContextHasNoLogger(t *testing.T
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendContextLoggerWithPipelineRunInfo(ctxWithoutLogger, pipelineRun)
+		ExtendContextLoggerWithPipelineRunInfo(ctxWithoutLogger, pipelineRun)
 	}).To(
 		Panic(),
 	)
@@ -346,7 +346,7 @@ func Test_extendContextLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) 
 
 	// EXERCISE + VERIFY
 	g.Expect(func() {
-		extendContextLoggerWithPipelineRunInfo(ctx, nil)
+		ExtendContextLoggerWithPipelineRunInfo(ctx, nil)
 	}).To(
 		Panic(),
 	)
