@@ -1,21 +1,19 @@
 package custom
 
-// PipelineRunAccessorConfig is the config to defines a way to access a value of a pipeline run
-type PipelineRunAccessorConfig struct {
+type pipelineRunAccessorConfig struct {
 	LogKey string `yaml:"logKey,omitempty"`
-	Kind   Kind   `yaml:"kind,omitempty"`
+	Kind   kind   `yaml:"kind,omitempty"`
 	Spec   Spec   `yaml:"spec,omitempty"`
 }
 
-// Kind of accessor
-type Kind string
+type kind string
 
 const (
 	// KindLabelAccessor defines an accessor for labels
-	KindLabelAccessor Kind = "label"
+	KindLabelAccessor kind = "label"
 
 	// KindAnnotationAccessor defines an accessor for annotations
-	KindAnnotationAccessor Kind = "annotation"
+	KindAnnotationAccessor kind = "annotation"
 )
 
 // Spec of the accessor

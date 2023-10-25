@@ -10,10 +10,7 @@ import (
 
 func Test_parseAccessors_invalidYaml(t *testing.T) {
 	t.Parallel()
-	const (
-		anyKey      = "key1"
-		invalidYaml = "invalid1"
-	)
+	const invalidYaml = "invalid1"
 
 	// EXERCISE
 	_, err := ParseLoggingDetailsProvider(invalidYaml)

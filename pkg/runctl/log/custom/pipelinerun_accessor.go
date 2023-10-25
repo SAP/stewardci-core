@@ -9,7 +9,7 @@ import (
 type LoggingDetailsProvider func(run *v1alpha1.PipelineRun) []any
 
 func ParseLoggingDetailsProvider(strVal string) ([]LoggingDetailsProvider, error) {
-	var configs = []PipelineRunAccessorConfig{}
+	var configs = []pipelineRunAccessorConfig{}
 	if strVal != "" {
 		err := yaml.Unmarshal([]byte(strVal), &configs)
 		if err != nil {
