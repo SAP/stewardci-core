@@ -8,6 +8,7 @@ import (
 // LoggingDetailsProvider extracts details from a pipeline run to be added to the log
 type LoggingDetailsProvider func(run *v1alpha1.PipelineRun) []any
 
+// ParseLoggingDetailsProvider returns a list of LoggingDetailsProviders created from a yaml string.
 func ParseLoggingDetailsProvider(strVal string) ([]LoggingDetailsProvider, error) {
 	var configs = []pipelineRunAccessorConfig{}
 	if strVal != "" {
