@@ -901,7 +901,7 @@ func (c *Controller) logFinalState(ctx context.Context, pipelineRun k8s.Pipeline
 		}
 	}
 
-    logger := klog.FromContext(ctx)
+	logger := klog.FromContext(ctx)
 
 	logger.V(3).Info(
 		"Completed processing of pipeline run",
