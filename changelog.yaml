@@ -70,6 +70,17 @@
         Use Go SDK v1.21.3.
       pullRequestNumber: 420
 
+    - type: internal
+      impact: patch
+      title: Update Go dependencies
+      description: |-
+        Updated all dependencies. Most important:
+
+        - Kybernetes to v1.26.10
+        - Tekton to v0.50.2
+        - knative.dev/pkg to release 1.12
+      pullRequestNumber: 420
+
 - version: "0.38.1"
   date: 2023-10-18
   changes:
