@@ -15,7 +15,7 @@ func CodeLocation(skip uint16) string {
 	if entryCount == 0 {
 		panic(fmt.Errorf("cannot identify caller when skipping %d frames", skip))
 	}
-	frames := runtime.CallersFrames(pc[:1])
+	frames := runtime.CallersFrames(pc)
 	frame, _ := frames.Next()
 	if frame.Function != "" {
 		return frame.Function

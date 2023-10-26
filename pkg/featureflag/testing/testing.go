@@ -5,11 +5,11 @@ feature flags.
 Feature flags are shared state. When tests change feature flags,
 they must ensure that no other tests are affected.
 
-1. They must restore the default feature flag state when the
-   test is finished.
+ 1. They must restore the default feature flag state when the
+    test is finished.
 
-2. They must not run in parallel with other tests that could be
-   affected by changed feature flags state.
+ 2. They must not run in parallel with other tests that could be
+    affected by changed feature flags state.
 */
 package testing
 
@@ -23,7 +23,7 @@ The returned function is meant to be called deferred by the caller.
 
 Example:
 
-    defer testing.WithFeatureFlag(featureflag.Dummy, true)()
+	defer testing.WithFeatureFlag(featureflag.Dummy, true)()
 */
 func WithFeatureFlag(ff *featureflag.FeatureFlag, enabled bool) func() {
 	changeFeatureFlag := func(ff *featureflag.FeatureFlag, enabled bool) {

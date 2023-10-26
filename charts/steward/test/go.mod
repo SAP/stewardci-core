@@ -1,6 +1,6 @@
 module github.com/SAP/stewardci-core/charts/steward/test
 
-go 1.18
+go 1.21
 
 require (
 	github.com/gruntwork-io/terratest v0.40.24
