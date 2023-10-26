@@ -73,8 +73,8 @@ type PipelineRun interface {
 	// object has a deletion timestamp set.
 	HasDeletionTimestamp() bool
 
-	// HasFinalizer return whether the underlying PipelineRun API
-	// object has a finalizer
+	// HasFinalizer returns whether the underlying PipelineRun API
+	// object has the Steward finalizer.
 	HasFinalizer() bool
 
 	// AddFinalizerAndCommitIfNotPresent adds the Steward finalizer to the list
