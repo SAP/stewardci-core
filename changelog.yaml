@@ -60,6 +60,17 @@
         The configuration is done in 'customLoggingDetails'
       pullRequestNumber: 406
 
+    - type: bug
+      impact: patch
+      title: Use result 'error_config' instead of 'error_content'
+      description: |-
+        ... in case
+
+        - secrets referenced by pipeline runs don't exist
+        - multiple secrets map to the same name
+        - the configured Jenkinsfile repo server URL is invalid
+      pullRequestNumber: 416
+
 - version: "0.38.1"
   date: 2023-10-18
   changes:

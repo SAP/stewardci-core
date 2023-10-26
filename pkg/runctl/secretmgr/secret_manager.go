@@ -67,7 +67,7 @@ func (s SecretManager) copyPipelineCloneSecretToRunNamespace(ctx context.Context
 	}
 	repoServerURL, err := pipelineRun.GetValidatedJenkinsfileRepoServerURL()
 	if err != nil {
-		return "", serrors.Classify(err, v1alpha1.ResultErrorContent)
+		return "", serrors.Classify(err, v1alpha1.ResultErrorConfig)
 	}
 	transformers := []secrets.SecretTransformer{
 		secrets.StripAnnotationsTransformer(annotationPrefixJenkins),
@@ -97,7 +97,7 @@ func (s SecretManager) copySecrets(ctx context.Context, pipelineRun k8s.Pipeline
 		logger := klog.FromContext(ctx)
 		logger.Error(err, "Could not copy secrets", "secrets", secretNames)
 		if s.secretHelper.IsNotFound(err) || k8serrors.IsInvalid(err) || k8serrors.IsAlreadyExists(err) {
-			err = serrors.Classify(err, v1alpha1.ResultErrorContent)
+			err = serrors.Classify(err, v1alpha1.ResultErrorConfig)
 		} else {
 			err = serrors.Classify(err, v1alpha1.ResultErrorInfra)
 		}
