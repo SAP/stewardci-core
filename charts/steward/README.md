@@ -203,26 +203,30 @@ This plug-in supports two ways of sending log events:
 | <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>flushAttemptIntervalMillis</b></code><br/><i>integer</i> | The interval in milliseconds at which the Fluency flusher service periodically checks for buffer chunks ready to be flushed. | |
 | <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>maxBufferSize</b></code><br/><i>integer</i> | The maximum total size in bytes of all buffer chunks. Must be greater than `bufferChunkRetentionSize`. | |
 | <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>emitTimeoutMillis</b></code><br/><i>integer</i> | The timeout in milliseconds for inserting a single log event into the local in-memory buffer and retrying in case of errors, e.g. when the buffer is full. | |
-| <code>pipelineRuns.<wbr/>logging.<wbr/><b>customLoggingDetails</b></code><br/><i>map</i> | Define a map of labels (key) which should be added to the log output in the structured logging. See example below.| {} |
+| <code>pipelineRuns.<wbr/>logging.<wbr/><b>customLoggingDetails</b></code><br/><i>list</i> | Define a list of log detail providers. See example below.| {} |
 
 ##### Custom Logging Details
 
 The custom logging details can be defined at `pipelineRuns.logging.customLoggingDetails`.
-The content is a map, where the key is the one which should be used in the log output of the structured logging.
-The value is another map defining a pipeline run accessor. This consists of a map with keys 'kind' and 'name'.
-Currently there are accessors available for annotations and labels, which is expressed by 'kind: annotation' or 'kind: label'.
-In the 'name' filed the key of the annotation / label is stored. See example below:
+The content is a list, where each entry defines a log detail provider.
+A log provider definition consists of a map with keys: `logKey`, `kind` and `spec`.
+The `logKey` is used as label for the structured logging. The `kind` defines the used provider.
+The `spec` depends on the used kind.
+The available providers are described below:
+
+##### Annotation provider
+
+The annotation provider is used to access annotations in the metadata section of a pipeline run.
+For this `kind: annotation` is used. In the spec a `key` to access the annotation must be defined.
 
 ```yaml
 pipelineRuns:
   logging:
     customLoggingDetails:
-      customLogKey1:
-        kind: annotation
-        name: foo.bar.annotationKey1
-      customLogKey2:
-        kind: label
-        name: foo.bar.labelKey1
+    - logKey: customLogKey1
+      kind: annotation
+      spec:
+        key: foo.bar.annotationKey1
 ```
 
 With a pipelineRuns metadata:
@@ -231,6 +235,33 @@ With a pipelineRuns metadata:
 metadata:
   annotations:
     foo.bar.annotationKey1: annotationValue
+```
+
+This would result in the following additional log entry for a pipeline run related log:
+
+```yaml
+customLogKey1: annotationValue
+```
+
+##### Label provider
+
+The label provider is used to access labels in the metadata section of a pipeline run.
+For this `kind: label` is used.  In the spec a `key` to access the label must be defined.
+
+```yaml
+pipelineRuns:
+  logging:
+    customLoggingDetails:
+    - logKey: customLogKey1
+      kind: label
+      spec:
+        key: foo.bar.labelKey1
+```
+
+With a pipelineRuns metadata:
+
+```yaml
+metadata:
   labels:
     foo.bar.labelKey1: labelValue
 ```
@@ -238,7 +269,6 @@ metadata:
 This would result in the following additional log entries for a pipeline run related log:
 
 ```yaml
-customLogKey1: annotationValue
 customLogKey2: labelValue
 ```
 
