@@ -897,8 +897,8 @@ func (c *Controller) logFinalState(ctx context.Context, pipelineRun k8s.Pipeline
 		err := error(nil)
 		runID, err = toJSONString(&spec.Logging.Elasticsearch.RunID)
 		if err != nil {
-            runID = "invalid"
-            logger.Error(err, "Failed to serialize spec.logging.elasticsearch.runid to JSON")
+			runID = "invalid"
+			logger.Error(err, "Failed to serialize spec.logging.elasticsearch.runid to JSON")
 		}
 	}
 
