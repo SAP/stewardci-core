@@ -720,7 +720,7 @@ func (c *Controller) handlePipelineRunCleaning(
 		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateFinished, metav1.Now()); err != nil {
 			return true, err
 		}
-		ctx, logger := extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
+		ctx, logger = extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
 		if err = c.finalizePipelineRun(ctx, pipelineRun); err != nil {
 			return true, err
 		}
