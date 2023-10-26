@@ -893,16 +893,15 @@ func (c *Controller) logFinalState(ctx context.Context, pipelineRun k8s.Pipeline
 	status := pipelineRun.GetStatus()
 	spec := pipelineRun.GetSpec()
 	runID := "unknown"
-    logger := klog.FromContext(ctx)
-
 	if spec != nil && spec.Logging != nil && spec.Logging.Elasticsearch != nil {
 		err := error(nil)
 		runID, err = toJSONString(&spec.Logging.Elasticsearch.RunID)
 		if err != nil {
 			runID = "invalid"
-			logger.Error(err, "Failed to serialize spec.logging.elasticsearch.runid to JSON")
 		}
 	}
+
+    logger := klog.FromContext(ctx)
 
 	logger.V(3).Info(
 		"Completed processing of pipeline run",
