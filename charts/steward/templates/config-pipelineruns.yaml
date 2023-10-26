@@ -50,18 +50,17 @@ data:
           limits.cpu: 10
           limits.memory: 20Gi
 
-    # define a map of labels (key) which should be added to the log output
-    # in the structured logging. the value to be logged is defined by
-    # an pipelineAccessor containing a kind and a name
-    # possible kinds are 'annotation' and 'label'
-    # name is the name of the label or the annotation
+    # define a list of log detail providers
+    # details see README.md
     customLoggingDetails: |
-      customLogKey1:
+      - logKey: customLogKey1
         kind: annotation
-        name: foo.bar.annotationKey1
-      customLogKey2:
+        spec:
+          key: foo.bar.annotationKey1
+      - logKey: customLogKey2
         kind: label
-        name: foo.bar.labelKey1
+        spec:
+          key: foo.bar.labelKey1
 
     # jenkinsfileRunner.podSecurityContext.* allow configuring selected fields
     # of the pod security context of the Jenkinsfile Runner pod.
@@ -84,7 +83,7 @@ data:
   tektonTaskName: steward-jenkinsfile-runner
   tektonTaskNamespace: {{ .Values.targetNamespace.name | quote }}
   customLoggingDetails: |
-    {{- .Values.pipelineRuns.logging.customLoggingDetails | toYaml | nindent 4 }}
+    {{- .Values.runController.logging.customLoggingDetails | toYaml | nindent 4 }}
 
 {{- with .Values.pipelineRuns.jenkinsfileRunner }}
 {{- if kindIs "string" .image }}
