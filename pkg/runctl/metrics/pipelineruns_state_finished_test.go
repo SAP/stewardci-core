@@ -75,7 +75,21 @@ func Test_pipelineRunsStateFinished_Valid(t *testing.T) {
 		assert.Equal(t, len(metricFamily[1].GetMetric()), 1)
 
 		ioMetric := metricFamily[1].GetMetric()[0]
-		assert.DeepEqual(t, ioMetric, metricFamily[0].GetMetric()[0])
+		//t.Log(ioMetric.Histogram.String())
+
+		stateLabel := ioMetric.Label[0]
+		assert.Equal(t, stateLabel.GetName(), "state")
+		assert.Equal(t, stateLabel.GetValue(), stateName)
+
+		assert.Equal(t, *ioMetric.Histogram.SampleCount, uint64(1))
+
+		for _, bucket := range ioMetric.Histogram.Bucket {
+			if duration.Seconds() <= *bucket.UpperBound {
+				assert.Equal(t, *bucket.CumulativeCount, uint64(1))
+			} else {
+				assert.Equal(t, *bucket.CumulativeCount, uint64(0))
+			}
+		}
 	}
 }
 

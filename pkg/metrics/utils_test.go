@@ -3,11 +3,12 @@ package metrics
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	. "github.com/onsi/gomega"
 )
 
 func Test_CodeLocation_WithoutSkip(t *testing.T) {
 	// SETUP
+	g := NewGomegaWithT(t)
 
 	// EXERCISE
 	var result string
@@ -16,11 +17,12 @@ func Test_CodeLocation_WithoutSkip(t *testing.T) {
 	}()
 
 	// VERIFY
-	assert.Equal(t, result, "github.com/SAP/stewardci-core/pkg/metrics.Test_CodeLocation_WithoutSkip.func1")
+	g.Expect(result).To(Equal("github.com/SAP/stewardci-core/pkg/metrics.Test_CodeLocation_WithoutSkip.func1"))
 }
 
 func Test_CodeLocation_WithSkip(t *testing.T) {
 	// SETUP
+	g := NewGomegaWithT(t)
 
 	// EXERCISE
 	var result string
@@ -35,5 +37,12 @@ func Test_CodeLocation_WithSkip(t *testing.T) {
 	}()
 
 	// VERIFY
-	assert.Equal(t, result, "github.com/SAP/stewardci-core/pkg/metrics.Test_CodeLocation_WithSkip.func1.1")
+	// Inlining leads to different function names, see https://github.com/golang/go/issues/60324
+	g.Expect(result).To(SatisfyAny(
+		// with Go 1.18
+		Equal("github.com/SAP/stewardci-core/pkg/metrics.Test_CodeLocation_WithSkip.func1.1"),
+
+		// with Go 1.21
+		Equal("github.com/SAP/stewardci-core/pkg/metrics.Test_CodeLocation_WithSkip.Test_CodeLocation_WithSkip.func1.func2"),
+	))
 }

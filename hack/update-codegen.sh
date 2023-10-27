@@ -113,7 +113,8 @@ function generate_mocks() {
         -package="$destPkgName" \
         "$pkg" \
         "$interfaces" \
-        || die "mock generation for '$pkg' failed"
+    && gofmt -w "${MOCK_ROOT}/${dest}" \
+    || die "mock generation for '$pkg' ($dest) failed"
     { set +x; } 2>/dev/null
     if is_verify_mode; then
         set -x
@@ -241,7 +242,11 @@ if is_generate_clients; then
         steward:v1alpha1 \
         --go-header-file "${PROJECT_ROOT}/hack/boilerplate.go.txt" \
         --output-base "${GEN_DIR}" \
-        || die "Code generation failed"
+    && gofmt -w \
+        "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/client" \
+        "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/apis" \
+    || die "Code generation failed"
+
     "${CODEGEN_PKG}/generate-groups.sh" \
         "client,informer,lister" \
         github.com/SAP/stewardci-core/pkg/tektonclient \
@@ -249,16 +254,18 @@ if is_generate_clients; then
         pipeline:v1beta1 \
         --go-header-file "${PROJECT_ROOT}/hack/boilerplate.go.txt" \
         --output-base "${GEN_DIR}" \
-        || die "Code generation failed"
+    && gofmt -w \
+        "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/tektonclient" \
+    || die "Code generation failed"
     { set +x; } 2>/dev/null
 
     echo
     if is_verify_mode; then
         echo "## Verifying generated sources ####################"
         set -x
-        diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/client/ ${PROJECT_ROOT}/pkg/client/ || die "Regeneration required for clients"
-        diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/tektonclient/ ${PROJECT_ROOT}/pkg/tektonclient/ || die "Regeneration required for tektonclients"
-        diff -Naupr ${GEN_DIR}/github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go ${PROJECT_ROOT}/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go || die "Regeneration required for apis"
+        diff -Naupr "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/client/" "${PROJECT_ROOT}/pkg/client/" || die "Regeneration required for clients"
+        diff -Naupr "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/tektonclient/" "${PROJECT_ROOT}/pkg/tektonclient/" || die "Regeneration required for tektonclients"
+        diff -Naupr "${GEN_DIR}/github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go" "${PROJECT_ROOT}/pkg/apis/steward/v1alpha1/zz_generated.deepcopy.go" || die "Regeneration required for apis"
         { set +x; } 2>/dev/null
     else
         echo "## Move generated files ###########################"

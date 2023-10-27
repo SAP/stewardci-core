@@ -14,7 +14,7 @@ const (
 	checkRoleExistence = true
 )
 
-//ServiceAccountManager manages serviceAccounts
+// ServiceAccountManager manages serviceAccounts
 type ServiceAccountManager interface {
 	CreateServiceAccount(ctx context.Context, name string, pipelineCloneSecretName string, imagePullSecretNames []string) (*ServiceAccountWrap, error)
 	GetServiceAccount(ctx context.Context, name string) (*ServiceAccountWrap, error)
@@ -34,7 +34,7 @@ type ServiceAccountWrap struct {
 // RoleName to be attached
 type RoleName string
 
-//NewServiceAccountManager creates ServiceAccountManager
+// NewServiceAccountManager creates ServiceAccountManager
 func NewServiceAccountManager(factory ClientFactory, namespace string) ServiceAccountManager {
 	return &serviceAccountManager{
 		factory: factory,
@@ -42,10 +42,16 @@ func NewServiceAccountManager(factory ClientFactory, namespace string) ServiceAc
 	}
 }
 
-// CreateServiceAccount creates a service account on the cluster
-//   name					name of the service account
-//   pipelineCloneSecretName	(optional) the name of the secret to be used to authenticate at the Git repository hosting the pipeline definition.
-//   imagePullSecretNames		(optional) a list of image pull secrets to attach to this service account (e.g. for pulling the Jenkinsfile Runner image)
+// CreateServiceAccount creates a service account on the cluster.
+//
+// Parameters:
+//   - name: The name of the service account.
+//   - pipelineCloneSecretName: (optional) The name of the secret
+//     to be used to authenticate at the Git repository hosting the
+//     pipeline definition.
+//   - imagePullSecretNames: (optional) a list of image pull secrets
+//     to attach to this service account (e.g. for pulling the
+//     Jenkinsfile Runner image)
 func (c *serviceAccountManager) CreateServiceAccount(ctx context.Context, name string, pipelineCloneSecretName string, imagePullSecretNames []string) (*ServiceAccountWrap, error) {
 	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	serviceAccountWrap := &ServiceAccountWrap{

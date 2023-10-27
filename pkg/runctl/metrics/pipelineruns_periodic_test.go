@@ -193,8 +193,6 @@ func doTestPipelineRunsPeriodic(
 	expectObservation bool,
 	expectedStateLabelValue stewardapi.State,
 ) {
-	t.Helper()
-
 	// SETUP
 	reg := prometheus.NewPedanticRegistry()
 	t.Cleanup(metrics.Testing{}.PatchRegistry(reg))
@@ -240,7 +238,20 @@ func doTestPipelineRunsPeriodic(
 			assert.Equal(t, len(metricFamily[1].GetMetric()), 1)
 
 			ioMetric := metricFamily[1].GetMetric()[0]
-			assert.DeepEqual(t, ioMetric, metricFamily[0].GetMetric()[0])
+			//t.Log(ioMetric.Histogram.String())
+
+			stateLabel := ioMetric.Label[0]
+			assert.Equal(t, stateLabel.GetName(), "state")
+			assert.Equal(t, stateLabel.GetValue(), string(expectedStateLabelValue))
+
+			for _, bucket := range ioMetric.Histogram.Bucket {
+				durationSecs := duration.Seconds()
+				if durationSecs <= *bucket.UpperBound {
+					assert.Equal(t, *bucket.CumulativeCount, uint64(1))
+				} else {
+					assert.Equal(t, *bucket.CumulativeCount, uint64(0))
+				}
+			}
 		}
 	} else {
 		assert.Equal(t, len(metricFamily), 0)
