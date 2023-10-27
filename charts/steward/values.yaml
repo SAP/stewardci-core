@@ -14,7 +14,7 @@ runController:
     k8sAPIRequestTimeout: ""
   image:
     repository: stewardci/stewardci-run-controller
-    tag: "0.38.0" #Do not modify this line! RunController tag updated automatically
+    tag: "0.38.1" #Do not modify this line! RunController tag updated automatically
     pullPolicy: IfNotPresent
   resources:
     limits:
@@ -72,7 +72,7 @@ pipelineRuns:
       maxBufferSize: ~
       emitTimeoutMillis: ~
   jenkinsfileRunner:
-    image: "stewardci/stewardci-jenkinsfile-runner:231006_5085985"
+    image: "stewardci/stewardci-jenkinsfile-runner:231018_94c7e9a"
     imagePullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0

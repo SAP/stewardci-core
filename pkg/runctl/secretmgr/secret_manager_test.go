@@ -104,7 +104,7 @@ func Test_copyPipelineCloneSecretToRunNamespace_Success(t *testing.T) {
 	examinee.copyPipelineCloneSecretToRunNamespace(th.ctx, mockPipelineRun)
 }
 
-func Test_copyPipelineCloneSecretToRunNamespace_FailsWithContentErrorOnGetPipelineRepoServerURLError(t *testing.T) {
+func Test_copyPipelineCloneSecretToRunNamespace_FailsWithConfigErrorOnGetPipelineRepoServerURLError(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -119,7 +119,7 @@ func Test_copyPipelineCloneSecretToRunNamespace_FailsWithContentErrorOnGetPipeli
 	_, err := examinee.copyPipelineCloneSecretToRunNamespace(th.ctx, mockPipelineRun)
 	assert.Assert(t, err != nil)
 	assert.Equal(t, "err1", err.Error())
-	assert.Equal(t, stewardv1alpha1.ResultErrorContent, serrors.GetClass(err))
+	assert.Equal(t, stewardv1alpha1.ResultErrorConfig, serrors.GetClass(err))
 }
 
 func Test_copyPipelineSecretsToRunNamespace(t *testing.T) {
@@ -140,7 +140,7 @@ func Test_copyPipelineSecretsToRunNamespace(t *testing.T) {
 
 }
 
-func Test_copySecrets_FailsWithContentErrorOnNotFound(t *testing.T) {
+func Test_copySecrets_FailsWithConfigErrorOnNotFound(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -161,7 +161,7 @@ func Test_copySecrets_FailsWithContentErrorOnNotFound(t *testing.T) {
 	// VERIFY
 	assert.Assert(t, err != nil)
 	assert.Equal(t, "err1", err.Error())
-	assert.Equal(t, stewardv1alpha1.ResultErrorContent, serrors.GetClass(err))
+	assert.Equal(t, stewardv1alpha1.ResultErrorConfig, serrors.GetClass(err))
 }
 
 func Test_copySecrets_FailsWithInfraErrorOnOtherError(t *testing.T) {
