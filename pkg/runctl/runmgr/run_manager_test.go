@@ -1263,7 +1263,7 @@ func Test__runManager_addTektonTaskRunParamsForLoggingElasticsearch(t *testing.T
 	for _, test := range []struct {
 		name           string
 		spec           *stewardv1alpha1.PipelineSpec
-		expectedParams []tektonv1beta1.Param
+		expectedParams tektonv1beta1.Params
 		expectedError  error
 	}{
 		{
@@ -1276,7 +1276,7 @@ func Test__runManager_addTektonTaskRunParamsForLoggingElasticsearch(t *testing.T
 					},
 				},
 			},
-			expectedParams: []tektonv1beta1.Param{
+			expectedParams: tektonv1beta1.Params{
 				idParam,
 				tektonStringParam(TaskRunParamNameIndexURL, SampleURL),
 			},
@@ -1290,14 +1290,14 @@ func Test__runManager_addTektonTaskRunParamsForLoggingElasticsearch(t *testing.T
 					},
 				},
 			},
-			expectedParams: []tektonv1beta1.Param{
+			expectedParams: tektonv1beta1.Params{
 				idParam,
 			},
 		},
 		{
 			name: "no logging configured will set url to empty string",
 			spec: &stewardv1alpha1.PipelineSpec{},
-			expectedParams: []tektonv1beta1.Param{
+			expectedParams: tektonv1beta1.Params{
 				tektonStringParam(TaskRunParamNameIndexURL, ""),
 			},
 		},
@@ -1306,7 +1306,7 @@ func Test__runManager_addTektonTaskRunParamsForLoggingElasticsearch(t *testing.T
 			spec: &stewardv1alpha1.PipelineSpec{
 				Logging: &stewardv1alpha1.Logging{},
 			},
-			expectedParams: []tektonv1beta1.Param{
+			expectedParams: tektonv1beta1.Params{
 				tektonStringParam(TaskRunParamNameIndexURL, ""),
 			},
 		},
@@ -1466,12 +1466,12 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 	for _, tc := range []struct {
 		name                string
 		spec                *stewardv1alpha1.PipelineSpec
-		expectedAddedParams []tektonv1beta1.Param
+		expectedAddedParams tektonv1beta1.Params
 	}{
 		{
 			name: "empty",
 			spec: &stewardv1alpha1.PipelineSpec{},
-			expectedAddedParams: []tektonv1beta1.Param{
+			expectedAddedParams: tektonv1beta1.Params{
 				tektonStringParam("JFR_IMAGE", pipelineRunsConfigDefaultImage),
 				tektonStringParam("JFR_IMAGE_PULL_POLICY", pipelineRunsConfigDefaultPolicy),
 			},
@@ -1481,7 +1481,7 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 			spec: &stewardv1alpha1.PipelineSpec{
 				JenkinsfileRunner: &stewardv1alpha1.JenkinsfileRunnerSpec{},
 			},
-			expectedAddedParams: []tektonv1beta1.Param{
+			expectedAddedParams: tektonv1beta1.Params{
 				tektonStringParam("JFR_IMAGE", pipelineRunsConfigDefaultImage),
 				tektonStringParam("JFR_IMAGE_PULL_POLICY", pipelineRunsConfigDefaultPolicy),
 			},
@@ -1493,7 +1493,7 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 					Image: "foo",
 				},
 			},
-			expectedAddedParams: []tektonv1beta1.Param{
+			expectedAddedParams: tektonv1beta1.Params{
 				tektonStringParam("JFR_IMAGE", "foo"),
 				tektonStringParam("JFR_IMAGE_PULL_POLICY", "IfNotPresent"),
 			},
@@ -1505,7 +1505,7 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 					ImagePullPolicy: "bar",
 				},
 			},
-			expectedAddedParams: []tektonv1beta1.Param{
+			expectedAddedParams: tektonv1beta1.Params{
 				tektonStringParam("JFR_IMAGE", pipelineRunsConfigDefaultImage),
 				tektonStringParam("JFR_IMAGE_PULL_POLICY", pipelineRunsConfigDefaultPolicy),
 			},
@@ -1518,7 +1518,7 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 					ImagePullPolicy: "bar",
 				},
 			},
-			expectedAddedParams: []tektonv1beta1.Param{
+			expectedAddedParams: tektonv1beta1.Params{
 				tektonStringParam("JFR_IMAGE", "foo"),
 				tektonStringParam("JFR_IMAGE_PULL_POLICY", "bar"),
 			},
@@ -1536,7 +1536,7 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 			existingParam := tektonStringParam("AlreadyExistingParam1", "foo")
 			tektonTaskRun := tektonv1beta1.TaskRun{
 				Spec: tektonv1beta1.TaskRunSpec{
-					Params: []tektonv1beta1.Param{*existingParam.DeepCopy()},
+					Params: tektonv1beta1.Params{*existingParam.DeepCopy()},
 				},
 			}
 			runCtx := &runContext{
@@ -1551,7 +1551,7 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 			examinee.addTektonTaskRunParamsForJenkinsfileRunnerImage(runCtx, &tektonTaskRun)
 
 			// VERIFY
-			expectedParams := []tektonv1beta1.Param{existingParam}
+			expectedParams := tektonv1beta1.Params{existingParam}
 			expectedParams = append(expectedParams, tc.expectedAddedParams...)
 			assert.DeepEqual(t, expectedParams, tektonTaskRun.Spec.Params)
 		})

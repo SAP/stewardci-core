@@ -1,5 +1,4 @@
 //go:build opennet
-// +build opennet
 
 package networkpolicy
 

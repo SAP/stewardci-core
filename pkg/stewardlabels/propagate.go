@@ -17,12 +17,16 @@ A label value is enforced if the corresponding key in `labelSpec` is
 associated with a non-empty string value (empty values cannot be
 enforced).
 
-A value conflict exists for a label key if
-	a) the label value is enforced and the existing value at `sourceObj`
-	   differs from the enforced value, or
-	b) the label value is enforced and the exiting value at `destObj`
-	   differs from the enforced value, or
-    c) the existing values at `sourceObj` and `destObject` differ.
+A value conflict exists for a label key if:
+
+  - the label value is enforced and the existing value at `sourceObj`
+    differs from the enforced value, or
+
+  - the label value is enforced and the exiting value at `destObj`
+    differs from the enforced value, or
+
+  - the existing values at `sourceObj` and `destObject` differ.
+
 The empty string value is NOT treated specially, e.g. there's a conflict
 if `destObj` has a label set with value "foo" but `sourceObj` has the
 same label set with an empty string value.
