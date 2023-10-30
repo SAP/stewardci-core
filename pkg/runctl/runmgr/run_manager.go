@@ -2,7 +2,6 @@ package runmgr
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -614,7 +613,7 @@ func (c *runManager) addTektonTaskRunParamsForPipeline(
 	pipelineArgs := spec.Args
 	pipelineArgsJSON := "{}"
 	if pipelineArgs != nil {
-		if pipelineArgsJSON, err = toJSONString(&pipelineArgs); err != nil {
+		if pipelineArgsJSON, err = utils.ToJSONString(&pipelineArgs); err != nil {
 			return err
 		}
 	}
@@ -645,7 +644,7 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 			tektonStringParam("PIPELINE_LOG_ELASTICSEARCH_INDEX_URL", ""),
 		}
 	} else {
-		runIDJSON, err := toJSONString(&spec.Logging.Elasticsearch.RunID)
+		runIDJSON, err := utils.ToJSONString(&spec.Logging.Elasticsearch.RunID)
 		if err != nil {
 			return errors.WithMessage(err,
 				"could not serialize spec.logging.elasticsearch.runid to JSON",
@@ -828,14 +827,6 @@ func (c *runManager) deleteNamespace(ctx context.Context, name string, options m
 			return err
 		},
 	)
-}
-
-func toJSONString(value interface{}) (string, error) {
-	bytes, err := json.Marshal(value)
-	if err != nil {
-		return "", errors.Wrapf(err, "error while serializing to JSON: %v", err)
-	}
-	return string(bytes), nil
 }
 
 func tektonStringParam(name string, value string) tekton.Param {
