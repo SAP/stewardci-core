@@ -21,7 +21,7 @@ func ExtendContextLoggerWithPipelineRunInfo(ctx context.Context, pipelineRun *v1
 	if err != nil {
 		panic(err)
 	}
-	var customLoggingDetails []custom.LoggingDetailsProvider
+	var customLoggingDetails custom.LoggingDetailsProvider
 	config, err := cfg.FromContext(ctx)
 	if err == nil && config != nil {
 		customLoggingDetails = config.CustomLoggingDetails
@@ -34,12 +34,12 @@ func ExtendContextLoggerWithPipelineRunInfo(ctx context.Context, pipelineRun *v1
 // extendLoggerWithPipelineRunInfo attaches some data of the given pipelineRun
 // as values to the given logger. The enhanced logger is returned.
 // Panics if the given pipeline run is nil.
-func extendLoggerWithPipelineRunInfo(logger logr.Logger, pipelineRun *v1alpha1.PipelineRun, customLoggingDetails []custom.LoggingDetailsProvider) logr.Logger {
+func extendLoggerWithPipelineRunInfo(logger logr.Logger, pipelineRun *v1alpha1.PipelineRun, customLoggingDetails custom.LoggingDetailsProvider) logr.Logger {
 	kvs := getPipelineRunInfoForLogging(pipelineRun, customLoggingDetails)
 	return logger.WithValues(kvs...)
 }
 
-func getPipelineRunInfoForLogging(run *v1alpha1.PipelineRun, customLoggingDetails []custom.LoggingDetailsProvider) []interface{} {
+func getPipelineRunInfoForLogging(run *v1alpha1.PipelineRun, customLoggingDetails custom.LoggingDetailsProvider) []interface{} {
 	kvs := []interface{}{
 		"pipelineRun", klog.KObj(&run.ObjectMeta),
 		"pipelineRunUID", run.ObjectMeta.UID,
@@ -55,10 +55,8 @@ func getPipelineRunInfoForLogging(run *v1alpha1.PipelineRun, customLoggingDetail
 			"pipelineRunExecAuxNamespace", run.Status.AuxiliaryNamespace,
 		)
 	}
-
-	for _, accessor := range customLoggingDetails {
-		kvs = append(kvs, accessor(run)...)
+	if customLoggingDetails != nil {
+		kvs = append(kvs, customLoggingDetails(run)...)
 	}
-
 	return kvs
 }

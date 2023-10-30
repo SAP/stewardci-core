@@ -9,7 +9,7 @@ import (
 type LoggingDetailsProvider func(run *v1alpha1.PipelineRun) []any
 
 // ParseLoggingDetailsProvider returns a list of LoggingDetailsProviders created from a yaml string.
-func ParseLoggingDetailsProvider(strVal string) ([]LoggingDetailsProvider, error) {
+func ParseLoggingDetailsProvider(strVal string) (LoggingDetailsProvider, error) {
 	var configs = []pipelineRunAccessorConfig{}
 	if strVal != "" {
 		err := yaml.Unmarshal([]byte(strVal), &configs)
@@ -44,5 +44,17 @@ func ParseLoggingDetailsProvider(strVal string) ([]LoggingDetailsProvider, error
 			}
 		}
 	}
-	return accessors, nil
+
+	return MergeLoggingDetailsProviders(accessors...), nil
+}
+
+// MergeLoggingDetailsProviders merges any number of LoggingDetailsProvider functions to one
+func MergeLoggingDetailsProviders(providers ...LoggingDetailsProvider) LoggingDetailsProvider {
+	return func(run *v1alpha1.PipelineRun) []any {
+		result := []interface{}{}
+		for _, accessor := range providers {
+			result = append(result, accessor(run)...)
+		}
+		return result
+	}
 }

@@ -37,12 +37,7 @@ func Test_parseAccessors_success(t *testing.T) {
 
 	// VERIFY
 	assert.NilError(t, err)
-	assert.Equal(t, 2, len(result))
 
-	logDetails := result[0](run)
-	assert.DeepEqual(t, []any{"label1", "value1"}, logDetails)
-
-	logDetails = result[1](run)
-	assert.DeepEqual(t, []any{"label2", "value2"}, logDetails)
-
+	logDetails := result(run)
+	assert.DeepEqual(t, []any{"label1", "value1", "label2", "value2"}, logDetails)
 }

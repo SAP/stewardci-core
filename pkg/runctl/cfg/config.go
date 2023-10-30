@@ -59,7 +59,7 @@ type PipelineRunsConfigStruct struct {
 
 	// CustomLoggingDetails contains a map specifying additional keys for the structured logging.
 	// The value of each key is a PipelineRunAccessor to get the data to be logged.
-	CustomLoggingDetails []custom.LoggingDetailsProvider
+	CustomLoggingDetails custom.LoggingDetailsProvider
 
 	// JenkinsfileRunnerImage is the Jenkinsfile Runner container image to be
 	// used for pipeline runs.

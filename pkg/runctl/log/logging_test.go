@@ -224,7 +224,7 @@ func Test_ExtendContextLoggerWithPipelineRunInfo(t *testing.T) {
 
 	ld1, _ := custom.NewPipelineRunAnnotationAccessor(logKey1, custom.Spec{Key: annotationKey})
 	ld2, _ := custom.NewPipelineRunLabelAccessor(logKey2, custom.Spec{Key: labelKey})
-	loggingDetails := []custom.LoggingDetailsProvider{ld1, ld2}
+	loggingDetails := custom.MergeLoggingDetailsProviders(ld1, ld2)
 
 	expectedWithKVs := []interface{}{
 		"pipelineRun", klog.ObjectRef{Name: "run-2", Namespace: "run-namespace-2"},
