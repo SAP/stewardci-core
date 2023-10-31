@@ -1,5 +1,4 @@
 //go:build closednet
-// +build closednet
 
 package networkpolicy
 

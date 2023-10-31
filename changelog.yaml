@@ -69,7 +69,25 @@
         - secrets referenced by pipeline runs don't exist
         - multiple secrets map to the same name
         - the configured Jenkinsfile repo server URL is invalid
-      pullRequestNumber: 416
+      pullRequestNumber: 418
+
+    - type: internal
+      impact: patch
+      title: Upgrade Go SDK to v1.21.3
+      description: |-
+        Use Go SDK v1.21.3.
+      pullRequestNumber: 420
+
+    - type: internal
+      impact: patch
+      title: Update Go dependencies
+      description: |-
+        Updated all dependencies. Most important:
+
+        - Kybernetes to v1.26.10
+        - Tekton to v0.50.2
+        - knative.dev/pkg to release 1.12
+      pullRequestNumber: 420
 
 - version: "0.38.1"
   date: 2023-10-18

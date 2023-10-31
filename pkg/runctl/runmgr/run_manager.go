@@ -574,7 +574,7 @@ func (c *runManager) addTektonTaskRunParamsForJenkinsfileRunnerImage(
 			}
 		}
 	}
-	params := []tekton.Param{
+	params := tekton.Params{
 		tektonStringParam("JFR_IMAGE", image),
 		tektonStringParam("JFR_IMAGE_PULL_POLICY", imagePullPolicy),
 	}
@@ -588,7 +588,7 @@ func (c *runManager) addTektonTaskRunParamsForRunDetails(
 	spec := runCtx.pipelineRun.GetSpec()
 	details := spec.RunDetails
 	if details != nil {
-		params := []tekton.Param{}
+		params := tekton.Params{}
 		if details.JobName != "" {
 			params = append(params, tektonStringParam("JOB_NAME", details.JobName))
 		}
@@ -618,7 +618,7 @@ func (c *runManager) addTektonTaskRunParamsForPipeline(
 		}
 	}
 
-	params := []tekton.Param{
+	params := tekton.Params{
 		tektonStringParam("PIPELINE_GIT_URL", pipeline.URL),
 		tektonStringParam("PIPELINE_GIT_REVISION", pipeline.Revision),
 		tektonStringParam("PIPELINE_FILE", pipeline.Path),
@@ -634,10 +634,10 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 	tektonTaskRun *tekton.TaskRun,
 ) error {
 	spec := runCtx.pipelineRun.GetSpec()
-	var params []tekton.Param
+	var params tekton.Params
 
 	if spec.Logging == nil || spec.Logging.Elasticsearch == nil {
-		params = []tekton.Param{
+		params = tekton.Params{
 			// overide the index URL hardcoded in the template by
 			// the empty string to effective disable logging to
 			// Elasticsearch

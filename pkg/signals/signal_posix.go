@@ -1,5 +1,4 @@
 //go:build !windows
-// +build !windows
 
 /*
 Source: https://github.com/kubernetes/sample-controller/tree/master/pkg/signals

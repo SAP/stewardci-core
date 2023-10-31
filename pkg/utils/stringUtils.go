@@ -5,12 +5,12 @@ import (
 	"strings"
 )
 
-//Trim removes blanks
+// Trim removes blanks.
 func Trim(input string) (output string) {
 	return strings.Trim(input, " \t\n\r")
 }
 
-//ShortenMessage Removes line breaks and shortens the message
+// ShortenMessage removes line breaks and shortens the message.
 func ShortenMessage(message string, length int) (shortenedMessage string) {
 	if length < 3 {
 		length = 3
