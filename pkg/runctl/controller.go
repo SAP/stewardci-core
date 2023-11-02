@@ -437,7 +437,7 @@ func (c *Controller) handlePipelineRunFinalizerAndDeletion(
 	ctx, logger := log.ExtendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
 
 	if pipelineRun.GetStatus().State == api.StateFinished {
-		err := pipelineRun.DeleteFinalizerAndCommitIfExists(ctx)
+		err := c.finalizePipelineRun(ctx, pipelineRun)
 		return true, err
 	}
 
@@ -688,7 +688,8 @@ func (c *Controller) handlePipelineRunCleaning(
 	runManager run.Manager,
 	pipelineRun k8s.PipelineRun,
 ) (bool, error) {
-	ctx, logger := log.ExtendContextLoggerWithPipelineRunInfo(ctx, pipelineRun.GetAPIObject())
+	origCtx := ctx
+	ctx, logger := log.ExtendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
 
 	if pipelineRun.GetStatus().State == api.StateCleaning {
 		logger.V(3).Info("Cleaning up pipeline execution")
@@ -701,7 +702,8 @@ func (c *Controller) handlePipelineRunCleaning(
 		if err = c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateFinished, metav1.Now()); err != nil {
 			return true, err
 		}
-		if err = pipelineRun.DeleteFinalizerAndCommitIfExists(ctx); err != nil {
+		ctx, logger = extendContextLoggerWithPipelineRunInfo(origCtx, pipelineRun.GetAPIObject())
+		if err = c.finalizePipelineRun(ctx, pipelineRun); err != nil {
 			return true, err
 		}
 	}
@@ -760,7 +762,7 @@ func (c *Controller) updateStateAndResult(ctx context.Context, pipelineRun k8s.P
 	}
 	metrics.PipelineRunsResult.Observe(pipelineRun.GetStatus().Result)
 	if state == api.StateFinished {
-		return pipelineRun.DeleteFinalizerAndCommitIfExists(ctx)
+		return c.finalizePipelineRun(ctx, pipelineRun)
 	}
 	return nil
 }
@@ -847,4 +849,47 @@ func (c *Controller) addToWorkqueueFromAssociated(obj interface{}) {
 			"triggerObjectType", triggerObjectType,
 		)
 	}
+}
+
+func (c *Controller) finalizePipelineRun(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+
+	if !pipelineRun.HasFinalizer() {
+		return nil
+	}
+
+	err := pipelineRun.DeleteFinalizerAndCommitIfExists(ctx)
+	if err != nil {
+		return err
+	}
+
+	c.logFinalState(ctx, pipelineRun)
+
+	return nil
+}
+
+func (c *Controller) logFinalState(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+	status := pipelineRun.GetStatus()
+	spec := pipelineRun.GetSpec()
+	runID := "unknown"
+	if spec != nil && spec.Logging != nil && spec.Logging.Elasticsearch != nil {
+		err := error(nil)
+		runID, err = utils.ToJSONString(&spec.Logging.Elasticsearch.RunID)
+		if err != nil {
+			runID = "invalid"
+		}
+	}
+
+	logger := klog.FromContext(ctx)
+
+	logger.V(3).Info(
+		"Completed processing of pipeline run",
+		"intent", spec.Intent,
+		"loggingRunId", runID,
+		"startedAt", status.StartedAt,
+		"finishedAt", status.FinishedAt,
+		"result", status.Result,
+		"statusMessage", status.Message,
+		"stateHistory", status.StateHistory,
+	)
+	return nil
 }

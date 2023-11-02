@@ -60,6 +60,14 @@
         The configuration is done in 'customLoggingDetails'
       pullRequestNumber: 406
 
+    - type: enhancement
+      impact: minor
+      title: Add logging of pipeline run final state
+      description: |-
+        Log result, namespace, run id etc. for completed pipeline runs.
+      pullRequestNumber: 415
+      jiraIssueNumber: 1576
+
     - type: bug
       impact: patch
       title: Use result 'error_config' instead of 'error_content'
