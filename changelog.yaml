@@ -97,6 +97,13 @@
         - knative.dev/pkg to release 1.12
       pullRequestNumber: 420
 
+    - type: internal
+      impact: patch
+      title: Tweak container build
+      description: |-
+        Small improvements to container build files.
+      pullRequestNumber: 421
+
 - version: "0.38.1"
   date: 2023-10-18
   changes:
