@@ -6,8 +6,8 @@ import (
 
 	logrtesting "github.com/SAP/stewardci-core/internal/logr/testing"
 	api "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	"github.com/SAP/stewardci-core/pkg/k8s/fake"
 	"github.com/SAP/stewardci-core/pkg/runctl/cfg"
-	"github.com/SAP/stewardci-core/pkg/runctl/log/custom"
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/gomega"
@@ -201,19 +201,13 @@ func Test_extendLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) {
 
 func Test_ExtendContextLoggerWithPipelineRunInfo(t *testing.T) {
 	// SETUP
-	const (
-		annotationKey = "annotationKey"
-		labelKey      = "labelKey"
-		logKey1       = "key1"
-		logKey2       = "key2"
-	)
+	g := NewGomegaWithT(t)
+
 	pipelineRun := &api.PipelineRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        "run-2",
-			Namespace:   "run-namespace-2",
-			UID:         k8sapitypes.UID("uid-2"),
-			Annotations: map[string]string{annotationKey: "annotationValue1"},
-			Labels:      map[string]string{labelKey: "labelValue1"},
+			Name:      "run-2",
+			Namespace: "run-namespace-2",
+			UID:       k8sapitypes.UID("uid-2"),
 		},
 		Status: api.PipelineStatus{
 			State:              api.StatePreparing,
@@ -222,9 +216,13 @@ func Test_ExtendContextLoggerWithPipelineRunInfo(t *testing.T) {
 		},
 	}
 
-	ld1, _ := custom.NewPipelineRunAnnotationAccessor(logKey1, custom.Spec{Key: annotationKey})
-	ld2, _ := custom.NewPipelineRunLabelAccessor(logKey2, custom.Spec{Key: labelKey})
-	loggingDetails := custom.MergeLoggingDetailsProviders(ld1, ld2)
+	customLoggingDetails := func(pipelineRunPassed *api.PipelineRun) []any {
+		g.Expect(pipelineRunPassed).To(BeIdenticalTo(pipelineRun))
+		return []any{
+			"custom2", "custom2Value",
+			"custom1", "custom1Value",
+		}
+	}
 
 	expectedWithKVs := []interface{}{
 		"pipelineRun", klog.ObjectRef{Name: "run-2", Namespace: "run-namespace-2"},
@@ -232,11 +230,10 @@ func Test_ExtendContextLoggerWithPipelineRunInfo(t *testing.T) {
 		"pipelineRunState", api.StatePreparing,
 		"pipelineRunExecNamespace", "exec-namespace-2",
 		"pipelineRunExecAuxNamespace", "exec-aux-namespace-2",
-		logKey1, "annotationValue1",
-		logKey2, "labelValue1",
+		"custom2", "custom2Value",
+		"custom1", "custom1Value",
 	}
 
-	g := NewGomegaWithT(t)
 	mockCtrl := gomock.NewController(t)
 
 	origSink := logrtesting.NewMockLogSink(mockCtrl)
@@ -258,8 +255,9 @@ func Test_ExtendContextLoggerWithPipelineRunInfo(t *testing.T) {
 	baseCtxValue := 94586724935743
 	baseCtx := context.WithValue(context.Background(), baseCtxKey{}, baseCtxValue)
 	ctx := logr.NewContext(baseCtx, logger)
+
 	config := &cfg.PipelineRunsConfigStruct{
-		CustomLoggingDetails: loggingDetails,
+		CustomLoggingDetails: customLoggingDetails,
 	}
 	ctx = cfg.NewContextWithConfig(ctx, config)
 
@@ -277,7 +275,7 @@ func Test_ExtendContextLoggerWithPipelineRunInfo(t *testing.T) {
 	g.Expect(resultLogger.GetSink()).To(BeIdenticalTo(newSink))
 }
 
-func Test_extendContextLoggerWithPipelineRunInfo_ContextIsNil(t *testing.T) {
+func Test_ExtendContextLoggerWithPipelineRunInfo_ContextIsNil(t *testing.T) {
 	// SETUP
 	g := NewGomegaWithT(t)
 
@@ -304,7 +302,7 @@ func Test_extendContextLoggerWithPipelineRunInfo_ContextIsNil(t *testing.T) {
 	)
 }
 
-func Test_extendContextLoggerWithPipelineRunInfo_ContextHasNoLogger(t *testing.T) {
+func Test_ExtendContextLoggerWithPipelineRunInfo_ContextHasNoLogger(t *testing.T) {
 	// SETUP
 	g := NewGomegaWithT(t)
 
@@ -331,7 +329,133 @@ func Test_extendContextLoggerWithPipelineRunInfo_ContextHasNoLogger(t *testing.T
 	)
 }
 
-func Test_extendContextLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) {
+func Test_ExtendContextLoggerWithPipelineRunInfo_ContextHasNoConfig(t *testing.T) {
+	// SETUP
+	g := NewGomegaWithT(t)
+
+	pipelineRun := &api.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "run-2",
+			Namespace: "run-namespace-2",
+			UID:       k8sapitypes.UID("uid-2"),
+		},
+		Status: api.PipelineStatus{
+			State:              api.StatePreparing,
+			Namespace:          "exec-namespace-2",
+			AuxiliaryNamespace: "exec-aux-namespace-2",
+		},
+	}
+
+	expectedWithKVs := []interface{}{
+		"pipelineRun", klog.ObjectRef{Name: "run-2", Namespace: "run-namespace-2"},
+		"pipelineRunUID", k8sapitypes.UID("uid-2"),
+		"pipelineRunState", api.StatePreparing,
+		"pipelineRunExecNamespace", "exec-namespace-2",
+		"pipelineRunExecAuxNamespace", "exec-aux-namespace-2",
+	}
+
+	mockCtrl := gomock.NewController(t)
+
+	origSink := logrtesting.NewMockLogSink(mockCtrl)
+	newSink := logrtesting.NewMockLogSink(mockCtrl)
+
+	gomock.InOrder(
+		origSink.EXPECT().Init(gomock.Any()),
+		origSink.EXPECT().WithValues(gomock.Any()).DoAndReturn(
+			func(args ...interface{}) logr.LogSink {
+				g.Expect(args).To(HaveExactElements(expectedWithKVs...))
+				return newSink
+			},
+		),
+	)
+
+	logger := logr.New(origSink)
+
+	type baseCtxKey struct{}
+	baseCtxValue := 94586724935743
+	baseCtx := context.WithValue(context.Background(), baseCtxKey{}, baseCtxValue)
+	ctx := logr.NewContext(baseCtx, logger)
+	// ctx does NOT carry a pipeline runs config
+
+	// EXERCISE
+	resultCtx, resultLogger := ExtendContextLoggerWithPipelineRunInfo(
+		ctx, pipelineRun,
+	)
+
+	// VERIFY
+	g.Expect(resultCtx).NotTo(BeIdenticalTo(ctx))
+	g.Expect(logr.FromContext(resultCtx)).To(BeIdenticalTo(resultLogger))
+	g.Expect(resultCtx.Value(baseCtxKey{})).To(BeIdenticalTo(baseCtxValue))
+
+	g.Expect(resultLogger).NotTo(BeIdenticalTo(logger))
+	g.Expect(resultLogger.GetSink()).To(BeIdenticalTo(newSink))
+}
+
+func Test_ExtendContextLoggerWithPipelineRunInfo_ErrorGettingConfigFromContext(t *testing.T) {
+	// SETUP
+	g := NewGomegaWithT(t)
+
+	pipelineRun := &api.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "run-2",
+			Namespace: "run-namespace-2",
+			UID:       k8sapitypes.UID("uid-2"),
+		},
+		Status: api.PipelineStatus{
+			State:              api.StatePreparing,
+			Namespace:          "exec-namespace-2",
+			AuxiliaryNamespace: "exec-aux-namespace-2",
+		},
+	}
+
+	expectedWithKVs := []interface{}{
+		"pipelineRun", klog.ObjectRef{Name: "run-2", Namespace: "run-namespace-2"},
+		"pipelineRunUID", k8sapitypes.UID("uid-2"),
+		"pipelineRunState", api.StatePreparing,
+		"pipelineRunExecNamespace", "exec-namespace-2",
+		"pipelineRunExecAuxNamespace", "exec-aux-namespace-2",
+	}
+
+	mockCtrl := gomock.NewController(t)
+
+	origSink := logrtesting.NewMockLogSink(mockCtrl)
+	newSink := logrtesting.NewMockLogSink(mockCtrl)
+
+	gomock.InOrder(
+		origSink.EXPECT().Init(gomock.Any()),
+		origSink.EXPECT().WithValues(gomock.Any()).DoAndReturn(
+			func(args ...interface{}) logr.LogSink {
+				g.Expect(args).To(HaveExactElements(expectedWithKVs...))
+				return newSink
+			},
+		),
+	)
+
+	logger := logr.New(origSink)
+
+	type baseCtxKey struct{}
+	baseCtxValue := 94586724935743
+	baseCtx := context.WithValue(context.Background(), baseCtxKey{}, baseCtxValue)
+	ctx := logr.NewContext(baseCtx, logger)
+
+	mockClientFactory := fake.NewClientFactory( /* no objects -> error loading config */ )
+	ctx = cfg.NewContext(ctx, mockClientFactory)
+
+	// EXERCISE
+	resultCtx, resultLogger := ExtendContextLoggerWithPipelineRunInfo(
+		ctx, pipelineRun,
+	)
+
+	// VERIFY
+	g.Expect(resultCtx).NotTo(BeIdenticalTo(ctx))
+	g.Expect(logr.FromContext(resultCtx)).To(BeIdenticalTo(resultLogger))
+	g.Expect(resultCtx.Value(baseCtxKey{})).To(BeIdenticalTo(baseCtxValue))
+
+	g.Expect(resultLogger).NotTo(BeIdenticalTo(logger))
+	g.Expect(resultLogger.GetSink()).To(BeIdenticalTo(newSink))
+}
+
+func Test_ExtendContextLoggerWithPipelineRunInfo_PipelineRunIsNil(t *testing.T) {
 	// SETUP
 	g := NewGomegaWithT(t)
 	mockCtrl := gomock.NewController(t)

@@ -8,36 +8,38 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func Test_NewPipelineRunLabelAccessor(t *testing.T) {
+func Test_newLabelProvider(t *testing.T) {
 	t.Parallel()
+
 	const logKey = "logKey1"
+
 	for _, tc := range []struct {
 		name     string
-		spec     Spec
+		spec     providerSpec
 		labels   map[string]string
 		expected string
 	}{
 		{
 			name:     "success",
-			spec:     Spec{Key: "key1"},
+			spec:     providerSpec{Key: "key1"},
 			labels:   map[string]string{"key1": "value1"},
 			expected: "value1",
 		},
 		{
 			name:     "no labels",
-			spec:     Spec{Key: "key1"},
+			spec:     providerSpec{Key: "key1"},
 			labels:   nil,
 			expected: "",
 		},
 		{
 			name:     "empty labels",
-			spec:     Spec{Key: "key1"},
+			spec:     providerSpec{Key: "key1"},
 			labels:   map[string]string{},
 			expected: "",
 		},
 		{
 			name:     "unknown key",
-			spec:     Spec{Key: "key_unknown"},
+			spec:     providerSpec{Key: "key_unknown"},
 			labels:   map[string]string{"key1": "value1"},
 			expected: "",
 		},
@@ -45,6 +47,7 @@ func Test_NewPipelineRunLabelAccessor(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc := tc // capture current value before going parallel
 			t.Parallel()
+
 			// SETUP
 			run := &api.PipelineRun{
 				ObjectMeta: metav1.ObjectMeta{
@@ -52,7 +55,7 @@ func Test_NewPipelineRunLabelAccessor(t *testing.T) {
 				},
 			}
 
-			examinee, err := NewPipelineRunLabelAccessor(logKey, tc.spec)
+			examinee, err := newLabelProvider(logKey, tc.spec)
 			assert.NilError(t, err)
 
 			// EXERCISE

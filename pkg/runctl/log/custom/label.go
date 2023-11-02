@@ -6,9 +6,11 @@ import (
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 )
 
-// NewPipelineRunLabelAccessor creates a new PipelineRunAccessor to access
-// the label with the provided key
-func NewPipelineRunLabelAccessor(logKey string, spec Spec) (LoggingDetailsProvider, error) {
+func init() {
+	providerRegistry[providerKindLabel] = newLabelProvider
+}
+
+func newLabelProvider(logKey string, spec providerSpec) (LoggingDetailsProvider, error) {
 	if logKey == "" || spec.Key == "" {
 		return nil, fmt.Errorf("logKey and spec.key must not be nil")
 	}

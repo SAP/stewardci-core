@@ -10,7 +10,7 @@ import (
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/featureflag"
 	"github.com/SAP/stewardci-core/pkg/k8s"
-	"github.com/SAP/stewardci-core/pkg/runctl/log/custom"
+	customlog "github.com/SAP/stewardci-core/pkg/runctl/log/custom"
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,9 +57,9 @@ type PipelineRunsConfigStruct struct {
 	// If empty, no resource quota will be defined.
 	ResourceQuota string
 
-	// CustomLoggingDetails contains a map specifying additional keys for the structured logging.
-	// The value of each key is a PipelineRunAccessor to get the data to be logged.
-	CustomLoggingDetails custom.LoggingDetailsProvider
+	// CustomLoggingDetails refers to a function that provides custom logging
+	// details extracted from a pipeline run object.
+	CustomLoggingDetails customlog.LoggingDetailsProvider
 
 	// JenkinsfileRunnerImage is the Jenkinsfile Runner container image to be
 	// used for pipeline runs.
@@ -227,9 +227,9 @@ func processMainConfig(configData configDataMap, dest *PipelineRunsConfigStruct)
 
 	var err error
 
-	loggingDetailsString := configData[mainConfigKeyCustomLoggingDetails]
+	loggingDetailsConfigString := configData[mainConfigKeyCustomLoggingDetails]
 	if dest.CustomLoggingDetails, err =
-		custom.ParseLoggingDetailsProvider(loggingDetailsString); err != nil {
+		customlog.GetLoggingDetailsProvider(loggingDetailsConfigString); err != nil {
 		return err
 	}
 

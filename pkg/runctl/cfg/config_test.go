@@ -16,6 +16,7 @@ import (
 	corev1clientmocks "github.com/SAP/stewardci-core/pkg/k8s/mocks/client-go/corev1"
 	"github.com/SAP/stewardci-core/pkg/utils"
 	gomock "github.com/golang/mock/gomock"
+	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	"gotest.tools/v3/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -29,7 +30,7 @@ func init() {
 	os.Setenv(system.NamespaceEnvKey, testSystemNamespaceName)
 }
 
-func Test_loadPipelineRunsConfig_NoMainConfig(t *testing.T) {
+func Test_LoadPipelineRunsConfig_NoMainConfig(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -56,7 +57,7 @@ func Test_loadPipelineRunsConfig_NoMainConfig(t *testing.T) {
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
 
-func Test_loadPipelineRunsConfig_EmptyMainConfig(t *testing.T) {
+func Test_LoadPipelineRunsConfig_EmptyMainConfig(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -83,13 +84,14 @@ func Test_loadPipelineRunsConfig_EmptyMainConfig(t *testing.T) {
 	assert.DeepEqual(t, expectedConfig, resultConfig)
 }
 
-func Test_loadPipelineRunsConfig_NoNetworkConfig(t *testing.T) {
+func Test_LoadPipelineRunsConfig_NoNetworkConfig(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		newMainConfigMap(nil),
+		/* no network configmap defined here */
 	)
 
 	// EXERCISE
@@ -100,7 +102,7 @@ func Test_loadPipelineRunsConfig_NoNetworkConfig(t *testing.T) {
 	assert.Assert(t, resultConfig == nil)
 }
 
-func Test_loadPipelineRunsConfig_EmptyNetworkConfig(t *testing.T) {
+func Test_LoadPipelineRunsConfig_EmptyNetworkConfig(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -117,7 +119,7 @@ func Test_loadPipelineRunsConfig_EmptyNetworkConfig(t *testing.T) {
 	assert.Assert(t, resultConfig == nil)
 }
 
-func Test_loadPipelineRunsConfig_ErrorOnGetMainConfigMap(t *testing.T) {
+func Test_LoadPipelineRunsConfig_ErrorOnGetMainConfigMap(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -147,7 +149,7 @@ func Test_loadPipelineRunsConfig_ErrorOnGetMainConfigMap(t *testing.T) {
 	assert.Assert(t, resultConfig == nil)
 }
 
-func Test_loadPipelineRunsConfig_ErrorOnGetNetworkPoliciesConfigMap(t *testing.T) {
+func Test_LoadPipelineRunsConfig_ErrorOnGetNetworkPoliciesConfigMap(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -181,27 +183,30 @@ func Test_loadPipelineRunsConfig_ErrorOnGetNetworkPoliciesConfigMap(t *testing.T
 	assert.Assert(t, resultConfig == nil)
 }
 
-func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
+func Test_LoadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
+	g := NewGomegaWithT(t)
+
 	ctx := context.Background()
 	cf := fake.NewClientFactory(
 		newMainConfigMap(
 			map[string]string{
-				"_example":                       "exampleString",
-				mainConfigKeyLimitRange:          "limitRange1",
-				mainConfigKeyResourceQuota:       "resourceQuota1",
-				mainConfigKeyPSCRunAsUser:        "1111",
-				mainConfigKeyPSCRunAsGroup:       "2222",
-				mainConfigKeyPSCFSGroup:          "3333",
-				mainConfigKeyTimeout:             "4444m",
-				mainConfigKeyTimeoutWait:         "555m",
-				mainConfigKeyImage:               "jfrImage1",
-				mainConfigKeyImagePullPolicy:     "jfrImagePullPolicy1",
-				mainConfigKeyTektonTaskName:      "taskName1",
-				mainConfigKeyTektonTaskNamespace: "taskNamespace1",
-				"someKeyThatShouldBeIgnored":     "34957349",
+				"_example":                        "exampleString",
+				mainConfigKeyLimitRange:           "limitRange1",
+				mainConfigKeyResourceQuota:        "resourceQuota1",
+				mainConfigKeyPSCRunAsUser:         "1111",
+				mainConfigKeyPSCRunAsGroup:        "2222",
+				mainConfigKeyPSCFSGroup:           "3333",
+				mainConfigKeyTimeout:              "4444m",
+				mainConfigKeyTimeoutWait:          "555m",
+				mainConfigKeyImage:                "jfrImage1",
+				mainConfigKeyImagePullPolicy:      "jfrImagePullPolicy1",
+				mainConfigKeyTektonTaskName:       "taskName1",
+				mainConfigKeyTektonTaskNamespace:  "taskNamespace1",
+				mainConfigKeyCustomLoggingDetails: "[{logKey: logKey1, kind: label, spec: {key: label1}}]",
+				"someKeyThatShouldBeIgnored":      "34957349",
 			},
 		),
 		newNetworkPolicyConfigMap(map[string]string{
@@ -217,7 +222,11 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 	resultConfig, resultErr := LoadPipelineRunsConfig(ctx, cf)
 
 	// VERIFY
-	assert.NilError(t, resultErr)
+	g.Expect(resultErr).NotTo(HaveOccurred())
+
+	g.Expect(resultConfig.CustomLoggingDetails).NotTo(BeNil())
+	resultConfig.CustomLoggingDetails = nil
+
 	expectedConfig := &PipelineRunsConfigStruct{
 		Timeout:                          utils.Metav1Duration(time.Minute * 4444),
 		TimeoutWait:                      utils.Metav1Duration(time.Minute * 555),
@@ -238,38 +247,10 @@ func Test_loadPipelineRunsConfig_CompleteConfig(t *testing.T) {
 		TektonTaskName:      "taskName1",
 		TektonTaskNamespace: "taskNamespace1",
 	}
-	assert.DeepEqual(t, expectedConfig, resultConfig)
+	g.Expect(resultConfig).To(Equal(expectedConfig))
 }
 
-func Test_withRecoverablility(t *testing.T) {
-	t.Parallel()
-
-	errFoo := fmt.Errorf("foo")
-
-	for _, tc := range []struct {
-		name                                  string
-		flag, infraError, expectedRecoverable bool
-	}{
-		{"retry_off_no_infra_error", false, false, false},
-		{"retry_off_infra_error", false, true, true},
-		{"retry_on_no_infra_error", true, false, true},
-		{"retry_on_infra_error", true, true, true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-
-			// SETUP
-			defer featureflagtesting.WithFeatureFlag(featureflag.RetryOnInvalidPipelineRunsConfig, tc.flag)()
-
-			// EXERCISE
-			resultErr := withRecoverability(errFoo, tc.infraError)
-
-			// VERIFY
-			assert.Assert(t, serrors.IsRecoverable(resultErr) == tc.expectedRecoverable)
-		})
-	}
-}
-
-func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
+func Test_LoadPipelineRunsConfig_InvalidValues(t *testing.T) {
 	t.Parallel()
 
 	for i, tc := range []struct {
@@ -311,6 +292,34 @@ func Test_loadPipelineRunsConfig_InvalidValues(t *testing.T) {
 			// VERIFY
 			assert.Assert(t, resultErr != nil)
 			assert.Assert(t, resultConfig == nil)
+		})
+	}
+}
+
+func Test_withRecoverablility(t *testing.T) {
+	t.Parallel()
+
+	errFoo := fmt.Errorf("foo")
+
+	for _, tc := range []struct {
+		name                                  string
+		flag, infraError, expectedRecoverable bool
+	}{
+		{"retry_off_no_infra_error", false, false, false},
+		{"retry_off_infra_error", false, true, true},
+		{"retry_on_no_infra_error", true, false, true},
+		{"retry_on_infra_error", true, true, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+
+			// SETUP
+			defer featureflagtesting.WithFeatureFlag(featureflag.RetryOnInvalidPipelineRunsConfig, tc.flag)()
+
+			// EXERCISE
+			resultErr := withRecoverability(errFoo, tc.infraError)
+
+			// VERIFY
+			assert.Assert(t, serrors.IsRecoverable(resultErr) == tc.expectedRecoverable)
 		})
 	}
 }

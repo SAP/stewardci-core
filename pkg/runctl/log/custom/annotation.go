@@ -6,9 +6,11 @@ import (
 	"github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
 )
 
-// NewPipelineRunAnnotationAccessor creates a new PipelineRunAccessor to access
-// the annotation with the provided key
-func NewPipelineRunAnnotationAccessor(logKey string, spec Spec) (LoggingDetailsProvider, error) {
+func init() {
+	providerRegistry[providerKindAnnotation] = newAnnotationProvider
+}
+
+func newAnnotationProvider(logKey string, spec providerSpec) (LoggingDetailsProvider, error) {
 	if logKey == "" || spec.Key == "" {
 		return nil, fmt.Errorf("logKey and spec.key must not be nil")
 	}
