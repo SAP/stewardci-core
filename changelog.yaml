@@ -51,14 +51,16 @@
 - version: NEXT
   date: TBD
   changes:
+
     - type: enhancement
       impact: minor
-      title: Improve logging capabilities
+      title: Add custom logging details
       description: |-
-        With this change a new configuration is introduced to extend the logging capabilities.
-        You can specify additional keys for the structured logging related to pipeline-runs.
-        The configuration is done in 'customLoggingDetails'
-      pullRequestNumber: 406
+        Allow to configure additional log attributes to be set from pipeline
+        run labels and annotations.
+
+        See the chart README for details.
+      pullRequestNumber: 412
 
     - type: enhancement
       impact: minor
