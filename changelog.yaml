@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.39.0"
+  date: 2023-11-03
+  changes:
+
     - type: enhancement
       impact: minor
       title: Add custom logging details
