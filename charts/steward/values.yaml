@@ -36,6 +36,8 @@ runController:
   affinity: {}
   tolerations: []
   podSecurityPolicyName: ""
+  logging:
+    customLoggingDetails: []
 
 imagePullSecrets: []
 
@@ -71,6 +73,7 @@ pipelineRuns:
       flushAttemptIntervalMillis: ~
       maxBufferSize: ~
       emitTimeoutMillis: ~
+
   jenkinsfileRunner:
     image: "stewardci/stewardci-jenkinsfile-runner:231018_94c7e9a"
     imagePullPolicy: IfNotPresent

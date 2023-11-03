@@ -118,6 +118,74 @@ The tables in the following sections list the configurable parameters of the Ste
 | <code>runController.<wbr/><b>args.<wbr/>heartbeatLogLevel</b></code><br/><i>bool</i> |  The log level to be used for controller heartbeats. | `3` |
 | <code>runController.<wbr/><b>args.<wbr/>k8sAPIRequestTimeout</b></code><br/><i>[duration][type-duration]</i> | The timeout for Kubernetes API requests. A value of zero means no timeout. If empty, a default timeout will be applied. | empty |
 | <code>runController.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by the run controller. If empty, a default pod security policy will be created. | empty |
+| <code>runController.<wbr/>logging.<wbr/><b>customLoggingDetails</b></code><br/><i>list</i> | Define a list of log detail providers. See example below.| {} |
+
+##### Custom Logging Details
+
+The custom logging details can be defined at `runController.logging.customLoggingDetails`.
+The content is a list, where each entry defines a log detail provider.
+A log provider definition consists of a map with keys: `logKey`, `kind` and `spec`.
+The `logKey` is used as label for the structured logging. The `kind` defines the used provider.
+The `spec` depends on the used kind.
+The available providers are described below:
+
+##### Annotation provider
+
+The annotation provider is used to access annotations in the metadata section of a pipeline run.
+For this `kind: annotation` is used. In the spec a `key` to access the annotation must be defined.
+
+```yaml
+runController:
+  logging:
+    customLoggingDetails:
+    - logKey: customLogKey1
+      kind: annotation
+      spec:
+        key: foo.bar.annotationKey1
+```
+
+With a pipelineRuns metadata:
+
+```yaml
+metadata:
+  annotations:
+    foo.bar.annotationKey1: annotationValue
+```
+
+This would result in the following additional log entry for a pipeline run related log:
+
+```yaml
+customLogKey1: annotationValue
+```
+
+##### Label provider
+
+The label provider is used to access labels in the metadata section of a pipeline run.
+For this `kind: label` is used.  In the spec a `key` to access the label must be defined.
+
+```yaml
+runController:
+  logging:
+    customLoggingDetails:
+    - logKey: customLogKey1
+      kind: label
+      spec:
+        key: foo.bar.labelKey1
+```
+
+With a pipelineRuns metadata:
+
+```yaml
+metadata:
+  labels:
+    foo.bar.labelKey1: labelValue
+```
+
+This would result in the following additional log entries for a pipeline run related log:
+
+```yaml
+customLogKey2: labelValue
+```
 
 Common parameters:
 

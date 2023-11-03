@@ -54,6 +54,16 @@
 
     - type: enhancement
       impact: minor
+      title: Add custom logging details
+      description: |-
+        Allow to configure additional log attributes to be set from pipeline
+        run labels and annotations.
+
+        See the chart README for details.
+      pullRequestNumber: 412
+
+    - type: enhancement
+      impact: minor
       title: Add logging of pipeline run final state
       description: |-
         Log result, namespace, run id etc. for completed pipeline runs.

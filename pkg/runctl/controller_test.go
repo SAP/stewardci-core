@@ -31,6 +31,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2/ktesting"
 	"knative.dev/pkg/apis"
+
+	_ "knative.dev/pkg/system/testing"
 )
 
 func Test_meterAllPipelineRunsPeriodic(t *testing.T) {
@@ -647,7 +649,9 @@ func Test_Controller_syncHandler_mock(t *testing.T) {
 				currentStatus: api.PipelineStatus{
 					State: api.StateWaiting,
 				},
-				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {},
+				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
+					rm.EXPECT().GetRun(gomock.Any(), gomock.Any()).Return(nil, nil)
+				},
 				loadPipelineRunsConfigStub: func(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error) {
 					return nil, error1
 				},

@@ -10,6 +10,7 @@ import (
 	serrors "github.com/SAP/stewardci-core/pkg/errors"
 	"github.com/SAP/stewardci-core/pkg/featureflag"
 	"github.com/SAP/stewardci-core/pkg/k8s"
+	customlog "github.com/SAP/stewardci-core/pkg/runctl/log/custom"
 	"github.com/pkg/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,18 +18,19 @@ import (
 )
 
 const (
-	mainConfigMapName                = "steward-pipelineruns"
-	mainConfigKeyTimeout             = "timeout"
-	mainConfigKeyTimeoutWait         = "waitTimeout"
-	mainConfigKeyLimitRange          = "limitRange"
-	mainConfigKeyResourceQuota       = "resourceQuota"
-	mainConfigKeyImage               = "jenkinsfileRunner.image"
-	mainConfigKeyImagePullPolicy     = "jenkinsfileRunner.imagePullPolicy"
-	mainConfigKeyPSCRunAsUser        = "jenkinsfileRunner.podSecurityContext.runAsUser"
-	mainConfigKeyPSCRunAsGroup       = "jenkinsfileRunner.podSecurityContext.runAsGroup"
-	mainConfigKeyPSCFSGroup          = "jenkinsfileRunner.podSecurityContext.fsGroup"
-	mainConfigKeyTektonTaskName      = "tektonTaskName"
-	mainConfigKeyTektonTaskNamespace = "tektonTaskNamespace"
+	mainConfigMapName                 = "steward-pipelineruns"
+	mainConfigKeyTimeout              = "timeout"
+	mainConfigKeyTimeoutWait          = "waitTimeout"
+	mainConfigKeyLimitRange           = "limitRange"
+	mainConfigKeyResourceQuota        = "resourceQuota"
+	mainConfigKeyCustomLoggingDetails = "customLoggingDetails"
+	mainConfigKeyImage                = "jenkinsfileRunner.image"
+	mainConfigKeyImagePullPolicy      = "jenkinsfileRunner.imagePullPolicy"
+	mainConfigKeyPSCRunAsUser         = "jenkinsfileRunner.podSecurityContext.runAsUser"
+	mainConfigKeyPSCRunAsGroup        = "jenkinsfileRunner.podSecurityContext.runAsGroup"
+	mainConfigKeyPSCFSGroup           = "jenkinsfileRunner.podSecurityContext.fsGroup"
+	mainConfigKeyTektonTaskName       = "tektonTaskName"
+	mainConfigKeyTektonTaskNamespace  = "tektonTaskNamespace"
 
 	networkPoliciesConfigMapName    = "steward-pipelineruns-network-policies"
 	networkPoliciesConfigKeyDefault = "_default"
@@ -54,6 +56,10 @@ type PipelineRunsConfigStruct struct {
 	// applied to each pipeline run sandbox namespace.
 	// If empty, no resource quota will be defined.
 	ResourceQuota string
+
+	// CustomLoggingDetails refers to a function that provides custom logging
+	// details extracted from a pipeline run object.
+	CustomLoggingDetails customlog.LoggingDetailsProvider
 
 	// JenkinsfileRunnerImage is the Jenkinsfile Runner container image to be
 	// used for pipeline runs.
@@ -220,6 +226,12 @@ func processMainConfig(configData configDataMap, dest *PipelineRunsConfigStruct)
 	dest.TektonTaskNamespace = configData[mainConfigKeyTektonTaskNamespace]
 
 	var err error
+
+	loggingDetailsConfigString := configData[mainConfigKeyCustomLoggingDetails]
+	if dest.CustomLoggingDetails, err =
+		customlog.GetLoggingDetailsProvider(loggingDetailsConfigString); err != nil {
+		return err
+	}
 
 	if dest.Timeout, err =
 		configData.parseDuration(mainConfigKeyTimeout); err != nil {

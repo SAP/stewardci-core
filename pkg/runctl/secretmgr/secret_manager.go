@@ -92,9 +92,9 @@ func (s SecretManager) copyPipelineSecretsToRunNamespace(ctx context.Context, pi
 }
 
 func (s SecretManager) copySecrets(ctx context.Context, pipelineRun k8s.PipelineRun, secretNames []string, filter secrets.SecretFilter, transformers ...secrets.SecretTransformer) ([]string, error) {
-	logger := klog.FromContext(ctx)
 	storedSecretNames, err := s.secretHelper.CopySecrets(ctx, secretNames, filter, transformers...)
 	if err != nil {
+		logger := klog.FromContext(ctx)
 		logger.Error(err, "Could not copy secrets", "secrets", secretNames)
 		if s.secretHelper.IsNotFound(err) || k8serrors.IsInvalid(err) || k8serrors.IsAlreadyExists(err) {
 			err = serrors.Classify(err, v1alpha1.ResultErrorConfig)
