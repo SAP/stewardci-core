@@ -52,6 +52,13 @@
   date: TBD
   changes:
 
+    - type: bug
+      impact: patch
+      title: Fix error detected by checkmarx tool
+      description: |-
+        Remove redundant error from logFinalState function
+      pullRequestNumber: 423
+
 - version: "0.39.0"
   date: 2023-11-03
   changes:
