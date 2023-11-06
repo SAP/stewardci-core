@@ -867,7 +867,7 @@ func (c *Controller) finalizePipelineRun(ctx context.Context, pipelineRun k8s.Pi
 	return nil
 }
 
-func (c *Controller) logFinalState(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+func (c *Controller) logFinalState(ctx context.Context, pipelineRun k8s.PipelineRun) {
 	status := pipelineRun.GetStatus()
 	spec := pipelineRun.GetSpec()
 	runID := "unknown"
@@ -891,5 +891,4 @@ func (c *Controller) logFinalState(ctx context.Context, pipelineRun k8s.Pipeline
 		"statusMessage", status.Message,
 		"stateHistory", status.StateHistory,
 	)
-	return nil
 }
