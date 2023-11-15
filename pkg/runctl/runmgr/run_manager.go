@@ -694,11 +694,11 @@ func (c *runManager) GetRun(ctx context.Context, pipelineRun k8s.PipelineRun) (r
 	return NewRun(run), nil
 }
 
-// DeleteRun deletes a tekton run based on a pipelineRun
+// DeleteRun deletes a JFR task run for a given pipeline run.
 func (c *runManager) DeleteRun(ctx context.Context, pipelineRun k8s.PipelineRun) error {
 	namespace := pipelineRun.GetRunNamespace()
 	if namespace == "" {
-		return fmt.Errorf("cannot delete taskrun, runnamespace not set in %q", pipelineRun.GetName())
+		return fmt.Errorf("cannot delete taskrun, run namespace not set in %q", pipelineRun.GetName())
 	}
 	err := c.factory.TektonV1beta1().TaskRuns(namespace).Delete(ctx, constants.TektonTaskRunName, metav1.DeleteOptions{})
 

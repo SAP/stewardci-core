@@ -27,6 +27,7 @@ type Run interface {
 	GetCompletionTime() *metav1.Time
 	GetContainerInfo() *corev1.ContainerState
 	GetMessage() string
+	IsDeleted() bool
 }
 
 // SecretManager manages secrets of a pipelinerun

@@ -119,6 +119,20 @@ func (mr *MockRunMockRecorder) GetStartTime() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStartTime", reflect.TypeOf((*MockRun)(nil).GetStartTime))
 }
 
+// IsDeleted mocks base method.
+func (m *MockRun) IsDeleted() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsDeleted")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsDeleted indicates an expected call of IsDeleted.
+func (mr *MockRunMockRecorder) IsDeleted() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDeleted", reflect.TypeOf((*MockRun)(nil).IsDeleted))
+}
+
 // IsFinished mocks base method.
 func (m *MockRun) IsFinished() (bool, v1alpha1.Result) {
 	m.ctrl.T.Helper()

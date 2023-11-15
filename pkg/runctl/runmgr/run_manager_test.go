@@ -1271,7 +1271,7 @@ func Test__runManager_addTektonTaskRunParamsForLoggingElasticsearch(t *testing.T
 			spec: &stewardv1alpha1.PipelineSpec{
 				Logging: &stewardv1alpha1.Logging{
 					Elasticsearch: &stewardv1alpha1.Elasticsearch{
-						RunID:    &stewardv1alpha1.CustomJSON{DummyRunID},
+						RunID:    &stewardv1alpha1.CustomJSON{Value: DummyRunID},
 						IndexURL: SampleURL,
 					},
 				},
@@ -1286,7 +1286,7 @@ func Test__runManager_addTektonTaskRunParamsForLoggingElasticsearch(t *testing.T
 			spec: &stewardv1alpha1.PipelineSpec{
 				Logging: &stewardv1alpha1.Logging{
 					Elasticsearch: &stewardv1alpha1.Elasticsearch{
-						RunID: &stewardv1alpha1.CustomJSON{DummyRunID},
+						RunID: &stewardv1alpha1.CustomJSON{Value: DummyRunID},
 					},
 				},
 			},
@@ -1315,7 +1315,7 @@ func Test__runManager_addTektonTaskRunParamsForLoggingElasticsearch(t *testing.T
 			spec: &stewardv1alpha1.PipelineSpec{
 				Logging: &stewardv1alpha1.Logging{
 					Elasticsearch: &stewardv1alpha1.Elasticsearch{
-						RunID:    &stewardv1alpha1.CustomJSON{DummyRunID},
+						RunID:    &stewardv1alpha1.CustomJSON{Value: DummyRunID},
 						IndexURL: "wrongscheme://foo.bar",
 					},
 				},
@@ -2159,7 +2159,7 @@ func Test__runManager_DeleteRun_MissingRunNamespace(t *testing.T) {
 	resultError := examinee.DeleteRun(h.ctx, mockPipelineRun)
 
 	// VERIFY
-	assert.Error(t, resultError, `cannot delete taskrun, runnamespace not set in "foo"`)
+	assert.Error(t, resultError, `cannot delete taskrun, run namespace not set in "foo"`)
 
 	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }

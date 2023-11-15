@@ -93,7 +93,7 @@ const (
     status: Unknown
     type: Succeeded
   podName: build-pod-38aa76
-  startTime: 
+  startTime:
   steps:
   - container: step-jenkinsfile-runner
     imageID: docker-pullable://alpine@sha256:acd3ca9941a85e8ed16515bfc5328e4e2f8c128caa72959a58a127b7801ee01f
@@ -355,4 +355,38 @@ func Test__GetMessage(t *testing.T) {
 			assert.Equal(t, test.expectedMessage, result)
 		})
 	}
+}
+
+func Test__IsDeleted__WithReceiverNil(t *testing.T) {
+	// EXERCISE
+	result := (*tektonRun)(nil).IsDeleted()
+
+	// VERIFY
+	assert.Assert(t, result == true)
+}
+
+func Test__IsDeleted__WithoutTerminationTimestamp(t *testing.T) {
+	// SETUP
+	taskRun := fakeTektonTaskRun(emptyBuild)
+	taskRun.DeletionTimestamp = nil
+	run := NewRun(taskRun)
+
+	// EXERCISE
+	result := run.IsDeleted()
+
+	// VERIFY
+	assert.Assert(t, result == false)
+}
+
+func Test__IsDeleted__WithTerminationTimestamp(t *testing.T) {
+	// SETUP
+	taskRun := fakeTektonTaskRun(emptyBuild)
+	taskRun.DeletionTimestamp = &metav1.Time{}
+	run := NewRun(taskRun)
+
+	// EXERCISE
+	result := run.IsDeleted()
+
+	// VERIFY
+	assert.Assert(t, result == true)
 }

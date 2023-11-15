@@ -6,6 +6,7 @@ package runctl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -83,7 +84,7 @@ type Controller struct {
 }
 
 type controllerTesting struct {
-	createRunManagerStub       run.Manager
+	createRunManagerStub       func(k8s.PipelineRun) run.Manager
 	newRunManagerStub          func(k8s.ClientFactory, secrets.SecretProvider) run.Manager
 	loadPipelineRunsConfigStub func(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error)
 	isMaintenanceModeStub      func(ctx context.Context) (bool, error)
@@ -292,7 +293,7 @@ func (c *Controller) changeState(ctx context.Context, pipelineRun k8s.PipelineRu
 
 func (c *Controller) createRunManager(pipelineRun k8s.PipelineRun) run.Manager {
 	if c.testing != nil && c.testing.createRunManagerStub != nil {
-		return c.testing.createRunManagerStub
+		return c.testing.createRunManagerStub(pipelineRun)
 	}
 	namespace := pipelineRun.GetNamespace()
 	secretsClient := c.factory.CoreV1().Secrets(namespace)
@@ -585,32 +586,56 @@ func (c *Controller) handlePipelineRunWaiting(
 					"failed to load configuration for pipeline runs",
 				)
 		}
-		// Check for wait timeout
-		startTime := pipelineRun.GetStatus().StateDetails.StartedAt
-		timeout := c.getWaitTimeout(pipelineRunsConfig)
-		if startTime.Add(timeout.Duration).Before(time.Now()) {
+
+		waitingTimeout := c.getWaitTimeout(pipelineRunsConfig)
+
+		isWaitingTimeout := func() bool {
+			waitingStartTime := pipelineRun.GetStatus().StateDetails.StartedAt
+			return waitingStartTime.Add(waitingTimeout.Duration).Before(time.Now())
+		}
+
+		failOnWaitingTimeout := func() (bool, error) {
 			err := fmt.Errorf(
 				"main pod has not started after %s",
-				timeout.Duration,
+				waitingTimeout.Duration,
 			)
 			return true, c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, errorMessageWaitingFailed, err)
 		}
 
 		if run == nil {
+			// recreate after deletion (restart)
 			return true, c.startPipelineRun(ctx, runManager, pipelineRun, pipelineRunsConfig)
-		} else if run.IsRestartable() {
-			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
-			return c.restart(ctx, runManager, pipelineRun)
-		}
-
-		started := run.GetStartTime()
-		if started != nil {
-			if err := c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateRunning, *started); err != nil {
-				return true, err
+		} else if run.IsDeleted() {
+			// deletion is still pending
+			// wait until object vanished before creating a new one with the same name
+			if isWaitingTimeout() {
+				return failOnWaitingTimeout()
 			}
+			if workqueueKey := c.getWorkqueueKey(pipelineRun.GetAPIObject()); workqueueKey != "" {
+				c.workqueue.AddAfter(workqueueKey, 1*time.Second)
+			}
+			return true, nil
 		}
 
-		// TODO return (false, nil) to continue with next phase
+		startTime := run.GetStartTime()
+		if startTime != nil {
+			return true, c.changeAndCommitStateAndMeter(ctx, pipelineRun, api.StateRunning, *startTime)
+		}
+
+		if isWaitingTimeout() {
+			return failOnWaitingTimeout()
+		}
+
+		taskRunFinished, _ := run.IsFinished()
+		if taskRunFinished /* without having started */ {
+			if run.IsRestartable() {
+				c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, "restarting")
+				return c.restartPipelineRun(ctx, runManager, pipelineRun)
+			}
+			err := errors.New("failed to start task run")
+			return true, c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, errorMessageWaitingFailed, err)
+		}
+
 		return true, nil
 	}
 	return false, nil
@@ -632,7 +657,7 @@ func (c *Controller) startPipelineRun(ctx context.Context,
 	return nil
 }
 
-func (c *Controller) restart(
+func (c *Controller) restartPipelineRun(
 	ctx context.Context,
 	runManager run.Manager,
 	pipelineRun k8s.PipelineRun,
@@ -641,7 +666,10 @@ func (c *Controller) restart(
 		if serrors.IsRecoverable(err) {
 			return true, err
 		}
-		return true, c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, "run deletion for restart failed", err)
+		return true, c.handleResultError(ctx, pipelineRun, api.ResultErrorInfra, errorMessageWaitingFailed+": could not restart stuck task run", err)
+	}
+	if workqueueKey := c.getWorkqueueKey(pipelineRun.GetAPIObject()); workqueueKey != "" {
+		c.workqueue.AddAfter(workqueueKey, 1*time.Second)
 	}
 	return true, nil
 }
@@ -801,14 +829,19 @@ func (c *Controller) handlePipelineRunAbort(ctx context.Context, pipelineRun k8s
 }
 
 func (c *Controller) addToWorkqueue(obj interface{}) {
-	var key string
-	var err error
-	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-		utilruntime.HandleError(err)
-		return
+	if key := c.getWorkqueueKey(obj); key != "" {
+		c.workqueue.Add(key)
+		c.logger.V(4).Info("Added item to workqueue", "key", key)
 	}
-	c.workqueue.Add(key)
-	c.logger.V(4).Info("Added item to workqueue", "key", key)
+}
+
+func (c *Controller) getWorkqueueKey(obj interface{}) string {
+	key, err := cache.MetaNamespaceKeyFunc(obj)
+	if err != nil {
+		utilruntime.HandleError(err)
+		return ""
+	}
+	return key
 }
 
 // addToWorkqueueFromAssociated takes any resource implementing metav1.Object and attempts

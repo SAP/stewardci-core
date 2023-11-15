@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	jfrRcErrorContent = 2
-	jfrRcErrorConfig  = 3
+	jfrExitCodeErrorContent = 2
+	jfrExitCodeErrorConfig  = 3
 )
 
 type tektonRun struct {
@@ -85,7 +85,9 @@ func (r *tektonRun) IsRestartable() bool {
 	if condition.IsFalse() {
 		// TaskRun finished unsuccessfully, check reason...
 		switch condition.Reason {
-		case tekton.TaskRunReasonImagePullFailed.String():
+		case
+			string(tekton.TaskRunReasonImagePullFailed),
+			"PodCreationFailed":
 			return true
 		}
 	}
@@ -103,15 +105,15 @@ func (r *tektonRun) IsFinished() (bool, steward.Result) {
 	}
 	// TaskRun finished unsuccessfully, check reason...
 	switch condition.Reason {
-	case tekton.TaskRunReasonTimedOut.String():
+	case string(tekton.TaskRunReasonTimedOut):
 		return true, steward.ResultTimeout
-	case tekton.TaskRunReasonFailed.String():
+	case string(tekton.TaskRunReasonFailed):
 		jfrStepState := r.getJenkinsfileRunnerStepState()
 		if jfrStepState != nil && jfrStepState.Terminated != nil {
 			switch jfrStepState.Terminated.ExitCode {
-			case jfrRcErrorContent:
+			case jfrExitCodeErrorContent:
 				return true, steward.ResultErrorContent
-			case jfrRcErrorConfig:
+			case jfrExitCodeErrorConfig:
 				return true, steward.ResultErrorConfig
 			}
 		}
@@ -148,13 +150,15 @@ func (r *tektonRun) GetMessage() string {
 	return "internal error"
 }
 
+func (r *tektonRun) IsDeleted() bool {
+	return r == nil || r.tektonTaskRun.DeletionTimestamp != nil
+}
+
 func (r *tektonRun) getJenkinsfileRunnerStepState() *tekton.StepState {
 	steps := r.tektonTaskRun.Status.Steps
-	if steps != nil {
-		for _, stepState := range steps {
-			if stepState.Name == tektonTaskJenkinsfileRunnerStep {
-				return &stepState
-			}
+	for _, stepState := range steps {
+		if stepState.Name == tektonTaskJenkinsfileRunnerStep {
+			return &stepState
 		}
 	}
 	return nil
