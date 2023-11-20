@@ -53,7 +53,7 @@
   changes:
 
     - type: enhancement
-      impact: minor
+      impact: patch
       title: Update Jenkinsfile-runner image
       description: |-
         When a branch is missing in the Github pipeline repository, it returns
