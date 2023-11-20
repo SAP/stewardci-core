@@ -52,6 +52,16 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: minor
+      title: Update Jenkinsfile-runner image
+      description: |-
+        When a branch is missing in the Github pipeline repository, it returns
+        - proper error message
+        - correct error code (error_config)
+      pullRequestNumber: 425
+      jiraIssueNumber: 1675
+
     - type: bug
       impact: patch
       title: Fix error detected by checkmarx tool
