@@ -75,7 +75,7 @@ pipelineRuns:
       emitTimeoutMillis: ~
 
   jenkinsfileRunner:
-    image: "stewardci/stewardci-jenkinsfile-runner:231018_94c7e9a"
+    image: "stewardci/stewardci-jenkinsfile-runner:231120_3aac49d"
     imagePullPolicy: IfNotPresent
     javaOpts: >-
       -Dhudson.slaves.NodeProvisioner.initialDelay=0

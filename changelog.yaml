@@ -52,6 +52,20 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: patch
+      title: Update JFR image to tag 231120_3aac49d
+      description: |-
+        Noteworthy changes:
+
+        - The JFR launcher script now allows to specify _any_ commit-ish
+          as pipeline revision that exists in the remote repository.
+          In case the given revision is not a commit-ish, a proper error
+          message is provided and the scripts exits with `error_config`
+          instead of `error_infra`.
+      pullRequestNumber: 425
+      jiraIssueNumber: 1675
+
     - type: bug
       impact: patch
       title: Fix error detected by checkmarx tool
