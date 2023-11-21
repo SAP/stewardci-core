@@ -15,7 +15,6 @@ import (
 	mocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	cfg "github.com/SAP/stewardci-core/pkg/runctl/cfg"
-	"github.com/SAP/stewardci-core/pkg/runctl/constants"
 	metricstesting "github.com/SAP/stewardci-core/pkg/runctl/metrics/testing"
 	run "github.com/SAP/stewardci-core/pkg/runctl/run"
 	runmocks "github.com/SAP/stewardci-core/pkg/runctl/run/mocks"
@@ -36,7 +35,7 @@ import (
 	_ "knative.dev/pkg/system/testing"
 )
 
-func Test_Controller_meterAllPipelineRunsPeriodic(t *testing.T) {
+func Test__Controller_meterAllPipelineRunsPeriodic(t *testing.T) {
 	// no parallel: patching global state
 
 	// SETUP
@@ -71,7 +70,7 @@ func Test_Controller_meterAllPipelineRunsPeriodic(t *testing.T) {
 	c.meterAllPipelineRunsPeriodic()
 }
 
-func Test_Controller_Success(t *testing.T) {
+func Test__Controller__Success(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -98,7 +97,7 @@ func Test_Controller_Success(t *testing.T) {
 	assert.Equal(t, 2, len(status.StateHistory))
 }
 
-func Test_Controller_Running(t *testing.T) {
+func Test__Controller__Running(t *testing.T) {
 	t.Parallel()
 
 	for _, containerState := range []string{
@@ -146,14 +145,14 @@ func Test_Controller_Running(t *testing.T) {
 func stepsWithContainer(state string, startTime metav1.Time) []tekton.StepState {
 	var stepState tekton.StepState
 	time, _ := json.Marshal(startTime)
-	s := fmt.Sprintf(`{ %q: {"startedAt": %s}, "container": %q, "name": "foo"}`, state, time, constants.JFRStepName)
+	s := fmt.Sprintf(`{ %q: {"startedAt": %s}, "name": %q}`, state, time, runmgr.JFRTaskRunStepName)
 	json.Unmarshal([]byte(s), &stepState)
 	return []tekton.StepState{
 		stepState,
 	}
 }
 
-func Test_Controller_Deletion(t *testing.T) {
+func Test__Controller__Deletion(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -184,7 +183,7 @@ func Test_Controller_Deletion(t *testing.T) {
 	assert.Equal(t, 0, len(run.GetFinalizers()))
 }
 
-func Test_Controller_syncHandler_PipelineRunNotFound(t *testing.T) {
+func Test__Controller_syncHandler__PipelineRunNotFound(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -241,7 +240,7 @@ func getAPIPipelineRun(cf *fake.ClientFactory, name, namespace string) (*api.Pip
 	return cs.StewardV1alpha1().PipelineRuns(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-func Test_Controller_syncHandler_deleted_unfinished(t *testing.T) {
+func Test__Controller_syncHandler__PipelineRunIsDeletedAndUnfinished(t *testing.T) {
 	for _, currentState := range []api.State{
 		api.StateUndefined,
 		api.StateNew,
@@ -263,7 +262,7 @@ func Test_Controller_syncHandler_deleted_unfinished(t *testing.T) {
 				name: "with_finalizer/cleanup_succeeds",
 				runManagerExpectation: func(rm *runmocks.MockManager) {
 					rm.EXPECT().
-						Cleanup(gomock.Any(), gomock.Any()).
+						DeleteEnv(gomock.Any(), gomock.Any()).
 						Return(nil)
 				},
 				withFinalizer:   true,
@@ -276,7 +275,7 @@ func Test_Controller_syncHandler_deleted_unfinished(t *testing.T) {
 				name: "with_finalizer/cleanup_fails",
 				runManagerExpectation: func(rm *runmocks.MockManager) {
 					rm.EXPECT().
-						Cleanup(gomock.Any(), gomock.Any()).
+						DeleteEnv(gomock.Any(), gomock.Any()).
 						Return(errors.New("expected"))
 				},
 				withFinalizer:   true,
@@ -289,7 +288,7 @@ func Test_Controller_syncHandler_deleted_unfinished(t *testing.T) {
 				name: "no_finalizer/cleanup_succeeds",
 				runManagerExpectation: func(rm *runmocks.MockManager) {
 					rm.EXPECT().
-						Cleanup(gomock.Any(), gomock.Any()).
+						DeleteEnv(gomock.Any(), gomock.Any()).
 						Return(nil)
 				},
 				withFinalizer:   false,
@@ -302,7 +301,7 @@ func Test_Controller_syncHandler_deleted_unfinished(t *testing.T) {
 				name: "no_finalizer/cleanup_fails",
 				runManagerExpectation: func(rm *runmocks.MockManager) {
 					rm.EXPECT().
-						Cleanup(gomock.Any(), gomock.Any()).
+						DeleteEnv(gomock.Any(), gomock.Any()).
 						Return(errors.New("expected"))
 				},
 				withFinalizer:   false,
@@ -360,7 +359,7 @@ func Test_Controller_syncHandler_deleted_unfinished(t *testing.T) {
 	}
 }
 
-func Test_Controller_syncHandler_deleted_finished(t *testing.T) {
+func Test__Controller_syncHandler__PipelineRunIsDeletedAndFinished(t *testing.T) {
 	t.Parallel()
 
 	for _, currentResult := range []api.Result{
@@ -419,7 +418,7 @@ func Test_Controller_syncHandler_deleted_finished(t *testing.T) {
 	}
 }
 
-func Test_Controller_syncHandler_new(t *testing.T) {
+func Test__Controller_syncHandler__PipelineRunIsNew(t *testing.T) {
 	error1 := errors.New("error1")
 	errorRecoverable1 := serrors.Recoverable(errors.New("errorRecoverable1"))
 
@@ -442,7 +441,7 @@ func Test_Controller_syncHandler_new(t *testing.T) {
 				pipelineRunSpec: api.PipelineSpec{},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 					rm.EXPECT().
-						Prepare(gomock.Any(), gomock.Any(), gomock.Any()).
+						CreateEnv(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return("", "", nil)
 				},
 				expectedState:  api.StateWaiting,
@@ -453,7 +452,7 @@ func Test_Controller_syncHandler_new(t *testing.T) {
 				pipelineRunSpec: api.PipelineSpec{},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 					rm.EXPECT().
-						Prepare(gomock.Any(), gomock.Any(), gomock.Any()).
+						CreateEnv(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return("", "", error1)
 				},
 				expectedError:  error1,
@@ -559,7 +558,7 @@ func Test_Controller_syncHandler_new(t *testing.T) {
 	}
 }
 
-func Test_Controller_syncHandler_unfinished(t *testing.T) {
+func Test__Controller_syncHandler__PipelineRunIsUnfinished(t *testing.T) {
 	error1 := errors.New("error1")
 	errorRecoverable1 := serrors.Recoverable(errors.New("errorRecoverable1"))
 	longAgo := metav1.Unix(10, 10)
@@ -590,7 +589,7 @@ func Test_Controller_syncHandler_unfinished(t *testing.T) {
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 					rm.EXPECT().
-						Prepare(gomock.Any(), gomock.Any(), gomock.Any()).
+						CreateEnv(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return("", "", nil)
 				},
 				expectedState:  api.StateWaiting,
@@ -605,7 +604,7 @@ func Test_Controller_syncHandler_unfinished(t *testing.T) {
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 					rm.EXPECT().
-						Prepare(gomock.Any(), gomock.Any(), gomock.Any()).
+						CreateEnv(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return("", "", error1)
 				},
 				expectedError:  error1,
@@ -623,7 +622,7 @@ func Test_Controller_syncHandler_unfinished(t *testing.T) {
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 					rm.EXPECT().
-						Prepare(gomock.Any(), gomock.Any(), gomock.Any()).
+						CreateEnv(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return("", "", serrors.Classify(error1, api.ResultErrorContent))
 				},
 				expectedState:   api.StateCleaning,
@@ -641,7 +640,7 @@ func Test_Controller_syncHandler_unfinished(t *testing.T) {
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 					rm.EXPECT().
-						Prepare(gomock.Any(), gomock.Any(), gomock.Any()).
+						CreateEnv(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return("", "", serrors.Classify(error1, api.ResultErrorContent))
 				},
 				expectedState:   api.StateCleaning,
@@ -657,7 +656,7 @@ func Test_Controller_syncHandler_unfinished(t *testing.T) {
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 					rm.EXPECT().
-						Prepare(gomock.Any(), gomock.Any(), gomock.Any()).
+						CreateEnv(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return("", "", serrors.Classify(error1, api.ResultErrorInfra))
 				},
 				expectedState:   api.StateCleaning,
@@ -789,7 +788,7 @@ func Test_Controller_syncHandler_unfinished(t *testing.T) {
 						GetRun(gomock.Any(), gomock.Any()).
 						Return(nil, nil)
 					rm.EXPECT().
-						Start(gomock.Any(), gomock.Any(), gomock.Any()).
+						CreateRun(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(nil)
 				},
 				expectedState:  api.StateWaiting,
@@ -807,7 +806,7 @@ func Test_Controller_syncHandler_unfinished(t *testing.T) {
 						GetRun(gomock.Any(), gomock.Any()).
 						Return(nil, nil)
 					rm.EXPECT().
-						Start(gomock.Any(), gomock.Any(), gomock.Any()).
+						CreateRun(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(error1)
 				},
 				expectedError:  error1,
@@ -826,7 +825,7 @@ func Test_Controller_syncHandler_unfinished(t *testing.T) {
 						GetRun(gomock.Any(), gomock.Any()).
 						Return(nil, nil)
 					rm.EXPECT().
-						Start(gomock.Any(), gomock.Any(), gomock.Any()).
+						CreateRun(gomock.Any(), gomock.Any(), gomock.Any()).
 						Return(serrors.Classify(error1, api.ResultErrorConfig))
 				},
 				expectedState:  api.StateCleaning,
@@ -1219,7 +1218,7 @@ func Test_Controller_syncHandler_unfinished(t *testing.T) {
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 					rm.EXPECT().
-						Cleanup(gomock.Any(), gomock.Any()).
+						DeleteEnv(gomock.Any(), gomock.Any()).
 						Return(nil)
 				},
 				expectedState:  api.StateFinished,
@@ -1276,7 +1275,7 @@ func Test_Controller_syncHandler_unfinished(t *testing.T) {
 				},
 				runManagerExpectation: func(rm *runmocks.MockManager, run *runmocks.MockRun) {
 					rm.EXPECT().
-						Cleanup(gomock.Any(), gomock.Any()).
+						DeleteEnv(gomock.Any(), gomock.Any()).
 						Return(nil)
 				},
 				expectedState:  api.StateFinished,
@@ -1345,7 +1344,7 @@ func Test_Controller_syncHandler_unfinished(t *testing.T) {
 	}
 }
 
-func Test_Controller_syncHandler_PipelineRunFetchFails_InternalServerError(t *testing.T) {
+func Test__Controller_syncHandler__PipelineRunFetchFails_InternalServerError(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -1376,7 +1375,7 @@ func Test_Controller_syncHandler_PipelineRunFetchFails_InternalServerError(t *te
 	assert.ErrorContains(t, err, message)
 }
 
-func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
+func Test__Controller_syncHandler__OnTimeout(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -1459,7 +1458,7 @@ func Test_Controller_syncHandler_OnTimeout(t *testing.T) {
 }
 
 func newTestRunManager(workFactory k8s.ClientFactory, secretProvider secrets.SecretProvider) run.Manager {
-	return runmgr.NewRunManager(workFactory, secretProvider)
+	return runmgr.NewTektonRunManager(workFactory, secretProvider)
 }
 
 func startController(t *testing.T, cf *fake.ClientFactory) chan struct{} {
@@ -1545,7 +1544,7 @@ func updateRun(t *testing.T, run *api.PipelineRun, namespace string, cf *fake.Cl
 func getTektonTaskRun(t *testing.T, namespace string, cf *fake.ClientFactory) *tekton.TaskRun {
 	t.Helper()
 	ctx := context.Background()
-	taskRun, err := cf.TektonV1beta1().TaskRuns(namespace).Get(ctx, constants.TektonTaskRunName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(namespace).Get(ctx, runmgr.JFRTaskRunName, metav1.GetOptions{})
 	if err != nil {
 		t.Fatalf("could not get Tekton task run: %s", err.Error())
 	}

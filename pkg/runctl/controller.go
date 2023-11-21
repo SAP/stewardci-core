@@ -306,7 +306,7 @@ func (c *Controller) newRunManager(workFactory k8s.ClientFactory, secretProvider
 		return c.testing.newRunManagerStub(workFactory, secretProvider)
 
 	}
-	return runmgr.NewRunManager(workFactory, secretProvider)
+	return runmgr.NewTektonRunManager(workFactory, secretProvider)
 }
 
 func (c *Controller) loadPipelineRunsConfig(ctx context.Context) (*cfg.PipelineRunsConfigStruct, error) {
@@ -445,7 +445,7 @@ func (c *Controller) handlePipelineRunFinalizerAndDeletion(
 	if pipelineRun.HasDeletionTimestamp() {
 		logger.V(3).Info("Unfinished pipeline run was deleted")
 		runManager := c.createRunManager(pipelineRun)
-		err := runManager.Cleanup(ctx, pipelineRun)
+		err := runManager.DeleteEnv(ctx, pipelineRun)
 		if err != nil {
 			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
 			return true, err
@@ -532,7 +532,7 @@ func (c *Controller) handlePipelineRunPrepare(
 					"failed to load configuration for pipeline runs",
 				)
 		}
-		namespace, auxNamespace, err := runManager.Prepare(ctx, pipelineRun, pipelineRunsConfig)
+		namespace, auxNamespace, err := runManager.CreateEnv(ctx, pipelineRun, pipelineRunsConfig)
 		if err != nil {
 			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonPreparingFailed, err.Error())
 			resultClass := serrors.GetClass(err)
@@ -641,11 +641,13 @@ func (c *Controller) handlePipelineRunWaiting(
 	return false, nil
 }
 
-func (c *Controller) startPipelineRun(ctx context.Context,
+func (c *Controller) startPipelineRun(
+	ctx context.Context,
 	runManager run.Manager,
 	pipelineRun k8s.PipelineRun,
-	pipelineRunsConfig *cfg.PipelineRunsConfigStruct) error {
-	if err := runManager.Start(ctx, pipelineRun, pipelineRunsConfig); err != nil {
+	pipelineRunsConfig *cfg.PipelineRunsConfigStruct,
+) error {
+	if err := runManager.CreateRun(ctx, pipelineRun, pipelineRunsConfig); err != nil {
 		c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonWaitingFailed, err.Error())
 		resultClass := serrors.GetClass(err)
 		// In case we have a result we can cleanup. Otherwise we retry in the next iteration.
@@ -722,7 +724,7 @@ func (c *Controller) handlePipelineRunCleaning(
 	if pipelineRun.GetStatus().State == api.StateCleaning {
 		logger.V(3).Info("Cleaning up pipeline execution")
 
-		err := runManager.Cleanup(ctx, pipelineRun)
+		err := runManager.DeleteEnv(ctx, pipelineRun)
 		if err != nil {
 			c.eventRecorder.Event(pipelineRun.GetReference(), corev1.EventTypeWarning, api.EventReasonCleaningFailed, err.Error())
 			return true, err

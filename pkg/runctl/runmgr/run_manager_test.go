@@ -10,14 +10,12 @@ import (
 	featureflag "github.com/SAP/stewardci-core/pkg/featureflag"
 	featureflagtesting "github.com/SAP/stewardci-core/pkg/featureflag/testing"
 	k8s "github.com/SAP/stewardci-core/pkg/k8s"
-	fake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	k8sfake "github.com/SAP/stewardci-core/pkg/k8s/fake"
 	k8smocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	"github.com/SAP/stewardci-core/pkg/k8s/secrets"
 	secretproviderfakes "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/fake"
 	k8ssecretprovider "github.com/SAP/stewardci-core/pkg/k8s/secrets/providers/k8s"
 	cfg "github.com/SAP/stewardci-core/pkg/runctl/cfg"
-	"github.com/SAP/stewardci-core/pkg/runctl/constants"
 	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	runmocks "github.com/SAP/stewardci-core/pkg/runctl/run/mocks"
 	runctltesting "github.com/SAP/stewardci-core/pkg/runctl/testing"
@@ -38,8 +36,8 @@ import (
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 )
 
-func newRunManagerTestingWithAllNoopStubs() *runManagerTesting {
-	return &runManagerTesting{
+func newTektonRunManagerTestingWithAllNoopStubs() *tektonRunManagerTesting {
+	return &tektonRunManagerTesting{
 		cleanupStub:                               func(context.Context, *runContext) error { return nil },
 		copySecretsToRunNamespaceStub:             func(context.Context, *runContext) (string, []string, error) { return "", []string{}, nil },
 		setupLimitRangeFromConfigStub:             func(context.Context, *runContext) error { return nil },
@@ -53,8 +51,8 @@ func newRunManagerTestingWithAllNoopStubs() *runManagerTesting {
 	}
 }
 
-func newRunManagerTestingWithRequiredStubs() *runManagerTesting {
-	return &runManagerTesting{}
+func newTektonRunManagerTestingWithRequiredStubs() *tektonRunManagerTesting {
+	return &tektonRunManagerTesting{}
 }
 
 func contextWithSpec(t *testing.T, runNamespaceName string, spec stewardv1alpha1.PipelineSpec) *runContext {
@@ -67,7 +65,7 @@ func contextWithSpec(t *testing.T, runNamespaceName string, spec stewardv1alpha1
 	}
 }
 
-func Test__runManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
+func Test__TektonRunManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
 	for _, ffEnabled := range []bool{true, false} {
 		t.Run(fmt.Sprintf("featureflag_CreateAuxNamespaceIfUnused_%t", ffEnabled), func(t *testing.T) {
 			defer featureflagtesting.WithFeatureFlag(featureflag.CreateAuxNamespaceIfUnused, ffEnabled)()
@@ -84,8 +82,8 @@ func Test__runManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
 			config := &cfg.PipelineRunsConfigStruct{}
 			secretProvider := secretproviderfakes.NewProvider(h.namespace1)
 
-			examinee := NewRunManager(cf, secretProvider).(*runManager)
-			examinee.testing = newRunManagerTestingWithAllNoopStubs()
+			examinee := NewTektonRunManager(cf, secretProvider)
+			examinee.testing = newTektonRunManagerTestingWithAllNoopStubs()
 
 			pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 			assert.NilError(t, err)
@@ -121,7 +119,7 @@ func Test__runManager_prepareRunNamespace__CreatesNamespaces(t *testing.T) {
 	}
 }
 
-func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__AndPropagatesError(t *testing.T) {
+func Test__TektonRunManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__AndPropagatesError(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -137,8 +135,8 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 	pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
-	examinee := NewRunManager(cf, secretProvider).(*runManager)
-	examinee.testing = newRunManagerTestingWithAllNoopStubs()
+	examinee := NewTektonRunManager(cf, secretProvider)
+	examinee.testing = newTektonRunManagerTestingWithAllNoopStubs()
 
 	expectedError := errors.New("some error")
 	var methodCalled bool
@@ -162,7 +160,7 @@ func Test__runManager_prepareRunNamespace__Calls__copySecretsToRunNamespace__And
 	assert.Assert(t, methodCalled == true)
 }
 
-func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagatesError(t *testing.T) {
+func Test__TektonRunManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagatesError(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -178,8 +176,8 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 	pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
-	examinee := NewRunManager(cf, secretProvider).(*runManager)
-	examinee.testing = newRunManagerTestingWithAllNoopStubs()
+	examinee := NewTektonRunManager(cf, secretProvider)
+	examinee.testing = newTektonRunManagerTestingWithAllNoopStubs()
 
 	expectedPipelineCloneSecretName := "pipelineCloneSecret1"
 	expectedImagePullSecretNames := []string{"imagePullSecret1"}
@@ -209,7 +207,7 @@ func Test__runManager_prepareRunNamespace__Calls_setupServiceAccount_AndPropagat
 	assert.Assert(t, methodCalled == true)
 }
 
-func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndPropagatesError(t *testing.T) {
+func Test__TektonRunManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndPropagatesError(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -225,8 +223,8 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 	pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
 	assert.NilError(t, err)
 
-	examinee := NewRunManager(cf, secretProvider).(*runManager)
-	examinee.testing = newRunManagerTestingWithAllNoopStubs()
+	examinee := NewTektonRunManager(cf, secretProvider)
+	examinee.testing = newTektonRunManagerTestingWithAllNoopStubs()
 
 	expectedError := errors.New("some error")
 	var methodCalled bool
@@ -249,14 +247,14 @@ func Test__runManager_prepareRunNamespace__Calls_setupStaticNetworkPolicies_AndP
 	assert.Assert(t, methodCalled == true)
 }
 
-func Test__runManager_setupStaticNetworkPolicies__Succeeds(t *testing.T) {
+func Test__TektonRunManager_setupStaticNetworkPolicies__Succeeds(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	ctx := context.Background()
 	runCtx := &runContext{}
-	examinee := runManager{
-		testing: newRunManagerTestingWithAllNoopStubs(),
+	examinee := TektonRunManager{
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupStaticNetworkPoliciesStub = nil
 
@@ -267,14 +265,14 @@ func Test__runManager_setupStaticNetworkPolicies__Succeeds(t *testing.T) {
 	assert.NilError(t, resultError)
 }
 
-func Test__runManager_setupStaticNetworkPolicies__Calls_setupNetworkPolicyThatIsolatesAllPods_AndPropagatesError(t *testing.T) {
+func Test__TektonRunManager_setupStaticNetworkPolicies__Calls_setupNetworkPolicyThatIsolatesAllPods_AndPropagatesError(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	h := newTestHelper1(t)
 	runCtx := &runContext{runNamespace: h.namespace1}
-	examinee := runManager{
-		testing: newRunManagerTestingWithAllNoopStubs(),
+	examinee := TektonRunManager{
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupStaticNetworkPoliciesStub = nil
 
@@ -295,14 +293,14 @@ func Test__runManager_setupStaticNetworkPolicies__Calls_setupNetworkPolicyThatIs
 	assert.Assert(t, methodCalled == true)
 }
 
-func Test__runManager_setupStaticNetworkPolicies__Calls_setupNetworkPolicyFromConfig_AndPropagatesError(t *testing.T) {
+func Test__TektonRunManager_setupStaticNetworkPolicies__Calls_setupNetworkPolicyFromConfig_AndPropagatesError(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	h := newTestHelper1(t)
 	runCtx := &runContext{runNamespace: h.namespace1}
-	examinee := runManager{
-		testing: newRunManagerTestingWithAllNoopStubs(),
+	examinee := TektonRunManager{
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupStaticNetworkPoliciesStub = nil
 
@@ -323,7 +321,7 @@ func Test__runManager_setupStaticNetworkPolicies__Calls_setupNetworkPolicyFromCo
 	assert.Assert(t, methodCalled == true)
 }
 
-func Test__runManager_setupNetworkPolicyThatIsolatesAllPods(t *testing.T) {
+func Test__TektonRunManager_setupNetworkPolicyThatIsolatesAllPods(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -335,9 +333,9 @@ func Test__runManager_setupNetworkPolicyThatIsolatesAllPods(t *testing.T) {
 	cf := k8sfake.NewClientFactory()
 	cf.KubernetesClientset().PrependReactor("create", "*", k8sfake.GenerateNameReactor(0))
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupNetworkPolicyThatIsolatesAllPodsStub = nil
 
@@ -360,7 +358,7 @@ func Test__runManager_setupNetworkPolicyThatIsolatesAllPods(t *testing.T) {
 	}
 }
 
-func Test__runManager_setupNetworkPolicyFromConfig__NoPolicyConfigured(t *testing.T) {
+func Test__TektonRunManager_setupNetworkPolicyFromConfig__NoPolicyConfigured(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -376,9 +374,9 @@ func Test__runManager_setupNetworkPolicyFromConfig__NoPolicyConfigured(t *testin
 	// the SUT should not use it if no policy is configured.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
@@ -389,7 +387,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__NoPolicyConfigured(t *testin
 	assert.NilError(t, resultError)
 }
 
-func Test__runManager_setupNetworkPolicyFromConfig__SetsMetadataAndLeavesOtherThingsUntouched(t *testing.T) {
+func Test__TektonRunManager_setupNetworkPolicyFromConfig__SetsMetadataAndLeavesOtherThingsUntouched(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -439,9 +437,9 @@ func Test__runManager_setupNetworkPolicyFromConfig__SetsMetadataAndLeavesOtherTh
 	)
 	cf.DynamicClient.PrependReactor("create", "*", k8sfake.GenerateNameReactor(0))
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
@@ -484,7 +482,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__SetsMetadataAndLeavesOtherTh
 	}
 }
 
-func Test__runManager_setupNetworkPolicyFromConfig__ReplacesAllMetadata(t *testing.T) {
+func Test__TektonRunManager_setupNetworkPolicyFromConfig__ReplacesAllMetadata(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -536,9 +534,9 @@ func Test__runManager_setupNetworkPolicyFromConfig__ReplacesAllMetadata(t *testi
 	)
 	cf.DynamicClient.PrependReactor("create", "*", k8sfake.GenerateNameReactor(0))
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
@@ -564,7 +562,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__ReplacesAllMetadata(t *testi
 	}
 }
 
-func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing.T) {
+func Test__TektonRunManager_setupNetworkPolicyFromConfig__ChooseCorrectPolicy(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -664,9 +662,9 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 				},
 			}
 
-			examinee := runManager{
+			examinee := TektonRunManager{
 				factory: cf,
-				testing: newRunManagerTestingWithAllNoopStubs(),
+				testing: newTektonRunManagerTestingWithAllNoopStubs(),
 			}
 			examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
@@ -694,7 +692,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_ChooseCorrectPolicy(t *testing
 	}
 }
 
-func Test_RunManager_setupNetworkPolicyFromConfig_MalformedPolicy(t *testing.T) {
+func Test__TektonRunManager_setupNetworkPolicyFromConfig__MalformedPolicy(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -713,9 +711,9 @@ func Test_RunManager_setupNetworkPolicyFromConfig_MalformedPolicy(t *testing.T) 
 	// the SUT should not use it if policy decoding fails.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
@@ -726,7 +724,7 @@ func Test_RunManager_setupNetworkPolicyFromConfig_MalformedPolicy(t *testing.T) 
 	assert.ErrorContains(t, resultError, "failed to decode configured network policy: ")
 }
 
-func Test__runManager_setupNetworkPolicyFromConfig__UnexpectedGroup(t *testing.T) {
+func Test__TektonRunManager_setupNetworkPolicyFromConfig__UnexpectedGroup(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -748,9 +746,9 @@ func Test__runManager_setupNetworkPolicyFromConfig__UnexpectedGroup(t *testing.T
 	// the SUT should not use it if policy decoding fails.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
@@ -764,7 +762,7 @@ func Test__runManager_setupNetworkPolicyFromConfig__UnexpectedGroup(t *testing.T
 			" \"NetworkPolicy.unexpected.group\"")
 }
 
-func Test__runManager_setupNetworkPolicyFromConfig__UnexpectedKind(t *testing.T) {
+func Test__TektonRunManager_setupNetworkPolicyFromConfig__UnexpectedKind(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -786,9 +784,9 @@ func Test__runManager_setupNetworkPolicyFromConfig__UnexpectedKind(t *testing.T)
 	// the SUT should not use it if policy decoding fails.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupNetworkPolicyFromConfigStub = nil
 
@@ -802,14 +800,14 @@ func Test__runManager_setupNetworkPolicyFromConfig__UnexpectedKind(t *testing.T)
 			" \"UnexpectedKind.networking.k8s.io\"")
 }
 
-func Test__runManager_setupStaticLimitRange__Calls__setupLimitRangeFromConfig__AndPropagatesError(t *testing.T) {
+func Test__TektonRunManager_setupStaticLimitRange__Calls__setupLimitRangeFromConfig__AndPropagatesError(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	h := newTestHelper1(t)
 	runCtx := &runContext{runNamespace: h.namespace1}
-	examinee := runManager{
-		testing: newRunManagerTestingWithAllNoopStubs(),
+	examinee := TektonRunManager{
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupStaticLimitRangeStub = nil
 
@@ -830,14 +828,14 @@ func Test__runManager_setupStaticLimitRange__Calls__setupLimitRangeFromConfig__A
 	assert.Assert(t, methodCalled == true)
 }
 
-func Test__runManager_setupStaticLimitRange__Succeeds(t *testing.T) {
+func Test__TektonRunManager_setupStaticLimitRange__Succeeds(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	ctx := context.Background()
 	runCtx := &runContext{}
-	examinee := runManager{
-		testing: newRunManagerTestingWithAllNoopStubs(),
+	examinee := TektonRunManager{
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupStaticLimitRangeStub = nil
 
@@ -848,7 +846,7 @@ func Test__runManager_setupStaticLimitRange__Succeeds(t *testing.T) {
 	assert.NilError(t, resultError)
 }
 
-func Test__runManager_setupLimitRangeFromConfig__NoLimitRangeConfigured(t *testing.T) {
+func Test__TektonRunManager_setupLimitRangeFromConfig__NoLimitRangeConfigured(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -866,9 +864,9 @@ func Test__runManager_setupLimitRangeFromConfig__NoLimitRangeConfigured(t *testi
 	// the SUT should not use it if no policy is configured.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupLimitRangeFromConfigStub = nil
 
@@ -877,7 +875,7 @@ func Test__runManager_setupLimitRangeFromConfig__NoLimitRangeConfigured(t *testi
 	assert.NilError(t, resultError)
 }
 
-func Test__runManager_setupLimitRangeFromConfig__MalformedLimitRange(t *testing.T) {
+func Test__TektonRunManager_setupLimitRangeFromConfig__MalformedLimitRange(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -895,9 +893,9 @@ func Test__runManager_setupLimitRangeFromConfig__MalformedLimitRange(t *testing.
 	// the SUT should not use it if policy decoding fails.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupLimitRangeFromConfigStub = nil
 
@@ -908,7 +906,7 @@ func Test__runManager_setupLimitRangeFromConfig__MalformedLimitRange(t *testing.
 	assert.ErrorContains(t, resultError, "failed to decode configured limit range: ")
 }
 
-func Test__runManager_setupLimitRangeFromConfig__UnexpectedGroup(t *testing.T) {
+func Test__TektonRunManager_setupLimitRangeFromConfig__UnexpectedGroup(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -929,9 +927,9 @@ func Test__runManager_setupLimitRangeFromConfig__UnexpectedGroup(t *testing.T) {
 	// the SUT should not use it if policy decoding fails.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupLimitRangeFromConfigStub = nil
 
@@ -945,7 +943,7 @@ func Test__runManager_setupLimitRangeFromConfig__UnexpectedGroup(t *testing.T) {
 			" \"LimitRange.unexpected.group\"")
 }
 
-func Test__runManager_setupLimitRangeFromConfig__UnexpectedKind(t *testing.T) {
+func Test__TektonRunManager_setupLimitRangeFromConfig__UnexpectedKind(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -966,9 +964,9 @@ func Test__runManager_setupLimitRangeFromConfig__UnexpectedKind(t *testing.T) {
 	// the SUT should not use it if policy decoding fails.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupLimitRangeFromConfigStub = nil
 
@@ -982,14 +980,14 @@ func Test__runManager_setupLimitRangeFromConfig__UnexpectedKind(t *testing.T) {
 			" \"UnexpectedKind\"")
 }
 
-func Test__runManager_setupStaticResourceQuota__Calls__setupResourceQuotaFromConfig__AndPropagatesError(t *testing.T) {
+func Test__TektonRunManager_setupStaticResourceQuota__Calls__setupResourceQuotaFromConfig__AndPropagatesError(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	h := newTestHelper1(t)
 	runCtx := &runContext{runNamespace: h.namespace1}
-	examinee := runManager{
-		testing: newRunManagerTestingWithAllNoopStubs(),
+	examinee := TektonRunManager{
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupStaticResourceQuotaStub = nil
 
@@ -1010,14 +1008,14 @@ func Test__runManager_setupStaticResourceQuota__Calls__setupResourceQuotaFromCon
 	assert.Assert(t, methodCalled == true)
 }
 
-func Test__runManager_setupStaticResourceQuota__Succeeds(t *testing.T) {
+func Test__TektonRunManager_setupStaticResourceQuota__Succeeds(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
 	ctx := context.Background()
 	runCtx := &runContext{}
-	examinee := runManager{
-		testing: newRunManagerTestingWithAllNoopStubs(),
+	examinee := TektonRunManager{
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupStaticResourceQuotaStub = nil
 
@@ -1028,7 +1026,7 @@ func Test__runManager_setupStaticResourceQuota__Succeeds(t *testing.T) {
 	assert.NilError(t, resultError)
 }
 
-func Test__runManager_setupResourceQuotaFromConfig__NoQuotaConfigured(t *testing.T) {
+func Test__TektonRunManager_setupResourceQuotaFromConfig__NoQuotaConfigured(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -1046,9 +1044,9 @@ func Test__runManager_setupResourceQuotaFromConfig__NoQuotaConfigured(t *testing
 	// the SUT should not use it if no policy is configured.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupResourceQuotaFromConfigStub = nil
 
@@ -1057,7 +1055,7 @@ func Test__runManager_setupResourceQuotaFromConfig__NoQuotaConfigured(t *testing
 	assert.NilError(t, resultError)
 }
 
-func Test__runManager_setupResourceQuotaFromConfig__MalformedResourceQuota(t *testing.T) {
+func Test__TektonRunManager_setupResourceQuotaFromConfig__MalformedResourceQuota(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -1075,9 +1073,9 @@ func Test__runManager_setupResourceQuotaFromConfig__MalformedResourceQuota(t *te
 	// the SUT should not use it if policy decoding fails.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupResourceQuotaFromConfigStub = nil
 
@@ -1088,7 +1086,7 @@ func Test__runManager_setupResourceQuotaFromConfig__MalformedResourceQuota(t *te
 	assert.ErrorContains(t, resultError, "failed to decode configured resource quota: ")
 }
 
-func Test__runManager_setupResourceQuotaFromConfig__UnexpectedGroup(t *testing.T) {
+func Test__TektonRunManager_setupResourceQuotaFromConfig__UnexpectedGroup(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -1109,9 +1107,9 @@ func Test__runManager_setupResourceQuotaFromConfig__UnexpectedGroup(t *testing.T
 	// the SUT should not use it if policy decoding fails.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupResourceQuotaFromConfigStub = nil
 
@@ -1125,7 +1123,7 @@ func Test__runManager_setupResourceQuotaFromConfig__UnexpectedGroup(t *testing.T
 			" \"ResourceQuota.unexpected.group\"")
 }
 
-func Test__runManager_setupResourceQuotaFromConfig__UnexpectedKind(t *testing.T) {
+func Test__TektonRunManager_setupResourceQuotaFromConfig__UnexpectedKind(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -1146,9 +1144,9 @@ func Test__runManager_setupResourceQuotaFromConfig__UnexpectedKind(t *testing.T)
 	// the SUT should not use it if policy decoding fails.
 	cf := k8smocks.NewMockClientFactory(mockCtrl)
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 	examinee.testing.setupResourceQuotaFromConfigStub = nil
 
@@ -1162,7 +1160,7 @@ func Test__runManager_setupResourceQuotaFromConfig__UnexpectedKind(t *testing.T)
 			" \"UnexpectedKind\"")
 }
 
-func Test__runManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet(t *testing.T) {
+func Test__TektonRunManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -1178,9 +1176,9 @@ func Test__runManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet
 	}
 	mockPipelineRun.UpdateRunNamespace(h.namespace1)
 	cf := k8sfake.NewClientFactory()
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 
 	// EXERCISE
@@ -1189,14 +1187,14 @@ func Test__runManager_createTektonTaskRun__PodTemplate_IsNotEmptyIfNoValuesToSet
 	// VERIFY
 	assert.NilError(t, resultError)
 
-	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, constants.TektonTaskRunName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, JFRTaskRunName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	if equality.Semantic.DeepEqual(taskRun.Spec.PodTemplate, tektonPod.PodTemplate{}) {
 		t.Fatal("podTemplate of TaskRun is empty")
 	}
 }
 
-func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T) {
+func Test__TektonRunManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T) {
 	t.Parallel()
 
 	int64Ptr := func(val int64) *int64 { return &val }
@@ -1219,9 +1217,9 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	}
 	cf := k8sfake.NewClientFactory()
 
-	examinee := runManager{
+	examinee := TektonRunManager{
 		factory: cf,
-		testing: newRunManagerTestingWithAllNoopStubs(),
+		testing: newTektonRunManagerTestingWithAllNoopStubs(),
 	}
 
 	// EXERCISE
@@ -1230,7 +1228,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	// VERIFY
 	assert.NilError(t, resultError)
 
-	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, constants.TektonTaskRunName, metav1.GetOptions{})
+	taskRun, err := cf.TektonV1beta1().TaskRuns(h.namespace1).Get(h.ctx, JFRTaskRunName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	automount := true
 
@@ -1250,7 +1248,7 @@ func Test__runManager_createTektonTaskRun__PodTemplate_AllValuesSet(t *testing.T
 	assert.DeepEqual(t, utils.Metav1Duration(4444), taskRun.Spec.Timeout)
 }
 
-func Test__runManager_addTektonTaskRunParamsForLoggingElasticsearch(t *testing.T) {
+func Test__TektonRunManager_addTektonTaskRunParamsForLoggingElasticsearch(t *testing.T) {
 	t.Parallel()
 	const (
 		TaskRunParamNameIndexURL  = "PIPELINE_LOG_ELASTICSEARCH_INDEX_URL"
@@ -1330,8 +1328,8 @@ func Test__runManager_addTektonTaskRunParamsForLoggingElasticsearch(t *testing.T
 			defer mockCtrl.Finish()
 			mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocksWithSpec(mockCtrl, test.spec)
 
-			examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
-			examinee.testing = newRunManagerTestingWithRequiredStubs()
+			examinee := NewTektonRunManager(mockFactory, mockSecretProvider)
+			examinee.testing = newTektonRunManagerTestingWithRequiredStubs()
 
 			runCtx := &runContext{
 				pipelineRun: mockPipelineRun,
@@ -1353,7 +1351,7 @@ func Test__runManager_addTektonTaskRunParamsForLoggingElasticsearch(t *testing.T
 		})
 	}
 }
-func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
+func Test__TektonRunManager_CreateRun__CreatesTektonTaskRun(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -1364,22 +1362,22 @@ func Test__runManager_Start__CreatesTektonTaskRun(t *testing.T) {
 	h.preparePredefinedClusterRole(mockFactory)
 	config := &cfg.PipelineRunsConfigStruct{}
 
-	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
-	examinee.testing = newRunManagerTestingWithRequiredStubs()
+	examinee := NewTektonRunManager(mockFactory, mockSecretProvider)
+	examinee.testing = newTektonRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	resultError := examinee.Start(h.ctx, mockPipelineRun, config)
+	resultError := examinee.CreateRun(h.ctx, mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY
 	runNamespace := mockPipelineRun.GetRunNamespace()
 	result, err := mockFactory.TektonV1beta1().TaskRuns(runNamespace).Get(
-		h.ctx, constants.TektonTaskRunName, metav1.GetOptions{})
+		h.ctx, JFRTaskRunName, metav1.GetOptions{})
 	assert.NilError(t, err)
 	assert.Assert(t, result != nil)
 }
 
-func Test__runManager_Prepare__CleanupOnError(t *testing.T) {
+func Test__TektonRunManager_CreateEnv__CleanupOnError(t *testing.T) {
 	t.Parallel()
 
 	prepareRunnamespaceErr := fmt.Errorf("cannot prepare run namespace: foo")
@@ -1427,8 +1425,8 @@ func Test__runManager_Prepare__CleanupOnError(t *testing.T) {
 			mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 			config := &cfg.PipelineRunsConfigStruct{}
 
-			examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
-			examinee.testing = newRunManagerTestingWithRequiredStubs()
+			examinee := NewTektonRunManager(mockFactory, mockSecretProvider)
+			examinee.testing = newTektonRunManagerTestingWithRequiredStubs()
 
 			var cleanupCalled int
 			examinee.testing.cleanupStub = func(_ context.Context, ctx *runContext) error {
@@ -1444,7 +1442,7 @@ func Test__runManager_Prepare__CleanupOnError(t *testing.T) {
 			}
 
 			// EXERCISE
-			_, _, resultError := examinee.Prepare(h.ctx, mockPipelineRun, config)
+			_, _, resultError := examinee.CreateEnv(h.ctx, mockPipelineRun, config)
 
 			// VERIFY
 			if test.expectedError != nil {
@@ -1455,14 +1453,14 @@ func Test__runManager_Prepare__CleanupOnError(t *testing.T) {
 	}
 }
 
-func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing.T) {
+func Test__TektonRunManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing.T) {
 	t.Parallel()
 
 	const (
 		pipelineRunsConfigDefaultImage  = "defaultImage1"
 		pipelineRunsConfigDefaultPolicy = "defaultPolicy1"
 	)
-	examinee := runManager{}
+	examinee := TektonRunManager{}
 	for _, tc := range []struct {
 		name                string
 		spec                *stewardv1alpha1.PipelineSpec
@@ -1558,7 +1556,7 @@ func Test__runManager_addTektonTaskRunParamsForJenkinsfileRunnerImage(t *testing
 	}
 }
 
-func Test__runManager_Prepare__DoesNotSetPipelineRunStatus(t *testing.T) {
+func Test__TektonRunManager_CreateEnv__DoesNotSetPipelineRunStatus(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -1569,11 +1567,11 @@ func Test__runManager_Prepare__DoesNotSetPipelineRunStatus(t *testing.T) {
 	h.preparePredefinedClusterRole(mockFactory)
 	config := &cfg.PipelineRunsConfigStruct{}
 
-	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
-	examinee.testing = newRunManagerTestingWithRequiredStubs()
+	examinee := NewTektonRunManager(mockFactory, mockSecretProvider)
+	examinee.testing = newTektonRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	_, _, resultError := examinee.Prepare(h.ctx, mockPipelineRun, config)
+	_, _, resultError := examinee.CreateEnv(h.ctx, mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY
@@ -1581,7 +1579,7 @@ func Test__runManager_Prepare__DoesNotSetPipelineRunStatus(t *testing.T) {
 	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
-func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
+func Test__TektonRunManager_CreateRun__DoesNotSetPipelineRunStatus(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -1592,11 +1590,11 @@ func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
 	h.preparePredefinedClusterRole(mockFactory)
 	config := &cfg.PipelineRunsConfigStruct{}
 
-	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
-	examinee.testing = newRunManagerTestingWithRequiredStubs()
+	examinee := NewTektonRunManager(mockFactory, mockSecretProvider)
+	examinee.testing = newTektonRunManagerTestingWithRequiredStubs()
 
 	// EXERCISE
-	resultError := examinee.Start(h.ctx, mockPipelineRun, config)
+	resultError := examinee.CreateRun(h.ctx, mockPipelineRun, config)
 	assert.NilError(t, resultError)
 
 	// VERIFY
@@ -1604,7 +1602,7 @@ func Test__runManager_Start__DoesNotSetPipelineRunStatus(t *testing.T) {
 	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
-func Test__runManager_copySecretsToRunNamespace__DoesCopySecret(t *testing.T) {
+func Test__TektonRunManager_copySecretsToRunNamespace__DoesCopySecret(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -1612,12 +1610,12 @@ func Test__runManager_copySecretsToRunNamespace__DoesCopySecret(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	examinee := &runManager{}
+	examinee := &TektonRunManager{}
 
 	mockSecretManager := runmocks.NewMockSecretManager(mockCtrl)
 	// inject secret manager
 
-	examinee.testing = newRunManagerTestingWithRequiredStubs()
+	examinee.testing = newTektonRunManagerTestingWithRequiredStubs()
 	examinee.testing.getSecretManagerStub = func(*runContext) runifc.SecretManager {
 		return mockSecretManager
 	}
@@ -1641,7 +1639,7 @@ func Test__runManager_copySecretsToRunNamespace__DoesCopySecret(t *testing.T) {
 	assert.DeepEqual(t, []string{"foo", "bar"}, imagePullSecrets)
 }
 
-func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
+func Test__TektonRunManager_DeleteEnv__RemovesNamespaces(t *testing.T) {
 	for _, ffEnabled := range []bool{true, false} {
 		t.Run(fmt.Sprintf("featureflag_CreateAuxNamespaceIfUnused_%t", ffEnabled), func(t *testing.T) {
 			defer featureflagtesting.WithFeatureFlag(featureflag.CreateAuxNamespaceIfUnused, ffEnabled)()
@@ -1657,8 +1655,8 @@ func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
 			config := &cfg.PipelineRunsConfigStruct{}
 			secretProvider := secretproviderfakes.NewProvider(h.namespace1)
 
-			examinee := NewRunManager(cf, secretProvider).(*runManager)
-			examinee.testing = newRunManagerTestingWithAllNoopStubs()
+			examinee := NewTektonRunManager(cf, secretProvider)
+			examinee.testing = newTektonRunManagerTestingWithAllNoopStubs()
 			examinee.testing.cleanupStub = nil
 
 			pipelineRunHelper, err := k8s.NewPipelineRun(h.ctx, h.getPipelineRunFromStorage(cf, h.namespace1, h.pipelineRun1), cf)
@@ -1687,7 +1685,7 @@ func Test__runManager_Cleanup__RemovesNamespaces(t *testing.T) {
 			}
 
 			// EXERCISE
-			resultErr := examinee.Cleanup(h.ctx, pipelineRunHelper)
+			resultErr := examinee.DeleteEnv(h.ctx, pipelineRunHelper)
 
 			// VERIFY
 			assert.NilError(t, resultErr)
@@ -1710,7 +1708,7 @@ func dummySecretProvider(factory k8s.ClientFactory, namespace string) secrets.Se
 	return k8ssecretprovider.NewProvider(secretsClient, namespace)
 }
 
-func Test__runManager__Log_Elasticsearch(t *testing.T) {
+func Test__TektonRunManager__Log_Elasticsearch(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -1734,7 +1732,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 	setupExaminee := func(
 		t *testing.T, pipelineRunJSON string,
 	) (
-		examinee *runManager, runCtx *runContext, cf *k8sfake.ClientFactory,
+		examinee *TektonRunManager, runCtx *runContext, cf *k8sfake.ClientFactory,
 	) {
 		pipelineRun := runctltesting.StewardObjectFromJSON(t, pipelineRunJSON).(*stewardv1alpha1.PipelineRun)
 		t.Log("decoded:\n", spew.Sdump(pipelineRun))
@@ -1747,11 +1745,11 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 		k8sPipelineRun, err := k8s.NewPipelineRun(ctx, pipelineRun, cf)
 		assert.NilError(t, err)
 		config := &cfg.PipelineRunsConfigStruct{}
-		examinee = NewRunManager(
+		examinee = NewTektonRunManager(
 			cf,
 			dummySecretProvider(cf, pipelineRun.GetNamespace()),
-		).(*runManager)
-		examinee.testing = newRunManagerTestingWithRequiredStubs()
+		)
+		examinee.testing = newTektonRunManagerTestingWithRequiredStubs()
 		runCtx = &runContext{
 			pipelineRun:        k8sPipelineRun,
 			pipelineRunsConfig: config,
@@ -2002,7 +2000,7 @@ func Test__runManager__Log_Elasticsearch(t *testing.T) {
 	}
 }
 
-func Test__runManager__getTimeout__retrievesPipelineTimeoutIfSetInThePipelineSpec(t *testing.T) {
+func Test__TektonRunManager_getTimeout__retrievesPipelineTimeoutIfSetInThePipelineSpec(t *testing.T) {
 	t.Parallel()
 
 	//SETUP
@@ -2035,7 +2033,7 @@ func Test__runManager__getTimeout__retrievesPipelineTimeoutIfSetInThePipelineSpe
 
 }
 
-func Test__runManager__getTimeout__retrievesTheDefaultPipelineTimeoutIfTimeoutIsNilInThePipelineSpec(t *testing.T) {
+func Test__TektonRunManager_getTimeout__retrievesTheDefaultPipelineTimeoutIfTimeoutIsNilInThePipelineSpec(t *testing.T) {
 	t.Parallel()
 
 	//SETUP
@@ -2058,7 +2056,7 @@ func Test__runManager__getTimeout__retrievesTheDefaultPipelineTimeoutIfTimeoutIs
 	assert.DeepEqual(t, defaultTimeout, result)
 }
 
-func Test__runManager_GetRun_Missing(t *testing.T) {
+func Test__TektonRunManager_GetRun_Missing(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -2068,7 +2066,7 @@ func Test__runManager_GetRun_Missing(t *testing.T) {
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 	h.addTektonTaskRun(mockFactory)
 
-	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
+	examinee := NewTektonRunManager(mockFactory, mockSecretProvider)
 
 	// EXERCISE
 	run, resultError := examinee.GetRun(h.ctx, mockPipelineRun)
@@ -2080,7 +2078,7 @@ func Test__runManager_GetRun_Missing(t *testing.T) {
 	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
-func Test__runManager_GetRun_Existing(t *testing.T) {
+func Test__TektonRunManager_GetRun_Existing(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -2089,7 +2087,7 @@ func Test__runManager_GetRun_Existing(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 
-	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
+	examinee := NewTektonRunManager(mockFactory, mockSecretProvider)
 
 	// EXERCISE
 	run, resultError := examinee.GetRun(h.ctx, mockPipelineRun)
@@ -2101,7 +2099,7 @@ func Test__runManager_GetRun_Existing(t *testing.T) {
 	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
-func Test__runManager_DeleteRun_Success(t *testing.T) {
+func Test__TektonRunManager_DeleteRun_Success(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -2111,7 +2109,7 @@ func Test__runManager_DeleteRun_Success(t *testing.T) {
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 	h.addTektonTaskRun(mockFactory)
 
-	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
+	examinee := NewTektonRunManager(mockFactory, mockSecretProvider)
 
 	// EXERCISE
 	resultError := examinee.DeleteRun(h.ctx, mockPipelineRun)
@@ -2122,7 +2120,7 @@ func Test__runManager_DeleteRun_Success(t *testing.T) {
 	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
-func Test__runManager_DeleteRun_Missing(t *testing.T) {
+func Test__TektonRunManager_DeleteRun_Missing(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -2131,7 +2129,7 @@ func Test__runManager_DeleteRun_Missing(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 
-	examinee := NewRunManager(mockFactory, mockSecretProvider)
+	examinee := NewTektonRunManager(mockFactory, mockSecretProvider)
 
 	// EXERCISE
 	resultError := examinee.DeleteRun(h.ctx, mockPipelineRun)
@@ -2141,7 +2139,7 @@ func Test__runManager_DeleteRun_Missing(t *testing.T) {
 	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
-func Test__runManager_DeleteRun_MissingRunNamespace(t *testing.T) {
+func Test__TektonRunManager_DeleteRun_MissingRunNamespace(t *testing.T) {
 	t.Parallel()
 
 	// SETUP
@@ -2151,7 +2149,7 @@ func Test__runManager_DeleteRun_MissingRunNamespace(t *testing.T) {
 	defer mockCtrl.Finish()
 	mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 
-	examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
+	examinee := NewTektonRunManager(mockFactory, mockSecretProvider)
 
 	mockPipelineRun.EXPECT().GetName().Return("foo").Times(1)
 
@@ -2164,7 +2162,7 @@ func Test__runManager_DeleteRun_MissingRunNamespace(t *testing.T) {
 	mockPipelineRun.EXPECT().UpdateState(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 }
 
-func Test__runManager_DeleteRun_Recoverable(t *testing.T) {
+func Test__TektonRunManager_DeleteRun_Recoverable(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -2195,7 +2193,7 @@ func Test__runManager_DeleteRun_Recoverable(t *testing.T) {
 			mockFactory, mockPipelineRun, mockSecretProvider := h.prepareMocks(mockCtrl)
 
 			h.tektonClientset.PrependReactor("delete", "*", k8sfake.NewErrorReactor(tc.transientError))
-			examinee := NewRunManager(mockFactory, mockSecretProvider).(*runManager)
+			examinee := NewTektonRunManager(mockFactory, mockSecretProvider)
 			// EXERCISE
 			resultError := examinee.DeleteRun(h.ctx, mockPipelineRun)
 
@@ -2207,12 +2205,12 @@ func Test__runManager_DeleteRun_Recoverable(t *testing.T) {
 	}
 }
 
-func newFakeClientFactory(objects ...runtime.Object) *fake.ClientFactory {
-	cf := fake.NewClientFactory(objects...)
+func newFakeClientFactory(objects ...runtime.Object) *k8sfake.ClientFactory {
+	cf := k8sfake.NewClientFactory(objects...)
 
-	cf.KubernetesClientset().PrependReactor("create", "*", fake.GenerateNameReactor(0))
+	cf.KubernetesClientset().PrependReactor("create", "*", k8sfake.GenerateNameReactor(0))
 
-	cf.StewardClientset().PrependReactor("create", "*", fake.NewCreationTimestampReactor())
+	cf.StewardClientset().PrependReactor("create", "*", k8sfake.NewCreationTimestampReactor())
 
 	return cf
 }
