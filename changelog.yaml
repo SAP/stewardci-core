@@ -66,6 +66,13 @@
       pullRequestNumber: 425
       jiraIssueNumber: 1675
 
+    - type: internal
+      impact: patch
+      title: Upgrade Go SDK to v1.21.4
+      description: |-
+        Use Go SDK v1.21.4.
+      pullRequestNumber: 426
+
     - type: bug
       impact: patch
       title: Fix error detected by checkmarx tool
