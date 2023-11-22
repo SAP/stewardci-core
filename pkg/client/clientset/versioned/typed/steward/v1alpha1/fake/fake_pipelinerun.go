@@ -26,11 +26,13 @@ package fake
 
 import (
 	"context"
+	json "encoding/json"
+	"fmt"
 
 	v1alpha1 "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
+	stewardv1alpha1 "github.com/SAP/stewardci-core/pkg/client/applyconfiguration/steward/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -42,9 +44,9 @@ type FakePipelineRuns struct {
 	ns   string
 }
 
-var pipelinerunsResource = schema.GroupVersionResource{Group: "steward.sap.com", Version: "v1alpha1", Resource: "pipelineruns"}
+var pipelinerunsResource = v1alpha1.SchemeGroupVersion.WithResource("pipelineruns")
 
-var pipelinerunsKind = schema.GroupVersionKind{Group: "steward.sap.com", Version: "v1alpha1", Kind: "PipelineRun"}
+var pipelinerunsKind = v1alpha1.SchemeGroupVersion.WithKind("PipelineRun")
 
 // Get takes name of the pipelineRun, and returns the corresponding pipelineRun object, and an error if there is any.
 func (c *FakePipelineRuns) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.PipelineRun, err error) {
@@ -140,6 +142,51 @@ func (c *FakePipelineRuns) DeleteCollection(ctx context.Context, opts v1.DeleteO
 func (c *FakePipelineRuns) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.PipelineRun, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(pipelinerunsResource, c.ns, name, pt, data, subresources...), &v1alpha1.PipelineRun{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.PipelineRun), err
+}
+
+// Apply takes the given apply declarative configuration, applies it and returns the applied pipelineRun.
+func (c *FakePipelineRuns) Apply(ctx context.Context, pipelineRun *stewardv1alpha1.PipelineRunApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.PipelineRun, err error) {
+	if pipelineRun == nil {
+		return nil, fmt.Errorf("pipelineRun provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(pipelineRun)
+	if err != nil {
+		return nil, err
+	}
+	name := pipelineRun.Name
+	if name == nil {
+		return nil, fmt.Errorf("pipelineRun.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewPatchSubresourceAction(pipelinerunsResource, c.ns, *name, types.ApplyPatchType, data), &v1alpha1.PipelineRun{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.PipelineRun), err
+}
+
+// ApplyStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
+func (c *FakePipelineRuns) ApplyStatus(ctx context.Context, pipelineRun *stewardv1alpha1.PipelineRunApplyConfiguration, opts v1.ApplyOptions) (result *v1alpha1.PipelineRun, err error) {
+	if pipelineRun == nil {
+		return nil, fmt.Errorf("pipelineRun provided to Apply must not be nil")
+	}
+	data, err := json.Marshal(pipelineRun)
+	if err != nil {
+		return nil, err
+	}
+	name := pipelineRun.Name
+	if name == nil {
+		return nil, fmt.Errorf("pipelineRun.Name must be provided to Apply")
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewPatchSubresourceAction(pipelinerunsResource, c.ns, *name, types.ApplyPatchType, data, "status"), &v1alpha1.PipelineRun{})
 
 	if obj == nil {
 		return nil, err
