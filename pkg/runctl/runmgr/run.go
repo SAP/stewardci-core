@@ -2,8 +2,7 @@ package runmgr
 
 import (
 	steward "github.com/SAP/stewardci-core/pkg/apis/steward/v1alpha1"
-	"github.com/SAP/stewardci-core/pkg/runctl/constants"
-	run "github.com/SAP/stewardci-core/pkg/runctl/run"
+	runifc "github.com/SAP/stewardci-core/pkg/runctl/run"
 	tekton "github.com/tektoncd/pipeline/pkg/apis/pipeline/v1beta1"
 	termination "github.com/tektoncd/pipeline/pkg/termination"
 	"go.uber.org/zap"
@@ -13,41 +12,44 @@ import (
 )
 
 const (
-	jfrRcErrorContent = 2
-	jfrRcErrorConfig  = 3
+	jfrExitCodeErrorContent = 2
+	jfrExitCodeErrorConfig  = 3
 )
 
+// tektonRun is a runifc.Run based on Tekton.
 type tektonRun struct {
 	tektonTaskRun *tekton.TaskRun
 }
 
-// NewRun returns new Run
-func NewRun(tektonTaskRun *tekton.TaskRun) run.Run {
+// Compiler check for interface compliance
+var _ runifc.Run = (*tektonRun)(nil)
+
+// newRun creates a new tektonRun
+func newRun(tektonTaskRun *tekton.TaskRun) *tektonRun {
 	return &tektonRun{tektonTaskRun: tektonTaskRun}
 }
 
-// GetStartTime returns start time of run if already started
-// start time must not be returned if condition is unknown but not running
+// GetStartTime implements runifc.Run.
 func (r *tektonRun) GetStartTime() *metav1.Time {
 	condition := r.getSucceededCondition()
 	if condition == nil {
 		return nil
 	}
-	if condition.IsUnknown() && condition.Reason != tekton.TaskRunReasonRunning.String() {
+	if condition.IsUnknown() && condition.Reason != string(tekton.TaskRunReasonRunning) {
 		return nil
 	}
-	for _, step := range r.tektonTaskRun.Status.Steps {
-		if step.ContainerName == constants.JFRStepName && step.Running != nil {
-			return &step.Running.StartedAt
+	if stepState := r.getJFRStepState(); stepState != nil {
+		if stepState.Running != nil {
+			return &stepState.Running.StartedAt
 		}
-		if step.ContainerName == constants.JFRStepName && step.Terminated != nil {
-			return &step.Terminated.StartedAt
+		if stepState.Terminated != nil {
+			return &stepState.Terminated.StartedAt
 		}
 	}
 	return nil
 }
 
-// GetCompletionTime returns completion time of run if already completed
+// GetCompletionTime implements runifc.Run.
 func (r *tektonRun) GetCompletionTime() *metav1.Time {
 	completionTime := r.tektonTaskRun.Status.CompletionTime
 	if completionTime != nil {
@@ -65,10 +67,9 @@ func (r *tektonRun) GetCompletionTime() *metav1.Time {
 	return &now
 }
 
-// GetContainerInfo returns the state of the Jenkinsfile Runner container
-// as reported in the Tekton TaskRun status.
+// GetContainerInfo implements runifc.Run.
 func (r *tektonRun) GetContainerInfo() *corev1.ContainerState {
-	stepState := r.getJenkinsfileRunnerStepState()
+	stepState := r.getJFRStepState()
 	if stepState == nil {
 		return nil
 	}
@@ -79,20 +80,22 @@ func (r *tektonRun) getSucceededCondition() *knativeapis.Condition {
 	return r.tektonTaskRun.Status.GetCondition(knativeapis.ConditionSucceeded)
 }
 
-// IsRestartable returns true if run is finished but could be restarted
+// IsRestartable implements runifc.Run.
 func (r *tektonRun) IsRestartable() bool {
 	condition := r.getSucceededCondition()
 	if condition.IsFalse() {
 		// TaskRun finished unsuccessfully, check reason...
 		switch condition.Reason {
-		case tekton.TaskRunReasonImagePullFailed.String():
+		case
+			string(tekton.TaskRunReasonImagePullFailed),
+			"PodCreationFailed":
 			return true
 		}
 	}
 	return false
 }
 
-// IsFinished returns true if run is finished
+// IsFinished implements runifc.Run.
 func (r *tektonRun) IsFinished() (bool, steward.Result) {
 	condition := r.getSucceededCondition()
 	if condition.IsUnknown() {
@@ -103,15 +106,15 @@ func (r *tektonRun) IsFinished() (bool, steward.Result) {
 	}
 	// TaskRun finished unsuccessfully, check reason...
 	switch condition.Reason {
-	case tekton.TaskRunReasonTimedOut.String():
+	case string(tekton.TaskRunReasonTimedOut):
 		return true, steward.ResultTimeout
-	case tekton.TaskRunReasonFailed.String():
-		jfrStepState := r.getJenkinsfileRunnerStepState()
+	case string(tekton.TaskRunReasonFailed):
+		jfrStepState := r.getJFRStepState()
 		if jfrStepState != nil && jfrStepState.Terminated != nil {
 			switch jfrStepState.Terminated.ExitCode {
-			case jfrRcErrorContent:
+			case jfrExitCodeErrorContent:
 				return true, steward.ResultErrorContent
-			case jfrRcErrorConfig:
+			case jfrExitCodeErrorConfig:
 				return true, steward.ResultErrorConfig
 			}
 		}
@@ -121,7 +124,7 @@ func (r *tektonRun) IsFinished() (bool, steward.Result) {
 	return true, steward.ResultErrorInfra
 }
 
-// GetMessage returns the termination message
+// GetMessage implements runifc.Run.
 func (r *tektonRun) GetMessage() string {
 	var msg string
 
@@ -148,13 +151,16 @@ func (r *tektonRun) GetMessage() string {
 	return "internal error"
 }
 
-func (r *tektonRun) getJenkinsfileRunnerStepState() *tekton.StepState {
+// IsDeleted implements runifc.Run.
+func (r *tektonRun) IsDeleted() bool {
+	return r == nil || r.tektonTaskRun.DeletionTimestamp != nil
+}
+
+func (r *tektonRun) getJFRStepState() *tekton.StepState {
 	steps := r.tektonTaskRun.Status.Steps
-	if steps != nil {
-		for _, stepState := range steps {
-			if stepState.Name == tektonTaskJenkinsfileRunnerStep {
-				return &stepState
-			}
+	for _, stepState := range steps {
+		if stepState.Name == JFRTaskRunStepName {
+			return &stepState
 		}
 	}
 	return nil

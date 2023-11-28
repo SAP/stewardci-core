@@ -119,6 +119,20 @@ func (mr *MockRunMockRecorder) GetStartTime() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStartTime", reflect.TypeOf((*MockRun)(nil).GetStartTime))
 }
 
+// IsDeleted mocks base method.
+func (m *MockRun) IsDeleted() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsDeleted")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsDeleted indicates an expected call of IsDeleted.
+func (mr *MockRunMockRecorder) IsDeleted() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDeleted", reflect.TypeOf((*MockRun)(nil).IsDeleted))
+}
+
 // IsFinished mocks base method.
 func (m *MockRun) IsFinished() (bool, v1alpha1.Result) {
 	m.ctrl.T.Helper()
@@ -171,18 +185,48 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 	return m.recorder
 }
 
-// Cleanup mocks base method.
-func (m *MockManager) Cleanup(arg0 context.Context, arg1 k8s.PipelineRun) error {
+// CreateEnv mocks base method.
+func (m *MockManager) CreateEnv(arg0 context.Context, arg1 k8s.PipelineRun, arg2 *cfg.PipelineRunsConfigStruct) (string, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Cleanup", arg0, arg1)
+	ret := m.ctrl.Call(m, "CreateEnv", arg0, arg1, arg2)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CreateEnv indicates an expected call of CreateEnv.
+func (mr *MockManagerMockRecorder) CreateEnv(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEnv", reflect.TypeOf((*MockManager)(nil).CreateEnv), arg0, arg1, arg2)
+}
+
+// CreateRun mocks base method.
+func (m *MockManager) CreateRun(arg0 context.Context, arg1 k8s.PipelineRun, arg2 *cfg.PipelineRunsConfigStruct) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateRun", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Cleanup indicates an expected call of Cleanup.
-func (mr *MockManagerMockRecorder) Cleanup(arg0, arg1 interface{}) *gomock.Call {
+// CreateRun indicates an expected call of CreateRun.
+func (mr *MockManagerMockRecorder) CreateRun(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cleanup", reflect.TypeOf((*MockManager)(nil).Cleanup), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRun", reflect.TypeOf((*MockManager)(nil).CreateRun), arg0, arg1, arg2)
+}
+
+// DeleteEnv mocks base method.
+func (m *MockManager) DeleteEnv(arg0 context.Context, arg1 k8s.PipelineRun) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteEnv", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteEnv indicates an expected call of DeleteEnv.
+func (mr *MockManagerMockRecorder) DeleteEnv(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnv", reflect.TypeOf((*MockManager)(nil).DeleteEnv), arg0, arg1)
 }
 
 // DeleteRun mocks base method.
@@ -212,36 +256,6 @@ func (m *MockManager) GetRun(arg0 context.Context, arg1 k8s.PipelineRun) (run.Ru
 func (mr *MockManagerMockRecorder) GetRun(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRun", reflect.TypeOf((*MockManager)(nil).GetRun), arg0, arg1)
-}
-
-// Prepare mocks base method.
-func (m *MockManager) Prepare(arg0 context.Context, arg1 k8s.PipelineRun, arg2 *cfg.PipelineRunsConfigStruct) (string, string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Prepare", arg0, arg1, arg2)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// Prepare indicates an expected call of Prepare.
-func (mr *MockManagerMockRecorder) Prepare(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Prepare", reflect.TypeOf((*MockManager)(nil).Prepare), arg0, arg1, arg2)
-}
-
-// Start mocks base method.
-func (m *MockManager) Start(arg0 context.Context, arg1 k8s.PipelineRun, arg2 *cfg.PipelineRunsConfigStruct) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Start indicates an expected call of Start.
-func (mr *MockManagerMockRecorder) Start(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockManager)(nil).Start), arg0, arg1, arg2)
 }
 
 // MockSecretManager is a mock of SecretManager interface.

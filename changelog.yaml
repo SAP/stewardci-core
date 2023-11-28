@@ -85,6 +85,25 @@
 
     - type: bug
       impact: patch
+      title: Recreate JFR TaskRun if pod creation failed
+      description: |-
+        The creation of the JFR pod may temporarily fail, e.g. due
+        to a timeout calling a mandatory admission webhook.
+        Steward now detects this and recreates the Tekton taskrun
+        to retry.
+      pullRequestNumber: 424
+
+    - type: bug
+      impact: patch
+      title: Stop waiting for finished non-restartable JFR TaskRun
+      description: |-
+        If a JFR TaskRun was never started, is finished and is not
+        restartable, Steward now fails the PipelineRun instead of
+        waiting until timeout.
+      pullRequestNumber: 424
+
+    - type: bug
+      impact: patch
       title: Fix error detected by checkmarx tool
       description: |-
         Remove redundant error from logFinalState function

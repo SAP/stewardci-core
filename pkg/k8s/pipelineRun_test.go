@@ -162,7 +162,7 @@ func Test_pipelineRun_StoreErrorAsMessage(t *testing.T) {
 	client := factory.StewardV1alpha1().PipelineRuns(ns1)
 	run, err = client.Get(ctx, "foo", metav1.GetOptions{})
 	assert.NilError(t, err)
-	assert.Equal(t, "ERROR: message1 [PipelineRun{name: foo, namespace: namespace1, state: running}]: error1", run.Status.Message)
+	assert.Equal(t, "ERROR: message1: error1", run.Status.Message)
 }
 
 func Test_pipelineRun_HasDeletionTimestamp_false(t *testing.T) {

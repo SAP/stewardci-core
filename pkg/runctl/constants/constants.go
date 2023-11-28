@@ -5,14 +5,7 @@ import (
 )
 
 const (
-
-	// RunClusterRoleName is the name of the cluster role
+	// RunClusterRoleName is the name of the cluster role that
+	// pipeline run service accounts are bound to.
 	RunClusterRoleName k8s.RoleName = "steward-run"
-
-	// JFRStepName is the name of the jfs step
-	JFRStepName = "step-jenkinsfile-runner"
-
-	// TektonTaskRunName is the name of the Tekton TaskRun in each
-	// run namespace.
-	TektonTaskRunName = "steward-jenkinsfile-runner"
 )

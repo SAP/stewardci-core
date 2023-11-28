@@ -14,7 +14,6 @@ import (
 	k8smocks "github.com/SAP/stewardci-core/pkg/k8s/mocks"
 	secretmocks "github.com/SAP/stewardci-core/pkg/k8s/secrets/mocks"
 	cfg "github.com/SAP/stewardci-core/pkg/runctl/cfg"
-	"github.com/SAP/stewardci-core/pkg/runctl/constants"
 	runctltesting "github.com/SAP/stewardci-core/pkg/runctl/testing"
 	tektonfakeclient "github.com/SAP/stewardci-core/pkg/tektonclient/clientset/versioned/fake"
 	gomock "github.com/golang/mock/gomock"
@@ -152,7 +151,7 @@ func (h *testHelper1) dummyTektonTaskRun() *tektonv1beta1.TaskRun {
 	t.Helper()
 	return &tektonv1beta1.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.TektonTaskRunName,
+			Name:      JFRTaskRunName,
 			Namespace: h.runNamespace1,
 		},
 	}

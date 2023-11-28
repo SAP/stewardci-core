@@ -351,8 +351,8 @@ func (r *pipelineRun) UpdateContainer(ctx context.Context, newContainerState *co
 // StoreErrorAsMessage implements part of interface `PipelineRun`.
 func (r *pipelineRun) StoreErrorAsMessage(ctx context.Context, err error, prefix string) error {
 	if err != nil {
-		text := fmt.Sprintf("ERROR: %s [%s]: %s", utils.Trim(prefix), r.String(), err.Error())
-		r.UpdateMessage(text)
+		msg := fmt.Sprintf("ERROR: %s: %s", utils.Trim(prefix), err.Error())
+		r.UpdateMessage(msg)
 	}
 	return nil
 }

@@ -33,30 +33,18 @@ import (
 	klog "k8s.io/klog/v2"
 )
 
-const (
-	runNamespacePrefix       = "steward-run"
-	runNamespaceRandomLength = 5
-	serviceAccountName       = "default"
-	serviceAccountTokenName  = "steward-serviceaccount-token"
-
-	// in general, the token of the above service account should not be automatically mounted into pods
-	automountServiceAccountToken = false
-
-	// tektonTaskJenkinsfileRunnerStep is the name of the step
-	// in the Tekton TaskRun that executes the Jenkinsfile Runner
-	tektonTaskJenkinsfileRunnerStep = "jenkinsfile-runner"
-
-	annotationPipelineRunKey = steward.GroupName + "/pipeline-run-key"
-)
-
-type runManager struct {
+// TektonRunManager is an implementation of runifc.Manager based on Tekton.
+type TektonRunManager struct {
 	factory        k8s.ClientFactory
 	secretProvider secrets.SecretProvider
 
-	testing *runManagerTesting
+	testing *tektonRunManagerTesting
 }
 
-type runManagerTesting struct {
+// Compiler check for interface compliance
+var _ runifc.Manager = (*TektonRunManager)(nil)
+
+type tektonRunManagerTesting struct {
 	cleanupStub                               func(context.Context, *runContext) error
 	copySecretsToRunNamespaceStub             func(context.Context, *runContext) (string, []string, error)
 	createTektonTaskRunStub                   func(context.Context, *runContext) error
@@ -80,16 +68,16 @@ type runContext struct {
 	serviceAccount     *k8s.ServiceAccountWrap
 }
 
-// NewRunManager creates a new runManager.
-func NewRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider) runifc.Manager {
-	return &runManager{
+// NewTektonRunManager creates a new TektonRunManager.
+func NewTektonRunManager(factory k8s.ClientFactory, secretProvider secrets.SecretProvider) *TektonRunManager {
+	return &TektonRunManager{
 		factory:        factory,
 		secretProvider: secretProvider,
 	}
 }
 
-// Prepare prepares the isolated environment for a new run
-func (c *runManager) Prepare(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (namespace string, auxNamespace string, err error) {
+// CreateEnv implements runifc.Manager.
+func (c *TektonRunManager) CreateEnv(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (namespace string, auxNamespace string, err error) {
 
 	runCtx := &runContext{
 		pipelineRun:        pipelineRun,
@@ -117,8 +105,8 @@ func (c *runManager) Prepare(ctx context.Context, pipelineRun k8s.PipelineRun, p
 	return runCtx.runNamespace, runCtx.auxNamespace, nil
 }
 
-// Start starts the run in the environment prepared by Prepare.
-func (c *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (err error) {
+// CreateRun implements runifc.Manager.
+func (c *TektonRunManager) CreateRun(ctx context.Context, pipelineRun k8s.PipelineRun, pipelineRunsConfig *cfg.PipelineRunsConfigStruct) (err error) {
 
 	runCtx := &runContext{
 		pipelineRun:        pipelineRun,
@@ -132,7 +120,7 @@ func (c *runManager) Start(ctx context.Context, pipelineRun k8s.PipelineRun, pip
 
 // prepareRunNamespace creates a new namespace for the pipeline run
 // and populates it with needed resources.
-func (c *runManager) prepareRunNamespace(ctx context.Context, runCtx *runContext) error {
+func (c *TektonRunManager) prepareRunNamespace(ctx context.Context, runCtx *runContext) error {
 
 	if c.testing != nil && c.testing.prepareRunNamespaceStub != nil {
 		return c.testing.prepareRunNamespaceStub(ctx, runCtx)
@@ -182,7 +170,7 @@ func (c *runManager) prepareRunNamespace(ctx context.Context, runCtx *runContext
 	return nil
 }
 
-func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext, pipelineCloneSecretName string, imagePullSecrets []string) error {
+func (c *TektonRunManager) setupServiceAccount(ctx context.Context, runCtx *runContext, pipelineCloneSecretName string, imagePullSecrets []string) error {
 	if c.testing != nil && c.testing.setupServiceAccountStub != nil {
 		return c.testing.setupServiceAccountStub(ctx, runCtx, pipelineCloneSecretName, imagePullSecrets)
 	}
@@ -214,7 +202,7 @@ func (c *runManager) setupServiceAccount(ctx context.Context, runCtx *runContext
 	return nil
 }
 
-func (c *runManager) attachAllSecrets(ctx context.Context, runCtx *runContext, accountManager k8s.ServiceAccountManager, pipelineCloneSecretName string, imagePullSecrets []string) (*k8s.ServiceAccountWrap, error) {
+func (c *TektonRunManager) attachAllSecrets(ctx context.Context, runCtx *runContext, accountManager k8s.ServiceAccountManager, pipelineCloneSecretName string, imagePullSecrets []string) (*k8s.ServiceAccountWrap, error) {
 	logger := klog.FromContext(ctx)
 
 	var serviceAccount *k8s.ServiceAccountWrap
@@ -247,14 +235,14 @@ func (c *runManager) attachAllSecrets(ctx context.Context, runCtx *runContext, a
 	return serviceAccount, nil
 }
 
-func (c *runManager) copySecretsToRunNamespace(ctx context.Context, runCtx *runContext) (string, []string, error) {
+func (c *TektonRunManager) copySecretsToRunNamespace(ctx context.Context, runCtx *runContext) (string, []string, error) {
 	if c.testing != nil && c.testing.copySecretsToRunNamespaceStub != nil {
 		return c.testing.copySecretsToRunNamespaceStub(ctx, runCtx)
 	}
 	return c.getSecretManager(runCtx).CopyAll(ctx, runCtx.pipelineRun)
 }
 
-func (c *runManager) getSecretManager(runCtx *runContext) runifc.SecretManager {
+func (c *TektonRunManager) getSecretManager(runCtx *runContext) runifc.SecretManager {
 	if c.testing != nil && c.testing.getSecretManagerStub != nil {
 		return c.testing.getSecretManagerStub(runCtx)
 	}
@@ -263,7 +251,7 @@ func (c *runManager) getSecretManager(runCtx *runContext) runifc.SecretManager {
 	return secretmgr.NewSecretManager(secretHelper)
 }
 
-func (c *runManager) setupStaticNetworkPolicies(ctx context.Context, runCtx *runContext) error {
+func (c *TektonRunManager) setupStaticNetworkPolicies(ctx context.Context, runCtx *runContext) error {
 	if c.testing != nil && c.testing.setupStaticNetworkPoliciesStub != nil {
 		return c.testing.setupStaticNetworkPoliciesStub(ctx, runCtx)
 	}
@@ -283,7 +271,7 @@ func (c *runManager) setupStaticNetworkPolicies(ctx context.Context, runCtx *run
 	return nil
 }
 
-func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(ctx context.Context, runCtx *runContext) error {
+func (c *TektonRunManager) setupNetworkPolicyThatIsolatesAllPods(ctx context.Context, runCtx *runContext) error {
 	if c.testing != nil && c.testing.setupNetworkPolicyThatIsolatesAllPodsStub != nil {
 		return c.testing.setupNetworkPolicyThatIsolatesAllPodsStub(ctx, runCtx)
 	}
@@ -312,7 +300,7 @@ func (c *runManager) setupNetworkPolicyThatIsolatesAllPods(ctx context.Context, 
 	return nil
 }
 
-func (c *runManager) setupNetworkPolicyFromConfig(ctx context.Context, runCtx *runContext) error {
+func (c *TektonRunManager) setupNetworkPolicyFromConfig(ctx context.Context, runCtx *runContext) error {
 	if c.testing != nil && c.testing.setupNetworkPolicyFromConfigStub != nil {
 		return c.testing.setupNetworkPolicyFromConfigStub(ctx, runCtx)
 	}
@@ -341,7 +329,7 @@ func (c *runManager) setupNetworkPolicyFromConfig(ctx context.Context, runCtx *r
 	return c.createResource(ctx, manifestYAMLStr, "networkpolicies", "network policy", expectedGroupKind, runCtx)
 }
 
-func (c *runManager) setupStaticLimitRange(ctx context.Context, runCtx *runContext) error {
+func (c *TektonRunManager) setupStaticLimitRange(ctx context.Context, runCtx *runContext) error {
 	if c.testing != nil && c.testing.setupStaticLimitRangeStub != nil {
 		return c.testing.setupStaticLimitRangeStub(ctx, runCtx)
 	}
@@ -356,7 +344,7 @@ func (c *runManager) setupStaticLimitRange(ctx context.Context, runCtx *runConte
 	return nil
 }
 
-func (c *runManager) setupLimitRangeFromConfig(ctx context.Context, runCtx *runContext) error {
+func (c *TektonRunManager) setupLimitRangeFromConfig(ctx context.Context, runCtx *runContext) error {
 	if c.testing != nil && c.testing.setupLimitRangeFromConfigStub != nil {
 		return c.testing.setupLimitRangeFromConfigStub(ctx, runCtx)
 	}
@@ -374,7 +362,7 @@ func (c *runManager) setupLimitRangeFromConfig(ctx context.Context, runCtx *runC
 	return c.createResource(ctx, configStr, "limitranges", "limit range", expectedGroupKind, runCtx)
 }
 
-func (c *runManager) setupStaticResourceQuota(ctx context.Context, runCtx *runContext) error {
+func (c *TektonRunManager) setupStaticResourceQuota(ctx context.Context, runCtx *runContext) error {
 	if c.testing != nil && c.testing.setupStaticResourceQuotaStub != nil {
 		return c.testing.setupStaticResourceQuotaStub(ctx, runCtx)
 	}
@@ -389,7 +377,7 @@ func (c *runManager) setupStaticResourceQuota(ctx context.Context, runCtx *runCo
 	return nil
 }
 
-func (c *runManager) setupResourceQuotaFromConfig(ctx context.Context, runCtx *runContext) error {
+func (c *TektonRunManager) setupResourceQuotaFromConfig(ctx context.Context, runCtx *runContext) error {
 	if c.testing != nil && c.testing.setupResourceQuotaFromConfigStub != nil {
 		return c.testing.setupResourceQuotaFromConfigStub(ctx, runCtx)
 	}
@@ -407,7 +395,7 @@ func (c *runManager) setupResourceQuotaFromConfig(ctx context.Context, runCtx *r
 	return c.createResource(ctx, configStr, "resourcequotas", "resource quota", expectedGroupKind, runCtx)
 }
 
-func (c *runManager) createResource(ctx context.Context, configStr string, resource string, resourceDisplayName string, expectedGroupKind schema.GroupKind, runCtx *runContext) error {
+func (c *TektonRunManager) createResource(ctx context.Context, configStr string, resource string, resourceDisplayName string, expectedGroupKind schema.GroupKind, runCtx *runContext) error {
 	var obj *unstructured.Unstructured
 
 	// decode
@@ -462,7 +450,7 @@ func GetPipelineRunKeyAnnotation(object metav1.Object) string {
 	return annotations[annotationPipelineRunKey]
 }
 
-func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runContext) (*tekton.TaskRun, error) {
+func (c *TektonRunManager) createTektonTaskRunObject(ctx context.Context, runCtx *runContext) (*tekton.TaskRun, error) {
 
 	var err error
 
@@ -478,7 +466,7 @@ func (c *runManager) createTektonTaskRunObject(ctx context.Context, runCtx *runC
 	automount := true
 	tektonTaskRun := tekton.TaskRun{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.TektonTaskRunName,
+			Name:      JFRTaskRunName,
 			Namespace: namespace,
 			Annotations: map[string]string{
 				annotationPipelineRunKey: runCtx.pipelineRun.GetKey(),
@@ -541,7 +529,7 @@ func getTimeout(runCtx *runContext) *metav1.Duration {
 	return timeout
 }
 
-func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext) error {
+func (c *TektonRunManager) createTektonTaskRun(ctx context.Context, runCtx *runContext) error {
 	if c.testing != nil && c.testing.createTektonTaskRunStub != nil {
 		return c.testing.createTektonTaskRunStub(ctx, runCtx)
 	}
@@ -555,7 +543,7 @@ func (c *runManager) createTektonTaskRun(ctx context.Context, runCtx *runContext
 	return err
 }
 
-func (c *runManager) addTektonTaskRunParamsForJenkinsfileRunnerImage(
+func (c *TektonRunManager) addTektonTaskRunParamsForJenkinsfileRunnerImage(
 	runCtx *runContext,
 	tektonTaskRun *tekton.TaskRun,
 ) {
@@ -581,7 +569,7 @@ func (c *runManager) addTektonTaskRunParamsForJenkinsfileRunnerImage(
 	tektonTaskRun.Spec.Params = append(tektonTaskRun.Spec.Params, params...)
 }
 
-func (c *runManager) addTektonTaskRunParamsForRunDetails(
+func (c *TektonRunManager) addTektonTaskRunParamsForRunDetails(
 	runCtx *runContext,
 	tektonTaskRun *tekton.TaskRun,
 ) {
@@ -602,7 +590,7 @@ func (c *runManager) addTektonTaskRunParamsForRunDetails(
 	}
 }
 
-func (c *runManager) addTektonTaskRunParamsForPipeline(
+func (c *TektonRunManager) addTektonTaskRunParamsForPipeline(
 	runCtx *runContext,
 	tektonTaskRun *tekton.TaskRun,
 ) error {
@@ -629,7 +617,7 @@ func (c *runManager) addTektonTaskRunParamsForPipeline(
 	return nil
 }
 
-func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
+func (c *TektonRunManager) addTektonTaskRunParamsForLoggingElasticsearch(
 	runCtx *runContext,
 	tektonTaskRun *tekton.TaskRun,
 ) error {
@@ -671,7 +659,7 @@ func (c *runManager) addTektonTaskRunParamsForLoggingElasticsearch(
 	return nil
 }
 
-func (c *runManager) recoverableIfTransient(err error) error {
+func (c *TektonRunManager) recoverableIfTransient(err error) error {
 	return serrors.RecoverableIf(err,
 		k8serrors.IsServerTimeout(err) ||
 			k8serrors.IsServiceUnavailable(err) ||
@@ -681,26 +669,26 @@ func (c *runManager) recoverableIfTransient(err error) error {
 			k8serrors.IsUnexpectedServerError(err))
 }
 
-// GetRun based on a pipelineRun
-func (c *runManager) GetRun(ctx context.Context, pipelineRun k8s.PipelineRun) (runifc.Run, error) {
+// GetRun creates a new TektonRunManager.
+func (c *TektonRunManager) GetRun(ctx context.Context, pipelineRun k8s.PipelineRun) (runifc.Run, error) {
 	namespace := pipelineRun.GetRunNamespace()
-	run, err := c.factory.TektonV1beta1().TaskRuns(namespace).Get(ctx, constants.TektonTaskRunName, metav1.GetOptions{})
+	run, err := c.factory.TektonV1beta1().TaskRuns(namespace).Get(ctx, JFRTaskRunName, metav1.GetOptions{})
 	if k8serrors.IsNotFound(err) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, c.recoverableIfTransient(err)
 	}
-	return NewRun(run), nil
+	return newRun(run), nil
 }
 
-// DeleteRun deletes a tekton run based on a pipelineRun
-func (c *runManager) DeleteRun(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+// DeleteRun creates a new TektonRunManager.
+func (c *TektonRunManager) DeleteRun(ctx context.Context, pipelineRun k8s.PipelineRun) error {
 	namespace := pipelineRun.GetRunNamespace()
 	if namespace == "" {
-		return fmt.Errorf("cannot delete taskrun, runnamespace not set in %q", pipelineRun.GetName())
+		return fmt.Errorf("cannot delete taskrun, run namespace not set in %q", pipelineRun.GetName())
 	}
-	err := c.factory.TektonV1beta1().TaskRuns(namespace).Delete(ctx, constants.TektonTaskRunName, metav1.DeleteOptions{})
+	err := c.factory.TektonV1beta1().TaskRuns(namespace).Delete(ctx, JFRTaskRunName, metav1.DeleteOptions{})
 
 	if k8serrors.IsNotFound(err) {
 		return nil
@@ -711,8 +699,8 @@ func (c *runManager) DeleteRun(ctx context.Context, pipelineRun k8s.PipelineRun)
 	return nil
 }
 
-// Cleanup a run based on a pipelineRun
-func (c *runManager) Cleanup(ctx context.Context, pipelineRun k8s.PipelineRun) error {
+// DeleteEnv creates a new TektonRunManager.
+func (c *TektonRunManager) DeleteEnv(ctx context.Context, pipelineRun k8s.PipelineRun) error {
 	runCtx := &runContext{
 		pipelineRun:  pipelineRun,
 		runNamespace: pipelineRun.GetRunNamespace(),
@@ -721,7 +709,7 @@ func (c *runManager) Cleanup(ctx context.Context, pipelineRun k8s.PipelineRun) e
 	return c.cleanupNamespaces(ctx, runCtx)
 }
 
-func (c *runManager) cleanupNamespaces(ctx context.Context, runCtx *runContext) error {
+func (c *TektonRunManager) cleanupNamespaces(ctx context.Context, runCtx *runContext) error {
 	if c.testing != nil && c.testing.cleanupStub != nil {
 		return c.testing.cleanupStub(ctx, runCtx)
 	}
@@ -760,7 +748,7 @@ func (c *runManager) cleanupNamespaces(ctx context.Context, runCtx *runContext) 
 	return fmt.Errorf("cannot delete all namespaces: %s", strings.Join(msg, ", "))
 }
 
-func (c *runManager) createNamespace(ctx context.Context, runCtx *runContext, purpose, randName string) (string, error) {
+func (c *TektonRunManager) createNamespace(ctx context.Context, runCtx *runContext, purpose, randName string) (string, error) {
 	var err error
 
 	wanted := &corev1api.Namespace{
@@ -801,7 +789,7 @@ func (c *runManager) createNamespace(ctx context.Context, runCtx *runContext, pu
 	return created.GetName(), err
 }
 
-func (c *runManager) deleteNamespace(ctx context.Context, name string, options metav1.DeleteOptions) error {
+func (c *TektonRunManager) deleteNamespace(ctx context.Context, name string, options metav1.DeleteOptions) error {
 	isIgnorable := func(err error) bool {
 		return k8serrors.IsNotFound(err) ||
 			k8serrors.IsGone(err) ||
