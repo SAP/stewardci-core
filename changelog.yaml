@@ -52,6 +52,10 @@
   date: TBD
   changes:
 
+- version: "0.40.0"
+  date: 2023-11-29
+  changes:
+
     - type: enhancement
       impact: minor
       title: "Helm chart: Ensure atomic override of complex values"
