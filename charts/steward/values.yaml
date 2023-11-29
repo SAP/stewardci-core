@@ -16,25 +16,12 @@ runController:
     repository: stewardci/stewardci-run-controller
     tag: "0.39.1" #Do not modify this line! RunController tag updated automatically
     pullPolicy: IfNotPresent
-  resources:
-    limits:
-      cpu: 1
-      memory: 256Mi
-    requests:
-      cpu: 100m
-      memory: 256Mi
-  podSecurityContext: {}
-  securityContext:
-    capabilities:
-      drop:
-      - ALL
-    readOnlyRootFilesystem: true
-    runAsNonRoot: true
-    runAsUser: 1000
-    runAsGroup: 1000
-  nodeSelector: {}
-  affinity: {}
-  tolerations: []
+  resources: {} # default is defined in template
+  podSecurityContext: {} # default is defined in template
+  securityContext: {} # default is defined in template
+  nodeSelector: {} # default is defined in template
+  affinity: {} # default is defined in template
+  tolerations: [] # default is defined in template
   podSecurityPolicyName: ""
   logging:
     customLoggingDetails: []
@@ -83,13 +70,7 @@ pipelineRuns:
       -Dhudson.slaves.NodeProvisioner.MARGIN0=0.8
       -XX:+UseContainerSupport
       -XX:MaxRAMPercentage=75.0
-    resources:
-      limits:
-        cpu: 3
-        memory: 2Gi
-      requests:
-        cpu: 500m
-        memory: 2Gi
+    resources: {} # default is defined in template
     podSecurityContext:
       runAsUser: 1000
       runAsGroup: 1000

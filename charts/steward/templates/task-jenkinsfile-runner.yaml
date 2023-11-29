@@ -213,7 +213,17 @@ spec:
     - name: TERMINATION_LOG_PATH
       value: /tekton/results/jfr-termination-log
     resources:
-      {{- toYaml .Values.pipelineRuns.jenkinsfileRunner.resources | nindent 6 }}
+      {{- with .Values.pipelineRuns.jenkinsfileRunner.resources }}
+      {{- toYaml . | nindent 6 }}
+      {{- else }}
+      # chart default
+      limits:
+        cpu: 3
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      {{- end }}
     terminationMessagePath: /tekton/results/jfr-termination-log
   results:
   - name: jfr-termination-log

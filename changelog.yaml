@@ -52,6 +52,30 @@
   date: TBD
   changes:
 
+    - type: enhancement
+      impact: minor
+      title: "Helm chart: Ensure atomic override of complex values"
+      description: |-
+        The following complex values can no longer be overridden partially:
+
+        - `runController.resources`
+        - `runController.podSecurityContext`
+        - `runController.securityContext`
+        - `runController.nodeSelector` (default was empty)
+        - `runController.affinity` (default was empty)
+        - `runController.tolerations` (default was empty)
+        - `pipelineRuns.resources`
+
+        Partial overrides should be avoided because they imply the
+        risk of inconsistent or unintented results in case the default
+        values change with newer Helm chart releases.
+      upgradeNotes: |-
+        Ensure that overrides of the above-mentioned values are
+        complete, i.e. they override _all_ fields which where also set
+        in the respective chart default in v0.39.1.
+        If this is not the case, add the missing fields.
+      pullRequestNumber: 398
+
 - version: "0.39.1"
   date: 2023-11-29
   changes:
