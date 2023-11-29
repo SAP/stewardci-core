@@ -113,6 +113,30 @@ spec:
           else
             echo "$CRD_SPEC" | kubectl create -f -
           fi
+        resources:
+          {{- with .Values.hooks.crdUpdate.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- else }}
+          # chart default
+          {{- end }}
+      nodeSelector:
+        {{- with .Values.hooks.crdUpdate.nodeSelector }}
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        # chart default
+        {{- end }}
+      affinity:
+        {{- with .Values.hooks.crdUpdate.affinity }}
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        # chart default
+        {{- end }}
+      tolerations:
+        {{- with .Values.hooks.crdUpdate.tolerations }}
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        # chart default
+        {{- end }}
 {{- end -}}
 {{- end -}}
 

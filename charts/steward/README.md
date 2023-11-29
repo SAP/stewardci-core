@@ -307,8 +307,12 @@ Lifecycle:
 
 | Parameter | Description | Default |
 |---|---|---|
+| <code>hooks.<wbr>crdUpdate.<wbr/><b>resources</b></code><br/><i>object of [`RecourceRequirements`][k8s-resourcerequirements]</i> |  The resource requirements of the hook container. If not set or empty, the default value is used. | `{}` |
 | <code>hooks.<wbr>crdUpdate.<wbr/><b>podSecurityContext</b></code><br/><i>object of [`PodSecurityContext`][k8s-podsecuritycontext]</i> |  The pod security context of the hook pod. If not set or empty, the default value is used. | `{"runAsUser":1000, "runAsGroup":1000, "fsGroup":1000, "runAsNonRoot":true}` |
 | <code>hooks.<wbr>crdUpdate.<wbr/><b>securityContext</b></code><br/><i>object of [`SecurityContext`][k8s-securitycontext]</i> |  The security context of the hook container. If not set or empty, the default value is used. | `{"privileged":false, "seccompProfile": {"type":"RuntimeDefault"}, "allowPrivilegeEscalation":false, "capabilities": {"drop": ["ALL"]}, "readOnlyRootFilesystem":true}` |
+| <code>hooks.<wbr>crdUpdate.<wbr/><b>nodeSelector</b></code><br/><i>object</i> |  The `nodeSelector` field of the hook [pod spec][k8s-podspec]. If not set or empty, the default value is used. | `{}` |
+| <code>hooks.<wbr>crdUpdate.<wbr/><b>affinity</b></code><br/><i>object of [`Affinity`][k8s-affinity]</i> |  The `affinity` field of the hook [pod spec][k8s-podspec]. If not set or empty, the default value is used. | `{}` |
+| <code>hooks.<wbr>crdUpdate.<wbr/><b>tolerations</b></code><br/><i>array of [`Toleration`][k8s-tolerations]</i> |  The `tolerations` field of the hook [pod spec][k8s-podspec]. If not set or empty, the default value is used. | `[]` |
 
 ### Feature Flags
 

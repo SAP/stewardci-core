@@ -92,6 +92,19 @@
       pullRequestNumber: 398
       jiraIssueNumber: 725
 
+    - type: enhancement
+      impact: minor
+      title: "Helm chart: Add parameters for crd-update hook pods"
+      description: |-
+        The following additional parameters for CRD update hooks are now
+        available:
+
+        - `hooks.crdUpdate.resources`
+        - `hooks.crdUpdate.nodeSelector`
+        - `hooks.crdUpdate.affinity`
+        - `hooks.crdUpdate.tolerations`
+      pullRequestNumber: 398
+
 - version: "0.39.1"
   date: 2023-11-29
   changes:

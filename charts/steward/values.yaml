@@ -90,6 +90,10 @@ hooks:
   crdUpdate:
     podSecurityContext: {} # default is defined in template
     securityContext: {} # default is defined in template
+    resources: {} # default is defined in template
+    nodeSelector: {} # default is defined in template
+    affinity: {} # default is defined in template
+    tolerations: [] # default is defined in template
   images:
     kubectl:
       repository: docker.io/bitnami/kubectl
