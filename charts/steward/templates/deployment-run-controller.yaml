@@ -24,11 +24,30 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       securityContext:
-        {{- toYaml .Values.runController.podSecurityContext | nindent 8 }}
+        {{- with .Values.runController.podSecurityContext }}
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        # chart default
+        {{- end }}
       containers:
       - name: controller
         securityContext:
-          {{- toYaml .Values.runController.securityContext | nindent 10 }}
+          {{- with .Values.runController.securityContext }}
+          {{- toYaml . | nindent 10 }}
+          {{- else }}
+          # chart default
+          privileged: false
+          seccompProfile:
+            type: RuntimeDefault
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          {{- end }}
         {{- with .Values.runController.image }}
         image: {{ printf "%s:%s" .repository .tag | quote }}
         imagePullPolicy: {{ .pullPolicy | quote }}
@@ -66,16 +85,32 @@ spec:
             containerPort: 9090
             protocol: TCP
         resources:
-          {{- toYaml .Values.runController.resources | nindent 10 }}
-      {{- with .Values.runController.nodeSelector }}
+          {{- with .Values.runController.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- else }}
+          # chart default
+          limits:
+            cpu: 1
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          {{- end }}
       nodeSelector:
+        {{- with .Values.runController.nodeSelector }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.runController.affinity }}
+        {{- else }}
+        # chart default
+        {{- end }}
       affinity:
+        {{- with .Values.runController.affinity }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.runController.tolerations }}
+        {{- else }}
+        # chart default
+        {{- end }}
       tolerations:
+        {{- with .Values.runController.tolerations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- else }}
+        # chart default
+        {{- end }}

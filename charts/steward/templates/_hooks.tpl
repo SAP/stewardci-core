@@ -71,8 +71,32 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       restartPolicy: Never
+      securityContext:
+        {{- with .Values.hooks.crdUpdate.podSecurityContext }}
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        # chart default
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        runAsNonRoot: true
+        {{- end }}
       containers:
       - name: kubectl
+        securityContext:
+          {{- with .Values.hooks.crdUpdate.securityContext }}
+          {{- toYaml . | nindent 10 }}
+          {{- else }}
+          # chart default
+          privileged: false
+          seccompProfile:
+            type: RuntimeDefault
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          {{- end }}
         {{- with .Values.hooks.images.kubectl }}
         image: {{ printf "%s:%s" .repository .tag | quote }}
         imagePullPolicy: {{ .pullPolicy | quote }}
@@ -89,6 +113,30 @@ spec:
           else
             echo "$CRD_SPEC" | kubectl create -f -
           fi
+        resources:
+          {{- with .Values.hooks.crdUpdate.resources }}
+          {{- toYaml . | nindent 10 }}
+          {{- else }}
+          # chart default
+          {{- end }}
+      nodeSelector:
+        {{- with .Values.hooks.crdUpdate.nodeSelector }}
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        # chart default
+        {{- end }}
+      affinity:
+        {{- with .Values.hooks.crdUpdate.affinity }}
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        # chart default
+        {{- end }}
+      tolerations:
+        {{- with .Values.hooks.crdUpdate.tolerations }}
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        # chart default
+        {{- end }}
 {{- end -}}
 {{- end -}}
 

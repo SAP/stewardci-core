@@ -13,8 +13,15 @@ Install and configure [Steward][] on Kubernetes.
   - [Chart Configuration](#chart-configuration)
     - [Target Namespace](#target-namespace)
     - [Pipeline Run Controller](#pipeline-run-controller)
+      - [Custom Logging Details](#custom-logging-details)
+        - [Annotation provider](#annotation-provider)
+        - [Label provider](#label-provider)
     - [Monitoring](#monitoring)
     - [Pipeline Runs](#pipeline-runs)
+      - [Jenkinsfile Runner](#jenkinsfile-runner)
+      - [Logging](#logging)
+    - [Helm Hooks](#helm-hooks)
+      - [CRD Update Hooks](#crd-update-hooks)
     - [Feature Flags](#feature-flags)
       - [List of Defined Feature Flags](#list-of-defined-feature-flags)
     - [Misc](#misc)
@@ -103,12 +110,12 @@ The tables in the following sections list the configurable parameters of the Ste
 | <code>runController.<wbr/><b>image.<wbr/>repository</b></code><br/><i>string</i> |  The container registry and repository of the Run Controller image. | `stewardci/stewardci-run-controller` |
 | <code>runController.<wbr/><b>image.<wbr/>tag</b></code><br/><i>string</i> |  The tag of the Run Controller image in the container registry. | A fixed image tag. |
 | <code>runController.<wbr/><b>image.<wbr/>pullPolicy</b></code><br/><i>string</i> |  The image pull policy for the Run Controller image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation.  | `IfNotPresent` |
-| <code>runController.<wbr/><b>resources</b></code><br/><i>object of [`RecourceRequirements`][k8s-resourcerequirements]</i> |  The resource requirements of the Run Controller container. When overriding, override the complete value, not just subvalues, because the default value might change in future versions and a partial override might not make sense anymore. | Limits and requests set (see `values.yaml`) |
-| <code>runController.<wbr/><b>podSecurityContext</b></code><br/><i>object of [`PodSecurityContext`][k8s-podsecuritycontext]</i> |  The pod security context of the Run Controller pod. | `{}` |
-| <code>runController.<wbr/><b>securityContext</b></code><br/><i>object of [`SecurityContext`][k8s-securitycontext]</i> |  The security context of the Run Controller container. | `{}` |
-| <code>runController.<wbr/><b>nodeSelector</b></code><br/><i>object</i> |  The `nodeSelector` field of the Run Controller [pod spec][k8s-podspec]. | `{}` |
-| <code>runController.<wbr/><b>affinity</b></code><br/><i>object of [`Affinity`][k8s-affinity]</i> |  The `affinity` field of the Run Controller [pod spec][k8s-podspec]. | `{}` |
-| <code>runController.<wbr/><b>tolerations</b></code><br/><i>array of [`Toleration`][k8s-tolerations]</i> |  The `tolerations` field of the Run Controller [pod spec][k8s-podspec]. | `[]` |
+| <code>runController.<wbr/><b>resources</b></code><br/><i>object of [`RecourceRequirements`][k8s-resourcerequirements]</i> |  The resource requirements of the Run Controller container. If not set or empty, the default value is used. | `{"limits": {"cpu":1, "memory":"256Mi"}, "requests": {"cpu":"100m", "memory":"256Mi"}}` |
+| <code>runController.<wbr/><b>podSecurityContext</b></code><br/><i>object of [`PodSecurityContext`][k8s-podsecuritycontext]</i> |  The pod security context of the Run Controller pod. If not set or empty, the default value is used. | `{}` |
+| <code>runController.<wbr/><b>securityContext</b></code><br/><i>object of [`SecurityContext`][k8s-securitycontext]</i> |  The security context of the Run Controller container. If not set or empty, the default value is used. | `{"privileged":false, "seccompProfile": {"type":"RuntimeDefault"}, "allowPrivilegeEscalation":false, "capabilities": {"drop": ["ALL"]}, "readOnlyRootFilesystem":true, "runAsNonRoot":true, "runAsUser":1000, "runAsGroup":"1000}"}` |
+| <code>runController.<wbr/><b>nodeSelector</b></code><br/><i>object</i> |  The `nodeSelector` field of the Run Controller [pod spec][k8s-podspec]. If not set or empty, the default value is used. | `{}` |
+| <code>runController.<wbr/><b>affinity</b></code><br/><i>object of [`Affinity`][k8s-affinity]</i> |  The `affinity` field of the Run Controller [pod spec][k8s-podspec]. If not set or empty, the default value is used. | `{}` |
+| <code>runController.<wbr/><b>tolerations</b></code><br/><i>array of [`Toleration`][k8s-tolerations]</i> |  The `tolerations` field of the Run Controller [pod spec][k8s-podspec]. If not set or empty, the default value is used. | `[]` |
 | <code>runController.<wbr/><b>args.<wbr/>qps</b></code><br/><i>integer</i> |  The maximum queries per second (QPS) from the controller to the cluster. | 5 |
 | <code>runController.<wbr/><b>args.<wbr/>burst</b></code><br/><i>integer</i> |  The burst limit for throttle connections (maximum number of concurrent requests). | 10 |
 | <code>runController.<wbr/><b>args.<wbr/>threadiness</b></code><br/><i>integer</i> |  The maximum number of reconciliations performed in parallel. | 2 |
@@ -120,7 +127,7 @@ The tables in the following sections list the configurable parameters of the Ste
 | <code>runController.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by the run controller. If empty, a default pod security policy will be created. | empty |
 | <code>runController.<wbr/>logging.<wbr/><b>customLoggingDetails</b></code><br/><i>list</i> | Define a list of log detail providers. See example below.| {} |
 
-##### Custom Logging Details
+#### Custom Logging Details
 
 The custom logging details can be defined at `runController.logging.customLoggingDetails`.
 The content is a list, where each entry defines a log detail provider.
@@ -204,13 +211,13 @@ Common parameters:
 
 | Parameter | Description | Default |
 |---|---|---|
-| <code>pipelineRuns.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by pipeline run pods. If empty, a default pod security policy will be created. | empty |
+| <code>pipelineRuns.<wbr/><b>podSecurityPolicyName</b></code><br/><i>string</i> |  The name of an _existing_ pod security policy that should be used by pipeline run pods. If empty, a default pod security policy will be created. | |
 | <code>pipelineRuns.<wbr/><b>timeout</b></code><br/><i>[duration][type-duration]</i> |  The maximum execution time of pipelines. | `60m` |
 | <code>pipelineRuns.<wbr/><b>networkPolicy</b></code><br/><i>string</i> | <b>Deprecated</b>: Use <code>pipelineRuns.<wbr/>networkPolicies</code> instead. | |
 | <code>pipelineRuns.<wbr/><b>defaultNetworkPolicyName</b></code> | The name of the network policy which is used when no network profile is selected by a pipeline run spec. | `default` if <code>pipelineRuns.<wbr/>networkPolicies</code> is not set or empty. |
 | <code>pipelineRuns.<wbr/><b>networkPolicies</b></code><br/><i>map\[string]string</i> |  The network policies selectable as network profiles in pipeline run specs. The key can be any valid YAML key not starting with underscore (`_`). The value must be a string containing a complete `networkpolicy.networking.k8s.io` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of network policies][k8s-networkpolicies] for details about Kubernetes network policies.<br/><br/> Note that Steward ensures that all pods in pipeline run namespaces are _isolated_ in terms of network policies. The policy defined here _adds_ egress and/or ingress rules. | A single entry named `default` whose value is a network policy defining rules that allow ingress traffic from all pods in the same namespace and egress traffic to the internet, the cluster DNS resolver. |
 | <code>pipelineRuns.<wbr/><b>limitRange</b></code><br/><i>string</i> |  The limit range to be created in every pipeline run namespace. The value must be a string containing a complete `limitrange` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of limit ranges][k8s-limitranges] for details about Kubernetes limit ranges. | A limit range defining a default CPU request of 0.5 CPUs, a default CPU limit of 3 CPUs, a default memory request of 0.5 GiB and a default memory limit of 3 GiB.<br/><br/>This default limit range might change with newer releases of Steward. It is recommended to set an own limit range to avoid unexpected changes with Steward upgrades. |
-| <code>pipelineRuns.<wbr/><b>resourceQuota</b></code><br/><i>string</i> |  The resource quota to be created in every pipeline run namespace. The value must be a string containing a complete `resourcequotas` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of resource quotas][k8s-resourcequotas] for details about Kubernetes resource quotas.| none |
+| <code>pipelineRuns.<wbr/><b>resourceQuota</b></code><br/><i>string</i> |  The resource quota to be created in every pipeline run namespace. The value must be a string containing a complete `resourcequotas` resource manifest in YAML format. The `.metadata` section of the manifest can be omitted, as it will be replaced anyway. See the [Kubernetes documentation of resource quotas][k8s-resourcequotas] for details about Kubernetes resource quotas.| |
 
 #### Jenkinsfile Runner
 
@@ -222,13 +229,13 @@ Common parameters:
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>image</b></code><br/><i>string</i> |  The Jenkinsfile Runner image. | `stewardci/stewardci-jenkinsfile-runner:<versionTag>` |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>imagePullPolicy</b></code><br/><i>string</i> |  The image pull policy for the Jenkinsfile Runner image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation. | `IfNotPresent` |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>javaOpts</b></code><br/><i>string</i> |  The JAVA_OPTS environment variable for the Jenkinsfile Runner process.  | (see `values.yaml`) |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>resources</b></code><br/><i>object of [`RecourceRequirements`][k8s-resourcerequirements]</i> |  The resource requirements of Jenkinsfile Runner containers. When overriding, override the complete value, not just subvalues, because the default value might change in future versions and a partial override might not make sense anymore. | Limits and requests set (see `values.yaml`) |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>resources</b></code><br/><i>object of [`RecourceRequirements`][k8s-resourcerequirements]</i> |  The resource requirements of Jenkinsfile Runner containers. If not set or empty, the default value is used. | `{"limits": {"cpu":3, "memory":"2Gi"}, "requests": {"cpu":"500m", "memory":"2Gi"}}` |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>podSecurityContext.<wbr/>runAsUser</b></code><br/><i>integer</i> |  The user ID (UID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of \[1,65535]. Corresponds to field `runAsUser` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>podSecurityContext.<wbr/>runAsGroup</b></code><br/><i>integer</i> |  The group ID (GID) of the container processes of the Jenkinsfile Runner pod. The value must be an integer in the range of \[1,65535]. Corresponds to field `runAsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>podSecurityContext.<wbr/>fsGroup</b></code><br/><i>integer</i> |  A special supplemental group ID of the container processes of the Jenkinsfile Runner pod, that defines the ownership of some volume types. The value must be an integer in the range of \[1,65535]. Corresponds to field `fsGroup` of a [PodSecurityContext][k8s-podsecuritycontext]. | `1000` |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>pipelineCloneRetryIntervalSec</b></code><br/><i>string</i> |  The retry interval for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
 | <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>pipelineCloneRetryTimeoutSec</b></code><br/><i>string</i> |  The retry timeout for cloning the pipeline repository (in seconds).  | The default value is defined in the Jenkinsfile Runner image. |
-| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>sidecars</b></code><br/><i>list</i> | A list of sidecar containers for the task, as specified by the [Tekton documentation](https://tekton.dev/vault/pipelines-main/tasks/#specifying-sidecars). | empty |
+| <code>pipelineRuns.<wbr/>jenkinsfileRunner.<wbr/><b>sidecars</b></code><br/><i>list</i> | A list of sidecar containers for the task, as specified by the [Tekton documentation](https://tekton.dev/vault/pipelines-main/tasks/#specifying-sidecars). | |
 
 #### Logging
 
@@ -271,6 +278,41 @@ This plug-in supports two ways of sending log events:
 | <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>flushAttemptIntervalMillis</b></code><br/><i>integer</i> | The interval in milliseconds at which the Fluency flusher service periodically checks for buffer chunks ready to be flushed. | |
 | <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>maxBufferSize</b></code><br/><i>integer</i> | The maximum total size in bytes of all buffer chunks. Must be greater than `bufferChunkRetentionSize`. | |
 | <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>emitTimeoutMillis</b></code><br/><i>integer</i> | The timeout in milliseconds for inserting a single log event into the local in-memory buffer and retrying in case of errors, e.g. when the buffer is full. | |
+
+### Helm Hooks
+
+#### Images
+
+This section configures the images used by Helm hooks.
+
+| Parameter | Description | Default |
+|---|---|---|
+| hooks.<wbr/>images.<wbr>&lt;IMAGE_KEY>.<wbr/><b>repository</b></code><br/><i>string</i> |  The container registry and repository of the image. | see `values.yaml` |
+| hooks.<wbr/>images.<wbr>&lt;IMAGE_KEY>.<wbr/><b>tag</b></code><br/><i>string</i> |  The tag of the Run Controller image in the container registry. | see `values.yaml` |
+| hooks.<wbr/>images.<wbr>&lt;IMAGE_KEY>.<wbr/><b>pullPolicy</b></code><br/><i>string</i> |  The image pull policy for the image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation. | see `values.yaml` |
+
+Image keys:
+
+- `kubectl`: An image with Bourne shell and the `kubectl` CLI.
+
+#### CRD Update Hooks
+
+The CRD Update hooks are Kubernetes Jobs to update the Steward CRDs.
+
+Lifecycle:
+
+- pre-install
+- pre-upgrade
+- pre-rollback
+
+| Parameter | Description | Default |
+|---|---|---|
+| <code>hooks.<wbr>crdUpdate.<wbr/><b>resources</b></code><br/><i>object of [`RecourceRequirements`][k8s-resourcerequirements]</i> |  The resource requirements of the hook container. If not set or empty, the default value is used. | `{}` |
+| <code>hooks.<wbr>crdUpdate.<wbr/><b>podSecurityContext</b></code><br/><i>object of [`PodSecurityContext`][k8s-podsecuritycontext]</i> |  The pod security context of the hook pod. If not set or empty, the default value is used. | `{"runAsUser":1000, "runAsGroup":1000, "fsGroup":1000, "runAsNonRoot":true}` |
+| <code>hooks.<wbr>crdUpdate.<wbr/><b>securityContext</b></code><br/><i>object of [`SecurityContext`][k8s-securitycontext]</i> |  The security context of the hook container. If not set or empty, the default value is used. | `{"privileged":false, "seccompProfile": {"type":"RuntimeDefault"}, "allowPrivilegeEscalation":false, "capabilities": {"drop": ["ALL"]}, "readOnlyRootFilesystem":true}` |
+| <code>hooks.<wbr>crdUpdate.<wbr/><b>nodeSelector</b></code><br/><i>object</i> |  The `nodeSelector` field of the hook [pod spec][k8s-podspec]. If not set or empty, the default value is used. | `{}` |
+| <code>hooks.<wbr>crdUpdate.<wbr/><b>affinity</b></code><br/><i>object of [`Affinity`][k8s-affinity]</i> |  The `affinity` field of the hook [pod spec][k8s-podspec]. If not set or empty, the default value is used. | `{}` |
+| <code>hooks.<wbr>crdUpdate.<wbr/><b>tolerations</b></code><br/><i>array of [`Toleration`][k8s-tolerations]</i> |  The `tolerations` field of the hook [pod spec][k8s-podspec]. If not set or empty, the default value is used. | `[]` |
 
 ### Feature Flags
 
