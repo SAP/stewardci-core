@@ -71,8 +71,32 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       restartPolicy: Never
+      securityContext:
+        {{- with .Values.hooks.crdUpdate.podSecurityContext }}
+        {{- toYaml . | nindent 8 }}
+        {{- else }}
+        # chart default
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        runAsNonRoot: true
+        {{- end }}
       containers:
       - name: kubectl
+        securityContext:
+          {{- with .Values.hooks.crdUpdate.securityContext }}
+          {{- toYaml . | nindent 10 }}
+          {{- else }}
+          # chart default
+          privileged: false
+          seccompProfile:
+            type: RuntimeDefault
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          {{- end }}
         {{- with .Values.hooks.images.kubectl }}
         image: {{ printf "%s:%s" .repository .tag | quote }}
         imagePullPolicy: {{ .pullPolicy | quote }}

@@ -20,6 +20,8 @@ Install and configure [Steward][] on Kubernetes.
     - [Pipeline Runs](#pipeline-runs)
       - [Jenkinsfile Runner](#jenkinsfile-runner)
       - [Logging](#logging)
+    - [Helm Hooks](#helm-hooks)
+      - [CRD Update Hooks](#crd-update-hooks)
     - [Feature Flags](#feature-flags)
       - [List of Defined Feature Flags](#list-of-defined-feature-flags)
     - [Misc](#misc)
@@ -276,6 +278,37 @@ This plug-in supports two ways of sending log events:
 | <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>flushAttemptIntervalMillis</b></code><br/><i>integer</i> | The interval in milliseconds at which the Fluency flusher service periodically checks for buffer chunks ready to be flushed. | |
 | <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>maxBufferSize</b></code><br/><i>integer</i> | The maximum total size in bytes of all buffer chunks. Must be greater than `bufferChunkRetentionSize`. | |
 | <code>pipelineRuns.<wbr/>logging.<wbr/><b>forwarder.<wbr/>emitTimeoutMillis</b></code><br/><i>integer</i> | The timeout in milliseconds for inserting a single log event into the local in-memory buffer and retrying in case of errors, e.g. when the buffer is full. | |
+
+### Helm Hooks
+
+#### Images
+
+This section configures the images used by Helm hooks.
+
+| Parameter | Description | Default |
+|---|---|---|
+| hooks.<wbr/>images.<wbr>&lt;IMAGE_KEY>.<wbr/><b>repository</b></code><br/><i>string</i> |  The container registry and repository of the image. | see `values.yaml` |
+| hooks.<wbr/>images.<wbr>&lt;IMAGE_KEY>.<wbr/><b>tag</b></code><br/><i>string</i> |  The tag of the Run Controller image in the container registry. | see `values.yaml` |
+| hooks.<wbr/>images.<wbr>&lt;IMAGE_KEY>.<wbr/><b>pullPolicy</b></code><br/><i>string</i> |  The image pull policy for the image. For possible values see field `imagePullPolicy` of the `container` spec in the Kubernetes API documentation. | see `values.yaml` |
+
+Image keys:
+
+- `kubectl`: An image with Bourne shell and the `kubectl` CLI.
+
+#### CRD Update Hooks
+
+The CRD Update hooks are Kubernetes Jobs to update the Steward CRDs.
+
+Lifecycle:
+
+- pre-install
+- pre-upgrade
+- pre-rollback
+
+| Parameter | Description | Default |
+|---|---|---|
+| <code>hooks.<wbr>crdUpdate.<wbr/><b>podSecurityContext</b></code><br/><i>object of [`PodSecurityContext`][k8s-podsecuritycontext]</i> |  The pod security context of the hook pod. If not set or empty, the default value is used. | `{"runAsUser":1000, "runAsGroup":1000, "fsGroup":1000, "runAsNonRoot":true}` |
+| <code>hooks.<wbr>crdUpdate.<wbr/><b>securityContext</b></code><br/><i>object of [`SecurityContext`][k8s-securitycontext]</i> |  The security context of the hook container. If not set or empty, the default value is used. | `{"privileged":false, "seccompProfile": {"type":"RuntimeDefault"}, "allowPrivilegeEscalation":false, "capabilities": {"drop": ["ALL"]}, "readOnlyRootFilesystem":true}` |
 
 ### Feature Flags
 

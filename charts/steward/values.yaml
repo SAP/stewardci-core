@@ -87,6 +87,9 @@ pipelineRuns:
   podSecurityPolicyName: ""
 
 hooks:
+  crdUpdate:
+    podSecurityContext: {} # default is defined in template
+    securityContext: {} # default is defined in template
   images:
     kubectl:
       repository: docker.io/bitnami/kubectl

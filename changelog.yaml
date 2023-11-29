@@ -76,6 +76,22 @@
         If this is not the case, add the missing fields.
       pullRequestNumber: 398
 
+    - type: enhancement
+      impact: minor
+      title: "Helm chart: Configure pods to run with Pod Security profile 'restricted'"
+      description: |-
+        Default security settings for the run controller and Helm hooks
+        have been changed to be accepted by Kubernetes Pod Security profile
+        `restricted`.
+
+        The following additional parameters for CRD update hooks are now
+        available:
+
+        - `hooks.crdUpdate.podSecurityContext`
+        - `hooks.crdUpdate.securityContext`
+      pullRequestNumber: 398
+      jiraIssueNumber: 725
+
 - version: "0.39.1"
   date: 2023-11-29
   changes:
