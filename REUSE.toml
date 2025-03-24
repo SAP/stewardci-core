@@ -1,0 +1,16 @@
+version = 1
+SPDX-PackageName = "github.com/SAP/stewardci-core"
+SPDX-PackageSupplier = "roman.isbrecht_at_sap.com"
+SPDX-PackageDownloadLocation = "github.com/SAP/stewardci-core"
+
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2019-2020 SAP SE or an SAP affiliate company and project \"Steward\" contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["pkg/featureflag/types_test.go", "pkg/featureflag/types.go", "pkg/runctl/controller.go"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = ["The Kubernetes Authors.", "Modifications Copyright SAP SE 2020. All rights reserved."]
+SPDX-License-Identifier = "Apache-2.0"
